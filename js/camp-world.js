@@ -297,7 +297,12 @@
 
     // Dark earthy ground
     const groundGeo  = new THREE.PlaneGeometry(100, 100, 30, 30);
-    const groundMat  = new THREE.MeshLambertMaterial({ color: 0x1a1208 });
+    const groundMat  = new THREE.MeshPhongMaterial({
+      color: 0x1a1208,
+      emissive: 0x0a0604,
+      emissiveIntensity: 0.1,
+      shininess: 5
+    });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -305,7 +310,13 @@
 
     // Central dirt circle (around campfire)
     const dirtGeo = new THREE.CircleGeometry(6, 32);
-    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x3d2410, depthWrite: false });
+    const dirtMat = new THREE.MeshPhongMaterial({
+      color: 0x3d2410,
+      emissive: 0x1e1208,
+      emissiveIntensity: 0.1,
+      shininess: 5,
+      depthWrite: false
+    });
     const dirt = new THREE.Mesh(dirtGeo, dirtMat);
     dirt.rotation.x = -Math.PI / 2;
     dirt.position.y = 0.05;
@@ -313,8 +324,12 @@
 
     // Stone ring around firepit
     const stoneRingGeo = new THREE.RingGeometry(0.9, 1.35, 16);
-    const stoneMat = new THREE.MeshLambertMaterial({
-      color: 0x888070, side: THREE.DoubleSide
+    const stoneMat = new THREE.MeshPhongMaterial({
+      color: 0x888070,
+      emissive: 0x444038,
+      emissiveIntensity: 0.1,
+      shininess: 20,
+      side: THREE.DoubleSide
     });
     const stoneRing = new THREE.Mesh(stoneRingGeo, stoneMat);
     stoneRing.rotation.x = -Math.PI / 2;
@@ -326,7 +341,12 @@
       const a = (i / 10) * Math.PI * 2;
       const r = 1.1;
       const sGeo = new THREE.DodecahedronGeometry(0.18 + Math.random() * 0.1, 0);
-      const sMat = new THREE.MeshLambertMaterial({ color: 0x706858 });
+      const sMat = new THREE.MeshPhongMaterial({
+        color: 0x706858,
+        emissive: 0x38342c,
+        emissiveIntensity: 0.1,
+        shininess: 15
+      });
       const s = new THREE.Mesh(sGeo, sMat);
       s.position.set(Math.sin(a) * r, 0.1, Math.cos(a) * r);
       s.rotation.set(Math.random(), Math.random(), Math.random());
@@ -335,7 +355,12 @@
     }
 
     // Dirt paths radiating to each building
-    const pathMat = new THREE.MeshLambertMaterial({ color: 0x2e1c0e });
+    const pathMat = new THREE.MeshPhongMaterial({
+      color: 0x2e1c0e,
+      emissive: 0x170e07,
+      emissiveIntensity: 0.1,
+      shininess: 5
+    });
     for (const def of BUILDING_DEFS) {
       const dx = def.x;
       const dz = def.z;
@@ -356,7 +381,12 @@
     const THREE = T();
 
     // Logs (two crossing cylinders)
-    const logMat = new THREE.MeshLambertMaterial({ color: 0x3d2208 });
+    const logMat = new THREE.MeshPhongMaterial({
+      color: 0x3d2208,
+      emissive: 0x1e1104,
+      emissiveIntensity: 0.1,
+      shininess: 10
+    });
     for (let i = 0; i < 2; i++) {
       const logGeo = new THREE.CylinderGeometry(0.14, 0.18, 2.2, 8);
       const log = new THREE.Mesh(logGeo, logMat);
@@ -599,7 +629,12 @@
 
       // Trunk
       const trunkGeo = new THREE.CylinderGeometry(0.15 * scale, 0.22 * scale, 1.8 * scale, 6);
-      const trunkMat = new THREE.MeshLambertMaterial({ color: 0x3d2208 });
+      const trunkMat = new THREE.MeshPhongMaterial({
+        color: 0x3d2208,
+        emissive: 0x1e1104,
+        emissiveIntensity: 0.1,
+        shininess: 10
+      });
       const trunk = new THREE.Mesh(trunkGeo, trunkMat);
       trunk.position.y = 0.9 * scale;
       trunk.castShadow = true;
@@ -607,7 +642,12 @@
 
       // Canopy (2 stacked cones)
       const col = treeColors[Math.floor(Math.random() * treeColors.length)];
-      const canopyMat = new THREE.MeshLambertMaterial({ color: col });
+      const canopyMat = new THREE.MeshPhongMaterial({
+        color: col,
+        emissive: col,
+        emissiveIntensity: 0.12,
+        shininess: 25
+      });
       const canopyMeshes = [];
       const origMats = [];
       for (let c = 0; c < 2; c++) {
@@ -634,8 +674,11 @@
 
     // Dark-blue reflective lake surface
     const lakeGeo = new THREE.CircleGeometry(12, 48);
-    const lakeMat = new THREE.MeshLambertMaterial({
+    const lakeMat = new THREE.MeshPhongMaterial({
       color: 0x1a3a5c,
+      emissive: 0x0d1d2e,
+      emissiveIntensity: 0.15,
+      shininess: 80,  // High shininess for water reflection
       transparent: true,
       opacity: 0.88,
     });
@@ -652,8 +695,11 @@
 
     // Shore ring – slightly lighter circle around the lake
     const shoreGeo = new THREE.RingGeometry(12, 14, 48);
-    const shoreMat = new THREE.MeshLambertMaterial({
+    const shoreMat = new THREE.MeshPhongMaterial({
       color: 0x2a4010,
+      emissive: 0x152008,
+      emissiveIntensity: 0.1,
+      shininess: 15,
       side: THREE.DoubleSide,
     });
     const shore = new THREE.Mesh(shoreGeo, shoreMat);
@@ -1315,20 +1361,20 @@
     }
   }
 
-  // Grant free starter points / materials so the player can try the building mechanic
+  // Grant minimal starter materials to build the first building (Quest Hall = 1W/1S/1C)
   function _aidaGrantStarterMaterials() {
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (!sd || sd.aidaStarterGranted) return;
     sd.aidaStarterGranted = true;
     if (!sd.resources) sd.resources = {};
-    sd.resources.wood  = (sd.resources.wood  || 0) + 50;
-    sd.resources.stone = (sd.resources.stone || 0) + 50;
-    sd.resources.coal  = (sd.resources.coal  || 0) + 30;
-    sd.gold            = (sd.gold            || 0) + 100;
-    sd.skillPoints     = (sd.skillPoints     || 0) + 3;
+    // Quest Hall costs 1 Wood, 1 Stone, 1 Coal (first building)
+    sd.resources.wood  = (sd.resources.wood  || 0) + 1;
+    sd.resources.stone = (sd.resources.stone || 0) + 1;
+    sd.resources.coal  = (sd.resources.coal  || 0) + 1;
+    // No gold or skill points - earn through quests
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof showStatChange === 'function') {
-      showStatChange('🎁 Aida Starter Pack: 🪵50 Wood  🪨50 Stone  🖤30 Coal  💰100 Gold  ⭐3 SP');
+      showStatChange('🎁 AIDA: "Minimal materials provided. Build the Command Node."', 'rare');
     }
     // Unlock Quest Hall so first building can be constructed
     if (sd.campBuildings && sd.campBuildings.questMission) {
@@ -1832,7 +1878,12 @@
   }
   function _lambert(color) {
     const THREE = T();
-    return new THREE.MeshLambertMaterial( { color } );
+    return new THREE.MeshPhongMaterial({
+      color: color,
+      emissive: color,
+      emissiveIntensity: 0.12,
+      shininess: 25
+    });
   }
 
   // ── Quest Hall ─ rustic log cabin with quest board ───────
@@ -2437,7 +2488,13 @@
 
     // Low stone wall ring
     const wallGeo = new THREE.CylinderGeometry(3.6, 3.6, 1.1, 8, 1, true);
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x404055, side: THREE.DoubleSide });
+    const wallMat = new THREE.MeshPhongMaterial({
+      color: 0x404055,
+      emissive: 0x20202a,
+      emissiveIntensity: 0.1,
+      shininess: 20,
+      side: THREE.DoubleSide
+    });
     const wall = new THREE.Mesh(wallGeo, wallMat);
     wall.position.y = 0.75;
     grp.add(wall);

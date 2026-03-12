@@ -77,10 +77,10 @@
           story: 'This tree grew from a single water droplet that absorbed centuries of knowledge. Each skill you unlock is a branch of understanding.'
         },
         forge: {
-          name: 'Progression Upgrades',
+          name: 'Artisan\'s Workshop',
           icon: '🔨',
-          description: 'A place to permanently upgrade your abilities and power.',
-          story: 'Fueled by the heat of a thousand defeated enemies, this place shapes even the hardest challenges.'
+          description: 'A masterful workshop where weapons, tools, and equipment are forged to perfection.',
+          story: 'Fueled by the heat of a thousand defeated enemies, this place shapes metal, wood, and magic into legendary creations.'
         },
         companionHouse: {
           name: 'Companion Sanctuary',
@@ -167,9 +167,9 @@
         }
       },
       forge: {
-        name: 'Progression Upgrades',
+        name: 'Artisan\'s Workshop',
         icon: '⚒️',
-        description: 'Craft and upgrade weapons. Higher tiers unlock better rarities',
+        description: 'Craft and upgrade all types of equipment - weapons, tools, and gear. Higher tiers unlock better rarities',
         baseCost: 250,
         costMultiplier: 1.8,
         maxCost: 100000,
@@ -185,6 +185,18 @@
             craftingTier: tier
           };
         }
+      },
+      progressionCenter: {
+        name: 'Stat Forge',
+        icon: '💪',
+        description: 'Forge permanent stat upgrades. Increase damage, health, speed, and more with permanent enhancements!',
+        baseCost: 250,
+        costMultiplier: 1.8,
+        maxCost: 100000,
+        bonus: (level) => ({
+          upgradeDiscount: 0.05 * level, // +5% discount on upgrades per level
+          upgradeSlots: Math.floor(level / 2) + 3 // +1 upgrade slot every 2 levels, starting at 3
+        })
       },
       armory: {
         name: 'Armory',
@@ -316,9 +328,9 @@
         bonus: (level) => ({})
       },
       warehouse: {
-        name: 'Warehouse',
-        icon: '🏪',
-        description: 'Store and manage your resources and items. Unlocked after Quest 7.',
+        name: 'Stat Cards',
+        icon: '🎰',
+        description: 'Spin the slot machine to unlock powerful permanent stat upgrades! Each roll costs gold and reveals a random stat card.',
         baseCost: 0,
         costMultiplier: 0,
         maxCost: 0,
@@ -1414,6 +1426,33 @@
         updateCampScreen();
         // Immediately re-render the skill tree panel so nodes update state visually
         if (typeof renderSkillTreeWeb === 'function') renderSkillTreeWeb();
+
+        // Trigger dopamine-inducing unlock animation
+        setTimeout(() => {
+          const skillNode = document.querySelector(`[data-skill-id="${skillId}"]`);
+          if (skillNode) {
+            // Add animation class
+            skillNode.classList.add('just-unlocked');
+
+            // Create particle burst effect overlay
+            const particleOverlay = document.createElement('div');
+            particleOverlay.className = 'skill-unlock-particles';
+            particleOverlay.style.cssText = `
+              background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
+              animation: particleBurst 0.8s ease-out forwards;
+            `;
+            skillNode.appendChild(particleOverlay);
+
+            // Remove animation class and particle overlay after animation completes
+            setTimeout(() => {
+              skillNode.classList.remove('just-unlocked');
+              if (particleOverlay.parentNode === skillNode) {
+                skillNode.removeChild(particleOverlay);
+              }
+            }, 800);
+          }
+        }, 50); // Small delay to ensure DOM is updated
+
         playSound('collect');
         
         // Refresh special attack loadout HUD if a special attack or melee node was unlocked
@@ -1772,22 +1811,37 @@
       quest_harvester: {
         id: 'quest_harvester',
         name: 'The Harvester',
-        description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials AND enough gold to buy every harvesting tool!',
+        description: 'Reach Level 3 in a single run to unlock the Forge. You\'ll receive starter materials and gold to buy gathering tools!',
         objectives: 'Reach Level 3 in a single run',
         claim: 'Main Building',
-        // Economy softlock fix: all tools now cost 1 Gold each so any amount of starting gold is sufficient.
-        // 20 of each resource comfortably covers the forge build cost (which is builtCount+1 of each).
         rewardGold: 50,
         rewardSkillPoints: 1,
         rewardResources: { wood: 20, stone: 20, coal: 20 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Fabrication Node Unlocked!</b> (Tool Crafting Only)<br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'The Alien Ship wreckage has left... residue. You are not alone on this lake. Map the anomaly sites — the Alien Ship, the Pyramid, Stonehenge, the Tesla Tower. The answers you seek are there. Your path home begins with understanding what shattered it.'</i><br><br>🎯 <b>NEXT:</b> Walk to the Forge plot in camp, build it, then buy your tools for just 1 Gold each!",
-        nextQuest: 'quest_firstBlood',
+        message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
+        nextQuest: 'quest_craftAllTools',
         conditions: ['quest_dailyRoutine']
       },
 
-      // === STEP 4: First Blood — Turn in 30 Wood and 30 Stone ===
+      // === STEP 4: Craft ALL Gathering Tools ===
+      quest_craftAllTools: {
+        id: 'quest_craftAllTools',
+        name: 'Gear Up: Gathering Tools',
+        description: 'Craft ALL 6 gathering tools at the Forge (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold. These tools let you gather resources during combat runs.',
+        objectives: 'Buy all 6 gathering tools at the Forge',
+        claim: 'Main Building',
+        rewardGold: 30,
+        rewardSkillPoints: 1,
+        rewardResources: { wood: 10, stone: 10, coal: 10 },
+        triggerOnDeath: false,
+        autoClaim: false,
+        message: "🛠️ <b>All Gathering Tools Acquired!</b><br><br><i>A.I.D.A: 'Good. Now gather 30 Wood and 30 Stone. Chop trees, mine rocks — the lake rewards the prepared.'</i><br><br>🎯 <b>NEXT:</b> Gather resources during runs to unlock the Armory!",
+        nextQuest: 'quest_firstBlood',
+        conditions: ['quest_harvester']
+      },
+
+      // === STEP 5: First Blood — Turn in 30 Wood and 30 Stone ===
       quest_firstBlood: {
         id: 'quest_firstBlood',
         name: 'First Blood',
@@ -1799,29 +1853,12 @@
         deductResources: { wood: 30, stone: 30 },
         unlockBuilding: 'armory',
         triggerOnDeath: true,
-        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. The lake\'s collective will not reclaim you while you are this fragile. Grow stronger. Map the Alien Ship crash site first — it holds the frequency data I... require.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
-        nextQuest: 'quest_craftAllTools',
-        conditions: ['quest_harvester']
-      },
-
-      // === STEP 4b: Craft ALL Gathering Tools ===
-      quest_craftAllTools: {
-        id: 'quest_craftAllTools',
-        name: 'Gear Up: Gathering Tools',
-        description: 'The Armory is built! Now craft ALL 6 gathering tools at the Forge (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold. These tools let you gather resources during combat runs.',
-        objectives: 'Buy all 6 gathering tools at the Forge',
-        claim: 'Main Building',
-        rewardGold: 80,
-        rewardSkillPoints: 1,
-        rewardResources: { wood: 15, stone: 15, coal: 15 },
-        triggerOnDeath: false,
-        autoClaim: false,
-        message: "🛠️ <b>All Gathering Tools Acquired!</b><br><br>You received bonus resources to get you started!<br><br><i>A.I.D.A: 'Good. The training wheels are <b>off</b> now, Droplet. From this point forward, you must gather your own resources during runs — chop trees, mine rocks, harvest everything you can. You will need those materials to build the next structures. The lake rewards the prepared.'</i><br><br>🎯 <b>NEXT:</b> Head into the field — gather resources and earn 300 kills to unlock the Skill Tree!",
+        message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. Grow stronger. The lake\'s collective will not reclaim you while you are fragile.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
         nextQuest: 'quest_gainingStats',
-        conditions: ['quest_firstBlood']
+        conditions: ['quest_craftAllTools']
       },
 
-      // === STEP 5: Gaining Stats — Defeat 300 enemies total ===
+      // === STEP 6: Gaining Stats — Defeat 300 enemies total ===
       quest_gainingStats: {
         id: 'quest_gainingStats',
         name: 'Gaining Stats',
@@ -1832,11 +1869,9 @@
         rewardSkillPoints: 2,
         unlockBuilding: 'skillTree',
         triggerOnDeath: true,
-        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding of this dimension. And yours grows too. The Pyramid anomaly is next — ancient geometry resonating with the crash frequency. Map it.'</i>",
+        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding. The Pyramid anomaly is next — map it.'</i>",
         nextQuest: 'quest_eggHunt',
-        // conditionsAny: either quest_craftAllTools (new path) OR quest_firstBlood (legacy saves
-        // that pre-date quest_craftAllTools) can unlock this quest, preventing soft-locks.
-        conditionsAny: ['quest_craftAllTools', 'quest_firstBlood']
+        conditions: ['quest_firstBlood']
       },
 
       // === STEP 6: The Egg Hunt — Reach Level 15 + find egg ===

@@ -24,7 +24,8 @@ const ENEMY_TYPES = {
   GREY_ALIEN_SCOUT:  17, // Minute-10 alien scout — ranged kiter, drops Alien Biomatter
   REPTILIAN_SHIFTER: 18, // Active-camo flanker — 80% transparent, fully visible at ≤3 units
   ANNUNAKI_ORB:      19, // Minute-15 boss — golden geometric drone, teleports, laser sweep
-  SOURCE_GLITCH:     20  // Forbidden Protocol spawn — reality-breaking glitch entity
+  SOURCE_GLITCH:     20, // Forbidden Protocol spawn — reality-breaking glitch entity
+  WATER_ORGANISM:    21  // Level-1 water creature — camp-style graphics, balanced stats
 };
 
 const MINI_BOSS_HP_SCALING_RATE = 0.20; // 20% HP increase per player level above start (was 15%)
@@ -73,60 +74,60 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
 
   if (type === 0) {           // Tank — charges, tries to cut off player
     stats.hp    = 200 * ls;
-    stats.speed = speedBase * 1.2;
+    stats.speed = speedBase * 1.2 * 60; // x60 compensates for removed * 60 in movement code
     stats.aiBehavior = 'interceptor'; // Predicts player movement
   } else if (type === 1) {    // Fast — flanker, zigzags around player
     stats.hp    = 60  * ls;
-    stats.speed = speedBase * 2.8;
+    stats.speed = speedBase * 2.8 * 60;
     stats.aiBehavior = 'flanker'; // Approaches from sides/behind
   } else if (type === 2) {    // Balanced — pack hunter, coordinates with others
     stats.hp    = 120 * ls;
-    stats.speed = speedBase * 1.8;
+    stats.speed = speedBase * 1.8 * 60;
     stats.aiBehavior = 'pack'; // Spreads out, surrounds player
   } else if (type === 3) {    // Slowing — ambusher, hides then rushes
     stats.hp           = 150 * ls;
-    stats.speed        = speedBase * 1.6;
+    stats.speed        = speedBase * 1.6 * 60;
     stats.slowDuration = 2000;
     stats.slowAmount   = 0.5;
     stats.aiBehavior = 'ambusher'; // Waits then dashes in
   } else if (type === 4) {    // Ranged — kiter, maintains distance smartly
     stats.hp             = 100 * ls;
-    stats.speed          = speedBase * 1.4;
+    stats.speed          = speedBase * 1.4 * 60;
     stats.attackRange    = 8;
     stats.projectileSpeed = 0.15;
     stats.aiBehavior = 'kiter'; // Retreats when player approaches
   } else if (type === 5) {    // Flying — dive bomber, swoops in and out
     stats.hp       = 120 * ls;
-    stats.speed    = speedBase * 2.4;
+    stats.speed    = speedBase * 2.4 * 60;
     stats.isFlying = true;
     stats.aiBehavior = 'divebomber'; // Dives at player then retreats
   } else if (type === 6) {    // Hard Tank — interceptor with prediction
     stats.hp    = 350 * ls;
-    stats.speed = speedBase * 1.3;
+    stats.speed = speedBase * 1.3 * 60;
     stats.aiBehavior = 'interceptor';
   } else if (type === 7) {    // Hard Fast — aggressive flanker
     stats.hp    = 110 * ls * 1.2; // +20% HP (yellow/gold enemy)
-    stats.speed = speedBase * 3.2;
+    stats.speed = speedBase * 3.2 * 60;
     stats.aiBehavior = 'flanker';
   } else if (type === 8) {    // Hard Balanced — pack leader
     stats.hp    = 220 * ls;
-    stats.speed = speedBase * 2.0;
+    stats.speed = speedBase * 2.0 * 60;
     stats.aiBehavior = 'pack';
   } else if (type === 9) {    // Elite — stalker, waits for openings
     stats.hp    = 400 * ls;
-    stats.speed = speedBase * 1.8;
+    stats.speed = speedBase * 1.8 * 60;
     stats.aiBehavior = 'stalker'; // Circles then strikes when player is busy
   } else if (type === 10) {   // MiniBoss
     const miniBossStartLevel = 10;
     stats.hp         = 2000 * 1.2 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE); // +20% HP (yellow/gold enemy)
-    stats.speed      = speedBase * 1.0;
+    stats.speed      = speedBase * 1.0 * 60;
     stats.isMiniBoss = true;
     stats.armor      = getEnemyArmor(playerLevel, 0.30);
     stats.aiBehavior = 'interceptor';
   } else if (type === 11) {   // Flying Boss (level 15) — giant airborne boss
     const flyingBossStartLevel = 15;
     stats.hp          = 5000 * (1 + Math.max(0, playerLevel - flyingBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
-    stats.speed       = speedBase * 1.4;
+    stats.speed       = speedBase * 1.4 * 60;
     stats.isFlying    = true;
     stats.isFlyingBoss = true;
     stats.armor       = getEnemyArmor(playerLevel, 0.35);
@@ -135,39 +136,39 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.aiBehavior = 'divebomber';
   } else if (type === 12) {   // Bug Ranged — kiting ranged attacker
     stats.hp             = 90 * ls;
-    stats.speed          = speedBase * 1.5;
+    stats.speed          = speedBase * 1.5 * 60;
     stats.isBug          = true;
     stats.attackRange    = 10;
     stats.projectileSpeed = 0.14;
     stats.aiBehavior = 'kiter';
   } else if (type === 13) {   // Bug Slow — armoured interceptor
     stats.hp    = 280 * ls;
-    stats.speed = speedBase * 0.9;
+    stats.speed = speedBase * 0.9 * 60;
     stats.isBug = true;
     stats.armor = getEnemyArmor(playerLevel, 0.20);
     stats.aiBehavior = 'interceptor';
   } else if (type === 14) {   // Bug Fast — fast dive bomber
     stats.hp       = 50 * ls;
-    stats.speed    = speedBase * 3.4;
+    stats.speed    = speedBase * 3.4 * 60;
     stats.isBug    = true;
     stats.isFlying = true;
     stats.aiBehavior = 'divebomber';
   } else if (type === 15) {   // Daddy Longlegs — spider, low HP like yellow enemy
     stats.hp       = 110 * ls * 1.2;  // Same HP as yellow enemy
-    stats.speed    = speedBase * 1.5;
+    stats.speed    = speedBase * 1.5 * 60;
     stats.isDaddyLonglegs = true;
     stats.aiBehavior = 'rearing'; // Creeps toward player, rears up before attacking
     stats.attackRange    = 3.5;   // Melee-range rearing attack
     stats.isSpider       = true;
   } else if (type === 16) {   // Sweeping Swarm — cluster that sweeps side to side
     stats.hp       = 10 * ls;  // 1-hit kill (very fragile)
-    stats.speed    = speedBase * 4.0;
+    stats.speed    = speedBase * 4.0 * 60;
     stats.isFlying = true;
     stats.isSwarm  = true;
     stats.aiBehavior = 'sweep'; // Flies rapidly in large arcs across the screen
   } else if (type === 17) {   // Grey Alien Scout (minute-10 encounter) — ranged kiter
     stats.hp             = 280 * ls;
-    stats.speed          = speedBase * 1.8;
+    stats.speed          = speedBase * 1.8 * 60;
     stats.isFlying       = true;           // hovers above ground
     stats.isGreyAlien    = true;
     stats.attackRange    = 11;
@@ -176,7 +177,7 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.dropsAlienBiomatter = true;      // rare biomatter drop on kill
   } else if (type === 18) {   // Reptilian Shifter — active-camo fast flanker
     stats.hp          = 160 * ls;
-    stats.speed       = speedBase * 3.6;
+    stats.speed       = speedBase * 3.6 * 60;
     stats.isReptilian = true;
     stats.aiBehavior  = 'flanker';
   } else if (type === 20) {   // Source Glitch — Forbidden Protocol reality-breaking entity
@@ -201,6 +202,10 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.projectileSpeed = 0.12;
     stats.aiBehavior     = 'annunaki';     // Custom behavior handled in enemy-class.js
     stats.elementalResistance = { fire: 0.20, ice: 0.20, lightning: 0.20, physical: 0.30 };
+  } else if (type === 21) {   // Water Organism — watery creature with camp-style graphics (level-1)
+    stats.hp    = 100 * ls;
+    stats.speed = speedBase * 1.8 * 60;
+    stats.aiBehavior = 'pack'; // Coordinates with others, spreads out
   }
 
   stats.maxHp  = stats.hp;
@@ -218,11 +223,12 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 18) stats.damage = 55  * ls;  // Reptilian Shifter — ambush strike
   if (type === 19) stats.damage = 120 * ls; // Annunaki Orb — laser devastation
   if (type === 20) stats.damage = 60  * ls; // Source Glitch — erratic digital strikes
+  if (type === 21) stats.damage = 40  * ls; // Water Organism — balanced melee damage
 
   // ── Phasing mutation (Level 60+) ────────────────────────────────────────────
-  // Above level 60 all basic enemy types (0–9, 12–16) can randomly phase —
+  // Above level 60 all basic enemy types (0–9, 12–16, 21) can randomly phase —
   // turning 50% transparent and absorbing the next hit entirely.
-  const PHASING_ELIGIBLE_TYPES = [0,1,2,3,4,5,6,7,8,9,12,13,14,15,16];
+  const PHASING_ELIGIBLE_TYPES = [0,1,2,3,4,5,6,7,8,9,12,13,14,15,16,21];
   if (playerLevel >= 60 && PHASING_ELIGIBLE_TYPES.includes(type)) {
     stats._phasingEnabled = true; // flag consumed by takeDamage() in enemy-class.js
   }
@@ -252,6 +258,7 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 14) { stats.elementalResistance.lightning = -0.20; } // Bug Fast: lightning vulnerable
   if (type === 17) { stats.elementalResistance.fire = 0.10; stats.elementalResistance.ice = -0.20; } // Grey Alien: ice vulnerable
   if (type === 18) { stats.elementalResistance.lightning = -0.25; stats.elementalResistance.fire = 0.15; } // Reptilian: weak to lightning
+  if (type === 21) { stats.elementalResistance.lightning = -0.30; stats.elementalResistance.ice = 0.20; } // Water Organism: weak to lightning, resistant to ice
   // Type 19 (Annunaki Orb) elemental resistance is already set inline in the stats block above
 
   return stats;

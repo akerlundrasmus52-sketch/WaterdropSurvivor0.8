@@ -78,43 +78,22 @@
         }
         geometry.computeVertexNormals();
         
-        const material = new THREE.MeshPhysicalMaterial({ 
-          color: COLORS.player,
+        // Use camp-style MeshPhongMaterial for better visuals and performance
+        const material = new THREE.MeshPhongMaterial({
+          color: COLORS.player,       // Light blue 0x4FC3F7
+          emissive: 0x0d47a1,         // Dark blue emissive glow
+          emissiveIntensity: 0.3,
+          shininess: 90,              // High shine like water
           transparent: true,
-          opacity: 0.75,
-          metalness: 0.1,
-          roughness: 0.2,
-          transmission: 0.3,
-          thickness: 0.5,
-          envMapIntensity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0.1
+          opacity: 0.85
         });
-
-        // Enhanced water material — apply IOR, sheen, and refined values from AdvancedPhysics
-        if (window.AdvancedPhysics && window.AdvancedPhysics.WaterMaterial) {
-          material.ior = 1.33;
-          material.sheen = 1.0;
-          material.sheenRoughness = 0.3;
-          material.sheenColor = new THREE.Color(0x88ccff);
-          material.transmission = 0.5;
-          material.thickness = 0.7;
-          window._waterMaterial = material;
-        }
 
         // Annunaki Protocol: permanent gold/liquid-metal texture
         if (window._nmAnnunakiActive || (playerStats && playerStats._annunakiActive)) {
           material.color.setHex(0xD4AF37);
-          material.metalness = 0.95;
-          material.roughness = 0.05;
           material.emissive = new THREE.Color(0x7a5900);
           material.emissiveIntensity = 0.4;
-          material.transmission = 0;
-          material.clearcoat = 1;
-          material.clearcoatRoughness = 0;
-          if (window._waterMaterial) {
-            window._waterMaterial.color.setHex(0xD4AF37);
-          }
+          material.shininess = 100;   // High metallic shine
         }
         // Store original water color for resets
         window._playerOriginalColor = material.color.getHex();
@@ -203,7 +182,7 @@
         this.mesh.add(this.mouth);
         
         // Cigar — brown cylinder body + orange ember end, matching spritesheet
-        const cigarMat = new THREE.MeshToonMaterial({ color: 0x8B6914 });
+        const cigarMat = new THREE.MeshPhongMaterial({ color: 0x8B6914, shininess: 20 });
         const cigarGeo = new THREE.CylinderGeometry(0.025, 0.022, 0.22, 8);
         this.cigar = new THREE.Mesh(cigarGeo, cigarMat);
         this.cigar.rotation.z = -0.3;
@@ -218,7 +197,12 @@
         this.mesh.add(this.cigarEmber);
         
         // Head bandage wrap — positioned higher around curved tip matching spritesheet
-        const bandageMat = new THREE.MeshToonMaterial({ color: 0xF5DEB3 }); // Wheat/tan color like cloth
+        const bandageMat = new THREE.MeshPhongMaterial({
+          color: 0xF5DEB3,
+          emissive: 0x8B7355,
+          emissiveIntensity: 0.1,
+          shininess: 10
+        });
         // Main wrap band around upper head
         const wrapGeo = new THREE.TorusGeometry(0.38, 0.06, 6, 16);
         this.bandageWrap = new THREE.Mesh(wrapGeo, bandageMat);
@@ -249,7 +233,14 @@
         
         // Arms — thick and stubby with fist ends matching spritesheet
         const armGeo = new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8);
-        const limbMaterial = new THREE.MeshToonMaterial({ color: COLORS.player, opacity: 0.85, transparent: true });
+        const limbMaterial = new THREE.MeshPhongMaterial({
+          color: COLORS.player,
+          emissive: 0x0d47a1,
+          emissiveIntensity: 0.15,
+          shininess: 90,
+          transparent: true,
+          opacity: 0.85
+        });
         
         // Left arm
         this.leftArm = new THREE.Mesh(armGeo, limbMaterial);
@@ -274,29 +265,29 @@
         
         // Gun visual (held by right arm) - enhanced for better visibility
         const gunBodyGeo = new THREE.BoxGeometry(0.12, 0.16, 0.35); // Larger gun body
-        const gunMat = new THREE.MeshToonMaterial({ color: 0x333333 }); // Slightly lighter dark gray
+        const gunMat = new THREE.MeshPhongMaterial({ color: 0x333333, shininess: 40 });
         this.gunBody = new THREE.Mesh(gunBodyGeo, gunMat);
         this.gunBody.position.set(0.42, -0.05, 0.35);
         this.mesh.add(this.gunBody);
-        
+
         // Gun barrel - longer and thicker
         const barrelGeo = new THREE.CylinderGeometry(0.035, 0.03, 0.3, 8);
-        const barrelMat = new THREE.MeshToonMaterial({ color: 0x1a1a1a }); // Black barrel
+        const barrelMat = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
         this.gunBarrel = new THREE.Mesh(barrelGeo, barrelMat);
         this.gunBarrel.rotation.x = Math.PI / 2;
         this.gunBarrel.position.set(0.42, -0.05, 0.56);
         this.mesh.add(this.gunBarrel);
-        
+
         // Gun scope / sight for visibility
         const sightGeo = new THREE.BoxGeometry(0.04, 0.05, 0.06);
-        const sightMat = new THREE.MeshToonMaterial({ color: 0x666666 });
+        const sightMat = new THREE.MeshPhongMaterial({ color: 0x666666, shininess: 60 });
         this.gunSight = new THREE.Mesh(sightGeo, sightMat);
         this.gunSight.position.set(0.42, 0.04, 0.35);
         this.mesh.add(this.gunSight);
-        
+
         // Gun handle
         const handleGeo = new THREE.BoxGeometry(0.07, 0.18, 0.10);
-        const handleMat = new THREE.MeshToonMaterial({ color: 0x8B4513 }); // Brown handle
+        const handleMat = new THREE.MeshPhongMaterial({ color: 0x8B4513, shininess: 20 }); // Brown handle
         this.gunHandle = new THREE.Mesh(handleGeo, handleMat);
         this.gunHandle.position.set(0.42, -0.22, 0.25);
         this.gunHandle.rotation.z = -Math.PI / 6;

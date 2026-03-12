@@ -12,7 +12,12 @@
     SHARED_GEO.sphere._isShared = true;
     const SHARED_MAT = {
       // SHARED_MAT.enemy is only used as a fallback — type-specific colors come from SHARED_MAT_CACHE
-      enemy:  new THREE.MeshLambertMaterial({ color: 0x44AA44 }),
+      enemy:  new THREE.MeshPhongMaterial({
+        color: 0x44AA44,
+        emissive: 0x44AA44,
+        emissiveIntensity: 0.15,
+        shininess: 40
+      }),
       black:  new THREE.MeshBasicMaterial({ color: 0x000000 }),
       bullet: new THREE.MeshBasicMaterial({ color: 0xffff00 })
     };
@@ -26,12 +31,19 @@
     // Prevents creating N materials for N enemies of the same type while still giving each
     // type its own distinct visual appearance.  Tag with _isShared so takeDamage() knows to
     // clone before mutating (blood stain, freeze, fire char, etc.).
+    // Now using MeshPhongMaterial with emissive properties for camp-style visuals
     const SHARED_MAT_CACHE = {};
     function getOrCreateMat(colorHex, opts) {
       // Build a deterministic key: hex color + optional transparency flag
       const key = colorHex.toString(16) + (opts && opts.transparent ? '_t' : '');
       if (!SHARED_MAT_CACHE[key]) {
-        const m = new THREE.MeshLambertMaterial(Object.assign({ color: colorHex }, opts || {}));
+        // Use MeshPhongMaterial with emissive glow for better visuals (camp style)
+        const m = new THREE.MeshPhongMaterial(Object.assign({
+          color: colorHex,
+          emissive: colorHex,
+          emissiveIntensity: 0.15,  // Subtle inner glow
+          shininess: 40              // Water-like shine
+        }, opts || {}));
         m._isShared = true;
         SHARED_MAT_CACHE[key] = m;
       }
@@ -63,6 +75,7 @@
         case 18: geo = new THREE.BoxGeometry(0.8, 0.9, 0.75);        break; // Reptilian Shifter — scaly block
         case 19: geo = new THREE.OctahedronGeometry(1.0, 1);         break; // Annunaki Orb
         case 20: geo = new THREE.DodecahedronGeometry(0.9, 0);       break; // Source Glitch
+        case 21: geo = new THREE.IcosahedronGeometry(0.75, 1);       break; // Water Organism — watery angular creature
         default: return SHARED_GEO.sphere; // Types 0,2,11 share generic sphere
       }
       SHARED_GEO_TYPE[type] = geo;
@@ -93,7 +106,8 @@
       0xAABBCC,  // 17: Grey Alien — blue-grey
       0x556633,  // 18: Reptilian Shifter — camo green
       0xFFD700,  // 19: Annunaki Orb — gold
-      0xFF00FF   // 20: Source Glitch — magenta
+      0xFF00FF,  // 20: Source Glitch — magenta
+      0x4FC3F7   // 21: Water Organism — cyan blue (matching player water color)
     ];
     // Fallback color for any type not listed in _ENEMY_COLORS
     const DEFAULT_ENEMY_COLOR = _ENEMY_COLORS[0]; // green (same as Tank/index-0)
@@ -101,7 +115,7 @@
     window._ENEMY_COLORS = _ENEMY_COLORS;
 
     // Enemy types that display eyes (creatures with recognizable faces)
-    const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17]);
+    const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17, 21]);
 
     // Enemy types that fly (need a ground shadow disc)
     const ENEMY_TYPES_FLYING = new Set([5, 11, 14, 16, 17, 19]);
@@ -609,7 +623,12 @@
         // MiniBoss/FlyingBoss have emissive glow — give them a per-instance material so the
         // pulsing glow animation in update() doesn't affect all enemies of the same color.
         if (type === 10 || type === 11) {
-          const _bossMat = new THREE.MeshLambertMaterial({ color: _colorHex, emissive: new THREE.Color(_colorHex), emissiveIntensity: 0.3 });
+          const _bossMat = new THREE.MeshPhongMaterial({
+            color: _colorHex,
+            emissive: new THREE.Color(_colorHex),
+            emissiveIntensity: 0.3,
+            shininess: 90  // Higher shininess for bosses to make them stand out
+          });
           this.mesh = new THREE.Mesh(_bodyGeo, _bossMat);
         } else {
           this.mesh = new THREE.Mesh(_bodyGeo, _bodyMat);
@@ -1116,405 +1135,59 @@
           vx += avoidX;
           vz += avoidZ;
           
-          // AI Behavior System - each enemy type acts differently
-          const behavior = this.aiBehavior || 'approach';
-          
-          if (this.type === 4 && dist < this.attackRange) {
-            // Ranged type 4: retreat when too close, strafe at range
-            if (dist < 3.0) {
-              vx = -(dx / dist) * this.speed * 1.8;
-              vz = -(dz / dist) * this.speed * 1.8;
-            } else {
-              const strafeDir = Math.sin(gameTime * 3 + this.wobbleOffset) > 0 ? 1 : -1;
-              const perpX = -dz / dist;
-              const perpZ =  dx / dist;
-              vx = perpX * this.speed * 0.5 * strafeDir;
-              vz = perpZ * this.speed * 0.5 * strafeDir;
-            }
-          } else if (this.type === 12 && dist < this.attackRange) {
-            // Bug Ranged type 12: retreat when too close, strafe at range
-            if (dist < 4.0) {
-              vx = -(dx / dist) * this.speed * 1.2;
-              vz = -(dz / dist) * this.speed * 1.2;
-            } else {
-              const perpX = -dz / dist;
-              const perpZ =  dx / dist;
-              vx = perpX * this.speed * 0.7;
-              vz = perpZ * this.speed * 0.7;
-            }
-          } else if (behavior === 'interceptor') {
-            // Move directly toward the player
-            vx = (dx / dist) * this.speed;
-            vz = (dz / dist) * this.speed;
-            // Charge when close
-            if (dist < 5 && dist > 1.5 && !this._charging) {
-              if (Math.random() < 0.008) {
-                this._charging = true;
-                this._chargeTime = 0.5;
-              }
-            }
-            if (this._charging) {
-              this._chargeTime -= dt;
-              vx = (dx / dist) * this.speed * 3;
-              vz = (dz / dist) * this.speed * 3;
-              if (this._chargeTime <= 0) this._charging = false;
-            }
-          } else if (behavior === 'flanker') {
-            // Zigzag: every 0.5s pick a perpendicular offset ±2 units from direct path
-            if (this._aiTimer > 0.5) {
-              this._aiTimer = 0;
-              this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (1.5 + Math.random() * 0.5);
-            }
-            const perpX = -dz / (dist || 1);
-            const perpZ =  dx / (dist || 1);
-            const zigzagX = perpX * this._flankAngle * 2;
-            const zigzagZ = perpZ * this._flankAngle * 2;
-            const targetZX = targetPos.x + zigzagX;
-            const targetZZ = targetPos.z + zigzagZ;
-            const tzDx = targetZX - this.mesh.position.x;
-            const tzDz = targetZZ - this.mesh.position.z;
-            const tzDist = Math.sqrt(tzDx * tzDx + tzDz * tzDz) || 1;
-            if (dist > 1.5) {
-              vx = (tzDx / tzDist) * this.speed;
-              vz = (tzDz / tzDist) * this.speed;
-            } else {
-              vx = (dx / dist) * this.speed * 1.6;
-              vz = (dz / dist) * this.speed * 1.6;
-            }
-          } else if (behavior === 'ranged') {
-            // Maintain 8-12 unit distance from player; fire projectile every 2s
-            const RANGED_MIN = 8, RANGED_MAX = 12;
-            if (dist < RANGED_MIN) {
-              // Too close — back away
-              vx = -(dx / dist) * this.speed * 1.5;
-              vz = -(dz / dist) * this.speed * 1.5;
-            } else if (dist > RANGED_MAX) {
-              // Too far — approach
-              vx = (dx / dist) * this.speed;
-              vz = (dz / dist) * this.speed;
-            } else {
-              // At ideal range — strafe
-              const rPerpX = -dz / dist;
-              const rPerpZ =  dx / dist;
-              const rDir = Math.sin(gameTime * 1.5 + this.wobbleOffset) > 0 ? 1 : -1;
-              vx = rPerpX * this.speed * 0.5 * rDir;
-              vz = rPerpZ * this.speed * 0.5 * rDir;
-            }
-            // Fire projectile every 2s when in range
+          // ═══════════════════════════════════════════════════════════════════════════════
+          // SIMPLIFIED AI SYSTEM - Simple direct movement, no complex behaviors
+          // All complex state machines, prediction, flanking, ambushing, etc. removed
+          // to fix FPS drops and jittery behavior. Enemies now simply move toward player.
+          // ═══════════════════════════════════════════════════════════════════════════════
+
+          // Ranged enemies (types 4, 12, 17) - simple retreat when too close
+          if ((this.type === 4 || this.type === 12 || this.type === 17) && dist < 6.0) {
+            vx = -(dx / dist) * this.speed * 0.7;
+            vz = -(dz / dist) * this.speed * 0.7;
+            // Fire projectiles periodically
             if (!this._rangedShotTimer) this._rangedShotTimer = 0;
             this._rangedShotTimer += dt;
-            if (this._rangedShotTimer >= 2.0 && dist < 20) {
+            if (this._rangedShotTimer >= 2.5 && dist < 18) {
               this._rangedShotTimer = 0;
               this.fireProjectile(targetPos);
             }
-          } else if (behavior === 'pack') {
-            // Spread out and surround the player, then rush together
-            const surroundDist = 3 + Math.sin(this.wobbleOffset) * 1.5;
-            // Periodically force a group rush to prevent endless circling
-            if (this._aiTimer > this._aiCooldown) {
-              this._aiTimer = 0;
-              this._aiCooldown = 1.5 + Math.random() * 2.0;
-              this._packRush = true;
-            }
-            if (this._packRush) {
-              // Rush straight at player
-              vx = (dx / dist) * this.speed * 1.4;
-              vz = (dz / dist) * this.speed * 1.4;
-              if (dist < 1.5) this._packRush = false;
-            } else if (dist > surroundDist + 1) {
-              // Move towards player with slight weave
-              vx = (dx / dist) * this.speed;
-              vz = (dz / dist) * this.speed;
-              const weave = Math.sin(gameTime * 4 + this.wobbleOffset) * 0.06;
-              vx += weave * (-dz/dist);
-              vz += weave * (dx/dist);
-            } else if (dist > 1.5) {
-              // Circle around player — always maintain inward pull to prevent endless orbit
-              const perpX = -dz / dist;
-              const perpZ =  dx / dist;
-              const circleDir = this.wobbleOffset > 50 ? 1 : -1;
-              vx = perpX * this.speed * 0.5 * circleDir + (dx / dist) * this.speed * 0.5;
-              vz = perpZ * this.speed * 0.5 * circleDir + (dz / dist) * this.speed * 0.5;
-            }
-          } else if (behavior === 'ambusher') {
-            // Wait at medium range then dash in
-            if (this._aiState === 'approach' && dist < 6) {
-              this._aiState = 'wait';
-              this._aiTimer = 0;
-            }
-            if (this._aiState === 'wait') {
-              // Hold position, slight drift
-              vx *= 0.1;
-              vz *= 0.1;
-              if (this._aiTimer > 1.5 + Math.random()) {
-                this._aiState = 'dash';
-                this._aiTimer = 0;
-              }
-            } else if (this._aiState === 'dash') {
-              vx = (dx / dist) * this.speed * 2.5;
-              vz = (dz / dist) * this.speed * 2.5;
-              if (dist < 1.2 || this._aiTimer > 0.6) {
-                this._aiState = 'retreat';
-                this._aiTimer = 0;
-              }
-            } else if (this._aiState === 'retreat') {
-              vx = -(dx / dist) * this.speed * 1.2;
-              vz = -(dz / dist) * this.speed * 1.2;
-              if (this._aiTimer > 0.8 || dist > 7) {
-                this._aiState = 'approach';
-                this._aiTimer = 0;
-              }
-            }
-          } else if (behavior === 'kiter') {
-            // Maintain optimal range, retreat when player approaches
-            const optimalRange = this.attackRange ? this.attackRange * 0.7 : 6;
-            if (dist < optimalRange - 1) {
-              // Too close - back away
-              vx = -(dx / dist) * this.speed * 1.5;
-              vz = -(dz / dist) * this.speed * 1.5;
-            } else if (dist < optimalRange + 2) {
-              // At range - strafe
-              const perpX = -dz / dist;
-              const perpZ =  dx / dist;
-              const sDir = Math.sin(gameTime * 2 + this.wobbleOffset) > 0 ? 1 : -1;
-              vx = perpX * this.speed * 0.6 * sDir;
-              vz = perpZ * this.speed * 0.6 * sDir;
-            }
-            // else: approach normally (default vx/vz)
-          } else if (behavior === 'divebomber') {
-            // Swoop in fast then pull away
-            if (this._aiState === 'approach' && dist < 5) {
-              this._aiState = 'dive';
-              this._aiTimer = 0;
-            }
-            if (this._aiState === 'dive') {
-              vx = (dx / dist) * this.speed * 2.0;
-              vz = (dz / dist) * this.speed * 2.0;
-              if (dist < 1.5 || this._aiTimer > 0.5) {
-                this._aiState = 'pullup';
-                this._aiTimer = 0;
-              }
-            } else if (this._aiState === 'pullup') {
-              // Fly away at angle
-              const escAngle = Math.atan2(dz, dx) + Math.PI + this._flankAngle * 0.5;
-              vx = Math.cos(escAngle) * this.speed * 1.5;
-              vz = Math.sin(escAngle) * this.speed * 1.5;
-              if (this._aiTimer > 1.0 || dist > 8) {
-                this._aiState = 'approach';
-                this._aiTimer = 0;
-              }
-            }
-          } else if (behavior === 'stalker') {
-            // Circle at medium range, strike when player is fighting others
-            // Only count nearby attackers (limit check count for performance)
-            let nearbyAttacking = 0;
-            for (let i = 0, count = 0; i < enemies.length && count < 8; i++) {
-              const e = enemies[i];
-              if (e === this || e.isDead) continue;
-              count++;
-              const edx = e.mesh.position.x - playerPos.x;
-              const edz = e.mesh.position.z - playerPos.z;
-              if (edx*edx + edz*edz < 9) nearbyAttacking++;
-            }
-            
-            if (nearbyAttacking >= 2 || dist < 2) {
-              // Player is distracted - rush in
-              vx = (dx / dist) * this.speed * 1.8;
-              vz = (dz / dist) * this.speed * 1.8;
-            } else if (dist < 8) {
-              // Circle at medium range
-              const perpX = -dz / dist;
-              const perpZ =  dx / dist;
-              vx = perpX * this.speed * 0.5 + (dx / dist) * this.speed * 0.15;
-              vz = perpZ * this.speed * 0.5 + (dz / dist) * this.speed * 0.15;
-            }
-          } else if (behavior === 'rearing') {
-            // Daddy Longlegs: creep toward player, then rear up and attack
-            if (!this._rearingPhase) this._rearingPhase = 0;
-            if (!this._rearingTimer) this._rearingTimer = 0;
-            this._rearingTimer += dt;
-            if (this._rearingPhase === 0) {
-              // Walking phase: approach slowly
-              if (this._spiderSprite) this._spiderSprite.play('walk');
-              if (dist > this.attackRange) {
-                vx = (dx / dist) * this.speed * 0.8;
-                vz = (dz / dist) * this.speed * 0.8;
-              } else if (this._rearingTimer > 1.0) {
-                // Close enough — start rearing
-                this._rearingPhase = 1;
-                this._rearingTimer = 0;
-              }
-            } else if (this._rearingPhase === 1) {
-              // Rearing up: play rear animation, lift body
-              if (this._spiderSprite) this._spiderSprite.play('rear');
-              this.mesh.position.y = 0.5 + Math.sin(this._rearingTimer * 4) * 0.4;
-              if (this._rearingTimer > 0.8) {
-                this._rearingPhase = 2;
-                this._rearingTimer = 0;
-              }
-            } else if (this._rearingPhase === 2) {
-              // Attack lunge — play attack animation
-              if (this._spiderSprite) this._spiderSprite.play('attack');
-              vx = (dx / dist) * this.speed * 3.0;
-              vz = (dz / dist) * this.speed * 3.0;
-              if (this._rearingTimer > 0.4) {
-                this._rearingPhase = 0;
-                this._rearingTimer = 0;
-                this.mesh.position.y = 0.5;
-              }
-            }
-            // Tick the spider sprite animator every frame
-            if (this._spiderSprite) this._spiderSprite.update(dt);
-          } else if (behavior === 'sweep') {
-            // Sweeping Swarm: moves as a tight group sweeping ±6 units perpendicular to approach
-            // with a sin wave over 2s period (π rad/s)
-            if (!this._sweepTimer) this._sweepTimer = 0;
-            this._sweepTimer += dt;
-            const sweepSpeed = this.speed * 2.0;
-            const perpX = -dz / (dist || 1);
-            const perpZ =  dx / (dist || 1);
-            // Sin wave ±6 units: sin(t * π) gives one full cycle per 2s
-            const sweepOffset = Math.sin(this._sweepTimer * Math.PI) * 6;
-            // Blend inward approach with perpendicular sweep
-            vx = (dx / (dist || 1)) * sweepSpeed * 0.4 + perpX * Math.cos(this._sweepTimer * Math.PI) * sweepSpeed;
-            vz = (dz / (dist || 1)) * sweepSpeed * 0.4 + perpZ * Math.cos(this._sweepTimer * Math.PI) * sweepSpeed;
-            // Reset sweep timer every 2s
-            if (this._sweepTimer >= 2.0) this._sweepTimer = 0;
-          } else if (behavior === 'sourceGlitch') {
-            // Source Glitch: erratic teleportation — never walks, always blinks around the player
-            vx = 0; vz = 0;
-            if (!this._glitchTeleportTimer) this._glitchTeleportTimer = 0;
-            this._glitchTeleportTimer += dt;
-            if (this._glitchTeleportTimer >= this._glitchTeleportCooldown) {
-              this._glitchTeleportTimer = 0;
-              this._glitchTeleportCooldown = 0.7 + Math.random() * 0.8; // 0.7-1.5s (matches init)
-              // Teleport to a random position 2-10 units from the player
-              const tpAngle = Math.random() * Math.PI * 2;
-              const tpDist = 2 + Math.random() * 8;
-              this.mesh.position.x = targetPos.x + Math.cos(tpAngle) * tpDist;
-              this.mesh.position.z = targetPos.z + Math.sin(tpAngle) * tpDist;
-              this.mesh.position.y = 1.5 + Math.random() * 2;
-              if (typeof spawnParticles === 'function') {
-                spawnParticles(this.mesh.position, 0xFF00FF, 8);
-                spawnParticles(this.mesh.position, 0x00FFFF, 5);
-              }
-            }
-          } else if (behavior === 'annunaki') {
-            // Annunaki Orb: doesn't move continuously — teleports every 4s near the player
-            // then charges for 1.5s (warning glow) before firing a laser sweep.
-            vx = 0; vz = 0; // No regular movement
-            if (!this._annunakiTeleportTimer) this._annunakiTeleportTimer = 0;
-            this._annunakiTeleportTimer += dt;
-            if (this._annunakiTeleportTimer >= this._annunakiTeleportCooldown) {
-              this._annunakiTeleportTimer = 0;
-              // Teleport to a random position 8-14 units from the player
-              const tpAngle = Math.random() * Math.PI * 2;
-              const tpDist = 8 + Math.random() * 6;
-              this.mesh.position.x = targetPos.x + Math.cos(tpAngle) * tpDist;
-              this.mesh.position.z = targetPos.z + Math.sin(tpAngle) * tpDist;
-              this.mesh.position.y = 4;
-              // Flash effect on teleport
-              if (typeof spawnParticles === 'function') {
-                spawnParticles(this.mesh.position, 0xFFD700, 12);
-              }
-              // Begin warning phase before laser
-              this._annunakiWarning = true;
-              this._annunakiLaserTimer = 0;
-            }
-            // Warning + laser sweep logic
-            if (this._annunakiWarning) {
-              this._annunakiLaserTimer += dt;
-              // Pulsing warning glow for 1.5s
-              const warnPulse = Math.abs(Math.sin(this._annunakiLaserTimer * 8));
-              if (this.mesh.material) {
-                this.mesh.material.emissiveIntensity = 0.4 + warnPulse * 1.5;
-              }
-              if (this._annunakiLaserTimer >= 1.5 && !this._annunakiLaserActive) {
-                // Fire the laser sweep
-                this._annunakiLaserActive = true;
-                this._annunakiLaserTimer = 0;
-                // Create a sweeping laser beam mesh
-                const beamGeo = new THREE.BoxGeometry(24, 0.6, 0.5);
-                const beamMat = new THREE.MeshBasicMaterial({
-                  color: 0xFFAA00, transparent: true, opacity: 0.85
-                });
-                this._annunakiLaserMesh = new THREE.Mesh(beamGeo, beamMat);
-                this._annunakiLaserMesh.position.copy(this.mesh.position);
-                this._annunakiLaserMesh.position.y = 1.0;
-                this._annunakiLaserMesh.rotation.y = Math.atan2(dx, dz);
-                scene.add(this._annunakiLaserMesh);
-                // Damage player if in beam path
-                const beamDx = player.mesh.position.x - this.mesh.position.x;
-                const beamDz = player.mesh.position.z - this.mesh.position.z;
-                const beamDist = Math.sqrt(beamDx * beamDx + beamDz * beamDz);
-                const beamAngle = Math.atan2(beamDx, beamDz);
-                const aimAngle = Math.atan2(dx, dz);
-                const angleDiff = Math.abs(((beamAngle - aimAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-                if (angleDiff < 0.35 && beamDist < 13 && typeof player.takeDamage === 'function') {
-                  player.takeDamage(this.damage);
-                  if (typeof spawnParticles === 'function') spawnParticles(player.mesh.position, 0xFFAA00, 10);
-                }
-              }
-              // Animate + remove laser after 1s
-              if (this._annunakiLaserActive) {
-                if (this._annunakiLaserMesh) {
-                  this._annunakiLaserMesh.material.opacity = Math.max(0, 0.85 - this._annunakiLaserTimer * 0.85);
-                  this._annunakiLaserMesh.rotation.y += dt * 1.5; // sweep rotation
-                }
-                if (this._annunakiLaserTimer >= 1.0) {
-                  // Done — clean up laser
-                  if (this._annunakiLaserMesh) {
-                    scene.remove(this._annunakiLaserMesh);
-                    this._annunakiLaserMesh.geometry.dispose();
-                    this._annunakiLaserMesh.material.dispose();
-                    this._annunakiLaserMesh = null;
-                  }
-                  this._annunakiLaserActive = false;
-                  this._annunakiWarning = false;
-                  if (this.mesh.material) this.mesh.material.emissiveIntensity = 0.6;
-                }
-              }
-            }
-            // Slow spin
-            this.mesh.rotation.y += dt * 0.5;
           }
-          
-          // Flying height behavior
-          if (this.type === 5 || this.type === 14 || this.type === 16 || this.type === 17) {
-            const wavePhase = gameTime * 5 + this.wobbleOffset;
-            const wave = Math.sin(wavePhase) * 0.08;
-            vx += wave * (dz/(dist||1));
-            vz -= wave * (dx/(dist||1));
-            const baseHeight = this._aiState === 'dive' ? 0.8 : (this.type === 16 ? 1.5 : 2);
-            this.mesh.position.y = baseHeight + Math.sin(gameTime * 3 + this.wobbleOffset) * 0.5;
-          }
-          // Annunaki Orb gentle hover
-          if (this.type === 19) {
-            this.mesh.position.y = 4 + Math.sin(gameTime * 1.5 + this.wobbleOffset) * 0.4;
-          }
-          // Source Glitch: chaotic sub-mesh animation + main mesh rotation
-          if (this.type === 20 && this._glitchMeshes) {
-            const _glitchPalette = [0xFF00FF, 0x00FFFF, 0xFF0000, 0x00FF00, 0xFFFF00, 0xFF8800, 0xFFFFFF, 0x8800FF, 0x0088FF];
-            this.mesh.rotation.x += dt * (Math.random() - 0.5) * 8;
-            this.mesh.rotation.y += dt * (Math.random() - 0.5) * 8;
-            this.mesh.rotation.z += dt * (Math.random() - 0.5) * 8;
-            for (let _gi = 0; _gi < this._glitchMeshes.length; _gi++) {
-              const _gm = this._glitchMeshes[_gi];
-              if (!_gm || !_gm.material) continue;
-              _gm.rotation.x += dt * (Math.random() - 0.5) * 12;
-              _gm.rotation.y += dt * (Math.random() - 0.5) * 12;
-              _gm.rotation.z += dt * (Math.random() - 0.5) * 12;
-              const _chaos = 0.5 + Math.random() * 1.2;
-              _gm.scale.setScalar(_chaos);
-              _gm.material.color.setHex(_glitchPalette[Math.floor(Math.random() * _glitchPalette.length)]);
+
+          // Grey Alien Scout - fires plasma bolts
+          if (this.type === 17) {
+            if (!this._alienShotTimer) this._alienShotTimer = 0;
+            this._alienShotTimer += dt;
+            if (this._alienShotTimer >= 2.0 && dist <= (this.attackRange || 11)) {
+              this._alienShotTimer = 0;
+              this.fireProjectile(targetPos);
             }
-            // Cycle main mesh emissive color
+          }
+
+          // Source Glitch (type 20) - simple teleport behavior (keep for uniqueness)
+          if (this.type === 20) {
+            if (!this._glitchTP) this._glitchTP = 0;
+            this._glitchTP += dt;
+            if (this._glitchTP > 1.8 && dist < 12) {
+              this._glitchTP = 0;
+              // Random micro-teleport
+              this.mesh.position.x += (Math.random() - 0.5) * 5;
+              this.mesh.position.z += (Math.random() - 0.5) * 5;
+              if (window.playSound) window.playSound('teleport', 0.4);
+            }
+            // Chaotic rotation and color cycling
+            this.mesh.rotation.x = Math.sin(gameTime * 6 + this.wobbleOffset) * 0.8;
+            this.mesh.rotation.z = Math.cos(gameTime * 5 + this.wobbleOffset) * 0.6;
             if (this.mesh.material) {
-              this.mesh.material.color.setHex(_glitchPalette[Math.floor(gameTime * 20) % _glitchPalette.length]);
-              this.mesh.material.emissive.setHex(_glitchPalette[(Math.floor(gameTime * 20) + 3) % _glitchPalette.length]);
+              const _glitchPalette = [0xFF00FF, 0x00FFFF, 0xFF8800];
+              this.mesh.material.color.setHex(_glitchPalette[Math.floor(gameTime * 15) % _glitchPalette.length]);
             }
           }
-          
+
+          // All other enemies: simple direct approach - that's it!
+          // No prediction, no state machines, no complex behaviors
+          // vx and vz are already set to move toward player at the top of the function
+
           // Clamp velocity magnitude to prevent teleportation
           const _MAX_VEL = this.speed * 3.5;
           const _velMag = Math.sqrt(vx * vx + vz * vz);
@@ -1524,24 +1197,27 @@
             vz *= _velScale;
           }
           
-          // Cap dt to prevent lag-spike teleportation while allowing animation throttle accumulation (~5fps floor)
+          // Cap dt to prevent lag-spike teleportation (~5fps floor)
+          // FIXED: Removed frame-rate dependent * 60 multiplier that caused jitter and teleportation
+          // Speed is now in units/second, dt scales it properly without additional multiplier
           const _safeDt = Math.min(dt, 0.2);
-          
-          this.mesh.position.x += vx * 60 * _safeDt;
-          this.mesh.position.z += vz * 60 * _safeDt;
+
+          this.mesh.position.x += vx * _safeDt;
+          this.mesh.position.z += vz * _safeDt;
           // Track last movement vector for glide-spin death state (store unscaled velocity direction)
           this._lastMoveVX = vx;
           this._lastMoveVZ = vz;
-          // Smooth rotation toward target using shortest-arc lerp.
-          // Avoids the jittery snap that a direct `rotation.y = atan2(…)` causes
-          // when the player is circling or when throttle frames skip updates.
-          // Store target for continued interpolation during throttled frames.
+          // Smooth rotation toward target using direct lerp with fixed speed.
+          // FIXED: Reduced lerp factor from dt * 10 to dt * 5 to prevent overshooting on frame drops
+          // This eliminates jitter caused by rotation snapping when FPS varies
           if (!_isRageFlee) {
             this._targetRotY = Math.atan2(dx, dz);
             let _faceDelta = this._targetRotY - this.mesh.rotation.y;
+            // Normalize to shortest arc (-PI to +PI)
             if (_faceDelta > Math.PI) _faceDelta -= Math.PI * 2;
             if (_faceDelta < -Math.PI) _faceDelta += Math.PI * 2;
-            this.mesh.rotation.y += _faceDelta * Math.min(1.0, dt * 10);
+            // Smooth lerp with reduced factor to prevent overshoot
+            this.mesh.rotation.y += _faceDelta * Math.min(1.0, dt * 5);
           }
           // Collision with environment props (trees, barrels, crates) — ground enemies bounce off
           // Skip flying enemy types: 5=Flying, 11=FlyingBoss, 14=BugFast(fly), 16=SweepingSwarm

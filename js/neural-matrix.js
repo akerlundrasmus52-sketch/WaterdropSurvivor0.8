@@ -555,6 +555,7 @@ window.NeuralMatrix = (function () {
       <div id="nm-node-desc"  class="nm-node-desc">Click on any node to view details and unlock it.</div>
       <button id="nm-unlock-btn" class="nm-unlock-btn" style="display:none">[ UNLOCK ]</button>
       <button id="nm-reroute-btn" class="nm-reroute-btn">[ RE-ROUTE AROUND PARASITE — 1 🔷 ]</button>
+      <button id="nm-1945-btn" class="nm-1945-btn" style="background: linear-gradient(135deg, #ff8800 0%, #ff4400 100%); border: 2px solid #ffaa00; margin-top: 10px;">[ ✈️ PLAY 1945 STRIKER ]</button>
       <div id="nm-toast" class="nm-toast"></div>`;
     overlay.appendChild(info);
 
@@ -596,6 +597,14 @@ window.NeuralMatrix = (function () {
     });
 
     document.getElementById('nm-reroute-btn').addEventListener('click', _rerouteAroundParasite);
+
+    // 1945 game button
+    document.getElementById('nm-1945-btn').addEventListener('click', () => {
+      if (window.Neural1945 && typeof window.Neural1945.open === 'function') {
+        hide(); // Close Neural Matrix
+        window.Neural1945.open();
+      }
+    });
 
     // Hide reroute btn if parasite not active
     const rBtn = document.getElementById('nm-reroute-btn');

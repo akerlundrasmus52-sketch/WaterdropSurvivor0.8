@@ -702,6 +702,13 @@ function showWeaponBuilding() {
     saveData.gold -= cost;
     mods[modKey] = (mods[modKey] || 0) + 1;
     saveData.weaponUpgrades[weaponId] = mods;
+
+    // Track achievement stat
+    if (!saveData.stats) {
+      saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+    }
+    saveData.stats.weaponsUpgraded = (saveData.stats.weaponsUpgraded || 0) + 1;
+
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof playSound === 'function') playSound('levelup');
 
@@ -744,6 +751,13 @@ function showWeaponBuilding() {
       saveData.weaponUpgrades[weaponId].unlockedFireModes = [];
     saveData.weaponUpgrades[weaponId].unlockedFireModes.push(fmKey);
     saveData.weaponUpgrades[weaponId].fireMode = fmKey;
+
+    // Track achievement stat
+    if (!saveData.stats) {
+      saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+    }
+    saveData.stats.weaponsUpgraded = (saveData.stats.weaponsUpgraded || 0) + 1;
+
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof playSound === 'function') playSound('levelup');
 
@@ -781,6 +795,13 @@ function showWeaponBuilding() {
       saveData.weaponUpgrades[weaponId].unlockedAmmo = [];
     saveData.weaponUpgrades[weaponId].unlockedAmmo.push(ammoKey);
     saveData.weaponUpgrades[weaponId].ammoType = ammoKey;
+
+    // Track achievement stat
+    if (!saveData.stats) {
+      saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+    }
+    saveData.stats.weaponsUpgraded = (saveData.stats.weaponsUpgraded || 0) + 1;
+
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof playSound === 'function') playSound('levelup');
 
@@ -930,208 +951,497 @@ function showWeaponBuilding() {
   }
 
   /* ================================================================
-   *  TAB 4 – SPIN WHEEL
+   *  TAB 4 – ADVANCED WEAPON SPIN WHEEL
    * ================================================================ */
+
+  /* ── Wheel Prize Pool Definitions ─────────────────────────────── */
+
+  var WHEEL_PRIZE_POOL = {
+    // Tier 1 - Basic Rewards (Gold cost: 50)
+    basic: [
+      { id: 'gold50', label: 'Gold x50', icon: '💰', type: 'gold', value: 50, rarity: 'common', weight: 25 },
+      { id: 'gold100', label: 'Gold x100', icon: '💰', type: 'gold', value: 100, rarity: 'common', weight: 20 },
+      { id: 'modUpgrade1', label: 'Weapon Mod +1', icon: '⚡', type: 'modUpgrade', value: 1, rarity: 'rare', weight: 15 },
+      { id: 'gold200', label: 'Gold x200', icon: '💰', type: 'gold', value: 200, rarity: 'rare', weight: 12 },
+      { id: 'essence10', label: 'Essence x10', icon: '✨', type: 'essence', value: 10, rarity: 'rare', weight: 10 },
+      { id: 'fireMode', label: 'Fire Mode Unlock', icon: '🔸', type: 'fireModeUnlock', rarity: 'epic', weight: 8 },
+      { id: 'ammoType', label: 'Ammo Type Unlock', icon: '🔥', type: 'ammoUnlock', rarity: 'epic', weight: 6 },
+      { id: 'jackpot', label: 'JACKPOT!', icon: '💎', type: 'gold', value: 500, rarity: 'legendary', weight: 4 },
+    ],
+
+    // Tier 2 - Premium Rewards (Gold cost: 200)
+    premium: [
+      { id: 'gold200', label: 'Gold x200', icon: '💰', type: 'gold', value: 200, rarity: 'common', weight: 20 },
+      { id: 'modUpgrade2', label: 'Weapon Mod +2', icon: '⚡', type: 'modUpgrade', value: 2, rarity: 'rare', weight: 18 },
+      { id: 'gold400', label: 'Gold x400', icon: '💰', type: 'gold', value: 400, rarity: 'rare', weight: 15 },
+      { id: 'essence25', label: 'Essence x25', icon: '✨', type: 'essence', value: 25, rarity: 'rare', weight: 14 },
+      { id: 'modUpgrade3', label: 'Weapon Mod +3', icon: '⚡', type: 'modUpgrade', value: 3, rarity: 'epic', weight: 12 },
+      { id: 'fireMode', label: 'Fire Mode Unlock', icon: '🔸', type: 'fireModeUnlock', rarity: 'epic', weight: 10 },
+      { id: 'ammoType', label: 'Ammo Type Unlock', icon: '🔥', type: 'ammoUnlock', rarity: 'epic', weight: 7 },
+      { id: 'weaponUnlock', label: 'Weapon Unlock', icon: '🎁', type: 'weaponUnlock', rarity: 'legendary', weight: 4 },
+    ],
+
+    // Tier 3 - Elite Rewards (Essence cost: 100)
+    elite: [
+      { id: 'modUpgrade3', label: 'Weapon Mod +3', icon: '⚡', type: 'modUpgrade', value: 3, rarity: 'rare', weight: 20 },
+      { id: 'essence50', label: 'Essence x50', icon: '✨', type: 'essence', value: 50, rarity: 'rare', weight: 18 },
+      { id: 'gold500', label: 'Gold x500', icon: '💰', type: 'gold', value: 500, rarity: 'rare', weight: 15 },
+      { id: 'modUpgrade5', label: 'Weapon Mod +5', icon: '⚡', type: 'modUpgrade', value: 5, rarity: 'epic', weight: 14 },
+      { id: 'fireMode', label: 'Fire Mode Unlock', icon: '🔸', type: 'fireModeUnlock', rarity: 'epic', weight: 12 },
+      { id: 'ammoType', label: 'Ammo Type Unlock', icon: '🔥', type: 'ammoUnlock', rarity: 'epic', weight: 10 },
+      { id: 'weaponUnlock', label: 'Weapon Unlock', icon: '🎁', type: 'weaponUnlock', rarity: 'legendary', weight: 8 },
+      { id: 'megaJackpot', label: 'MEGA JACKPOT!', icon: '💎', type: 'gold', value: 1000, rarity: 'mythic', weight: 3 },
+    ],
+  };
+
+  var WHEEL_TIERS = {
+    basic: { name: 'Basic Wheel', cost: 50, costType: 'gold', color: '#4FC3F7', icon: '🎰' },
+    premium: { name: 'Premium Wheel', cost: 200, costType: 'gold', color: '#AA44FF', icon: '🎡' },
+    elite: { name: 'Elite Wheel', cost: 100, costType: 'essence', color: '#F39C12', icon: '⭐' },
+  };
 
   function buildSpinWheel(panel) {
     panel.innerHTML = '';
+    _ensureUpgradeData();
 
-    var hasWheel = typeof window.GameLuckyWheel !== 'undefined';
+    // Initialize spin data if not exists
+    if (!saveData.weaponSpinWheel) {
+      saveData.weaponSpinWheel = {
+        totalSpins: 0,
+        history: [],
+        currentTier: 'basic',
+      };
+    }
 
     // Header
     var header = _html('div',
-      HEADER_FONT + 'font-size:20px;color:' + GOLD + ';text-align:center;margin:12px 0 6px;',
-      '🎰 STARTING WEAPON WHEEL');
+      HEADER_FONT + 'font-size:24px;color:' + GOLD + ';text-align:center;margin:12px 0 8px;text-shadow:0 0 12px rgba(255,215,0,0.6);',
+      '🎰 WEAPON SPIN WHEEL');
     panel.appendChild(header);
 
-    var desc = _el('div',
-      'font-size:12px;color:#888;text-align:center;margin-bottom:16px;',
-      'Spin to select your starting weapon for the next run!');
-    panel.appendChild(desc);
+    var subtitle = _el('div',
+      'font-size:13px;color:#aaa;text-align:center;margin-bottom:20px;',
+      'Spin for weapons, upgrades, and rare rewards!');
+    panel.appendChild(subtitle);
 
-    // Available start weapons
-    var startWeapons = _getAllWeapons().filter(function (w) { return _isOwned(w.id) && w.category === 'Handheld'; });
+    // Tier selector buttons
+    var tierBar = _el('div',
+      'display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;');
+    panel.appendChild(tierBar);
 
-    if (!startWeapons.length) {
-      startWeapons = _getAllWeapons().filter(function (w) { return w.id === 'gun'; });
-    }
+    var currentTier = saveData.weaponSpinWheel.currentTier || 'basic';
 
-    // Wheel wrapper — enlarged and zoomed so labels are big and readable
+    Object.keys(WHEEL_TIERS).forEach(function (tierId) {
+      var tier = WHEEL_TIERS[tierId];
+      var isActive = currentTier === tierId;
+      var canAfford = (tier.costType === 'gold' && (saveData.gold || 0) >= tier.cost) ||
+                      (tier.costType === 'essence' && (saveData.essence || 0) >= tier.cost);
+
+      var btn = _el('div',
+        'padding:10px 16px;border-radius:10px;cursor:pointer;transition:all 0.2s;' +
+        'border:2px solid ' + (isActive ? tier.color : '#444') + ';' +
+        'background:' + (isActive ? tier.color + '22' : 'rgba(0,0,0,0.3)') + ';' +
+        'font-weight:bold;font-size:13px;text-align:center;min-width:110px;' +
+        (canAfford ? '' : 'opacity:0.5;'));
+
+      btn.innerHTML = tier.icon + ' ' + tier.name + '<br>' +
+        '<span style="font-size:11px;color:#888;">' +
+        (tier.costType === 'gold' ? '💰' : '✨') + ' ' + tier.cost + '</span>';
+
+      btn.addEventListener('click', function () {
+        if (!canAfford) {
+          if (typeof playSound === 'function') playSound('invalid');
+          if (typeof showStatChange === 'function') {
+            showStatChange('Not enough ' + (tier.costType === 'gold' ? 'gold' : 'essence') + '!', 'normal');
+          }
+          return;
+        }
+        saveData.weaponSpinWheel.currentTier = tierId;
+        buildSpinWheel(panel);
+      });
+
+      tierBar.appendChild(btn);
+    });
+
+    // Get current tier prizes
+    var prizes = WHEEL_PRIZE_POOL[currentTier] || WHEEL_PRIZE_POOL.basic;
+    var tierInfo = WHEEL_TIERS[currentTier];
+
+    // Wheel container
     var wheelWrapper = _el('div',
-      'position:relative;width:340px;height:340px;margin:0 auto 20px;');
+      'position:relative;width:380px;height:380px;margin:0 auto 20px;');
     panel.appendChild(wheelWrapper);
 
-    // Visual wheel — larger (340 px) so icon + name labels are legible while spinning
+    // Build wheel with segments
     var wheelContainer = _el('div',
-      'position:absolute;top:0;left:0;width:340px;height:340px;border-radius:50%;' +
-      'background:conic-gradient(from 0deg,' +
-      _buildWheelGradient(startWeapons) + ');' +
-      'border:4px solid ' + GOLD + ';box-shadow:0 0 30px rgba(255,215,0,0.3);');
+      'position:absolute;top:0;left:0;width:380px;height:380px;border-radius:50%;' +
+      'background:conic-gradient(from 0deg,' + _buildPrizeWheelGradient(prizes) + ');' +
+      'border:5px solid ' + tierInfo.color + ';' +
+      'box-shadow:0 0 40px ' + tierInfo.color + '88,inset 0 0 30px rgba(0,0,0,0.5);' +
+      'transition:transform 3.5s cubic-bezier(0.17,0.67,0.12,0.99);');
     wheelWrapper.appendChild(wheelContainer);
 
-    // Add weapon icon + name labels on each segment so they're readable at this size
-    var segCount = startWeapons.length;
-    if (segCount > 0) {
-      var segDegLabel = 360 / segCount;
-      var wheelRadius = 170; // = wheelSize / 2 = 340 / 2
-      var labelRadius = Math.round(wheelRadius * 0.71); // ~71% out from center so labels sit in middle of segment depth
-      startWeapons.forEach(function (w, i) {
-        var midAngleDeg = segDegLabel * i + segDegLabel / 2;
-        var midAngleRad = (midAngleDeg - 90) * Math.PI / 180;
-        var lx = wheelRadius + labelRadius * Math.cos(midAngleRad);
-        var ly = wheelRadius + labelRadius * Math.sin(midAngleRad);
-        var lbl = document.createElement('div');
-        lbl.style.cssText =
-          'position:absolute;left:' + lx + 'px;top:' + ly + 'px;' +
-          'transform:translate(-50%,-50%) rotate(' + midAngleDeg + 'deg);' +
-          'text-align:center;pointer-events:none;line-height:1.15;white-space:nowrap;';
-        var iconDiv = document.createElement('div');
-        iconDiv.textContent = w.icon || '🔫';
-        iconDiv.style.cssText = 'font-size:22px;';
-        var nameDiv = document.createElement('div');
-        nameDiv.textContent = w.name;
-        nameDiv.style.cssText =
-          'font-size:9px;font-weight:900;color:#fff;' +
-          'text-shadow:0 0 3px #000,0 0 3px #000;max-width:70px;white-space:normal;';
-        lbl.appendChild(iconDiv);
-        lbl.appendChild(nameDiv);
-        wheelContainer.appendChild(lbl);
+    // Add prize labels on wheel
+    var segCount = prizes.length;
+    var segDeg = 360 / segCount;
+    var wheelRadius = 190;
+    var labelRadius = Math.round(wheelRadius * 0.7);
+
+    prizes.forEach(function (prize, i) {
+      var midAngleDeg = segDeg * i + segDeg / 2;
+      var midAngleRad = (midAngleDeg - 90) * Math.PI / 180;
+      var lx = wheelRadius + labelRadius * Math.cos(midAngleRad);
+      var ly = wheelRadius + labelRadius * Math.sin(midAngleRad);
+
+      var lbl = _el('div',
+        'position:absolute;left:' + lx + 'px;top:' + ly + 'px;' +
+        'transform:translate(-50%,-50%) rotate(' + midAngleDeg + 'deg);' +
+        'text-align:center;pointer-events:none;line-height:1.2;white-space:nowrap;');
+
+      var iconDiv = _el('div', 'font-size:26px;text-shadow:0 0 6px #000;', prize.icon || '🎁');
+      var nameDiv = _el('div',
+        'font-size:9px;font-weight:900;color:#fff;' +
+        'text-shadow:0 0 4px #000,0 0 4px #000;max-width:80px;white-space:normal;',
+        prize.label);
+
+      lbl.appendChild(iconDiv);
+      lbl.appendChild(nameDiv);
+      wheelContainer.appendChild(lbl);
+    });
+
+    // Center button
+    var centerBtn = _el('div',
+      'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);' +
+      'width:90px;height:90px;border-radius:50%;' +
+      'background:radial-gradient(circle,#1a1a2e 0%,#000 100%);' +
+      'border:4px solid ' + tierInfo.color + ';' +
+      'display:flex;align-items:center;justify-content:center;' +
+      'font-size:42px;cursor:pointer;transition:all 0.3s;z-index:2;' +
+      'box-shadow:0 0 20px ' + tierInfo.color + '66,inset 0 0 20px rgba(0,0,0,0.8);',
+      '🎯');
+
+    centerBtn.addEventListener('mouseenter', function () {
+      centerBtn.style.transform = 'translate(-50%,-50%) scale(1.1)';
+    });
+    centerBtn.addEventListener('mouseleave', function () {
+      centerBtn.style.transform = 'translate(-50%,-50%) scale(1)';
+    });
+
+    wheelContainer.appendChild(centerBtn);
+
+    // Pointer
+    var pointer = _el('div',
+      'position:absolute;top:-22px;left:50%;transform:translateX(-50%);' +
+      'font-size:36px;z-index:3;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.8));' +
+      'animation:pointerBounce 2s ease-in-out infinite;', '▼');
+    pointer.style.color = tierInfo.color;
+    wheelWrapper.appendChild(pointer);
+
+    // Add pointer bounce animation
+    if (!document.getElementById('wheel-pointer-bounce')) {
+      var style = document.createElement('style');
+      style.id = 'wheel-pointer-bounce';
+      style.textContent = `
+        @keyframes pointerBounce {
+          0%, 100% { transform: translateX(-50%) translateY(0px); }
+          50% { transform: translateX(-50%) translateY(-8px); }
+        }
+        @keyframes prizePulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.15); opacity: 0.9; }
+        }
+        @keyframes prizeGlow {
+          0%, 100% { box-shadow: 0 0 20px currentColor; }
+          50% { box-shadow: 0 0 40px currentColor, 0 0 60px currentColor; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Spin state
+    var spinning = false;
+
+    // Spin button
+    var canAffordSpin = (tierInfo.costType === 'gold' && (saveData.gold || 0) >= tierInfo.cost) ||
+                         (tierInfo.costType === 'essence' && (saveData.essence || 0) >= tierInfo.cost);
+
+    var spinBtn = _el('div',
+      'text-align:center;padding:14px 28px;border-radius:12px;cursor:pointer;' +
+      'background:linear-gradient(135deg,' + tierInfo.color + ',#FFA000);' +
+      'color:#000;font-weight:bold;' + HEADER_FONT + 'font-size:20px;' +
+      'letter-spacing:1.5px;margin:0 auto;max-width:250px;' +
+      'box-shadow:0 4px 12px rgba(0,0,0,0.4);transition:all 0.2s;' +
+      (canAffordSpin ? '' : 'opacity:0.5;cursor:not-allowed;'),
+      '🎰 SPIN! (' + (tierInfo.costType === 'gold' ? '💰' : '✨') + tierInfo.cost + ')');
+
+    if (canAffordSpin) {
+      spinBtn.addEventListener('mouseenter', function () {
+        spinBtn.style.transform = 'scale(1.05)';
+        spinBtn.style.boxShadow = '0 6px 16px rgba(0,0,0,0.5)';
+      });
+      spinBtn.addEventListener('mouseleave', function () {
+        spinBtn.style.transform = 'scale(1)';
+        spinBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
       });
     }
 
-    // Center circle
-    var centerCircle = _el('div',
-      'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);' +
-      'width:70px;height:70px;border-radius:50%;background:#1a1a2e;border:3px solid ' + GOLD + ';' +
-      'display:flex;align-items:center;justify-content:center;font-size:32px;cursor:pointer;' +
-      'transition:transform 0.2s;z-index:2;', '🎯');
-    wheelContainer.appendChild(centerCircle);
-
-    // Pointer (top of wheel, outside wrapper)
-    var pointer = _el('div',
-      'position:absolute;top:-18px;left:50%;transform:translateX(-50%);' +
-      'font-size:28px;z-index:3;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));', '▼');
-    pointer.style.color = GOLD;
-    wheelWrapper.appendChild(pointer);
-
-    // Spin button
-    var spinning = false;
-    var spinBtn = _el('div',
-      'text-align:center;padding:12px 24px;border-radius:10px;cursor:pointer;' +
-      'background:linear-gradient(135deg,' + GOLD + ',#FFA000);color:#000;font-weight:bold;' +
-      HEADER_FONT + 'font-size:18px;letter-spacing:1px;margin:0 auto;max-width:200px;',
-      '🎰 SPIN!');
     panel.appendChild(spinBtn);
 
-    // Result bubble — clean inner text only, no coloured background rectangle
+    // Result display
     var resultEl = _el('div',
-      'text-align:center;font-size:16px;color:#fff;margin-top:14px;min-height:24px;');
+      'text-align:center;font-size:16px;color:#fff;margin-top:20px;min-height:30px;');
     panel.appendChild(resultEl);
 
-    spinBtn.addEventListener('click', function () {
-      if (spinning || !startWeapons.length) return;
+    // Stats display
+    var statsEl = _el('div',
+      'text-align:center;font-size:12px;color:#888;margin-top:12px;',
+      'Total Spins: ' + (saveData.weaponSpinWheel.totalSpins || 0));
+    panel.appendChild(statsEl);
+
+    // Spin logic
+    centerBtn.addEventListener('click', performSpin);
+    spinBtn.addEventListener('click', performSpin);
+
+    function performSpin() {
+      if (spinning || !canAffordSpin) {
+        if (!canAffordSpin && typeof playSound === 'function') playSound('invalid');
+        return;
+      }
+
+      // Deduct cost
+      if (tierInfo.costType === 'gold') {
+        saveData.gold = (saveData.gold || 0) - tierInfo.cost;
+      } else {
+        saveData.essence = (saveData.essence || 0) - tierInfo.cost;
+      }
+
+      // Track achievement stat
+      if (!saveData.stats) {
+        saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+      }
+      saveData.stats.spinWheelSpins = (saveData.stats.spinWheelSpins || 0) + 1;
+
       spinning = true;
       spinBtn.style.opacity = '0.5';
       spinBtn.style.pointerEvents = 'none';
+      centerBtn.style.pointerEvents = 'none';
       resultEl.textContent = '';
-      resultEl.style.background = '';
-      resultEl.style.border = '';
+      resultEl.style.animation = '';
 
       if (typeof playSound === 'function') playSound('collect');
+      if (typeof refreshGold === 'function') refreshGold();
 
-      var totalDeg = 360 * 5 + Math.random() * 360;
-      wheelContainer.style.transition = 'transform 3s cubic-bezier(0.17,0.67,0.12,0.99)';
+      // Weighted random selection
+      var wonPrize = _weightedPickPrize(prizes);
+
+      // Calculate spin amount to land on prize
+      var prizeIndex = prizes.indexOf(wonPrize);
+      var targetAngle = (segDeg * prizeIndex) + (segDeg / 2);
+      var totalDeg = 360 * 6 + targetAngle + Math.random() * 30 - 15;
+
       wheelContainer.style.transform = 'rotate(' + totalDeg + 'deg)';
 
       setTimeout(function () {
         spinning = false;
-        spinBtn.style.opacity = '1';
-        spinBtn.style.pointerEvents = 'auto';
+        spinBtn.style.opacity = canAffordSpin ? '1' : '0.5';
+        spinBtn.style.pointerEvents = canAffordSpin ? 'auto' : 'none';
+        centerBtn.style.pointerEvents = 'auto';
 
-        var segDeg = 360 / startWeapons.length;
-        var finalAngle = ((totalDeg % 360) + 360) % 360;
-        var idx = Math.floor(finalAngle / segDeg) % startWeapons.length;
-        var chosen = startWeapons[idx];
+        // Update stats
+        saveData.weaponSpinWheel.totalSpins = (saveData.weaponSpinWheel.totalSpins || 0) + 1;
+        saveData.weaponSpinWheel.history = saveData.weaponSpinWheel.history || [];
+        saveData.weaponSpinWheel.history.push({ prize: wonPrize.id, time: Date.now() });
+        if (saveData.weaponSpinWheel.history.length > 50) {
+          saveData.weaponSpinWheel.history = saveData.weaponSpinWheel.history.slice(-50);
+        }
 
+        // Award prize
+        _awardSpinPrize(wonPrize);
+
+        // Show result
         if (typeof playSound === 'function') playSound('levelup');
 
-        var rarityCol = RARITY_COLORS[chosen.rarity] || '#aaa';
-        // Clean result bubble: rounded border only, no solid background rectangle
+        var rarityCol = RARITY_COLORS[wonPrize.rarity] || '#aaa';
         resultEl.style.cssText =
-          'text-align:center;font-size:16px;color:#fff;margin-top:14px;min-height:24px;' +
-          'display:inline-block;width:100%;padding:10px 0;' +
-          'border:2px solid ' + rarityCol + ';border-radius:14px;' +
-          'background:rgba(0,0,0,0.55);';
-        resultEl.textContent = '';
-        var iconSpan = _el('span', 'font-size:36px;display:block;margin-bottom:4px;', chosen.icon);
-        var nameSpan = _el('span', 'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:22px;display:block;', chosen.name);
-        var msgSpan = _el('span', 'color:#aaa;font-size:12px;display:block;margin-top:2px;', 'Starting weapon selected!');
+          'text-align:center;font-size:18px;margin-top:20px;min-height:30px;' +
+          'padding:16px;border-radius:14px;' +
+          'border:3px solid ' + rarityCol + ';' +
+          'background:radial-gradient(circle,' + rarityCol + '22 0%,transparent 70%);' +
+          'animation:prizePulse 1s ease-in-out;' +
+          'box-shadow:0 0 30px ' + rarityCol + '88;';
+
+        var iconSpan = _el('div', 'font-size:48px;margin-bottom:8px;animation:prizePulse 0.8s ease-in-out;', wonPrize.icon);
+        var nameSpan = _el('div',
+          'color:' + rarityCol + ';' + HEADER_FONT + 'font-size:24px;margin-bottom:6px;text-shadow:0 0 10px ' + rarityCol + ';',
+          wonPrize.label);
+        var raritySpan = _el('div',
+          'font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:1px;',
+          wonPrize.rarity + ' PRIZE');
+
         resultEl.appendChild(iconSpan);
         resultEl.appendChild(nameSpan);
-        resultEl.appendChild(msgSpan);
+        resultEl.appendChild(raritySpan);
 
-        // Store selection
-        saveData.startWeapon = chosen.id;
+        statsEl.textContent = 'Total Spins: ' + saveData.weaponSpinWheel.totalSpins;
+
         if (typeof saveSaveData === 'function') saveSaveData();
-      }, 3200);
+
+        // Refresh to update costs
+        canAffordSpin = (tierInfo.costType === 'gold' && (saveData.gold || 0) >= tierInfo.cost) ||
+                         (tierInfo.costType === 'essence' && (saveData.essence || 0) >= tierInfo.cost);
+        spinBtn.style.opacity = canAffordSpin ? '1' : '0.5';
+        spinBtn.style.cursor = canAffordSpin ? 'pointer' : 'not-allowed';
+      }, 3800);
+    }
+  }
+
+  /* ── Helper functions for spin wheel ───────────────────────────── */
+
+  function _buildPrizeWheelGradient(prizes) {
+    var colors = [];
+    var segPercent = 100 / prizes.length;
+
+    prizes.forEach(function (prize, i) {
+      var col = RARITY_COLORS[prize.rarity] || '#555';
+      var start = segPercent * i;
+      var end = segPercent * (i + 1);
+      colors.push(col + ' ' + start + '%');
+      colors.push(col + ' ' + end + '%');
     });
 
-    // Lucky Wheel integration
-    if (hasWheel) {
-      panel.appendChild(_el('hr', 'border:none;border-top:1px solid rgba(255,215,0,0.15);margin:20px 0;'));
+    return colors.join(',');
+  }
 
-      var luckyTitle = _html('div',
-        HEADER_FONT + 'font-size:16px;color:' + GOLD + ';text-align:center;margin-bottom:8px;',
-        '🍀 LUCKY WHEEL');
-      panel.appendChild(luckyTitle);
+  function _weightedPickPrize(prizes) {
+    var totalWeight = prizes.reduce(function (sum, p) { return sum + p.weight; }, 0);
+    var rand = Math.random() * totalWeight;
+    var cumulative = 0;
 
-      var luckyDesc = _el('div',
-        'font-size:12px;color:#888;text-align:center;margin-bottom:12px;',
-        'Access the Lucky Wheel for bonus prizes');
-      panel.appendChild(luckyDesc);
-
-      var luckyBtn = _el('div',
-        'text-align:center;padding:10px 20px;border-radius:10px;cursor:pointer;' +
-        'background:linear-gradient(135deg,#AA44FF,#7B2FBE);color:#fff;font-weight:bold;' +
-        HEADER_FONT + 'font-size:15px;max-width:200px;margin:0 auto;',
-        '🎡 Open Lucky Wheel');
-      luckyBtn.addEventListener('click', function () {
-        overlay.remove();
-        if (window.GameLuckyWheel && typeof window.GameLuckyWheel.showWheel === 'function') {
-          window.GameLuckyWheel.showWheel();
-        } else if (typeof showLuckyWheel === 'function') {
-          showLuckyWheel();
-        }
-      });
-      panel.appendChild(luckyBtn);
+    for (var i = 0; i < prizes.length; i++) {
+      cumulative += prizes[i].weight;
+      if (rand < cumulative) return prizes[i];
     }
 
-    // Weapon list
-    panel.appendChild(_el('hr', 'border:none;border-top:1px solid rgba(255,255,255,0.08);margin:20px 0;'));
+    return prizes[prizes.length - 1];
+  }
 
-    var listTitle = _html('div',
-      HEADER_FONT + 'font-size:16px;color:' + CYAN + ';text-align:center;margin-bottom:10px;',
-      '📋 AVAILABLE START WEAPONS');
-    panel.appendChild(listTitle);
+  function _awardSpinPrize(prize) {
+    switch (prize.type) {
+      case 'gold':
+        saveData.gold = (saveData.gold || 0) + prize.value;
+        if (typeof refreshGold === 'function') refreshGold();
+        if (typeof showStatChange === 'function') {
+          showStatChange('💰 +' + prize.value + ' Gold!', 'stat');
+        }
+        break;
 
-    startWeapons.forEach(function (w) {
-      var rarityCol = RARITY_COLORS[w.rarity] || '#aaa';
-      var effective = _getEffectiveStats(w);
-      var isCurrent = saveData.startWeapon === w.id;
+      case 'essence':
+        saveData.essence = (saveData.essence || 0) + prize.value;
+        if (typeof showStatChange === 'function') {
+          showStatChange('✨ +' + prize.value + ' Essence!', 'stat');
+        }
+        break;
 
-      var row = _el('div',
-        'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;' +
-        'background:' + (isCurrent ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)') + ';' +
-        'border:1px solid ' + (isCurrent ? GOLD + '55' : 'transparent') + ';');
-      panel.appendChild(row);
+      case 'modUpgrade':
+        // Award random weapon mod upgrade
+        var ownedWeapons = _getAllWeapons().filter(function (w) { return _isOwned(w.id); });
+        if (ownedWeapons.length > 0) {
+          var randomWeapon = ownedWeapons[Math.floor(Math.random() * ownedWeapons.length)];
+          var mods = getWeaponMods(randomWeapon.id);
+          var modTypes = ['speed', 'power', 'cooldown', 'sight'];
+          var availableMods = modTypes.filter(function (m) {
+            return (mods[m] || 0) < WEAPON_MOD_DEFS[m].maxLevel;
+          });
 
-      row.appendChild(_el('div', 'font-size:28px;flex-shrink:0;', w.icon));
+          if (availableMods.length > 0) {
+            var randomMod = availableMods[Math.floor(Math.random() * availableMods.length)];
+            mods[randomMod] = Math.min(
+              (mods[randomMod] || 0) + prize.value,
+              WEAPON_MOD_DEFS[randomMod].maxLevel
+            );
+            saveData.weaponUpgrades[randomWeapon.id] = mods;
+            if (typeof showStatChange === 'function') {
+              showStatChange('⚡ ' + randomWeapon.name + ' ' + WEAPON_MOD_DEFS[randomMod].name + ' +' + prize.value + '!', 'stat');
+            }
+          }
+        }
+        break;
 
-      var info = _el('div', 'flex:1;min-width:0;');
-      row.appendChild(info);
+      case 'fireModeUnlock':
+        // Unlock random fire mode for owned weapons
+        var ownedWeapons = _getAllWeapons().filter(function (w) { return _isOwned(w.id); });
+        if (ownedWeapons.length > 0) {
+          var randomWeapon = ownedWeapons[Math.floor(Math.random() * ownedWeapons.length)];
+          var mods = getWeaponMods(randomWeapon.id);
+          mods.unlockedFireModes = mods.unlockedFireModes || ['single'];
 
-      info.appendChild(_html('div', 'font-size:13px;color:#fff;font-weight:bold;',
-        w.name + (isCurrent ? ' <span style="color:' + GOLD + ';font-size:10px;">⭐ SELECTED</span>' : '')));
+          var availableModes = FIRE_MODE_ORDER.filter(function (m) {
+            return mods.unlockedFireModes.indexOf(m) === -1;
+          });
+
+          if (availableModes.length > 0) {
+            var newMode = availableModes[0]; // Unlock in order
+            mods.unlockedFireModes.push(newMode);
+            if (typeof showStatChange === 'function') {
+              showStatChange('🔸 ' + randomWeapon.name + ' ' + WEAPON_FIRE_MODES[newMode].name + ' Mode Unlocked!', 'stat');
+            }
+          }
+        }
+        break;
+
+      case 'ammoUnlock':
+        // Unlock random ammo type for owned weapons
+        var ownedWeapons = _getAllWeapons().filter(function (w) { return _isOwned(w.id); });
+        if (ownedWeapons.length > 0) {
+          var randomWeapon = ownedWeapons[Math.floor(Math.random() * ownedWeapons.length)];
+          var mods = getWeaponMods(randomWeapon.id);
+          mods.unlockedAmmo = mods.unlockedAmmo || ['standard'];
+
+          var availableAmmo = Object.keys(WEAPON_AMMO_TYPES).filter(function (a) {
+            return mods.unlockedAmmo.indexOf(a) === -1;
+          });
+
+          if (availableAmmo.length > 0) {
+            var newAmmo = availableAmmo[Math.floor(Math.random() * availableAmmo.length)];
+            mods.unlockedAmmo.push(newAmmo);
+            if (typeof showStatChange === 'function') {
+              showStatChange('🔥 ' + randomWeapon.name + ' ' + WEAPON_AMMO_TYPES[newAmmo].name + ' Unlocked!', 'stat');
+            }
+          }
+        }
+        break;
+
+      case 'weaponUnlock':
+        // Unlock random locked weapon
+        var allWeapons = _getAllWeapons();
+        var lockedWeapons = allWeapons.filter(function (w) { return !_isOwned(w.id); });
+
+        if (lockedWeapons.length > 0) {
+          // Prefer lower rarity weapons for basic unlocks
+          var commonLocked = lockedWeapons.filter(function (w) { return w.rarity === 'common' || w.rarity === 'rare'; });
+          var toUnlock = commonLocked.length > 0 ? commonLocked : lockedWeapons;
+          var randomWeapon = toUnlock[Math.floor(Math.random() * toUnlock.length)];
+
+          // Check if GameWeapons exists to properly unlock
+          if (typeof window.GameWeapons !== 'undefined' && window.GameWeapons.weapons) {
+            if (window.GameWeapons.weapons[randomWeapon.id]) {
+              window.GameWeapons.weapons[randomWeapon.id].active = true;
+            }
+          }
+
+          if (typeof showStatChange === 'function') {
+            showStatChange('🎁 ' + randomWeapon.icon + ' ' + randomWeapon.name + ' Unlocked!', 'legendary');
+          }
+        } else {
+          // All weapons unlocked, award gold instead
+          saveData.gold = (saveData.gold || 0) + 300;
+          if (typeof showStatChange === 'function') {
+            showStatChange('💰 +300 Gold (All weapons unlocked!)', 'stat');
+          }
+        }
+        break;
+    }
+  }
 
       var miniStats = _el('div', 'display:flex;gap:8px;font-size:11px;color:#888;margin-top:2px;');
       info.appendChild(miniStats);

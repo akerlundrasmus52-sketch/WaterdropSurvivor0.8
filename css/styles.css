@@ -3219,10 +3219,74 @@
       margin-top: 4px;
     }
 
+    /* Dopamine-inducing skill unlock animation */
     @keyframes skillPurchased {
-      0%   { transform: scale(1); }
-      50%  { transform: scale(1.35); filter: brightness(2.2); /* extra-bright flash to signal purchase */ }
-      100% { transform: scale(1); }
+      0%   {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 12px rgba(46,204,113,0.3);
+      }
+      15%  {
+        transform: scale(0.85);
+        filter: brightness(1.5);
+        box-shadow: 0 0 20px rgba(255,215,0,0.6);
+      }
+      40%  {
+        transform: scale(1.4);
+        filter: brightness(3) saturate(2);
+        box-shadow:
+          0 0 40px rgba(255,215,0,1),
+          0 0 60px rgba(255,255,255,0.8),
+          inset 0 0 30px rgba(255,215,0,0.5);
+      }
+      70%  {
+        transform: scale(1.1);
+        filter: brightness(2);
+        box-shadow: 0 0 35px rgba(46,204,113,0.8);
+      }
+      85%  {
+        transform: scale(0.95);
+        filter: brightness(1.3);
+        box-shadow: 0 0 20px rgba(46,204,113,0.5);
+      }
+      100% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 12px rgba(46,204,113,0.3);
+      }
+    }
+
+    /* Apply unlock animation when skill is purchased */
+    .skill-node.just-unlocked {
+      animation: skillPurchased 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Particle burst effect overlay for unlock */
+    .skill-unlock-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 12px;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    @keyframes particleBurst {
+      0% {
+        transform: scale(0.5) rotate(0deg);
+        opacity: 1;
+        filter: blur(0px);
+      }
+      50% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 0.8;
+        filter: blur(2px);
+      }
+      100% {
+        transform: scale(3) rotate(360deg);
+        opacity: 0;
+        filter: blur(8px);
+      }
     }
 
     .skill-node:hover {
@@ -3440,25 +3504,30 @@
       }
       
       /* Optimize level-up cards for portrait iPhone 16 */
-      /* ── 2×2 GRID: guaranteed 4 cards on screen simultaneously ── */
+      /* ── 2×2 GRID: guaranteed 4 cards on screen simultaneously, perfectly centered ── */
       #upgrade-list, #level-up-choices {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        gap: 10px;
         width: 100%;
+        max-width: 100%;
         box-sizing: border-box;
         overflow: visible;
+        padding: 0 12px; /* Padding to prevent cards from touching screen edges */
+        margin: 0 auto; /* Center the grid horizontally */
+        justify-items: center; /* Center cards within grid cells */
       }
 
       .upgrade-card {
-        width: auto !important;
-        max-width: none !important;
+        width: 100% !important; /* Fill grid cell width */
+        max-width: 180px !important; /* Prevent cards from getting too wide */
         min-width: 0 !important;
         height: auto !important;
         max-height: 42vw;           /* ~160px on 380px-wide phone */
         padding: 8px !important;
         font-size: clamp(8px, 1.7vw, 11px);
         overflow: hidden;
+        box-sizing: border-box; /* Include padding in width calculation */
       }
 
       .upgrade-title {
@@ -3546,8 +3615,13 @@
         bottom: 12px !important;
       }
 
-      /* Show settings/stats buttons in landscape (enough horizontal space) */
+      /* In landscape mode, hide overlapping buttons - only show menu button
+         User accesses these features through the menu button instead */
       #settings-btn, #stats-btn, #equipment-btn {
+        display: none !important;
+      }
+
+      #menu-btn {
         display: flex !important;
       }
     }
@@ -3589,7 +3663,7 @@
       }
       
       #upgrade-list {
-        gap: 8px; /* Use consistent gap for the 2×2 grid */
+        gap: 10px; /* Use consistent gap with main portrait mode */
       }
     }
     
@@ -3675,12 +3749,15 @@
         box-sizing: border-box;
       }
 
-      /* Galaxy S10 / small-360: 2×2 grid keeps all 4 cards on-screen */
+      /* Galaxy S10 / small-360: 2×2 grid keeps all 4 cards on-screen, perfectly centered */
       #upgrade-list, #level-up-choices {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
-        gap: 6px;
+        gap: 8px;
         overflow: visible;
+        padding: 0 10px; /* Padding to prevent cards from touching screen edges */
+        margin: 0 auto; /* Center the grid horizontally */
+        justify-items: center; /* Center cards within grid cells */
       }
 
       #upgrade-list > *, #level-up-choices > * {
@@ -8281,4 +8358,268 @@
   height: 36px;
   background: radial-gradient(circle, rgba(255,215,0,0.4) 0%, transparent 70%);
   border-radius: 50%;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STAT CARDS SYSTEM - Slot Machine Style
+   ══════════════════════════════════════════════════════════════════════ */
+
+#stat-cards-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
+  display: none;
+  overflow-y: auto;
+}
+
+.stat-cards-container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  color: white;
+}
+
+.stat-cards-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 15px;
+  border: 2px solid #ffaa00;
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.3);
+}
+
+.stat-cards-header h2 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: bold;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+.close-button {
+  background: rgba(255, 68, 68, 0.8);
+  border: 2px solid #ff4444;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.close-button:hover {
+  background: #ff4444;
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.8);
+}
+
+.stat-cards-info {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.info-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffaa00;
+}
+
+.purchase-button {
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 30px;
+  background: linear-gradient(135deg, #ff8800 0%, #ff4400 100%);
+  border: 3px solid #ffaa00;
+  border-radius: 15px;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 5px 20px rgba(255, 136, 0, 0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.purchase-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(255, 136, 0, 0.8);
+  background: linear-gradient(135deg, #ffaa00 0%, #ff6600 100%);
+}
+
+.purchase-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 3px 15px rgba(255, 136, 0, 0.5);
+}
+
+.purchase-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  animation: pulse 1s infinite;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  padding: 10px;
+}
+
+@media (min-width: 600px) {
+  .cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-card {
+  aspect-ratio: 0.7;
+  background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+  border: 3px solid #444;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: rotate(45deg);
+  transition: all 0.5s;
+}
+
+.stat-card:hover::before {
+  left: 100%;
+}
+
+.stat-card.highlighted {
+  border-color: #ffaa00;
+  box-shadow: 0 0 30px rgba(255, 170, 0, 0.8);
+  animation: cardJump 0.3s ease-in-out;
+}
+
+@keyframes cardJump {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-15px) scale(1.15); }
+}
+
+.card-back {
+  font-size: 64px;
+  color: #ffaa00;
+  text-shadow: 0 0 20px rgba(255, 170, 0, 0.8);
+  animation: cardBackGlow 2s ease-in-out infinite;
+}
+
+@keyframes cardBackGlow {
+  0%, 100% { opacity: 0.6; text-shadow: 0 0 20px rgba(255, 170, 0, 0.5); }
+  50% { opacity: 1; text-shadow: 0 0 30px rgba(255, 170, 0, 1); }
+}
+
+.stat-card.flipped {
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+  border-color: #00ff88;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+}
+
+.card-level {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 170, 0, 0.9);
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.card-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.card-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  margin-bottom: 5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.card-value {
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 0 0 10px currentColor;
+}
+
+@keyframes cardFlip {
+  0% { transform: rotateY(0deg) scale(1); }
+  50% { transform: rotateY(90deg) scale(1.1); }
+  100% { transform: rotateY(0deg) scale(1); }
+}
+
+@keyframes popupAppear {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes popupDisappear {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  90% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
