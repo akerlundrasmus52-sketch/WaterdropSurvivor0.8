@@ -82,7 +82,7 @@
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       // ACES Filmic tone mapping gives a cinematic, naturally bright result on mobile.
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.4;
+      renderer.toneMappingExposure = 1.48; // Enhanced from 1.4 for better visibility and vibrancy
       const gameContainer = document.getElementById('game-container');
       if (!gameContainer) {
         console.error('[Init] #game-container element not found - cannot append renderer canvas');
@@ -111,12 +111,12 @@
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
       // Using camp-style lighting: warmer ambient + cooler directional for depth
-      window.ambientLight = new THREE.AmbientLight(0xffeedd, 0.65); // Warm ambient (reduced intensity)
+      window.ambientLight = new THREE.AmbientLight(0xffeedd, 0.68); // Enhanced warm ambient (was 0.65)
       scene.add(window.ambientLight);
 
       // Realistic sun/moon with soft dynamic shadows
       const frustumHalf = RENDERER_CONFIG.shadowFrustumHalfSize;
-      window.dirLight = new THREE.DirectionalLight(0xffffee, 0.9); // Warm daylight (reduced intensity)
+      window.dirLight = new THREE.DirectionalLight(0xffffee, 0.95); // Enhanced warm daylight (was 0.9)
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
       window.dirLight.shadow.mapSize.width = RENDERER_CONFIG.defaultShadowMapSize;
@@ -134,7 +134,7 @@
 
       // Camp-style atmospheric point light (subtle fill)
       // Creates warmth and depth like the campfire in camp scene
-      window.fillLight = new THREE.PointLight(0xffaa66, 0.4, 40, 2);
+      window.fillLight = new THREE.PointLight(0xffaa66, 0.45, 40, 2); // Enhanced intensity (was 0.4)
       window.fillLight.position.set(0, 5, 0); // Above center of world
       scene.add(window.fillLight);
 

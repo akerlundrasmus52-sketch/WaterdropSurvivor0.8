@@ -80,12 +80,14 @@
         
         // Use camp-style MeshPhongMaterial for better visuals and performance
         const material = new THREE.MeshPhongMaterial({
-          color: COLORS.player,       // Light blue 0x4FC3F7
-          emissive: 0x0d47a1,         // Dark blue emissive glow
-          emissiveIntensity: 0.3,
-          shininess: 90,              // High shine like water
+          color: 0x3A9FD8,             // Deeper sea-blue like water (was 0x4FC3F7 light blue)
+          emissive: 0x0A3D5C,          // Deep ocean blue emissive glow (was 0x0d47a1)
+          emissiveIntensity: 0.35,     // Slightly more glow
+          shininess: 120,              // Higher shine like lake/sea water (was 90)
+          specular: 0x88CCFF,          // Bright specular highlights for wet look
           transparent: true,
-          opacity: 0.85
+          opacity: 0.88,               // Slightly more opaque for better depth
+          reflectivity: 0.6            // Add reflectivity for water-like appearance
         });
 
         // Annunaki Protocol: permanent gold/liquid-metal texture
@@ -104,27 +106,50 @@
         this.mesh.receiveShadow = true;
         scene.add(this.mesh);
         
-        // Add water shine effect (multiple layers)
+        // Add water shine effect (multiple layers for realistic water look)
         const shineGeo = new THREE.SphereGeometry(0.52, 16, 16);
-        const shineMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFFFFFF, 
-          transparent: true, 
-          opacity: 0.25,
+        const shineMat = new THREE.MeshBasicMaterial({
+          color: 0xCCEEFF,         // Light cyan shine (was 0xFFFFFF pure white)
+          transparent: true,
+          opacity: 0.28,           // Slightly stronger (was 0.25)
           side: THREE.BackSide
         });
         this.shine = new THREE.Mesh(shineGeo, shineMat);
         this.mesh.add(this.shine);
-        
-        // Add reflection highlight
-        const highlightGeo = new THREE.SphereGeometry(0.15, 16, 16);
-        const highlightMat = new THREE.MeshBasicMaterial({ 
-          color: 0xFFFFFF, 
-          transparent: true, 
-          opacity: 0.8
+
+        // Add reflection highlight - primary glance
+        const highlightGeo = new THREE.SphereGeometry(0.16, 16, 16);  // Slightly larger (was 0.15)
+        const highlightMat = new THREE.MeshBasicMaterial({
+          color: 0xDDFFFF,         // Bright cyan-white for water reflections (was 0xFFFFFF)
+          transparent: true,
+          opacity: 0.85            // Slightly stronger (was 0.8)
         });
         this.highlight = new THREE.Mesh(highlightGeo, highlightMat);
         this.highlight.position.set(-0.2, 0.3, 0.2);
         this.mesh.add(this.highlight);
+
+        // Add secondary reflection - for realistic water glance
+        const highlight2Geo = new THREE.SphereGeometry(0.10, 12, 12);
+        const highlight2Mat = new THREE.MeshBasicMaterial({
+          color: 0xAAEEFF,
+          transparent: true,
+          opacity: 0.6
+        });
+        this.highlight2 = new THREE.Mesh(highlight2Geo, highlight2Mat);
+        this.highlight2.position.set(0.15, 0.25, 0.25);
+        this.mesh.add(this.highlight2);
+
+        // Add subtle blue shimmer effect for lake/sea appearance
+        const shimmerGeo = new THREE.SphereGeometry(0.54, 16, 16);
+        const shimmerMat = new THREE.MeshBasicMaterial({
+          color: 0x2277AA,
+          transparent: true,
+          opacity: 0.15,
+          side: THREE.BackSide,
+          blending: THREE.AdditiveBlending  // Additive for glow effect
+        });
+        this.shimmer = new THREE.Mesh(shimmerGeo, shimmerMat);
+        this.mesh.add(this.shimmer);
         
         // Eyes — large and prominent matching spritesheet character design
         const eyeWhiteGeo = new THREE.SphereGeometry(0.13, 8, 8);
@@ -234,12 +259,14 @@
         // Arms — thick and stubby with fist ends matching spritesheet
         const armGeo = new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8);
         const limbMaterial = new THREE.MeshPhongMaterial({
-          color: COLORS.player,
-          emissive: 0x0d47a1,
-          emissiveIntensity: 0.15,
-          shininess: 90,
+          color: 0x3A9FD8,             // Match deeper sea-blue body color
+          emissive: 0x0A3D5C,          // Match deep ocean blue emissive
+          emissiveIntensity: 0.35,     // Match body for consistent glow
+          shininess: 120,              // Match body's enhanced water shine
+          specular: 0x88CCFF,          // Bright specular highlights for wet look
           transparent: true,
-          opacity: 0.85
+          opacity: 0.88,               // Match body opacity
+          reflectivity: 0.6            // Match body reflectivity for consistent water appearance
         });
         
         // Left arm

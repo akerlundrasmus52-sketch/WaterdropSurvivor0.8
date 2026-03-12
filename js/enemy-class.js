@@ -38,13 +38,14 @@
       const key = colorHex.toString(16) + (opts && opts.transparent ? '_t' : '');
       if (!SHARED_MAT_CACHE[key]) {
         // Use MeshPhongMaterial with emissive glow for better visuals (camp style)
-        // Emissive color is darkened (60% of base) to prevent washing out the appearance
-        const darkEmissive = new THREE.Color(colorHex).multiplyScalar(0.6);
+        // Emissive color is darkened (55% of base) to prevent washing out the appearance
+        const darkEmissive = new THREE.Color(colorHex).multiplyScalar(0.55);
         const m = new THREE.MeshPhongMaterial(Object.assign({
           color: colorHex,
           emissive: darkEmissive,
-          emissiveIntensity: 0.15,  // Subtle inner glow
-          shininess: 40              // Water-like shine
+          emissiveIntensity: 0.18,  // Enhanced inner glow (was 0.15)
+          shininess: 50,             // Enhanced water-like shine (was 40)
+          specular: 0x444444         // Add subtle specular highlights
         }, opts || {}));
         m._isShared = true;
         SHARED_MAT_CACHE[key] = m;
