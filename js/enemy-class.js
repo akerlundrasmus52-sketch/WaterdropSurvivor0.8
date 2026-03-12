@@ -634,8 +634,22 @@
         const _isBoss = (type === 10 || type === 11 || type === 19);
         this.mesh.castShadow = _isBoss;
         this.mesh.receiveShadow = _isBoss;
-        this._usesInstancing = false;
-        scene.add(this.mesh);
+
+        // ── INSTANCING: Types 0, 1, 2 use instanced rendering for performance ────────
+        // Check if the instanced renderer is available and active. If so, mark this
+        // enemy for instancing (mesh won't be added to scene, rendered via InstancedMesh)
+        // and hide its individual mesh. Otherwise fall back to regular scene rendering.
+        const _shouldInstance = (type === 0 || type === 1 || type === 2)
+          && window._instancedRenderer && window._instancedRenderer.active;
+
+        if (_shouldInstance) {
+          this._usesInstancing = true;
+          this.mesh.visible = false; // Hidden — rendered via InstancedMesh batch
+          // Don't add to scene — instanced renderer handles it
+        } else {
+          this._usesInstancing = false;
+          scene.add(this.mesh);
+        }
 
         // ── HEAD — proper sphere sitting on top of the torso body ───────────────────
         // Uses SHARED_HEAD_GEO (one geometry for all enemies) + a slightly lighter
@@ -1646,7 +1660,15 @@
         // Squishy idle breathing at 1.5Hz (9.4 rad/s) — only when not in hit reaction
         this.pulsePhase += dt * 9.4;
         const squish = Math.sin(this.pulsePhase) * 0.05;
-        
+
+        // ── DISTANCE-BASED LOD: Skip expensive animations for distant enemies ──────────
+        // Calculate squared distance once for all animation checks below.
+        // Near enemies (< 50 units) get full animation fidelity; distant ones skip
+        // expensive operations like eye tracking, head bob, leg animation, etc.
+        const _animDistSq = (this.mesh.position.x - playerPos.x) * (this.mesh.position.x - playerPos.x)
+                          + (this.mesh.position.z - playerPos.z) * (this.mesh.position.z - playerPos.z);
+        const _skipExpensiveAnims = _animDistSq > 2500; // 50² = far enough to skip details
+
         if (!this._squishTimer) {
         // MiniBoss glowing effect
         if (this.isMiniBoss) {
@@ -1668,8 +1690,8 @@
         }
         } // end !_squishTimer breathing
         
-        // Blinking eyes animation
-        if (this.leftEye && this.rightEye) {
+        // Blinking eyes animation (skip for distant enemies — not visible anyway)
+        if (!_skipExpensiveAnims && this.leftEye && this.rightEye) {
           this.blinkTimer += dt;
           if (this.blinkTimer >= this.nextBlinkTime) {
             this.isBlinking = true;
@@ -1690,15 +1712,15 @@
           }
         }
         
-        // Eye tracking: non-instanced enemies rotate eyes toward player each frame
-        if (this.leftEye && this.rightEye && !this._usesInstancing && playerPos) {
+        // Eye tracking: non-instanced enemies rotate eyes toward player each frame (skip for distant)
+        if (!_skipExpensiveAnims && this.leftEye && this.rightEye && !this._usesInstancing && playerPos) {
           _tmpHeadTarget.set(playerPos.x, this.mesh.position.y + 0.1, playerPos.z);
           this.leftEye.lookAt(_tmpHeadTarget);
           this.rightEye.lookAt(_tmpHeadTarget);
         }
 
-        // Idle sway: gentle rotation.z oscillation at 0.8Hz (5.03 rad/s)
-        if (!this._squishTimer && !this.isFrozen) {
+        // Idle sway: gentle rotation.z oscillation at 0.8Hz (5.03 rad/s) (skip for distant)
+        if (!_skipExpensiveAnims && !this._squishTimer && !this.isFrozen) {
           this.mesh.rotation.z = Math.sin(gameTime * 5.03 + this.wobbleOffset) * 0.03;
         }
 
@@ -1712,10 +1734,10 @@
           this.groundShadow.material.opacity = Math.max(0.05, _baseOp - _shadowHeight * 0.03);
         }
 
-        // ── Organic "Snail/Worm Pump" Locomotion ─────────────────────────────────────
+        // ── Organic "Snail/Worm Pump" Locomotion (skip for distant enemies) ────────────
         // Animate the segmented anatomy groups for a squishy, organic movement feel.
         // Runs continuously — hit-squish is applied additively on top of the base scale.
-        if (this.baseGroup && this.headGroup && this.torsoGroup) {
+        if (!_skipExpensiveAnims && this.baseGroup && this.headGroup && this.torsoGroup) {
           const _pump     = Math.sin(gameTime * 4.0 + this.wobbleOffset);
           const _mvX      = this._lastMoveVX || 0;
           const _mvZ      = this._lastMoveVZ || 0;
@@ -1771,8 +1793,8 @@
           }
         }
 
-        // ── LEG ANIMATION — walk-cycle tilt proportional to movement speed ────────
-        if (this._legs && this._legs.length > 0) {
+        // ── LEG ANIMATION — walk-cycle tilt proportional to movement speed (skip for distant) ────
+        if (!_skipExpensiveAnims && this._legs && this._legs.length > 0) {
           const _legMvX = this._lastMoveVX || 0;
           const _legMvZ = this._lastMoveVZ || 0;
           const _legSpd = Math.sqrt(_legMvX * _legMvX + _legMvZ * _legMvZ);
