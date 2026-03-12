@@ -1694,13 +1694,56 @@
         // Phase 5: Hit impact particles (flesh/blood) on every hit — scaled with HP ratio
         const hpRatio = this.hp / this.maxHp;
         const isHeavyHit = HEAVY_HIT_TYPES.includes(damageType) || isCrit;
-        const bloodParticleCount = Math.max(5, Math.floor((1 - hpRatio) * 18) + 5);
-        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 20)); // Blood particles
-        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 8)); // Darker blood
+        const bloodParticleCount = Math.max(8, Math.floor((1 - hpRatio) * 25) + 8); // Increased base from 5 to 8
+        spawnParticles(this.mesh.position, 0x8B0000, Math.min(bloodParticleCount, 30)); // Increased max from 20 to 30
+        spawnParticles(this.mesh.position, 0x660000, Math.min(Math.floor(bloodParticleCount * 0.5), 12)); // Increased from 8 to 12
         if (isHeavyHit) {
-          spawnParticles(this.mesh.position, 0xCC0000, 6); // Bright red burst for heavy hits
-          spawnParticles(this.mesh.position, 0xAA0000, 4);
+          spawnParticles(this.mesh.position, 0xCC0000, 10); // Increased from 6 to 10
+          spawnParticles(this.mesh.position, 0xAA0000, 8); // Increased from 4 to 8
+          spawnParticles(this.mesh.position, 0xFF0000, 6); // Added extra bright red particles
         }
+        if (isCrit) {
+          // Extra impact particles for crits
+          spawnParticles(this.mesh.position, 0xFFFF00, 8); // Yellow flash
+          spawnParticles(this.mesh.position, 0xFFAA00, 6); // Orange glow
+        }
+
+        // Enhanced screen shake for impactful hit feedback
+        if (typeof window.triggerScreenShake === 'function') {
+          let shakeIntensity = 0.08; // Base shake for normal hits
+
+          if (isCrit) {
+            shakeIntensity = 0.25; // Strong shake for critical hits
+          } else if (isHeavyHit) {
+            shakeIntensity = 0.18; // Medium-strong shake for heavy weapons
+          }
+
+          // Extra shake based on damage amount
+          const damageScale = Math.min(amount / 200, 1.0);
+          shakeIntensity += damageScale * 0.12;
+
+          // Boss hits shake more
+          if (this.isBoss) {
+            shakeIntensity *= 1.5;
+          }
+
+          window.triggerScreenShake(shakeIntensity);
+        }
+
+        // Hit-stop effect for heavy weapons - brief time freeze for impact feel
+        if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
+          if (isCrit && amount > 100) {
+            // Big crit hits: 70ms freeze
+            window.DopamineSystem.TimeDilation.snap(0.0, 70);
+          } else if (isHeavyHit && amount > 50) {
+            // Heavy weapon hits: 40ms freeze
+            window.DopamineSystem.TimeDilation.snap(0.0, 40);
+          } else if (SHOTGUN_TYPES.includes(damageType)) {
+            // Shotgun hits: 30ms freeze for satisfying pellet impact
+            window.DopamineSystem.TimeDilation.snap(0.0, 30);
+          }
+        }
+
         // Ground blood decal — more on heavy hits
         spawnBloodDecal(this.mesh.position);
         if (isHeavyHit) {
