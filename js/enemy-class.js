@@ -122,6 +122,19 @@
     window.SHARED_PUPIL_MAT  = SHARED_PUPIL_MAT;
     window.ENEMY_TYPES_WITH_EYES = ENEMY_TYPES_WITH_EYES;
 
+    // ── Shared eye layout helper — returns canonical eye position/scale for a type ───────────
+    // Defined once here and exposed via window so object-pool.js can use the same values
+    // without duplicating the lookup logic.  Keeps eye positioning in sync everywhere.
+    function getEnemyEyeLayout(type) {
+      return {
+        scale: (type >= 12 && type <= 14) ? 1.2 : 0.85,
+        yPos:  (type >= 12 && type <= 14) ? 0.90 : 0.92,
+        zPos:  (type === 10 || type === 11 || type === 19) ? 1.10 : 0.42,
+        xPos:  (type >= 12 && type <= 14) ? 0.28 : 0.22,
+      };
+    }
+    window.getEnemyEyeLayout = getEnemyEyeLayout;
+
     // ── Shared leg geometry — used by all legged enemy types (one geo, many instances) ──────
     // Capsule sticks oriented vertically; each leg Mesh has its own world-space transform.
     const SHARED_LEG_GEO  = new THREE.CapsuleGeometry(0.038, 0.38, 2, 4);
@@ -130,6 +143,18 @@
     SHARED_LLEG_GEO._isShared = true;
     window.SHARED_LEG_GEO  = SHARED_LEG_GEO;
     window.SHARED_LLEG_GEO = SHARED_LLEG_GEO;
+
+    // ── Shared head geometry (3-part anatomy: Base / Torso / Head) ──────────────────────────
+    // One sphere used as the head for all creature-type enemies. Sized so it sits
+    // naturally on top of the standard body sphere without per-enemy VRAM cost.
+    const SHARED_HEAD_GEO = new THREE.SphereGeometry(0.42, 6, 6);
+    SHARED_HEAD_GEO._isShared = true;
+    window.SHARED_HEAD_GEO = SHARED_HEAD_GEO;
+
+    // ── Shared guts geometry — inner-organ sphere revealed when torso takes heavy damage ─────
+    const SHARED_GUTS_GEO = new THREE.SphereGeometry(0.28, 5, 4);
+    SHARED_GUTS_GEO._isShared = true;
+    window.SHARED_GUTS_GEO = SHARED_GUTS_GEO;
 
     let hardTankGeometryCache = null;
 
@@ -612,27 +637,34 @@
         this._usesInstancing = false;
         scene.add(this.mesh);
 
-        // ── HEAD NUBBIN — small dark indicator on top of each enemy ─────────────────
-        this.headMesh = new THREE.Mesh(SHARED_GEO.cube, SHARED_MAT.black);
-        this.headMesh.scale.setScalar(0.3);
-        this.headMesh.position.y = 0.7;
+        // ── HEAD — proper sphere sitting on top of the torso body ───────────────────
+        // Uses SHARED_HEAD_GEO (one geometry for all enemies) + a slightly lighter
+        // variant of the body colour from the shared material cache → zero extra VRAM.
+        // Position y=0.95 overlaps the top of the body sphere (radius≈1) slightly so
+        // the head reads as a natural continuation of the silhouette, not a floating ball.
+        const _headR = Math.min(255, ((_colorHex >> 16) & 0xFF) + 45);
+        const _headG = Math.min(255, ((_colorHex >>  8) & 0xFF) + 45);
+        const _headB = Math.min(255, ( _colorHex        & 0xFF) + 45);
+        const _headColorHex = (_headR << 16) | (_headG << 8) | _headB;
+        const _headMat = getOrCreateMat(_headColorHex);
+        this.headMesh = new THREE.Mesh(SHARED_HEAD_GEO, _headMat);
+        this.headMesh.position.y = 0.95;
         this.mesh.add(this.headMesh);
 
-        // ── EYES — restored for creature-type enemies using shared geometry/material ─
-        // Each eye is a child of this.mesh; no new geometries are allocated per enemy.
+        // ── EYES — placed on the forward face of the head sphere ────────────────────
+        // Each eye is a child of this.mesh (NOT headMesh) so world-space positioning
+        // is unaffected by the head's lookAt() rotation.  Positions are chosen so the
+        // eyes sit just in front of the head sphere's surface at head-centre height.
         this.leftEye  = null;
         this.rightEye = null;
         if (ENEMY_TYPES_WITH_EYES.has(type)) {
           const _eyeL = new THREE.Mesh(SHARED_EYE_GEO, SHARED_EYE_MAT);
           const _eyeR = new THREE.Mesh(SHARED_EYE_GEO, SHARED_EYE_MAT);
-          // Bug-type enemies (12-14) have larger, more expressive eyes
-          const _eyeScale = (type >= 12 && type <= 14) ? 1.2 : 0.85;
-          _eyeL.scale.setScalar(_eyeScale);
-          _eyeR.scale.setScalar(_eyeScale);
-          // Eyes sit on the forward face of the sphere; Z depth depends on enemy radius
-          const _eyeZ = (type === 10 || type === 11 || type === 19) ? 1.15 : ((type >= 12 && type <= 14) ? 0.9 : 0.88);
-          _eyeL.position.set(-0.32, 0.28, _eyeZ);
-          _eyeR.position.set( 0.32, 0.28, _eyeZ);
+          const _el = getEnemyEyeLayout(type);
+          _eyeL.scale.setScalar(_el.scale);
+          _eyeR.scale.setScalar(_el.scale);
+          _eyeL.position.set(-_el.xPos, _el.yPos, _el.zPos);
+          _eyeR.position.set( _el.xPos, _el.yPos, _el.zPos);
           // Add black pupils as child meshes so they inherit lookAt() tracking
           const _pupilL = new THREE.Mesh(SHARED_PUPIL_GEO, SHARED_PUPIL_MAT);
           const _pupilR = new THREE.Mesh(SHARED_PUPIL_GEO, SHARED_PUPIL_MAT);
@@ -755,6 +787,15 @@
           this._anatBaseMesh.rotation.x = -Math.PI / 2;
           this._anatBaseMesh.position.y = 0.01;
           this.mesh.add(this._anatBaseMesh);
+
+          // ── GUTS CONTAINER — inner-organ sphere revealed when torso takes heavy damage ─
+          // Uses SHARED_GUTS_GEO + shared dark-red transparent material → no per-enemy VRAM.
+          // Starts hidden; shown by takeDamage() once torso HP drops below 50%.
+          const _gutsMat = getOrCreateMat(0x8B0000, { transparent: true, opacity: 0.88 });
+          this._gutsContainer = new THREE.Mesh(SHARED_GUTS_GEO, _gutsMat);
+          this._gutsContainer.position.y = 0.22;
+          this._gutsContainer.visible = false;
+          this.mesh.add(this._gutsContainer);
         } else {
           this._anatBaseMesh = null;
         }
@@ -765,7 +806,7 @@
           this.baseGroup  = this.mesh;
           this.torsoGroup = this.mesh;
           this.headGroup  = this.headMesh;
-          this._headGroupBaseY = this.headMesh.position.y; // 0.7
+          this._headGroupBaseY = this.headMesh.position.y; // 0.95
         }
 
         // ── TYPE-SPECIFIC AI STATE (no new meshes — pure numeric state) ─────────────
@@ -3482,8 +3523,11 @@
         // so acquireEnemy() can re-discover and restore them on recycle.
         if (_leftEye)  _leftEye.visible = false;
         if (_rightEye) _rightEye.visible = false;
-        // Also hide head nubbin during death fade (it uses its own opaque material)
+        // Also hide head sphere during death fade (it uses its own opaque material)
         if (this.headMesh) this.headMesh.visible = false;
+        // Hide guts container so it doesn't remain opaque while the body fades out.
+        // The shared geo/mat must never be disposed; just toggling visibility is enough.
+        if (this._gutsContainer) this._gutsContainer.visible = false;
         // Capture anatomy part refs so the managed animation can dispose their GL resources
         const _anatBaseMesh = this._anatBaseMesh;
         const _anatHeadMesh = this._anatHeadMesh;
