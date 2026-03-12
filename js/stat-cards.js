@@ -244,6 +244,12 @@
         // Apply stat bonus
         applyStatBonus(selectedCard.statType, bonusValue);
 
+        // Track achievement stat
+        if (!window.saveData.stats) {
+            window.saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+        }
+        window.saveData.stats.statCardsUsed = (window.saveData.stats.statCardsUsed || 0) + 1;
+
         // Visual feedback
         highlightSelectedCard(cardIndex, rarity);
         flipCard(cardIndex);

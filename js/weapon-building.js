@@ -702,6 +702,13 @@ function showWeaponBuilding() {
     saveData.gold -= cost;
     mods[modKey] = (mods[modKey] || 0) + 1;
     saveData.weaponUpgrades[weaponId] = mods;
+
+    // Track achievement stat
+    if (!saveData.stats) {
+      saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+    }
+    saveData.stats.weaponsUpgraded = (saveData.stats.weaponsUpgraded || 0) + 1;
+
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof playSound === 'function') playSound('levelup');
 
@@ -744,6 +751,13 @@ function showWeaponBuilding() {
       saveData.weaponUpgrades[weaponId].unlockedFireModes = [];
     saveData.weaponUpgrades[weaponId].unlockedFireModes.push(fmKey);
     saveData.weaponUpgrades[weaponId].fireMode = fmKey;
+
+    // Track achievement stat
+    if (!saveData.stats) {
+      saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+    }
+    saveData.stats.weaponsUpgraded = (saveData.stats.weaponsUpgraded || 0) + 1;
+
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof playSound === 'function') playSound('levelup');
 
@@ -781,6 +795,13 @@ function showWeaponBuilding() {
       saveData.weaponUpgrades[weaponId].unlockedAmmo = [];
     saveData.weaponUpgrades[weaponId].unlockedAmmo.push(ammoKey);
     saveData.weaponUpgrades[weaponId].ammoType = ammoKey;
+
+    // Track achievement stat
+    if (!saveData.stats) {
+      saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+    }
+    saveData.stats.weaponsUpgraded = (saveData.stats.weaponsUpgraded || 0) + 1;
+
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof playSound === 'function') playSound('levelup');
 
@@ -1193,6 +1214,12 @@ function showWeaponBuilding() {
       } else {
         saveData.essence = (saveData.essence || 0) - tierInfo.cost;
       }
+
+      // Track achievement stat
+      if (!saveData.stats) {
+        saveData.stats = { itemsCrafted: 0, weaponsUpgraded: 0, statCardsUsed: 0, spinWheelSpins: 0, companionsLeveled: 0, buildingsUpgraded: 0, questsCompleted: 0, skillsUnlocked: 0, gearsEquipped: 0 };
+      }
+      saveData.stats.spinWheelSpins = (saveData.stats.spinWheelSpins || 0) + 1;
 
       spinning = true;
       spinBtn.style.opacity = '0.5';
