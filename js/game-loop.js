@@ -1528,7 +1528,7 @@
       // Track landmark visits for quest11_findAllLandmarks
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest11_findAllLandmarks') {
         if (!saveData.tutorialQuests.landmarksFound) {
-          saveData.tutorialQuests.landmarksFound = { stonehenge: false, pyramid: false, montana: false, teslaTower: false };
+          saveData.tutorialQuests.landmarksFound = { stonehenge: false, pyramid: false, montana: false, teslaTower: false, eiffel: false };
         }
         const lf = saveData.tutorialQuests.landmarksFound;
         const px = player.mesh.position.x, pz = player.mesh.position.z;

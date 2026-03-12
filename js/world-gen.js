@@ -1785,7 +1785,7 @@
         if (distToSegment(x, z, r * 0.9,   r * 0.436, 18, 18)     < PATH_WIDTH) return true; // → Windmill (OPTIMIZED from 25, 25)
         if (distToSegment(x, z, -r * 0.707, -r * 0.707, -30, -30) < PATH_WIDTH) return true; // → Tesla Tower (OPTIMIZED from -50, -50)
         if (distToSegment(x, z, r * 0.707, -r * 0.707, 25, -20)   < PATH_WIDTH) return true; // → Pyramid (OPTIMIZED from 35, -35)
-        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 20, -20)   < PATH_WIDTH) return true; // → Lake
+        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 14, -14)   < PATH_WIDTH) return true; // → Lake (OPTIMIZED from 20, -20)
 
         // Building exclusion zones
         if (Math.sqrt((x - 18) ** 2 + (z - 18) ** 2)   < 8)  return true; // Windmill (OPTIMIZED from 25, 25)
@@ -1804,9 +1804,9 @@
       // Tree-specific placement validation: extends isPositionExcluded with extra landmark zones
       function isTreePlacementValid(x, z) {
         if (isPositionExcluded(x, z)) return false;
-        if (Math.sqrt((x + 13) ** 2 + (z - 13) ** 2) < 18) return false; // Colosseum (OPTIMIZED from 18, 18)
+        if (Math.sqrt((x + 13) ** 2 + (z - 13) ** 2) < 18) return false; // Colosseum (OPTIMIZED from -18, 18)
         // Extra lake buffer for trees (prevent clipping into water)
-        if (Math.sqrt((x - 20) ** 2 + (z + 20) ** 2) < 24) return false; // Lake + buffer
+        if (Math.sqrt((x - 14) ** 2 + (z + 14) ** 2) < 24) return false; // Lake + buffer (OPTIMIZED from 20, -20)
         return true;
       }
 
@@ -2813,9 +2813,9 @@
 
       // --- RIVERS: 2 winding paths of flat blue planes ---
       const riverMat = new THREE.MeshBasicMaterial({ color: 0x4499CC, transparent: true, opacity: 0.65 });
-      // River 1: from lake (20,-20) northeast toward Stonehenge direction
+      // River 1: from lake (14,-14) northeast toward Stonehenge direction - OPTIMIZED: Updated to new lake position
       const river1Points = [
-        [20, -20], [16, -10], [13, 0], [10, 10], [16, 20]
+        [14, -14], [12, -6], [10, 2], [8, 10], [12, 18]
       ];
       for (let r = 0; r < river1Points.length - 1; r++) {
         const [ax, az] = river1Points[r];
