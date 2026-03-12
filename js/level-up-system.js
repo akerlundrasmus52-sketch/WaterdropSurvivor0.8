@@ -313,7 +313,12 @@ class BossChest {
     this.mesh       = null;
     try {
       const geo = new THREE.BoxGeometry(1.2, 1.0, 0.9);
-      const mat = new THREE.MeshLambertMaterial({ color: 0xFFD700, emissive: new THREE.Color(0xFFAA00), emissiveIntensity: 1.2 });
+      const mat = new THREE.MeshPhongMaterial({
+        color: 0xFFD700,
+        emissive: new THREE.Color(0xFFAA00),
+        emissiveIntensity: 1.2,
+        shininess: 100  // High shininess for golden treasure effect
+      });
       this.mesh = new THREE.Mesh(geo, mat);
       this.mesh.position.set(x, 0.5, z);
       this.mesh.castShadow = true;
