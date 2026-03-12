@@ -5,7 +5,7 @@
 // Colour palette used throughout the scene
 const COLORS = {
   bg: 0xFFE8D6, // Warm peachy sky (camp-style atmospheric)
-  player: 0x4FC3F7, // Light Blue - more like water droplet
+  player: 0x3A9FD8, // Deeper sea-blue like water (was 0x4FC3F7 light blue)
   enemySquare: 0xFF69B4, // Hot Pink
   enemyTriangle: 0xFFD700, // Gold
   enemyRound: 0x9370DB, // Purple
