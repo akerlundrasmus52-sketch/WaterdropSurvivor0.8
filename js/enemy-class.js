@@ -2830,15 +2830,27 @@
           // Black smoke rising from the burning flesh
           if (typeof smokeParticles !== 'undefined' && typeof MAX_SMOKE_PARTICLES !== 'undefined' &&
               smokeParticles.length < MAX_SMOKE_PARTICLES && scene) {
-            const _smokeGeo = new THREE.SphereGeometry(0.09, 5, 5);
-            const _smokeMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.5 });
-            const _smoke = new THREE.Mesh(_smokeGeo, _smokeMat);
-            _smoke.position.copy(this.mesh.position);
-            _smoke.position.y += 0.2 + Math.random() * 0.5;
-            scene.add(_smoke);
-            smokeParticles.push({ mesh: _smoke, material: _smokeMat, geometry: _smokeGeo,
-              velocity: { x: (Math.random()-0.5)*0.02, y: 0.025+Math.random()*0.02, z: (Math.random()-0.5)*0.02 },
-              life: 30, maxLife: 30 });
+            if (typeof _ensureSmokePool === 'function') _ensureSmokePool();
+            const _smokeEntry = (typeof _smokePool !== 'undefined' && _smokePool) ? _smokePool.get() : (() => {
+              const _sg = new THREE.SphereGeometry(0.09, 5, 5);
+              const _sm = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.5 });
+              const _s  = new THREE.Mesh(_sg, _sm);
+              return { mesh: _s, material: _sm, geometry: _sg, velocity: { x: 0, y: 0, z: 0 }, life: 0, maxLife: 30 };
+            })();
+            _smokeEntry.mesh.position.copy(this.mesh.position);
+            _smokeEntry.mesh.position.y += 0.2 + Math.random() * 0.5;
+            _smokeEntry.velocity.x = (Math.random()-0.5)*0.02;
+            _smokeEntry.velocity.y = 0.025+Math.random()*0.02;
+            _smokeEntry.velocity.z = (Math.random()-0.5)*0.02;
+            _smokeEntry.life = 30;
+            _smokeEntry.maxLife = 30;
+            if (_smokeEntry.material && _smokeEntry.material.color) {
+              _smokeEntry.material.color.setHex(0x111111);
+              _smokeEntry.material.opacity = 0.5;
+            }
+            _smokeEntry.mesh.visible = true;
+            if (!_smokeEntry.mesh.parent && scene) scene.add(_smokeEntry.mesh);
+            smokeParticles.push(_smokeEntry);
           }
         }
 
@@ -4498,14 +4510,26 @@
               ashSmokeCount--;
               if (typeof smokeParticles !== 'undefined' && typeof MAX_SMOKE_PARTICLES !== 'undefined' &&
                   smokeParticles.length < MAX_SMOKE_PARTICLES && scene) {
-                const _sg = new THREE.SphereGeometry(0.07, 5, 5);
-                const _sm = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.45 });
-                const _s  = new THREE.Mesh(_sg, _sm);
-                _s.position.set(deathPos.x + (Math.random()-0.5)*0.12, 0.1 + Math.random()*0.15, deathPos.z + (Math.random()-0.5)*0.12);
-                scene.add(_s);
-                smokeParticles.push({ mesh: _s, material: _sm, geometry: _sg,
-                  velocity: { x: (Math.random()-0.5)*0.012, y: 0.018+Math.random()*0.012, z: (Math.random()-0.5)*0.012 },
-                  life: 35, maxLife: 35 });
+                if (typeof _ensureSmokePool === 'function') _ensureSmokePool();
+                const _entry = (typeof _smokePool !== 'undefined' && _smokePool) ? _smokePool.get() : (() => {
+                  const _sg = new THREE.SphereGeometry(0.07, 5, 5);
+                  const _sm = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.45 });
+                  const _s  = new THREE.Mesh(_sg, _sm);
+                  return { mesh: _s, material: _sm, geometry: _sg, velocity: { x: 0, y: 0, z: 0 }, life: 0, maxLife: 35 };
+                })();
+                _entry.mesh.position.set(deathPos.x + (Math.random()-0.5)*0.12, 0.1 + Math.random()*0.15, deathPos.z + (Math.random()-0.5)*0.12);
+                _entry.velocity.x = (Math.random()-0.5)*0.012;
+                _entry.velocity.y = 0.018+Math.random()*0.012;
+                _entry.velocity.z = (Math.random()-0.5)*0.012;
+                _entry.life = 35;
+                _entry.maxLife = 35;
+                if (_entry.material && _entry.material.color) {
+                  _entry.material.color.setHex(0x111111);
+                  _entry.material.opacity = 0.45;
+                }
+                _entry.mesh.visible = true;
+                if (!_entry.mesh.parent && scene) scene.add(_entry.mesh);
+                smokeParticles.push(_entry);
               }
             }
             return ashSmokeCount > 0;

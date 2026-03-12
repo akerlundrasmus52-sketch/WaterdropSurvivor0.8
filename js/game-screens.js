@@ -23,8 +23,19 @@
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
-        () => new Particle(new THREE.Vector3(0, 0, 0), 0xFFFFFF),
-        (particle) => particle.mesh.visible = false,
+        () => {
+          const p = new Particle(new THREE.Vector3(0, 0, 0), 0xFFFFFF);
+          p.mesh.visible = false;
+          return p;
+        },
+        (particle) => {
+          // Keep pooled particles out of the scene to avoid stranded meshes
+          if (scene && particle.mesh.parent === scene) scene.remove(particle.mesh);
+          particle.mesh.visible = false;
+          particle.mesh.position.set(0, -9999, 0);
+          if (particle.vel) particle.vel.set(0, 0, 0);
+          particle.life = 0;
+        },
         100
       );
 
@@ -4762,34 +4773,49 @@
     function spawnMuzzleSmoke(pos, count = 5) {
       const cappedCount = Math.min(count, 3); // Cap per-call count
       _ensureSharedSmokeGeo();
+      if (typeof _ensureSmokePool === 'function') _ensureSmokePool();
       for(let i = 0; i < cappedCount; i++) {
         // Enforce global cap - just skip if full, particles expire naturally
-        if (smokeParticles.length >= MAX_SMOKE_PARTICLES) continue;
-        const smokeMat = new THREE.MeshBasicMaterial({ 
-          color: 0x666666, 
-          transparent: true, 
-          opacity: 0.5,
-          depthWrite: false
-        });
-        const smoke = new THREE.Mesh(_sharedSmokeSphereGeo, smokeMat);
-        smoke.position.set(
+        if (smokeParticles.length >= MAX_SMOKE_PARTICLES && smokeParticles.length > 0) {
+          // Recycle oldest to keep cap strict
+          const oldest = smokeParticles.shift();
+          if (scene && oldest.mesh.parent === scene) scene.remove(oldest.mesh);
+          if (_smokePool) {
+            _smokePool.release(oldest);
+          } else if (oldest.material) {
+            oldest.material.dispose();
+          }
+        }
+        const entry = _smokePool ? _smokePool.get() : (() => {
+          const mesh = new THREE.Mesh(_sharedSmokeSphereGeo, new THREE.MeshBasicMaterial({ 
+            color: 0x666666, 
+            transparent: true, 
+            opacity: 0.5,
+            depthWrite: false
+          }));
+          return {
+            mesh,
+            material: mesh.material,
+            geometry: _sharedSmokeSphereGeo,
+            velocity: { x: 0, y: 0, z: 0 },
+            life: 0,
+            maxLife: GAME_CONFIG.smokeDurationFrames
+          };
+        })();
+        entry.mesh.position.set(
           pos.x + (Math.random() - 0.5) * 0.3,
           pos.y + 0.5,
           pos.z + (Math.random() - 0.5) * 0.3
         );
-        scene.add(smoke);
-        smokeParticles.push({
-          mesh: smoke,
-          material: smokeMat,
-          geometry: _sharedSmokeSphereGeo,
-          velocity: {
-            x: (Math.random() - 0.5) * 0.02,
-            y: 0.03 + Math.random() * 0.02,
-            z: (Math.random() - 0.5) * 0.02
-          },
-          life: GAME_CONFIG.smokeDurationFrames,
-          maxLife: GAME_CONFIG.smokeDurationFrames
-        });
+        entry.velocity.x = (Math.random() - 0.5) * 0.02;
+        entry.velocity.y = 0.03 + Math.random() * 0.02;
+        entry.velocity.z = (Math.random() - 0.5) * 0.02;
+        entry.life = GAME_CONFIG.smokeDurationFrames;
+        entry.maxLife = GAME_CONFIG.smokeDurationFrames;
+        if (entry.mesh.material) entry.mesh.material.opacity = 0.5;
+        entry.mesh.visible = true;
+        if (!entry.mesh.parent && scene) scene.add(entry.mesh);
+        smokeParticles.push(entry);
       }
     }
 
@@ -5839,4 +5865,3 @@
         }, 50);
       }, 4000);
     }
-

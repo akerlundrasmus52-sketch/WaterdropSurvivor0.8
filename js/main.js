@@ -165,6 +165,12 @@
     // Smoke particles managed array (avoids RAF accumulation over long sessions)
     let smokeParticles = [];
     const MAX_SMOKE_PARTICLES = 30; // Cap to prevent performance issues
+    let _smokePool = null; // ObjectPool entries: { mesh, material, geometry, velocity, life, maxLife }
+
+    // Lava spout particles (volcano) managed array
+    let lavaParticles = [];
+    const MAX_LAVA_PARTICLES = 80; // Hard cap to prevent runaway allocs
+    let _lavaPool = null; // ObjectPool entries: { mesh, vx, vy, vz, life }
     
     // Deferred disposal queue for Three.js memory management (PR #81)
     const disposalQueue = [];
