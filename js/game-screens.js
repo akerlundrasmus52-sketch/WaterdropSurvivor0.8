@@ -99,12 +99,13 @@
 
       // Day/Night Cycle System - Non-blocking, smooth transitions
       // Store light references for day/night cycle
-      window.ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+      // Using camp-style lighting: warmer ambient + cooler directional for depth
+      window.ambientLight = new THREE.AmbientLight(0xffeedd, 0.65); // Warm ambient (reduced intensity)
       scene.add(window.ambientLight);
 
       // Realistic sun/moon with soft dynamic shadows
       const frustumHalf = RENDERER_CONFIG.shadowFrustumHalfSize;
-      window.dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      window.dirLight = new THREE.DirectionalLight(0xffffee, 0.9); // Warm daylight (reduced intensity)
       window.dirLight.position.set(50, 100, 50);
       window.dirLight.castShadow = true;
       window.dirLight.shadow.mapSize.width = RENDERER_CONFIG.defaultShadowMapSize;
@@ -119,6 +120,12 @@
       window.dirLight.shadow.bias = RENDERER_CONFIG.shadowBias; // Prevent shadow acne
       scene.add(window.dirLight);
       scene.add(window.dirLight.target); // Must add target to scene for custom target position
+
+      // Camp-style atmospheric point light (subtle fill)
+      // Creates warmth and depth like the campfire in camp scene
+      window.fillLight = new THREE.PointLight(0xffaa66, 0.4, 40, 2);
+      window.fillLight.position.set(0, 5, 0); // Above center of world
+      scene.add(window.fillLight);
 
       // Apply graphics quality settings
       // For 'auto' mode, start at 'medium' and let the FPS booster adjust from there
