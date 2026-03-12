@@ -4193,7 +4193,19 @@
     foundation.position.set(grp.position.x, 0.02, grp.position.z);
     _campScene.add(foundation);
 
-    // ═══ 2. Building scale animation with foundation glow ═══
+    // ═══ 2. Building scale animation with foundation glow and light fade-in ═══
+    // Store original light intensities and start at 0
+    const buildingLights = [];
+    grp.traverse(child => {
+      if (child.isLight && child.type === 'PointLight') {
+        buildingLights.push({
+          light: child,
+          originalIntensity: child.intensity
+        });
+        child.intensity = 0;
+      }
+    });
+
     function animStep() {
       const elapsed = performance.now() - startTime;
       const t = Math.min(elapsed / ANIM_DURATION_MS, 1.0);
@@ -4214,10 +4226,22 @@
         foundationMat.opacity = 0.6 * (1 - (t - 0.7) / 0.3); // Fade out
       }
 
+      // Fade in building lights (start at 50% progress for dramatic effect)
+      if (t > 0.5) {
+        const lightT = (t - 0.5) / 0.5; // 0 to 1 over second half of animation
+        for (const lightInfo of buildingLights) {
+          lightInfo.light.intensity = lightInfo.originalIntensity * lightT;
+        }
+      }
+
       if (t < 1.0) {
         requestAnimationFrame(animStep);
       } else {
         grp.scale.set(1, 1, 1);
+        // Ensure lights are at full intensity
+        for (const lightInfo of buildingLights) {
+          lightInfo.light.intensity = lightInfo.originalIntensity;
+        }
         _campScene.remove(foundation);
         foundationGeo.dispose();
         foundationMat.dispose();
@@ -4225,7 +4249,66 @@
     }
     requestAnimationFrame(animStep);
 
-    // ═══ 3. Enhanced multi-layer particle system ═══
+    // ═══ 3. Light beam effect shooting upward ═══
+    if (_campScene) {
+      // Create 6-8 light beams that shoot upward in a cone
+      const BEAM_COUNT = 8;
+      const beams = [];
+
+      for (let i = 0; i < BEAM_COUNT; i++) {
+        const angle = (i / BEAM_COUNT) * Math.PI * 2;
+        const beamGeo = new THREE.CylinderGeometry(0.15, 0.05, 8, 8);
+        const beamMat = new THREE.MeshBasicMaterial({
+          color: 0xFFD700,
+          transparent: true,
+          opacity: 0.7,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        const beam = new THREE.Mesh(beamGeo, beamMat);
+        beam.position.set(
+          grp.position.x + Math.sin(angle) * 1.5,
+          4,
+          grp.position.z + Math.cos(angle) * 1.5
+        );
+        beam.rotation.x = Math.PI * 0.05; // Slight outward tilt
+        beam.rotation.z = -angle;
+        beam.scale.set(1, 0.01, 1); // Start compressed
+        _campScene.add(beam);
+        beams.push({ mesh: beam, mat: beamMat, angle: angle });
+      }
+
+      // Animate beams shooting up
+      const beamStartMs = performance.now();
+      function animBeams() {
+        const bt = Math.min((performance.now() - beamStartMs) / 1000, 1);
+
+        for (const beamInfo of beams) {
+          // Beams shoot up quickly then fade
+          if (bt < 0.4) {
+            beamInfo.mesh.scale.y = bt / 0.4; // Shoot up
+            beamInfo.mat.opacity = 0.7;
+          } else {
+            beamInfo.mat.opacity = 0.7 * (1 - (bt - 0.4) / 0.6); // Fade out
+          }
+        }
+
+        if (bt < 1) {
+          requestAnimationFrame(animBeams);
+        } else {
+          // Cleanup
+          for (const beamInfo of beams) {
+            _campScene.remove(beamInfo.mesh);
+            beamInfo.mesh.geometry.dispose();
+            beamInfo.mat.dispose();
+          }
+        }
+      }
+      requestAnimationFrame(animBeams);
+    }
+
+    // ═══ 4. Enhanced multi-layer particle system ═══
     if (_campScene) {
       // Layer 1: Golden burst particles (radial explosion)
       const BURST_COUNT = 80; // More particles for dramatic effect
