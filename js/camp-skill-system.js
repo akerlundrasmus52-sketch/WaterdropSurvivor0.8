@@ -167,7 +167,7 @@
         }
       },
       forge: {
-        name: 'Progression Upgrades',
+        name: 'Weaponsmith',
         icon: '⚒️',
         description: 'Craft and upgrade weapons. Higher tiers unlock better rarities',
         baseCost: 250,
@@ -185,6 +185,18 @@
             craftingTier: tier
           };
         }
+      },
+      progressionCenter: {
+        name: 'Progression Center',
+        icon: '💪',
+        description: 'Purchase permanent stat upgrades. Increase damage, health, speed, and more!',
+        baseCost: 250,
+        costMultiplier: 1.8,
+        maxCost: 100000,
+        bonus: (level) => ({
+          upgradeDiscount: 0.05 * level, // +5% discount on upgrades per level
+          upgradeSlots: Math.floor(level / 2) + 3 // +1 upgrade slot every 2 levels, starting at 3
+        })
       },
       armory: {
         name: 'Armory',

@@ -1884,6 +1884,7 @@
           },
         trainingHall:        () => { overlay.remove(); document.getElementById('camp-training-tab').click(); },
         forge:               () => { overlay.remove(); showProgressionShop(); },
+        progressionCenter:   () => { overlay.remove(); if (window.ProgressionCenter) window.ProgressionCenter.show(); },
         companionHouse:      () => { overlay.remove(); showCompanionHouse(); },
         achievementBuilding: () => {
           overlay.remove();
