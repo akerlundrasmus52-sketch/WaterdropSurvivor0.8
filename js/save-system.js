@@ -42,6 +42,20 @@
       },
       achievements: [],
       achievementQuests: { kill7Unlocked: false, kill7Quest: 'none' }, // 'none'|'active'|'complete'
+      // Achievement tracking stats
+      stats: {
+        itemsCrafted: 0,        // Total items crafted at Artisan's Workshop
+        weaponsUpgraded: 0,     // Total weapon upgrades purchased
+        statCardsUsed: 0,       // Total stat cards used at Warehouse
+        spinWheelSpins: 0,      // Total weapon spin wheel spins
+        companionsLeveled: 0,   // Total companion levels gained
+        buildingsUpgraded: 0,   // Total camp buildings upgraded
+        questsCompleted: 0,     // Total quests completed
+        skillsUnlocked: 0,      // Total skills unlocked in skill tree
+        gearsEquipped: 0        // Total times gear equipped
+      },
+      accountLevel: 1,          // Player's account profile level
+      accountXP: 0,             // Account XP for leveling
       // Achievement-based attribute points
       attributes: {
         dexterity: 0,
@@ -782,7 +796,63 @@
       level75: { id: 'level75', name: 'Elite Warrior', desc: 'Reach Level 75', reward: 750, skillPoints: 3, attributePoints: 3, check: () => playerStats.lvl >= 75, claimed: false },
       level100: { id: 'level100', name: 'Legendary Hero', desc: 'Reach Level 100', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => playerStats.lvl >= 100, claimed: false },
       level125: { id: 'level125', name: 'Unstoppable Force', desc: 'Reach Level 125', reward: 1250, skillPoints: 4, attributePoints: 4, check: () => playerStats.lvl >= 125, claimed: false },
-      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, skillPoints: 5, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false }
+      level150: { id: 'level150', name: 'Ascended Champion', desc: 'Reach Level 150', reward: 1500, skillPoints: 5, attributePoints: 5, check: () => playerStats.lvl >= 150, claimed: false },
+
+      // CRAFTING ACHIEVEMENTS - Artisan's Workshop
+      craft1: { id: 'craft1', name: 'First Creation', desc: 'Craft your first item', reward: 10, skillPoints: 0, attributePoints: 0, check: () => saveData.stats && saveData.stats.itemsCrafted >= 1, claimed: false },
+      craft5: { id: 'craft5', name: 'Novice Artisan', desc: 'Craft 5 items', reward: 25, skillPoints: 1, attributePoints: 0, check: () => saveData.stats && saveData.stats.itemsCrafted >= 5, claimed: false },
+      craft10: { id: 'craft10', name: 'Apprentice Crafter', desc: 'Craft 10 items', reward: 50, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.itemsCrafted >= 10, claimed: false },
+      craft25: { id: 'craft25', name: 'Skilled Craftsman', desc: 'Craft 25 items', reward: 100, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.itemsCrafted >= 25, claimed: false },
+      craft50: { id: 'craft50', name: 'Master Artisan', desc: 'Craft 50 items', reward: 200, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.itemsCrafted >= 50, claimed: false },
+      craft100: { id: 'craft100', name: 'Legendary Smith', desc: 'Craft 100 items', reward: 400, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.itemsCrafted >= 100, claimed: false },
+      craft250: { id: 'craft250', name: 'Grand Artificer', desc: 'Craft 250 items', reward: 750, skillPoints: 3, attributePoints: 3, check: () => saveData.stats && saveData.stats.itemsCrafted >= 250, claimed: false },
+      craft500: { id: 'craft500', name: 'Divine Creator', desc: 'Craft 500 items', reward: 1200, skillPoints: 4, attributePoints: 4, check: () => saveData.stats && saveData.stats.itemsCrafted >= 500, claimed: false },
+
+      // STAT CARD ACHIEVEMENTS - Warehouse Slot Machine
+      statCard1: { id: 'statCard1', name: 'Lucky Spin', desc: 'Use your first stat card', reward: 15, skillPoints: 0, attributePoints: 0, check: () => saveData.stats && saveData.stats.statCardsUsed >= 1, claimed: false },
+      statCard5: { id: 'statCard5', name: 'Card Collector', desc: 'Use 5 stat cards', reward: 30, skillPoints: 1, attributePoints: 0, check: () => saveData.stats && saveData.stats.statCardsUsed >= 5, claimed: false },
+      statCard10: { id: 'statCard10', name: 'Fortune Seeker', desc: 'Use 10 stat cards', reward: 60, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.statCardsUsed >= 10, claimed: false },
+      statCard25: { id: 'statCard25', name: 'Slot Master', desc: 'Use 25 stat cards', reward: 120, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.statCardsUsed >= 25, claimed: false },
+      statCard50: { id: 'statCard50', name: 'Jackpot Hunter', desc: 'Use 50 stat cards', reward: 250, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.statCardsUsed >= 50, claimed: false },
+      statCard100: { id: 'statCard100', name: 'High Roller', desc: 'Use 100 stat cards', reward: 450, skillPoints: 3, attributePoints: 3, check: () => saveData.stats && saveData.stats.statCardsUsed >= 100, claimed: false },
+      statCard250: { id: 'statCard250', name: 'Casino Legend', desc: 'Use 250 stat cards', reward: 800, skillPoints: 3, attributePoints: 3, check: () => saveData.stats && saveData.stats.statCardsUsed >= 250, claimed: false },
+
+      // WEAPON UPGRADE ACHIEVEMENTS - Weapon Building
+      weaponUpg1: { id: 'weaponUpg1', name: 'First Upgrade', desc: 'Purchase your first weapon upgrade', reward: 10, skillPoints: 0, attributePoints: 0, check: () => saveData.stats && saveData.stats.weaponsUpgraded >= 1, claimed: false },
+      weaponUpg5: { id: 'weaponUpg5', name: 'Arsenal Builder', desc: 'Purchase 5 weapon upgrades', reward: 25, skillPoints: 1, attributePoints: 0, check: () => saveData.stats && saveData.stats.weaponsUpgraded >= 5, claimed: false },
+      weaponUpg10: { id: 'weaponUpg10', name: 'Weapon Specialist', desc: 'Purchase 10 weapon upgrades', reward: 50, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.weaponsUpgraded >= 10, claimed: false },
+      weaponUpg25: { id: 'weaponUpg25', name: 'Arms Dealer', desc: 'Purchase 25 weapon upgrades', reward: 100, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.weaponsUpgraded >= 25, claimed: false },
+      weaponUpg50: { id: 'weaponUpg50', name: 'Military Expert', desc: 'Purchase 50 weapon upgrades', reward: 200, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.weaponsUpgraded >= 50, claimed: false },
+      weaponUpg100: { id: 'weaponUpg100', name: 'Weapons Master', desc: 'Purchase 100 weapon upgrades', reward: 400, skillPoints: 3, attributePoints: 3, check: () => saveData.stats && saveData.stats.weaponsUpgraded >= 100, claimed: false },
+
+      // SPIN WHEEL ACHIEVEMENTS - Weapon Building Spin Wheel
+      spin1: { id: 'spin1', name: 'First Spin', desc: 'Spin the weapon wheel once', reward: 10, skillPoints: 0, attributePoints: 0, check: () => saveData.stats && saveData.stats.spinWheelSpins >= 1, claimed: false },
+      spin10: { id: 'spin10', name: 'Wheel Enthusiast', desc: 'Spin the wheel 10 times', reward: 50, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.spinWheelSpins >= 10, claimed: false },
+      spin25: { id: 'spin25', name: 'Lucky Spinner', desc: 'Spin the wheel 25 times', reward: 100, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.spinWheelSpins >= 25, claimed: false },
+      spin50: { id: 'spin50', name: 'Wheel Addict', desc: 'Spin the wheel 50 times', reward: 200, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.spinWheelSpins >= 50, claimed: false },
+      spin100: { id: 'spin100', name: 'Spin Champion', desc: 'Spin the wheel 100 times', reward: 350, skillPoints: 3, attributePoints: 3, check: () => saveData.stats && saveData.stats.spinWheelSpins >= 100, claimed: false },
+
+      // ACCOUNT LEVEL ACHIEVEMENTS - Profile Building
+      account5: { id: 'account5', name: 'Growing Legend', desc: 'Reach Account Level 5', reward: 100, skillPoints: 1, attributePoints: 1, check: () => saveData.accountLevel >= 5, claimed: false },
+      account10: { id: 'account10', name: 'Rising Hero', desc: 'Reach Account Level 10', reward: 200, skillPoints: 2, attributePoints: 2, check: () => saveData.accountLevel >= 10, claimed: false },
+      account25: { id: 'account25', name: 'Experienced Veteran', desc: 'Reach Account Level 25', reward: 400, skillPoints: 2, attributePoints: 2, check: () => saveData.accountLevel >= 25, claimed: false },
+      account50: { id: 'account50', name: 'Elite Champion', desc: 'Reach Account Level 50', reward: 700, skillPoints: 3, attributePoints: 3, check: () => saveData.accountLevel >= 50, claimed: false },
+      account75: { id: 'account75', name: 'Master Survivor', desc: 'Reach Account Level 75', reward: 1000, skillPoints: 4, attributePoints: 4, check: () => saveData.accountLevel >= 75, claimed: false },
+      account100: { id: 'account100', name: 'Legendary Account', desc: 'Reach Account Level 100', reward: 1500, skillPoints: 5, attributePoints: 5, check: () => saveData.accountLevel >= 100, claimed: false },
+
+      // SKILL TREE ACHIEVEMENTS
+      skill1: { id: 'skill1', name: 'First Skill', desc: 'Unlock your first skill', reward: 15, skillPoints: 0, attributePoints: 0, check: () => saveData.stats && saveData.stats.skillsUnlocked >= 1, claimed: false },
+      skill5: { id: 'skill5', name: 'Skill Learner', desc: 'Unlock 5 skills', reward: 40, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.skillsUnlocked >= 5, claimed: false },
+      skill10: { id: 'skill10', name: 'Skill Collector', desc: 'Unlock 10 skills', reward: 75, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.skillsUnlocked >= 10, claimed: false },
+      skill25: { id: 'skill25', name: 'Skill Master', desc: 'Unlock 25 skills', reward: 150, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.skillsUnlocked >= 25, claimed: false },
+      skill48: { id: 'skill48', name: 'Complete Mastery', desc: 'Unlock all 48 skills', reward: 500, skillPoints: 5, attributePoints: 5, check: () => saveData.stats && saveData.stats.skillsUnlocked >= 48, claimed: false },
+
+      // QUEST ACHIEVEMENTS
+      quest1: { id: 'quest1', name: 'Quest Beginner', desc: 'Complete your first quest', reward: 20, skillPoints: 0, attributePoints: 0, check: () => saveData.stats && saveData.stats.questsCompleted >= 1, claimed: false },
+      quest5: { id: 'quest5', name: 'Quest Adventurer', desc: 'Complete 5 quests', reward: 50, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.questsCompleted >= 5, claimed: false },
+      quest10: { id: 'quest10', name: 'Quest Hero', desc: 'Complete 10 quests', reward: 100, skillPoints: 1, attributePoints: 1, check: () => saveData.stats && saveData.stats.questsCompleted >= 10, claimed: false },
+      quest25: { id: 'quest25', name: 'Quest Master', desc: 'Complete 25 quests', reward: 200, skillPoints: 2, attributePoints: 2, check: () => saveData.stats && saveData.stats.questsCompleted >= 25, claimed: false },
+      quest50: { id: 'quest50', name: 'Quest Legend', desc: 'Complete 50 quests', reward: 400, skillPoints: 3, attributePoints: 3, check: () => saveData.stats && saveData.stats.questsCompleted >= 50, claimed: false }
     };
 
     function updateAchievementsScreen() {
