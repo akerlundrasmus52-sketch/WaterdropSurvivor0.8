@@ -1,0 +1,5 @@
+    {
+      "title": "Dolphin Ocensurerad",
+      "provider": "ollama",
+      "model": "dolphin-mistral"
+    },
