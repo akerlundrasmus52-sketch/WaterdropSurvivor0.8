@@ -7,11 +7,53 @@
       // Exclusion zones: each entry is { x, z, r } — no prop spawns within r units of (x,z)
       const exclusionZones = [];
 
-      // Ground - Single massive ground plane for minimal draw calls
+      // Ground - Enhanced ground with procedural detail texture for realistic appearance
 
-      // One ground plane with a stylized dark-green/alien-grass color
+      // Create a detailed grass texture using canvas
+      const groundTexCanvas = document.createElement('canvas');
+      groundTexCanvas.width = 512;
+      groundTexCanvas.height = 512;
+      const gCtx = groundTexCanvas.getContext('2d');
+
+      // Base grass color with subtle variation
+      gCtx.fillStyle = '#1e3a29';
+      gCtx.fillRect(0, 0, 512, 512);
+
+      // Add noise pattern for grass detail
+      for (let i = 0; i < 8000; i++) {
+        const x = Math.random() * 512;
+        const y = Math.random() * 512;
+        const brightness = Math.random() * 40 + 10;
+        const size = Math.random() * 2 + 0.5;
+        gCtx.fillStyle = `rgba(${brightness}, ${brightness + 20}, ${brightness}, 0.3)`;
+        gCtx.fillRect(x, y, size, size);
+      }
+
+      // Add darker patches for variation
+      for (let i = 0; i < 50; i++) {
+        const x = Math.random() * 512;
+        const y = Math.random() * 512;
+        const radius = Math.random() * 40 + 20;
+        const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
+        grd.addColorStop(0, 'rgba(20, 40, 25, 0.4)');
+        grd.addColorStop(1, 'rgba(20, 40, 25, 0)');
+        gCtx.fillStyle = grd;
+        gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+      }
+
+      const groundTexture = new THREE.CanvasTexture(groundTexCanvas);
+      groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+      groundTexture.repeat.set(20, 20); // Tile the texture for detail
+
+      // One ground plane with enhanced material
       const mainGroundGeo = new THREE.PlaneGeometry(200, 200);
-      const mainGroundMat = new THREE.MeshStandardMaterial({ color: 0x1e3a29, roughness: 0.92, metalness: 0.0 });
+      const mainGroundMat = new THREE.MeshStandardMaterial({
+        color: 0x2D5A1A,
+        map: groundTexture,
+        roughness: 0.95,
+        metalness: 0.0,
+        normalScale: new THREE.Vector2(0.3, 0.3)
+      });
       const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
       mainGround.rotation.x = -Math.PI / 2;
       mainGround.position.set(0, 0, 0);

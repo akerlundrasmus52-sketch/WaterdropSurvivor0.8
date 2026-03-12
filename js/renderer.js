@@ -10,8 +10,8 @@
 
 const RENDERER_CONFIG = {
   // Orthographic camera distance (half-height of the view frustum)
-  // Wide overview distance so the full map is visible on first load
-  cameraDistance: 15,
+  // Closer zoom like in camp for better character visibility and immersion
+  cameraDistance: 10,
   // Camera world-space position (gives a balanced top-down isometric angle)
   cameraPositionX: 14,
   cameraPositionY: 13,
