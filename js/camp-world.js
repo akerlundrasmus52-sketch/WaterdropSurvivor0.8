@@ -29,6 +29,7 @@
     { id: 'questMission',        x:  0,  z:  11,  label: 'Quest Hall',          icon: '📜' },
     { id: 'skillTree',           x: -12,  z: -8,  label: 'Skill Tree',          icon: '🌳' },
     { id: 'forge',               x:  12,  z: -8,  label: 'The Forge',           icon: '⚒️' },
+    { id: 'progressionHouse',    x:  14,  z:  0,  label: 'Progression House',   icon: '💪' },
     { id: 'companionHouse',      x: -11,  z:  4,  label: 'Companion Home',      icon: '🏡' },
     { id: 'trainingHall',        x:  11,  z:  4,  label: 'Training Hall',       icon: '🏋️' },
     { id: 'achievementBuilding', x:  0,  z:-13,  label: 'Hall of Trophies',    icon: '🏆' },
@@ -1896,6 +1897,7 @@
       case 'questMission':       return _buildQuestHall(def);
       case 'skillTree':          return _buildSkillTree(def);
       case 'forge':              return _buildForge(def);
+      case 'progressionHouse':   return _buildProgressionHouse(def);
       case 'companionHouse':     return _buildCompanionHouse(def);
       case 'trainingHall':       return _buildTrainingHall(def);
       case 'achievementBuilding':return _buildAchievementHall(def);
@@ -2170,6 +2172,89 @@
     grp.add(new THREE.Points(embGeo, embMat));
 
     _addNameSign(grp, def.label, 0, 5.2, 0);
+    return grp;
+  }
+
+  // ── Progression House ─ upgrade temple with glowing energy ──
+  function _buildProgressionHouse(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Main building (temple-like)
+    const wallMat = _mat(0x4a3860, 0x6a00aa, 0.08);
+    const wallGeo = new THREE.BoxGeometry(6, 4.5, 5.5);
+    const walls = _mesh(wallGeo, wallMat);
+    walls.position.y = 2.25;
+    walls.castShadow = true;
+    grp.add(walls);
+
+    // Roof with crystal
+    const roofGeo = new THREE.BoxGeometry(6.4, 0.6, 6);
+    const roof = _mesh(roofGeo, _lambert(0x503070));
+    roof.position.y = 4.8;
+    grp.add(roof);
+
+    // Central crystal (progression symbol)
+    const crystalGeo = new THREE.OctahedronGeometry(0.7, 0);
+    const crystalMat = new THREE.MeshPhongMaterial({
+      color: 0x00ffff,
+      emissive: 0x00aaff,
+      emissiveIntensity: 0.8,
+      shininess: 100,
+      transparent: true,
+      opacity: 0.9
+    });
+    const crystal = _mesh(crystalGeo, crystalMat);
+    crystal.position.set(0, 5.8, 0);
+    crystal.rotation.y = Math.PI / 4;
+    grp.add(crystal);
+
+    // Crystal glow
+    const crystalLight = new THREE.PointLight(0x00ffff, 3, 10, 2);
+    crystalLight.position.set(0, 5.8, 0);
+    grp.add(crystalLight);
+
+    // Entrance pillars
+    const pillarGeo = new THREE.BoxGeometry(0.5, 3.5, 0.5);
+    const pillarMat = _lambert(0x604080);
+    for (let i = 0; i < 2; i++) {
+      const pillar = _mesh(pillarGeo, pillarMat);
+      pillar.position.set(i === 0 ? -2 : 2, 1.75, 2.8);
+      pillar.castShadow = true;
+      grp.add(pillar);
+    }
+
+    // Energy orbs floating around
+    const orbGeo = new THREE.SphereGeometry(0.15, 8, 8);
+    const orbMat = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.8
+    });
+    for (let i = 0; i < 4; i++) {
+      const orb = _mesh(orbGeo, orbMat);
+      const angle = (i / 4) * Math.PI * 2;
+      orb.position.set(Math.cos(angle) * 2.5, 3 + Math.sin(i) * 0.5, Math.sin(angle) * 2.5);
+      grp.add(orb);
+    }
+
+    // Glowing entrance
+    const entranceGlowGeo = new THREE.BoxGeometry(2.5, 3, 0.3);
+    const entranceGlowMat = new THREE.MeshBasicMaterial({
+      color: 0x6600ff,
+      transparent: true,
+      opacity: 0.5
+    });
+    const entranceGlow = _mesh(entranceGlowGeo, entranceGlowMat);
+    entranceGlow.position.set(0, 2, 2.85);
+    grp.add(entranceGlow);
+
+    const entranceLight = new THREE.PointLight(0x6600ff, 2, 8, 2);
+    entranceLight.position.set(0, 2, 3.5);
+    grp.add(entranceLight);
+
+    _addNameSign(grp, def.label, 0, 6.2, 0);
     return grp;
   }
 

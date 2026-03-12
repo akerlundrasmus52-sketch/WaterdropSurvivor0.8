@@ -1905,7 +1905,8 @@
             else { try { updateGearScreen(); } catch(e) {} document.getElementById('gear-screen').style.display = 'flex'; }
           },
         trainingHall:        () => { overlay.remove(); document.getElementById('camp-training-tab').click(); },
-        forge:               () => { overlay.remove(); showProgressionShop(); },
+        forge:               () => { overlay.remove(); showForgeShop(); },
+        progressionHouse:    () => { overlay.remove(); showProgressionShop(); },
         progressionCenter:   () => { overlay.remove(); if (window.ProgressionCenter) window.ProgressionCenter.show(); },
         companionHouse:      () => { overlay.remove(); showCompanionHouse(); },
         achievementBuilding: () => {
@@ -2213,17 +2214,16 @@
       updateGoldDisplays();
     }
 
-    // ── Camp-overlay version of the Progression Shop ─────────────────────────
-    // Displays the same harvesting tools + stat upgrades content inside the
-    // modern frosted-glass camp-bld-overlay panel used by Armory, Inventory, etc.
-    function _showProgressionShopOverlay() {
-      const existing = document.getElementById('progression-shop-overlay');
+    // ── Camp-overlay version of the Forge Shop (Harvesting Tools Only) ──────
+    // Displays only harvesting tools - stat upgrades moved to Progression House
+    function _showForgeShopOverlay() {
+      const existing = document.getElementById('forge-shop-overlay');
       if (existing) existing.remove();
 
       if (window.CampWorld) window.CampWorld.pauseInput();
 
       const overlay = document.createElement('div');
-      overlay.id = 'progression-shop-overlay';
+      overlay.id = 'forge-shop-overlay';
       overlay.className = 'camp-bld-overlay';
       overlay.style.zIndex = '500';
 
@@ -2233,7 +2233,7 @@
       // Header
       const header = document.createElement('div');
       header.className = 'camp-bld-header';
-      header.innerHTML = '<span class="camp-bld-title">⚒️ PROGRESSION UPGRADES</span>';
+      header.innerHTML = '<span class="camp-bld-title">⚒️ THE FORGE</span>';
       const closeBtn = document.createElement('button');
       closeBtn.className = 'camp-bld-close-btn';
       closeBtn.textContent = '✕';
@@ -2256,7 +2256,179 @@
 
       const subtitle = document.createElement('div');
       subtitle.className = 'camp-bld-subtitle';
-      subtitle.textContent = 'Buy gathering tools & invest in permanent stat upgrades';
+      subtitle.textContent = 'Craft and upgrade harvesting tools for gathering resources';
+      panel.appendChild(subtitle);
+
+      // Content grid
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:flex;flex-direction:column;gap:10px;width:100%;';
+      panel.appendChild(grid);
+      overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) closeBtn.onclick(); });
+      document.body.appendChild(overlay);
+
+      // Populate content
+      const _rebuild = () => {
+        grid.innerHTML = '';
+        goldDiv.textContent = `💰 GOLD: ${(saveData.gold || 0).toLocaleString()}`;
+
+        // ── Harvesting Tools ─────────────────────────────────────────────────
+        if (window.GameHarvesting) {
+          const toolsHdr = document.createElement('div');
+          toolsHdr.style.cssText = 'color:#FFD700;font-family:"Bangers",cursive;font-size:18px;letter-spacing:2px;margin-top:4px;text-align:center;';
+          toolsHdr.textContent = '⛏️ HARVESTING TOOLS';
+          grid.appendChild(toolsHdr);
+
+          const toolsNote = document.createElement('div');
+          toolsNote.style.cssText = 'color:rgba(180,220,255,0.55);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:center;margin-bottom:6px;';
+          toolsNote.textContent = 'Required to gather resources during runs';
+          grid.appendChild(toolsNote);
+
+          const tools = window.GameHarvesting.getToolList();
+          const ownedTools = window.GameHarvesting.getTools() || {};
+          const resources = window.GameHarvesting.getResources() || {};
+
+          tools.forEach(toolDef => {
+            const owned = ownedTools[toolDef.id];
+            const epicKey = 'epic' + toolDef.id.charAt(0).toUpperCase() + toolDef.id.slice(1);
+            const isEpic = ownedTools[epicKey];
+            const canAffordBase = (saveData.gold || 0) >= toolDef.buyCost;
+
+            const card = document.createElement('div');
+            card.className = 'camp-bld-panel';
+            card.style.cssText = 'padding:10px 14px;margin:0;border:1px solid rgba(139,69,19,0.6);background:rgba(40,20,0,0.7);display:flex;align-items:center;justify-content:space-between;gap:8px;';
+
+            let reqStr = '';
+            if (toolDef.epicForgeReq) {
+              reqStr = Object.entries(toolDef.epicForgeReq).map(([k, v]) => {
+                const rt = window.GameHarvesting.RESOURCE_TYPES && window.GameHarvesting.RESOURCE_TYPES[k];
+                const have = resources[k] || 0;
+                const color = have >= v ? '#2ecc71' : '#e74c3c';
+                return `<span style="color:${color}">${rt ? rt.icon : k} ${have}/${v}</span>`;
+              }).join(' ');
+            }
+
+            if (!owned) {
+              card.innerHTML = `
+                <div style="flex:1;">
+                  <div style="font-family:'Bangers',cursive;font-size:15px;color:#FFD700;letter-spacing:1px;">${toolDef.icon} ${toolDef.name}</div>
+                  <div style="color:rgba(180,220,255,0.55);font-size:10px;margin-top:2px;">Harvest resources from the world</div>
+                  <div style="color:#FFD700;font-size:11px;margin-top:3px;">Cost: ${toolDef.buyCost} Gold</div>
+                </div>
+                <button class="camp-bld-close-btn" style="width:auto;border-radius:7px;padding:6px 14px;font-size:12px;font-family:'Bangers',cursive;letter-spacing:1px;${!canAffordBase ? 'opacity:0.4;cursor:not-allowed;' : ''}" ${!canAffordBase ? 'disabled' : ''}>
+                  ${canAffordBase ? 'BUY' : 'NEED GOLD'}
+                </button>`;
+              const btn = card.querySelector('button');
+              btn.onclick = () => {
+                if (window.GameHarvesting.buyTool(toolDef.id)) {
+                  saveSaveData();
+                  playSound('levelup');
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest22_buyFirstTool') {
+                    progressTutorialQuest('quest22_buyFirstTool', true); saveSaveData();
+                  }
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'questForge0b_craftTools') {
+                    progressTutorialQuest('questForge0b_craftTools', true); saveSaveData();
+                  }
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_craftAllTools') {
+                    const _ownedNow = window.GameHarvesting.getTools() || {};
+                    const _allIds = ['axe','sledgehammer','pickaxe','magicTool','knife','berryScoop'];
+                    if (_allIds.every(id => !!_ownedNow[id])) {
+                      progressTutorialQuest('quest_craftAllTools', true); saveSaveData();
+                    }
+                  }
+                  _rebuild();
+                }
+              };
+            } else if (!isEpic) {
+              const epicReqsMet = toolDef.epicForgeReq && Object.entries(toolDef.epicForgeReq).every(([k, v]) => (resources[k] || 0) >= v);
+              card.innerHTML = `
+                <div style="flex:1;">
+                  <div style="font-family:'Bangers',cursive;font-size:15px;color:#2ecc71;letter-spacing:1px;">${toolDef.icon} ${toolDef.name} <span style="font-size:11px;color:#2ecc71;">✓ OWNED</span></div>
+                  <div style="color:rgba(180,220,255,0.55);font-size:10px;margin-top:2px;">⚒️ Forge to EPIC — 2.5× resource yield</div>
+                  <div style="font-size:10px;margin-top:3px;">Requires: ${reqStr}</div>
+                </div>
+                <button class="camp-bld-close-btn" style="width:auto;border-radius:7px;padding:6px 14px;font-size:12px;font-family:'Bangers',cursive;letter-spacing:1px;color:#FFD700;border-color:#FFD700;${!epicReqsMet ? 'opacity:0.4;cursor:not-allowed;' : ''}" ${!epicReqsMet ? 'disabled' : ''}>
+                  ${epicReqsMet ? '⚒️ FORGE' : 'NEED MORE'}
+                </button>`;
+              const btn = card.querySelector('button');
+              btn.onclick = () => {
+                if (window.GameHarvesting.forgeTool(toolDef.id)) {
+                  saveSaveData(); playSound('levelup');
+                  if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest25_useForge') {
+                    progressTutorialQuest('quest25_useForge', true); saveSaveData();
+                  }
+                  _rebuild();
+                }
+              };
+            } else {
+              card.innerHTML = `
+                <div style="flex:1;">
+                  <div style="font-family:'Bangers',cursive;font-size:15px;color:#FFD700;letter-spacing:1px;">${toolDef.icon} ${toolDef.name} <span style="font-size:11px;color:#FFD700;">★ EPIC</span></div>
+                  <div style="color:rgba(180,220,255,0.55);font-size:10px;margin-top:2px;">Maximum upgrade — 2.5× resource yield</div>
+                </div>`;
+            }
+            grid.appendChild(card);
+          });
+        }
+      };
+
+      _rebuild();
+    }
+
+    function showForgeShop() {
+      const _fromCamp = window.CampWorld && window.CampWorld.isActive;
+      if (_fromCamp) {
+        _showForgeShopOverlay();
+        return;
+      }
+      // Fallback for 2D camp - show same overlay
+      _showForgeShopOverlay();
+    }
+
+    // ── Camp-overlay version of the Progression Shop ─────────────────────────
+    // Displays the same harvesting tools + stat upgrades content inside the
+    // modern frosted-glass camp-bld-overlay panel used by Armory, Inventory, etc.
+    function _showProgressionShopOverlay() {
+      const existing = document.getElementById('progression-shop-overlay');
+      if (existing) existing.remove();
+
+      if (window.CampWorld) window.CampWorld.pauseInput();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'progression-shop-overlay';
+      overlay.className = 'camp-bld-overlay';
+      overlay.style.zIndex = '500';
+
+      const panel = document.createElement('div');
+      panel.className = 'camp-bld-panel';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'camp-bld-header';
+      header.innerHTML = '<span class="camp-bld-title">💪 PROGRESSION HOUSE</span>';
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'camp-bld-close-btn';
+      closeBtn.textContent = '✕';
+      closeBtn.title = 'Close';
+      closeBtn.onclick = () => {
+        panel.classList.add('closing');
+        setTimeout(() => {
+          overlay.remove();
+          if (window.CampWorld) window.CampWorld.resumeInput();
+        }, 200);
+      };
+      header.appendChild(closeBtn);
+      panel.appendChild(header);
+
+      // Gold display
+      const goldDiv = document.createElement('div');
+      goldDiv.className = 'camp-bld-currency';
+      goldDiv.textContent = `💰 GOLD: ${(saveData.gold || 0).toLocaleString()}`;
+      panel.appendChild(goldDiv);
+
+      const subtitle = document.createElement('div');
+      subtitle.className = 'camp-bld-subtitle';
+      subtitle.textContent = 'Invest in permanent stat upgrades to strengthen your character';
       panel.appendChild(subtitle);
 
       // Content grid (reuse the same builder logic as the 2D shop)

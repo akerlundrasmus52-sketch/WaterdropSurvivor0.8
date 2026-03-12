@@ -1177,6 +1177,7 @@
     init();
     createUI();
     gameState.active = true;
+    gameState.paused = false;  // Explicitly ensure game is not paused on start
     restart();
     gameLoop();
   }
