@@ -632,33 +632,21 @@
         }, 500);
       }
 
-      // ── Ultimate Admin Override ──
-      // Forces max resources and unlocks ALL buildings so features are immediately
-      // testable without grinding.
-      if (!saveData.campBuildings) saveData.campBuildings = {};
       // Ensure buildings not present in defaultSaveData are explicitly initialized
-      // before the unlock loop so they are always included.
+      if (!saveData.campBuildings) saveData.campBuildings = {};
       ['astralGateway', 'neuralMatrix', 'prismReliquary'].forEach(function(key) {
         if (!saveData.campBuildings[key]) {
           saveData.campBuildings[key] = { level: 0, maxLevel: 1, unlocked: false };
         }
       });
-      Object.keys(saveData.campBuildings).forEach(function(key) {
-        saveData.campBuildings[key] = Object.assign({}, saveData.campBuildings[key], { unlocked: true, level: 1 });
-      });
-      saveData.gold          = 999999;
-      saveData.astralEssence = 9999;
-      saveData.neuralCores   = 999;
-      // Ensure all default resource keys are present, then set each to 99999
+
+      // Ensure all default resource keys are present
       saveData.resources = Object.assign({}, defaultSaveData.resources, saveData.resources);
-      Object.keys(saveData.resources).forEach(function(key) {
-        saveData.resources[key] = 99999;
-      });
       if (!saveData.rawGems) saveData.rawGems = {};
-      saveData.rawGems.ruby     = 100;
-      saveData.rawGems.sapphire = 100;
-      saveData.rawGems.emerald  = 100;
-      saveData.rawGems.void     = 100;
+      if (!saveData.rawGems.ruby) saveData.rawGems.ruby = 0;
+      if (!saveData.rawGems.sapphire) saveData.rawGems.sapphire = 0;
+      if (!saveData.rawGems.emerald) saveData.rawGems.emerald = 0;
+      if (!saveData.rawGems.void) saveData.rawGems.void = 0;
     }
 
     // Throttle saves to avoid excessive localStorage writes (max once per 500ms)

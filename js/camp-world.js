@@ -1361,20 +1361,20 @@
     }
   }
 
-  // Grant free starter points / materials so the player can try the building mechanic
+  // Grant minimal starter materials to build the first building (Quest Hall = 1W/1S/1C)
   function _aidaGrantStarterMaterials() {
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (!sd || sd.aidaStarterGranted) return;
     sd.aidaStarterGranted = true;
     if (!sd.resources) sd.resources = {};
-    sd.resources.wood  = (sd.resources.wood  || 0) + 50;
-    sd.resources.stone = (sd.resources.stone || 0) + 50;
-    sd.resources.coal  = (sd.resources.coal  || 0) + 30;
-    sd.gold            = (sd.gold            || 0) + 100;
-    sd.skillPoints     = (sd.skillPoints     || 0) + 3;
+    // Quest Hall costs 1 Wood, 1 Stone, 1 Coal (first building)
+    sd.resources.wood  = (sd.resources.wood  || 0) + 1;
+    sd.resources.stone = (sd.resources.stone || 0) + 1;
+    sd.resources.coal  = (sd.resources.coal  || 0) + 1;
+    // No gold or skill points - earn through quests
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof showStatChange === 'function') {
-      showStatChange('🎁 Aida Starter Pack: 🪵50 Wood  🪨50 Stone  🖤30 Coal  💰100 Gold  ⭐3 SP');
+      showStatChange('🎁 AIDA: "Minimal materials provided. Build the Command Node."', 'rare');
     }
     // Unlock Quest Hall so first building can be constructed
     if (sd.campBuildings && sd.campBuildings.questMission) {
