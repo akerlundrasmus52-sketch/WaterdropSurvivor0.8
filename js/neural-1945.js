@@ -813,6 +813,12 @@
             gameState.score += enemy.type.score;
             gameState.credits += Math.floor(enemy.type.score / 5);
             createExplosion(enemy.x, enemy.y, enemy.type.color);
+            // Grant Account XP for enemy kill (1 XP per kill)
+            if (typeof addAccountXP === 'function') {
+              addAccountXP(1);
+            } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {
+              window.GameAccount.addXP(1, '1945 Minigame', window.saveData);
+            }
           }
           break;
         }
@@ -833,6 +839,12 @@
           if (enemy.hp <= 0) {
             gameState.score += enemy.type.score;
             gameState.credits += Math.floor(enemy.type.score / 5);
+            // Grant Account XP for enemy kill (1 XP per kill)
+            if (typeof addAccountXP === 'function') {
+              addAccountXP(1);
+            } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {
+              window.GameAccount.addXP(1, '1945 Minigame', window.saveData);
+            }
           }
           break;
         }

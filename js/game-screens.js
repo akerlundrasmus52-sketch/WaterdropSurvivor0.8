@@ -2608,20 +2608,27 @@
       const upgrade = PERMANENT_UPGRADES[upgradeKey];
       const currentLevel = saveData.upgrades[upgradeKey];
       const cost = getCost(upgradeKey);
-      
+
       if (currentLevel >= upgrade.maxLevel) return;
       if (saveData.gold < cost) return;
-      
+
       saveData.gold -= cost;
       saveData.upgrades[upgradeKey]++;
-      
+
+      // Grant Account XP for buying upgrade (3 XP)
+      if (typeof addAccountXP === 'function') {
+        addAccountXP(3);
+      } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+        window.GameAccount.addXP(3, 'Upgrade Purchase', saveData);
+      }
+
       // Track quest: Buy a Progression Upgrade
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest7_buyProgression') {
         progressTutorialQuest('quest7_buyProgression', true);
       }
-      
+
       saveSaveData();
-      
+
       playSound('levelup');
       showProgressionShop(); // Refresh the shop
     }
