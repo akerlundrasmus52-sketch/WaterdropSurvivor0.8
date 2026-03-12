@@ -292,6 +292,9 @@ window.enemyPool = (function () {
       enemy.mesh.material = enemy.defaultMaterial;
       enemy.mesh.material.needsUpdate = true;
 
+      // CRITICAL FIX: Only mutate material properties if it's NOT shared
+      // Shared materials are used by ALL enemies of the same type - mutating them
+      // would break colors for all enemies on the map!
       if (!enemy.defaultMaterial._isShared && !enemy.defaultMaterial._isSpiderHitbox) {
         const _resetColorHex = window._ENEMY_COLORS ? (window._ENEMY_COLORS[type] !== undefined ? window._ENEMY_COLORS[type] : window._ENEMY_COLORS[0]) : 0x44AA44;
         const _emissiveIntensity = (type === 10 || type === 11) ? 0.3 : 0.15;
