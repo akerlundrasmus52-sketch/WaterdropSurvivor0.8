@@ -67,6 +67,7 @@ function calculateOfflineProgress(lastTimestamp, saveData) {
   if (elapsed > maxElapsed) elapsed = maxElapsed;
 
   var elapsedMinutes = elapsed / 60000;
+  var goldEarned = 0;
   if (idle.goldMineLevel > 0) {
     var ratePerMin = idle.goldMineLevel * IDLE_CONFIG.GOLD_MINE.RATE_PER_LEVEL;
     goldEarned = Math.floor(ratePerMin * elapsedMinutes);

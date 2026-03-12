@@ -8652,7 +8652,4 @@
 }
 
 /* ─── Building construction complete notification ─────── */
-@keyframes buildCompleteSlide {
-  from { transform: translateX(120%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
-}
+/* buildCompleteSlide uses the same animation as slideInRight above */

@@ -532,8 +532,8 @@
   function _buildCampPond() {
     const THREE = T();
 
-    // Pond water surface — dark reflective ellipse
-    const pondGeo = new THREE.EllipseCurve(-6, 5, 2.5, 1.5, 0, Math.PI * 2, false, 0);
+    // Pond water surface — dark reflective ellipse (centered at origin, positioned via mesh.position)
+    const pondGeo = new THREE.EllipseCurve(0, 0, 2.5, 1.5, 0, Math.PI * 2, false, 0);
     const pondShape = new THREE.Shape(pondGeo.getPoints(40));
     const pondPlaneGeo = new THREE.ShapeGeometry(pondShape);
     const pondMat = new THREE.MeshPhongMaterial({
@@ -4417,7 +4417,8 @@
   function _checkMenuClosed() {
     if (!_menuOpen) return;
     // Wait at least 350ms after menu opened before checking — avoids race where
-    // the overlay hasn't been appended to the DOM yet in the same frame.
+    // the overlay hasn't been appended to DOM yet (JS is synchronous but DOM
+    // rendering is deferred; empirically 350ms covers one full render cycle).
     if (Date.now() - _menuOpenTs < 350) return;
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
