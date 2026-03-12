@@ -2653,73 +2653,78 @@
       // --- Instanced renderer: sync entity transforms to GPU buffers ---
       if (window._instancedRenderer && window._instancedRenderer.active) {
         const ir = window._instancedRenderer;
+        const _enemyInstancingEnabled = window.ENEMY_INSTANCING_ENABLED === true;
 
-        // Propagate each enemy's current material colour as its per-instance colour so that
-        // damage flashes (blood stain, freeze tint, etc.) are visible on instanced bodies.
-        // CRITICAL FIX: For instanced enemies, use their stored base color (_baseColorHex)
-        // instead of material.color, because instanced enemies use shared white materials.
-        // This ensures each enemy type renders with its correct color (green, blue, teal, etc.)
-        // instead of all appearing white or green.
-        for (let _ei = 0; _ei < enemies.length; _ei++) {
-          const _e = enemies[_ei];
-          if (_e && _e.mesh && !_e.isDead && _e._usesInstancing) {
-            // Use the stored base color hex for instanced enemies
-            if (_e._baseColorHex !== undefined) {
-              _e._instanceColor = _e._baseColorHex;
-            } else if (_e.mesh.material) {
-              // Fallback to material color if base color not set
-              _e._instanceColor = _e.mesh.material.color;
+        if (_enemyInstancingEnabled) {
+          // Propagate each enemy's current material colour as its per-instance colour so that
+          // damage flashes (blood stain, freeze tint, etc.) are visible on instanced bodies.
+          // CRITICAL FIX: For instanced enemies, use their stored base color (_baseColorHex)
+          // instead of material.color, because instanced enemies use shared white materials.
+          // This ensures each enemy type renders with its correct color (green, blue, teal, etc.)
+          // instead of all appearing white or green.
+          for (let _ei = 0; _ei < enemies.length; _ei++) {
+            const _e = enemies[_ei];
+            if (_e && _e.mesh && !_e.isDead && _e._usesInstancing) {
+              // Use the stored base color hex for instanced enemies
+              if (_e._baseColorHex !== undefined) {
+                _e._instanceColor = _e._baseColorHex;
+              } else if (_e.mesh.material) {
+                // Fallback to material color if base color not set
+                _e._instanceColor = _e.mesh.material.color;
+              }
             }
           }
         }
 
         ir.beginFrame();
-        ir.syncEntities('enemy_tank',     enemies,     e => !e.isDead && e.type === 0 && e._usesInstancing);
-        ir.syncEntities('enemy_fast',     enemies,     e => !e.isDead && e.type === 1 && e._usesInstancing);
-        ir.syncEntities('enemy_balanced', enemies,     e => !e.isDead && e.type === 2 && e._usesInstancing);
+        if (_enemyInstancingEnabled) {
+          ir.syncEntities('enemy_tank',     enemies,     e => !e.isDead && e.type === 0 && e._usesInstancing);
+          ir.syncEntities('enemy_fast',     enemies,     e => !e.isDead && e.type === 1 && e._usesInstancing);
+          ir.syncEntities('enemy_balanced', enemies,     e => !e.isDead && e.type === 2 && e._usesInstancing);
 
-        // Sync eye positions for instanced enemies — compute world-space position from
-        // the body mesh's transform (position + Y-rotation + scale).  Eyes are spheres
-        // so rotation in the eye batch itself doesn't matter visually.
-        const _eyeBatch = ir.getBatch('enemy_eye');
-        if (_eyeBatch) {
-          const _eyeSpread = 0.18;  // local X offset (types 0-2 all share this value)
-          const _eyeYOff   = 0.28;  // local Y offset — fixed (matches non-instanced eyes)
-          // Forward (local +Z) offset per type so eyes sit outside the body mesh.
-          // Tank (0) body radius ~0.55, Balanced (2) ~0.45, Fast (1) ~0.32.
-          const _EYE_FWD_BY_TYPE = { 0: 0.58, 1: 0.35, 2: 0.48 };
-          for (let _ei = 0; _ei < enemies.length; _ei++) {
-            const _e = enemies[_ei];
-            if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;
-            if (_e.type !== 0 && _e.type !== 1 && _e.type !== 2) continue;
+          // Sync eye positions for instanced enemies — compute world-space position from
+          // the body mesh's transform (position + Y-rotation + scale).  Eyes are spheres
+          // so rotation in the eye batch itself doesn't matter visually.
+          const _eyeBatch = ir.getBatch('enemy_eye');
+          if (_eyeBatch) {
+            const _eyeSpread = 0.18;  // local X offset (types 0-2 all share this value)
+            const _eyeYOff   = 0.28;  // local Y offset — fixed (matches non-instanced eyes)
+            // Forward (local +Z) offset per type so eyes sit outside the body mesh.
+            // Tank (0) body radius ~0.55, Balanced (2) ~0.45, Fast (1) ~0.32.
+            const _EYE_FWD_BY_TYPE = { 0: 0.58, 1: 0.35, 2: 0.48 };
+            for (let _ei = 0; _ei < enemies.length; _ei++) {
+              const _e = enemies[_ei];
+              if (!_e || !_e.mesh || _e.isDead || !_e._usesInstancing) continue;
+              if (_e.type !== 0 && _e.type !== 1 && _e.type !== 2) continue;
 
-            const _eyeFwd = _EYE_FWD_BY_TYPE[_e.type] ?? 0.42;
+              const _eyeFwd = _EYE_FWD_BY_TYPE[_e.type] ?? 0.42;
 
-            const _mx  = _e.mesh.position.x;
-            const _my  = _e.mesh.position.y;
-            const _mz  = _e.mesh.position.z;
-            const _ry  = _e.mesh.rotation.y;
-            const _cos = Math.cos(_ry);
-            const _sin = Math.sin(_ry);
+              const _mx  = _e.mesh.position.x;
+              const _my  = _e.mesh.position.y;
+              const _mz  = _e.mesh.position.z;
+              const _ry  = _e.mesh.rotation.y;
+              const _cos = Math.cos(_ry);
+              const _sin = Math.sin(_ry);
 
-            // Left eye: local (-spread, _eyeYOff, fwd)
-            // THREE.js Y-rotation matrix: wx = cos*lx + sin*lz, wz = -sin*lx + cos*lz
-            _eyeSyncPos.set(
-              _mx + _cos * -_eyeSpread + _sin * _eyeFwd,
-              _my + _eyeYOff,
-              _mz + -_sin * -_eyeSpread + _cos * _eyeFwd
-            );
-            _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
+              // Left eye: local (-spread, _eyeYOff, fwd)
+              // THREE.js Y-rotation matrix: wx = cos*lx + sin*lz, wz = -sin*lx + cos*lz
+              _eyeSyncPos.set(
+                _mx + _cos * -_eyeSpread + _sin * _eyeFwd,
+                _my + _eyeYOff,
+                _mz + -_sin * -_eyeSpread + _cos * _eyeFwd
+              );
+              _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
 
-            // Right eye: local (+spread, _eyeYOff, fwd)
-            _eyeSyncPos.set(
-              _mx + _cos * _eyeSpread + _sin * _eyeFwd,
-              _my + _eyeYOff,
-              _mz + -_sin * _eyeSpread + _cos * _eyeFwd
-            );
-            _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
+              // Right eye: local (+spread, _eyeYOff, fwd)
+              _eyeSyncPos.set(
+                _mx + _cos * _eyeSpread + _sin * _eyeFwd,
+                _my + _eyeYOff,
+                _mz + -_sin * _eyeSpread + _cos * _eyeFwd
+              );
+              _eyeBatch.push(_eyeSyncPos, _eyeSyncEuler, _eyeSyncScale);
+            }
+            // Note: endFrame() below will commit the eye batch along with all others.
           }
-          // Note: endFrame() below will commit the eye batch along with all others.
         }
 
         ir.syncEntities('exp_gem', expGems, g => g.active);

@@ -6,3 +6,7 @@
 // for future incremental migration.
 
 window.GameState = {};
+
+// Enemy instancing toggle — keep false to render full multi-part meshes
+// (heads/eyes/legs) and restore legacy visuals/animations.
+window.ENEMY_INSTANCING_ENABLED = false;

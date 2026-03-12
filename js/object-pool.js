@@ -270,7 +270,9 @@ window.enemyPool = (function () {
     // InstancedMesh batch.  Without this fix, recycled enemies are double-rendered
     // (regular scene mesh AND instanced batch at the same position), causing
     // Z-fighting, wrong colors, wrong size, and flickering every frame.
-    const _shouldUseInstancing = (type === 0 || type === 1 || type === 2)
+    const _enemyInstancingEnabled = window.ENEMY_INSTANCING_ENABLED === true;
+    const _shouldUseInstancing = _enemyInstancingEnabled
+      && (type === 0 || type === 1 || type === 2)
       && !!(window._instancedRenderer && window._instancedRenderer.active);
     if (_shouldUseInstancing && !enemy._usesInstancing) {
       // Mesh was added to scene during die() for the death animation — remove it.

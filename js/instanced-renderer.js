@@ -229,57 +229,60 @@
    */
   function createInstancedRenderer(scene) {
     const ir = new InstancedRenderer();
+    const enemyInstancingEnabled = window.ENEMY_INSTANCING_ENABLED === true;
 
-    // --- Enemy batches (one per common enemy geometry) ---------
-    // Type 0 — Tank (sphere)
-    // White base colour so per-instance setColorAt() renders the actual enemy colour correctly.
-    // CRITICAL: Use MeshPhongMaterial with emissive properties to match enemy-class.js
-    // Without emissive, enemies appear washed out and lose their characteristic glow.
-    ir.register('enemy_tank',
-      new THREE.SphereGeometry(0.6, 8, 8),
-      new THREE.MeshPhongMaterial({
-        color: 0xFFFFFF,
-        emissive: 0xFFFFFF,
-        emissiveIntensity: 0.15,
-        shininess: 40
-      }),
-      500
-    );
+    if (enemyInstancingEnabled) {
+      // --- Enemy batches (one per common enemy geometry) ---------
+      // Type 0 — Tank (sphere)
+      // White base colour so per-instance setColorAt() renders the actual enemy colour correctly.
+      // CRITICAL: Use MeshPhongMaterial with emissive properties to match enemy-class.js
+      // Without emissive, enemies appear washed out and lose their characteristic glow.
+      ir.register('enemy_tank',
+        new THREE.SphereGeometry(0.6, 8, 8),
+        new THREE.MeshPhongMaterial({
+          color: 0xFFFFFF,
+          emissive: 0xFFFFFF,
+          emissiveIntensity: 0.15,
+          shininess: 40
+        }),
+        500
+      );
 
-    // Type 1 — Fast (capsule)
-    ir.register('enemy_fast',
-      new THREE.CapsuleGeometry(0.3, 0.8, 6, 8),
-      new THREE.MeshPhongMaterial({
-        color: 0xFFFFFF,
-        emissive: 0xFFFFFF,
-        emissiveIntensity: 0.15,
-        shininess: 40
-      }),
-      500
-    );
+      // Type 1 — Fast (capsule)
+      ir.register('enemy_fast',
+        new THREE.CapsuleGeometry(0.3, 0.8, 6, 8),
+        new THREE.MeshPhongMaterial({
+          color: 0xFFFFFF,
+          emissive: 0xFFFFFF,
+          emissiveIntensity: 0.15,
+          shininess: 40
+        }),
+        500
+      );
 
-    // Type 2 — Balanced (dodecahedron)
-    ir.register('enemy_balanced',
-      new THREE.DodecahedronGeometry(0.5, 0),
-      new THREE.MeshPhongMaterial({
-        color: 0xFFFFFF,
-        emissive: 0xFFFFFF,
-        emissiveIntensity: 0.15,
-        shininess: 40
-      }),
-      500
-    );
+      // Type 2 — Balanced (dodecahedron)
+      ir.register('enemy_balanced',
+        new THREE.DodecahedronGeometry(0.5, 0),
+        new THREE.MeshPhongMaterial({
+          color: 0xFFFFFF,
+          emissive: 0xFFFFFF,
+          emissiveIntensity: 0.15,
+          shininess: 40
+        }),
+        500
+      );
 
-    // Eye batch — renders two white spheres per instanced enemy (left + right eye).
-    // White base colour matches the sclera; irides/pupils are baked into the shared geometry
-    // for simplicity.  Rendered as a separate InstancedMesh so the body InstancedMesh
-    // doesn't need to carry the eye geometry.
-    // Capacity: up to 500 of each type (tank/fast/balanced) = 1500 enemies × 2 eyes = 3000 slots.
-    ir.register('enemy_eye',
-      new THREE.SphereGeometry(0.07, 6, 6),
-      new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
-      3000
-    );
+      // Eye batch — renders two white spheres per instanced enemy (left + right eye).
+      // White base colour matches the sclera; irides/pupils are baked into the shared geometry
+      // for simplicity.  Rendered as a separate InstancedMesh so the body InstancedMesh
+      // doesn't need to carry the eye geometry.
+      // Capacity: up to 500 of each type (tank/fast/balanced) = 1500 enemies × 2 eyes = 3000 slots.
+      ir.register('enemy_eye',
+        new THREE.SphereGeometry(0.07, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xFFFFFF }),
+        3000
+      );
+    }
 
     // --- EXP Gem batch ----------------------------------------
     const starShape = new THREE.Shape();
