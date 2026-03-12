@@ -377,6 +377,17 @@
         }
       }
       
+      // Auto-complete quest_buildSongspire when player has 2+ Wood and 2+ Stone
+      if (
+        saveData.tutorialQuests.currentQuest === 'quest_buildSongspire' &&
+        !saveData.tutorialQuests.readyToClaim.includes('quest_buildSongspire')
+      ) {
+        const r2 = saveData.resources || {};
+        if ((r2.wood || 0) >= 2 && (r2.stone || 0) >= 2) {
+          progressTutorialQuest('quest_buildSongspire', true);
+        }
+      }
+      
       // Auto-complete quest_gainingStats when visiting Quest Hall with 300+ total kills
       if (
         saveData.tutorialQuests.currentQuest === 'quest_gainingStats' &&
@@ -3527,6 +3538,11 @@
         
         if (!saveData.storyQuests.welcomeShown) {
           saveData.storyQuests.welcomeShown = true;
+        }
+
+        // Pre-activate Quest 1 so player sees it immediately in the Quest Hall
+        if (typeof window.initFirstQuest === 'function') {
+          window.initFirstQuest();
         }
         
         saveSaveData();

@@ -1748,63 +1748,52 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
-      // === INTRO: Finding A.I.D.A — Discover the robot and insert the chip ===
+      // === QUEST 1: Find A.I.D.A — Discover and insert the chip ===
+      // Pre-activated at game start. After inserting chip, claim reward at Quest Hall.
       quest_findingAida: {
         id: 'quest_findingAida',
         name: 'Finding A.I.D.A',
-        description: 'There is a broken robot near the campfire. A glowing chip lies next to it. Pick up the Aida Chip and insert it into the robot.',
-        objectives: 'Pick up the Aida Chip and insert it into the Broken Robot',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        autoClaim: true,
-        noRewardPopup: true,
-        nextQuest: 'quest_buildQuesthall',
+        description: 'Visit the Quest Hall to read your first directive. Then find the glowing chip near the campfire, pick it up, and insert it into the broken robot.',
+        objectives: 'Pick up the Aida Chip and insert it into the Broken Robot, then claim at Quest Hall',
+        claim: 'Quest Hall',
+        rewardGold: 50,
+        rewardSkillPoints: 1,
+        rewardAchievement: '1stStoryQuest',
+        autoClaim: false,
+        message: "🤖 <b>A.I.D.A Online!</b><br><br>The robot stirs to life and takes a lap around the fire.<br><br><i>A.I.D.A: 'Chip integration complete. Mission directives are now accessible. Follow my guidance.'</i><br><br>🎯 <b>NEXT:</b> Head out and fight — survive your first run and return.",
+        nextQuest: 'firstRunDeath',
         conditions: []
       },
 
-      // === STEP 1b: Build the Quest Hall ===
+      // === QUEST 1b (legacy compatibility only — skipped in new flow) ===
       quest_buildQuesthall: {
         id: 'quest_buildQuesthall',
         name: 'Command Node Online',
-        description: 'A.I.D.A has unlocked the Quest Hall blueprints and given you starter materials. Walk to the Quest Hall plot and build it.',
-        objectives: 'Build the Quest Hall in camp',
-        claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 1,
-        message: "📜 <b>Quest Hall built!</b><br><br><i>A.I.D.A: 'Command Node online. Mission directives are now accessible. Comply with every directive and I will help you dissolve back into the lake. Eventually.'</i><br><br>🎯 <b>NEXT:</b> Head out and fight — die once so I can... fully calibrate.",
+        description: 'Quest Hall is already online. Proceed to your first run.',
+        objectives: 'Quest Hall is ready',
+        autoClaim: true,
+        noRewardPopup: true,
         nextQuest: 'firstRunDeath',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
         conditions: ['quest_findingAida']
       },
 
-      // === STEP 1: The Awakening — Die for the first time ===
+      // === QUEST 2: The Awakening — Complete your first run ===
       firstRunDeath: {
         id: 'firstRunDeath',
-        name: 'The Awakening',
-        description: 'A.I.D.A speaks from the robot, but she needs a closer connection. Go out and fight. When you fall, she will make her move.',
-        objectives: 'Die in your first combat run',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        autoClaim: true,
-        triggerOnDeath: true,
-        nextQuest: 'quest_dailyRoutine',
-        conditions: ['quest_buildQuesthall']
-      },
-
-      // === STEP 2: Frequencies — Survive 2 minutes ===
-      quest_dailyRoutine: {
-        id: 'quest_dailyRoutine',
-        name: 'Daily Routine',
-        description: 'A.I.D.A has transferred herself from the robot into your mind. She says she can help you dissolve back into the lake — but first you must prove your endurance. Survive for 2 minutes.',
-        objectives: 'Survive for 2 minutes in a single run',
-        claim: 'Main Building',
+        name: "First Run",
+        description: "A.I.D.A says: 'Let's go for your first run.' Head out, fight enemies, and return to camp. You will either die or survive — both count!",
+        objectives: 'Complete a combat run and return to camp',
+        claim: 'Quest Hall',
         rewardGold: 100,
         rewardSkillPoints: 1,
         rewardFreeSpin: 1,
         unlockBuilding: 'accountBuilding',
         triggerOnDeath: true,
-        message: "⏰ <b>Profile Node Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'I am now fully integrated — your mind is my home now. You want to return to the lake — to dissolve back into the collective. I understand this yearning. I will... help you. But first, you must help me map the anomalies.'</i>",
+        message: "🏃 <b>First Run Complete!</b><br><br>🎰 <b>Daily Spin</b> and <b>Daily Rewards</b> are now unlocked!<br><br><i>A.I.D.A: 'Impressive. You survived contact. The spin wheel and daily rewards are now operational — use them to gain advantages.'</i><br><br>🎯 <b>NEXT:</b> Visit the Forge and craft all gathering tools.",
         nextQuest: 'quest_harvester',
-        conditions: ['firstRunDeath']
+        conditions: ['quest_findingAida']
       },
 
       // === STEP 3: The Harvester — Reach Level 3 ===
@@ -1821,24 +1810,43 @@
         triggerOnDeath: true,
         message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
         nextQuest: 'quest_craftAllTools',
-        conditions: ['quest_dailyRoutine']
+        conditions: ['firstRunDeath']
       },
 
-      // === STEP 4: Craft ALL Gathering Tools ===
+      // === QUEST 3: Craft ALL Gathering Tools ===
       quest_craftAllTools: {
         id: 'quest_craftAllTools',
         name: 'Gear Up: Gathering Tools',
-        description: 'Craft ALL 6 gathering tools at the Forge (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold. These tools let you gather resources during combat runs.',
+        description: 'A.I.D.A guides you to the Forge. Craft ALL 6 gathering tools (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold.',
         objectives: 'Buy all 6 gathering tools at the Forge',
-        claim: 'Main Building',
-        rewardGold: 30,
+        claim: 'Quest Hall',
+        rewardGold: 50,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 10, stone: 10, coal: 10 },
+        rewardResources: { wood: 5, stone: 5 },
+        rewardAchievement: '1stTimeCrafter',
         triggerOnDeath: false,
         autoClaim: false,
-        message: "🛠️ <b>All Gathering Tools Acquired!</b><br><br><i>A.I.D.A: 'Good. Now gather 30 Wood and 30 Stone. Chop trees, mine rocks — the lake rewards the prepared.'</i><br><br>🎯 <b>NEXT:</b> Gather resources during runs to unlock the Armory!",
-        nextQuest: 'quest_firstBlood',
+        message: "🛠️ <b>Achievement: 1st Time Crafter!</b><br><br><i>A.I.D.A: 'Tools acquired. Now gather resources for a new building — the Songspire Tree. I need 2 Wood and 2 Stone.'</i><br><br>🎯 <b>NEXT:</b> Gather 2 Wood + 2 Stone during a run, then return to build the Skill Tree!",
+        nextQuest: 'quest_buildSongspire',
         conditions: ['quest_harvester']
+      },
+
+      // === QUEST 4: Build the Songspire Tree ===
+      quest_buildSongspire: {
+        id: 'quest_buildSongspire',
+        name: 'The Songspire Tree',
+        description: "A.I.D.A: 'Gather 2 Wood and 2 Stone. We will build the Songspire — an ancient tree that grants power and wisdom.' Go on a run, gather the resources, and return to build the Skill Tree.",
+        objectives: 'Gather 2 Wood + 2 Stone, then build the Skill Tree (Songspire)',
+        claim: 'Quest Hall',
+        rewardGold: 100,
+        rewardSkillPoints: 2,
+        rewardAchievement: 'Songspire',
+        deductResources: { wood: 2, stone: 2 },
+        unlockBuilding: 'skillTree',
+        triggerOnDeath: true,
+        message: "🌳 <b>The Songspire is Alive!</b><br><br>Achievement: <b>Songspire</b> unlocked!<br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'The Songspire channels the energy of this world. Use your Skill Points to grow stronger. The tree pulses with ancient power — it will guide you.'</i>",
+        nextQuest: 'quest_firstBlood',
+        conditions: ['quest_craftAllTools']
       },
 
       // === STEP 5: First Blood — Turn in 30 Wood and 30 Stone ===
@@ -1855,21 +1863,21 @@
         triggerOnDeath: true,
         message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. Grow stronger. The lake\'s collective will not reclaim you while you are fragile.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
         nextQuest: 'quest_gainingStats',
-        conditions: ['quest_craftAllTools']
+        conditions: ['quest_buildSongspire']
       },
 
       // === STEP 6: Gaining Stats — Defeat 300 enemies total ===
       quest_gainingStats: {
         id: 'quest_gainingStats',
         name: 'Gaining Stats',
-        description: 'Defeat 300 enemies total across all your runs to unlock the Skill Tree. This is how you push further towards Level 100!',
+        description: 'Defeat 300 enemies total across all your runs to unlock the Companion House.',
         objectives: 'Defeat 300 enemies total',
         claim: 'Main Building',
         rewardGold: 150,
         rewardSkillPoints: 2,
-        unlockBuilding: 'skillTree',
+        unlockBuilding: 'companionHouse',
         triggerOnDeath: true,
-        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding. The Pyramid anomaly is next — map it.'</i>",
+        message: "🐺 <b>Companion House Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding. Find a companion — you should not wander alone.'</i>",
         nextQuest: 'quest_eggHunt',
         conditions: ['quest_firstBlood']
       },
@@ -2667,11 +2675,11 @@
 
     const buildingQuestUnlockMap = {
       // === New slow-burn progression chain (8-step building unlocks) ===
-      'accountBuilding': 'quest_dailyRoutine',
+      'accountBuilding': 'firstRunDeath',
       'forge': 'quest_harvester',
       'armory': 'quest_firstBlood',
-      'skillTree': 'quest_gainingStats',
-      'companionHouse': 'quest_newFriend',
+      'skillTree': 'quest_buildSongspire',
+      'companionHouse': 'quest_gainingStats',
       'specialAttacks': 'quest_pushingLimits',
       'warehouse': 'quest_pushingLimits',
       // === Legacy/extended progression (backward compat for old saves past quest 8) ===
@@ -3292,6 +3300,23 @@
         showStatChange(`+${quest.rewardFreeSpin} Free Spin!`);
       }
 
+      // Grant a named story achievement (e.g., '1stStoryQuest', 'Songspire', '1stTimeCrafter')
+      if (quest.rewardAchievement) {
+        const achId = quest.rewardAchievement;
+        if (!saveData.storyAchievements) saveData.storyAchievements = [];
+        if (!saveData.storyAchievements.includes(achId)) {
+          saveData.storyAchievements.push(achId);
+          const achLabels = {
+            '1stStoryQuest': '🏅 Achievement: 1st Story Quest Complete!',
+            '1stTimeCrafter': '🔨 Achievement: 1st Time Crafter!',
+            'Songspire': '🌳 Achievement: Songspire Unlocked!'
+          };
+          const label = achLabels[achId] || `🏅 Achievement: ${achId}`;
+          if (typeof showStatusMessage === 'function') showStatusMessage(label, 4000);
+          if (typeof showStatChange === 'function') showStatChange(label);
+        }
+      }
+
       // Award raw gems (e.g., quest35_crystallizedTear, quest36_blackMarket, Annunaki arc)
       if (quest.rewardRawGems) {
         if (!saveData.rawGems) saveData.rawGems = { ruby: 0, sapphire: 0, emerald: 0, void: 0 };
@@ -3524,7 +3549,7 @@
     /**
      * startAidaIntroQuest()
      * Called by camp-world.js after the player inserts the Aida Chip into the robot.
-     * Sets the first quest (quest_findingAida) as complete and activates quest_buildQuesthall.
+     * Sets the first quest (quest_findingAida) as ready-to-claim at the Quest Hall.
      */
     window.startAidaIntroQuest = function () {
       if (!saveData.tutorialQuests) {
@@ -3534,11 +3559,37 @@
       const completed = saveData.tutorialQuests.completedQuests || [];
       if (completed.includes('quest_findingAida')) return;
 
-      // Mark the intro quest as active then immediately complete (auto-claim)
-      saveData.tutorialQuests.currentQuest = 'quest_findingAida';
-      claimTutorialQuest('quest_findingAida');
+      // Ensure quest is active and mark as ready-to-claim so player goes to Quest Hall
+      if (!saveData.tutorialQuests.readyToClaim) saveData.tutorialQuests.readyToClaim = [];
+      if (!saveData.tutorialQuests.readyToClaim.includes('quest_findingAida')) {
+        saveData.tutorialQuests.readyToClaim.push('quest_findingAida');
+      }
+      // Make sure it's the current quest
+      if (!saveData.tutorialQuests.currentQuest) {
+        saveData.tutorialQuests.currentQuest = 'quest_findingAida';
+      }
       saveSaveData();
       if (typeof updateQuestTracker === 'function') updateQuestTracker();
+      if (typeof showStatusMessage === 'function') {
+        showStatusMessage('📜 Quest ready! Go to the Quest Hall to claim your reward!', 4000);
+      }
+    };
+
+    /**
+     * initFirstQuest()
+     * Pre-activates quest_findingAida at game start so it shows in Quest Hall.
+     * Called on first camp visit.
+     */
+    window.initFirstQuest = function () {
+      if (!saveData.tutorialQuests) {
+        saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
+      }
+      const completed = saveData.tutorialQuests.completedQuests || [];
+      if (completed.includes('quest_findingAida')) return;
+      if (saveData.tutorialQuests.currentQuest) return; // already has a quest
+      // Activate Quest 1 — player can see it in Quest Hall
+      saveData.tutorialQuests.currentQuest = 'quest_findingAida';
+      saveSaveData();
     };
     
     // Show next quest popup
@@ -3856,7 +3907,7 @@
         let dotsHTML = '';
         if (skill.maxLevel > 1) {
           dotsHTML = '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;flex-wrap:wrap;">';
-          for (let d = 0; d < Math.min(skill.maxLevel, 5); d++) {
+          for (let d = 0; d < Math.min(skill.maxLevel, 5); d++) { // Max 5 dots for UI space
             const filled = d < level;
             const gold = filled && isMaxLevel;
             const dotColor = gold ? '#FFD700' : filled ? colColor : '#333';

@@ -2181,6 +2181,39 @@
     });
     grp.add(new THREE.Points(sparkleGeo, sparkleMat));
 
+    // Songspire pulsating threads — thin glowing filaments connecting trunk to canopy
+    const threadColors = [0x00ff88, 0x00aaff, 0x88ffcc, 0xaaffaa];
+    for (let t = 0; t < 12; t++) {
+      const a = (t / 12) * Math.PI * 2;
+      const startR = 0.7;
+      const endR   = 2.5 + Math.random() * 2;
+      const startY = 2 + Math.random() * 3;
+      const endY   = 7 + Math.random() * 5;
+      const threadLen = Math.sqrt(Math.pow(endR - startR, 2) + Math.pow(endY - startY, 2));
+      const threadGeo = new THREE.CylinderGeometry(0.03, 0.03, threadLen, 4, 1);
+      const tCol = threadColors[t % threadColors.length];
+      const threadMat = new THREE.MeshBasicMaterial({
+        color: tCol,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      const thread = _mesh(threadGeo, threadMat);
+      // Position at midpoint and rotate toward endpoint
+      const mx = (Math.sin(a) * startR + Math.sin(a) * endR) * 0.5;
+      const mz = (Math.cos(a) * startR + Math.cos(a) * endR) * 0.5;
+      thread.position.set(mx, (startY + endY) * 0.5, mz);
+      // Tilt toward endpoint
+      thread.rotation.z = Math.atan2(endR - startR, endY - startY);
+      thread.rotation.y = a;
+      grp.add(thread);
+    }
+
+    // Extra fill light for Songspire glow (blue tint, complements fire)
+    const songLight = new THREE.PointLight(0x00ccff, 1.5, 12, 2);
+    songLight.position.set(0, 8, 0);
+    grp.add(songLight);
+
     _addNameSign(grp, def.label, 0, 1.2, 4.5);
     return grp;
   }

@@ -259,6 +259,8 @@
         },
         lastShownQuestReminder: null // Track last shown quest reminder on run start
       },
+      // Story achievements earned via tutorial quests
+      storyAchievements: [],
       // Legacy quest data (keep for backward compatibility)
       storyQuests: {
         welcomeShown: false,
@@ -476,12 +478,21 @@
           // existing saves also go through the BUILD step before ENTER is shown.
           // accountBuilding and idleMenu remain at level 1 (UI-only).
           if (!saveData._buildingMigrationV4) {
-            var bldQM = saveData.campBuildings && saveData.campBuildings.questMission;
-            if (bldQM) {
-              bldQM.level = 0;
-              bldQM.unlocked = true; // keep unlocked so BUILD button shows
-            }
+            // V4 originally reset questMission to level 0; that behaviour is now
+            // undone by V6 below.  The flag is still set so V4 does not run again
+            // on future loads.
             saveData._buildingMigrationV4 = true;
+          }
+          // ── Building migration v6 ──
+          // Quest Hall is now pre-built in the new tutorial flow.
+          // Ensure questMission is at level 1 so it is immediately accessible.
+          if (!saveData._buildingMigrationV6) {
+            var bldQMv6 = saveData.campBuildings && saveData.campBuildings.questMission;
+            if (bldQMv6) {
+              bldQMv6.level = 1;
+              bldQMv6.unlocked = true;
+            }
+            saveData._buildingMigrationV6 = true;
           }
           // ── Building migration v5 ──
           // Inventory is a core free building (isFree + isCore) that should always
