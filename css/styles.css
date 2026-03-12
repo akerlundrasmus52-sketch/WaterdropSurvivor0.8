@@ -5046,123 +5046,26 @@
     }
 
     /* ============================================ */
-    /* CODEX SCREEN                                 */
+    /* CODEX SCREEN — Magazine Style                */
     /* ============================================ */
     #codex-screen {
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+      background: linear-gradient(160deg, #05050f 0%, #0d0d20 50%, #05050f 100%);
       z-index: 150;
       flex-direction: column;
       align-items: center;
-      overflow-y: auto;
-      padding: 20px;
+      overflow: hidden;
+      padding: 16px 14px 12px;
+      box-sizing: border-box;
     }
 
-    .codex-header {
-      font-family: 'Bangers', cursive;
-      font-size: 28px;
-      color: #FFD700;
-      text-shadow: 0 0 10px rgba(255,215,0,0.5);
-      margin-bottom: 16px;
-      letter-spacing: 3px;
-    }
-
-    .codex-pages {
-      width: min(700px, 95vw);
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-    }
-    @media (max-width: 500px) {
-      .codex-pages {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .codex-entry {
-      background: linear-gradient(135deg, #1a1a2e 0%, #0d0d1a 100%);
-      border: 3px solid #FFD700;
-      border-radius: 14px;
-      padding: 14px;
-      position: relative;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .codex-entry:hover {
-      transform: scale(1.02);
-      box-shadow: 0 0 16px rgba(255,215,0,0.4);
-    }
-
-    .codex-entry-icon {
-      font-size: 40px;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    .codex-entry-name {
-      font-family: 'Bangers', cursive;
-      font-size: 18px;
-      color: #FFD700;
-      text-align: center;
-      margin-bottom: 6px;
-    }
-    .codex-entry-desc {
-      font-size: 12px;
-      color: #ccc;
-      text-align: center;
-      line-height: 1.4;
-    }
-    .codex-entry-bubble {
-      background: rgba(255,255,255,0.08);
-      border: 2px solid rgba(255,215,0,0.3);
-      border-radius: 12px;
-      padding: 8px 10px;
-      margin-top: 8px;
-      font-family: 'Bangers', cursive;
-      font-size: 12px;
-      color: #F0F8FF;
-      position: relative;
-    }
-    .codex-entry-bubble::before {
-      content: '';
-      position: absolute;
-      top: -8px;
-      left: 20px;
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-bottom: 8px solid rgba(255,215,0,0.3);
-    }
-
-    .codex-pagination {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      margin-top: 16px;
-      font-family: 'Bangers', cursive;
-      color: #FFD700;
-      font-size: 18px;
-    }
-    .codex-pagination button {
-      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-      border: none;
-      border-radius: 8px;
-      color: #000;
-      font-family: 'Bangers', cursive;
-      font-size: 16px;
-      padding: 8px 18px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: transform 0.1s;
-    }
-    .codex-pagination button:hover {
-      transform: scale(1.05);
-    }
-    .codex-pagination button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
+    /* Legacy classes kept for backwards compat */
+    .codex-header { display: none; }
+    .codex-pages { display: none; }
+    .codex-pagination { display: none; }
+    .codex-entry { display: none; }
 
     /* =================================================
        SUPER STAT BAR — Advanced real-time event panel
@@ -8430,31 +8333,41 @@
   background: rgba(0, 0, 0, 0.95);
   z-index: 1000;
   display: none;
-  overflow-y: auto;
+  overflow: hidden; /* No scroll — all cards must fit on screen */
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
 }
 
 .stat-cards-container {
-  max-width: 900px;
-  margin: 20px auto;
-  padding: 20px;
+  width: 100%;
+  max-width: min(900px, 100vw);
+  height: 100vh;
+  padding: 1vh 2vw;
   color: white;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .stat-cards-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 15px;
+  margin-bottom: 0.8vh;
+  padding: 0.6vh 1.2vw;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 15px;
+  border-radius: 12px;
   border: 2px solid #ffaa00;
   box-shadow: 0 0 20px rgba(255, 170, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .stat-cards-header h2 {
   margin: 0;
-  font-size: 32px;
+  font-size: clamp(18px, 3vh, 28px);
   font-weight: bold;
   color: #ffaa00;
   text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
@@ -8484,13 +8397,14 @@
 .stat-cards-info {
   display: flex;
   justify-content: space-around;
-  margin-bottom: 20px;
-  padding: 15px;
+  margin-bottom: 0.8vh;
+  padding: 0.5vh 1vw;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 10px;
   border: 2px solid rgba(255, 255, 255, 0.1);
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .info-item {
@@ -8501,32 +8415,33 @@
 }
 
 .info-label {
-  font-size: 14px;
+  font-size: clamp(9px, 1.2vh, 13px);
   color: #888;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .info-value {
-  font-size: 20px;
+  font-size: clamp(13px, 2vh, 18px);
   font-weight: bold;
   color: #ffaa00;
 }
 
 .purchase-button {
   width: 100%;
-  padding: 20px;
-  margin-bottom: 30px;
+  padding: clamp(6px, 1.2vh, 14px) 10px;
+  margin-bottom: 0.8vh;
   background: linear-gradient(135deg, #ff8800 0%, #ff4400 100%);
   border: 3px solid #ffaa00;
-  border-radius: 15px;
+  border-radius: 12px;
   color: white;
-  font-size: 24px;
+  font-size: clamp(14px, 2.5vh, 20px);
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 5px 20px rgba(255, 136, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(255, 136, 0, 0.5);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
 }
 
 .purchase-button:hover:not(:disabled) {
@@ -8548,22 +8463,27 @@
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 15px;
-  padding: 10px;
+  /* 16 cards in a 4×4 grid that fills the remaining vertical space */
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: clamp(4px, 0.8vh, 12px);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
 }
 
 @media (min-width: 600px) {
   .cards-grid {
     grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(4, 1fr);
   }
 }
 
 .stat-card {
-  aspect-ratio: 0.7;
+  aspect-ratio: unset;
   background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
   border: 3px solid #444;
-  border-radius: 15px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8573,6 +8493,8 @@
   position: relative;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
 }
 
 .stat-card::before {
@@ -8620,6 +8542,18 @@
   box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
 }
 
+/* Golden pop animation when a card is revealed for the first time */
+.stat-card.just-flipped {
+  animation: cardGoldenPop 0.55s ease-out forwards;
+}
+
+@keyframes cardGoldenPop {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,215,0,0);    border-color: #444; }
+  30%  { transform: scale(1.18); box-shadow: 0 0 30px 8px rgba(255,215,0,0.9); border-color: #FFD700; }
+  60%  { transform: scale(1.08); box-shadow: 0 0 20px 5px rgba(255,215,0,0.6); border-color: #FFD700; }
+  100% { transform: scale(1);    box-shadow: 0 0 15px rgba(0,255,136,0.5);  border-color: #00ff88; }
+}
+
 .card-level {
   position: absolute;
   top: 8px;
@@ -8633,24 +8567,26 @@
 }
 
 .card-icon {
-  font-size: 48px;
-  margin-bottom: 8px;
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+  font-size: clamp(22px, 3.5vh, 48px);
+  margin-bottom: 4px;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
 }
 
 .card-name {
-  font-size: 14px;
+  font-size: clamp(9px, 1.4vh, 14px);
   font-weight: bold;
   color: white;
   text-align: center;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  padding: 0 4px;
+  line-height: 1.1;
 }
 
 .card-value {
-  font-size: 18px;
+  font-size: clamp(10px, 1.6vh, 18px);
   font-weight: bold;
-  text-shadow: 0 0 10px currentColor;
+  text-shadow: 0 0 8px currentColor;
 }
 
 @keyframes cardFlip {

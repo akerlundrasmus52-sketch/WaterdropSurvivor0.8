@@ -1234,10 +1234,18 @@ function showWeaponBuilding() {
       // Weighted random selection
       var wonPrize = _weightedPickPrize(prizes);
 
-      // Calculate spin amount to land on prize
+      // Calculate spin amount to land on prize.
+      // The pointer sits at the top (0°). A conic-gradient starts at 0° (top) and
+      // grows clockwise, so segment i occupies [segDeg*i, segDeg*(i+1)].
+      // After rotating the wheel clockwise by totalDeg, the pointer aligns with
+      // whatever was originally at position (360 - totalDeg % 360) % 360.
+      // We want it at the mid-point of the winning segment:
+      //   prizeAngle = segDeg * prizeIndex + segDeg / 2
+      // So we need: totalDeg ≡ -prizeAngle (mod 360) → rotate enough to bring it to 0°
       var prizeIndex = prizes.indexOf(wonPrize);
-      var targetAngle = (segDeg * prizeIndex) + (segDeg / 2);
-      var totalDeg = 360 * 6 + targetAngle + Math.random() * 30 - 15;
+      var prizeAngle = (segDeg * prizeIndex) + (segDeg / 2);
+      var targetAngle = (360 - (prizeAngle % 360)) % 360;
+      var totalDeg = 360 * 6 + targetAngle + (Math.random() * segDeg * 0.3 - segDeg * 0.15);
 
       wheelContainer.style.transform = 'rotate(' + totalDeg + 'deg)';
 

@@ -36,6 +36,7 @@
     { id: 'armory',              x: -8,  z: -12,  label: 'Armory',              icon: '⚔️' },
     { id: 'inventory',           x:  8,  z: -12,  label: 'Inventory',           icon: '📦' },
     { id: 'campBoard',           x: -3.5,z:  0,  label: 'Camp Board',          icon: '📋' },
+    { id: 'codex',               x:  3.5,z:  0,  label: 'Codex',               icon: '📖' },
     { id: 'specialAttacks',      x:  8,  z:  7,  label: 'Special Attacks',     icon: '⚡' },
     { id: 'warehouse',           x: -8,  z:  7,  label: 'Warehouse',           icon: '🏪' },
     { id: 'tavern',              x: -6,  z: 14,  label: 'Tavern',              icon: '🍺' },
@@ -1904,6 +1905,7 @@
       case 'armory':             return _buildArmory(def);
       case 'inventory':          return _buildInventoryStorage(def);
       case 'campBoard':          return _buildCampBoard(def);
+      case 'codex':             return _buildCodexSign(def);
       case 'specialAttacks':     return _buildSpecialAttacksArena(def);
       case 'warehouse':          return _buildWarehouse(def);
       case 'tavern':             return _buildTavern(def);
@@ -2548,45 +2550,165 @@
   // ── Generic fallback building ────────────────────────────
   // ── Camp Board ─ glowing notice board near campfire ──────
   function _buildCampBoard(def) {
+    // High-tech hub — replaces the old wooden billboard
     const THREE = T();
     const grp = new THREE.Group();
     grp.position.set(def.x, 0, def.z);
 
-    // Main post
-    const postGeo = new THREE.CylinderGeometry(0.12, 0.15, 2.8, 8);
-    const post = _mesh(postGeo, _lambert(0x4d2c0a));
-    post.position.y = 1.4;
-    post.castShadow = true;
-    grp.add(post);
+    // Hexagonal base platform
+    const baseGeo = new THREE.CylinderGeometry(1.6, 1.8, 0.22, 6);
+    const base = _mesh(baseGeo, _mat(0x111122, 0x2233aa, 0.25));
+    base.position.y = 0.11;
+    grp.add(base);
 
-    // Board frame
-    const frameGeo = new THREE.BoxGeometry(2.2, 1.4, 0.14);
-    const frame = _mesh(frameGeo, _lambert(0x5c3317));
-    frame.position.y = 2.6;
-    frame.castShadow = true;
-    grp.add(frame);
+    // Central pillar
+    const pillarGeo = new THREE.CylinderGeometry(0.18, 0.22, 3.0, 8);
+    const pillar = _mesh(pillarGeo, _mat(0x223355, 0x334466, 0.2));
+    pillar.position.y = 1.61;
+    pillar.castShadow = true;
+    grp.add(pillar);
 
-    // Board surface (golden glow)
-    const boardGeo = new THREE.BoxGeometry(1.9, 1.1, 0.06);
-    const board = _mesh(boardGeo, _mat(0xf0d890, 0xf0d890, 0.5));
-    board.position.set(0, 2.6, 0.11);
+    // Three rotating ring arcs
+    const ringMat = _mat(0x00ccff, 0x00ccff, 0.9);
+    for (let i = 0; i < 3; i++) {
+      const ringGeo = new THREE.TorusGeometry(1.0, 0.04, 8, 32, Math.PI * 1.4);
+      const ring = _mesh(ringGeo, ringMat);
+      ring.position.y = 1.2 + i * 0.8;
+      ring.rotation.y = (i / 3) * Math.PI * 2;
+      ring.rotation.x = Math.PI / 2;
+      grp.add(ring);
+    }
+
+    // Holographic panel frame at top
+    const panelGeo = new THREE.BoxGeometry(1.8, 1.2, 0.08);
+    const panel = _mesh(panelGeo, _mat(0x001133, 0x0066ff, 0.4));
+    panel.position.y = 3.6;
+    grp.add(panel);
+
+    // Glowing screen surface
+    const screenGeo = new THREE.BoxGeometry(1.6, 1.0, 0.04);
+    const screenMat = new THREE.MeshPhongMaterial({
+      color: 0x003366, emissive: 0x0055cc, emissiveIntensity: 0.8,
+      transparent: true, opacity: 0.85
+    });
+    const screen = new THREE.Mesh(screenGeo, screenMat);
+    screen.position.set(0, 3.6, 0.07);
+    grp.add(screen);
+
+    // Blue point light from screen
+    const screenLight = new THREE.PointLight(0x0088ff, 2.0, 7, 2);
+    screenLight.position.set(0, 3.6, 0.8);
+    grp.add(screenLight);
+
+    // 4 corner antenna spires
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const spireGeo = new THREE.CylinderGeometry(0.04, 0.07, 1.0, 6);
+      const spire = _mesh(spireGeo, _mat(0x334455, 0x0077aa, 0.3));
+      spire.position.set(Math.cos(a) * 0.8, 3.0, Math.sin(a) * 0.8);
+      grp.add(spire);
+      const tipLight = new THREE.PointLight(0x00aaff, 0.8, 3, 2);
+      tipLight.position.set(Math.cos(a) * 0.8, 3.6, Math.sin(a) * 0.8);
+      grp.add(tipLight);
+    }
+
+    _addNameSign(grp, def.label, 0, 4.6, 0);
+    return grp;
+  }
+
+  // ── Codex — wooden message/info board sign ─────────────────
+  function _buildCodexSign(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Two wooden posts
+    const postGeo = new THREE.CylinderGeometry(0.1, 0.12, 2.6, 8);
+    const postMat = _lambert(0x5c3317);
+    for (const px of [-0.7, 0.7]) {
+      const post = _mesh(postGeo, postMat);
+      post.position.set(px, 1.3, 0);
+      post.castShadow = true;
+      grp.add(post);
+    }
+
+    // Cross bar
+    const barGeo = new THREE.CylinderGeometry(0.06, 0.07, 1.7, 6);
+    const bar = _mesh(barGeo, postMat);
+    bar.position.y = 2.4;
+    bar.rotation.z = Math.PI / 2;
+    grp.add(bar);
+
+    // Main sign board
+    const boardGeo = new THREE.BoxGeometry(1.9, 1.2, 0.1);
+    const boardMat = _lambert(0x8B5E3C);
+    const board = _mesh(boardGeo, boardMat);
+    board.position.y = 1.8;
+    board.castShadow = true;
     grp.add(board);
 
-    // Decorative tacks (four corners)
-    const tackGeo = new THREE.SphereGeometry(0.05, 6, 6);
-    const tackMat = _mat(0xffd700, 0xffd700, 0.8);
-    for (const [tx, ty] of [[-0.8, 0.4], [0.8, 0.4], [-0.8, -0.4], [0.8, -0.4]]) {
+    // Sign face (lighter wood)
+    const faceGeo = new THREE.BoxGeometry(1.7, 1.0, 0.05);
+    const face = _mesh(faceGeo, _mat(0xf0d890, 0xf5e0a0, 0.18));
+    face.position.set(0, 1.8, 0.08);
+    grp.add(face);
+
+    // Corner tacks
+    const tackGeo = new THREE.SphereGeometry(0.045, 6, 6);
+    const tackMat = _mat(0xffd700, 0xffd700, 0.7);
+    for (const [tx, ty] of [[-0.72, 0.35], [0.72, 0.35], [-0.72, -0.35], [0.72, -0.35]]) {
       const tack = _mesh(tackGeo, tackMat);
-      tack.position.set(tx, 2.6 + ty, 0.15);
+      tack.position.set(tx, 1.8 + ty, 0.12);
       grp.add(tack);
     }
 
-    // Warm glow point light
-    const glow = new THREE.PointLight(0xf0d890, 1.8, 6, 2);
-    glow.position.set(0, 2.8, 0.6);
+    // Warm glow
+    const glow = new THREE.PointLight(0xf5e0a0, 1.4, 5, 2);
+    glow.position.set(0, 2.2, 0.8);
     grp.add(glow);
 
-    _addNameSign(grp, def.label, 0, 3.7, 0);
+    // Eye of Horus notification indicator (3D floating pyramid with exclamation glow)
+    // This is a small golden pyramid hovering above the sign that becomes visible when new codex entries are available
+    const notifGeo = new THREE.ConeGeometry(0.22, 0.38, 4);
+    const notifMat = new THREE.MeshPhongMaterial({
+      color: 0xFFD700, emissive: 0xFFAA00, emissiveIntensity: 0.95,
+      transparent: true, opacity: 0.9
+    });
+    const notifPyramid = new THREE.Mesh(notifGeo, notifMat);
+    notifPyramid.name = 'codex-notif-pyramid';
+    notifPyramid.position.set(0, 3.2, 0);
+    notifPyramid.rotation.y = Math.PI / 4;
+    grp.add(notifPyramid);
+
+    const notifLight = new THREE.PointLight(0xFFD700, 1.6, 4, 2);
+    notifLight.name = 'codex-notif-light';
+    notifLight.position.set(0, 3.2, 0);
+    grp.add(notifLight);
+
+    // Store reference for updating visibility
+    grp.userData.notifPyramid = notifPyramid;
+    grp.userData.notifLight = notifLight;
+
+    // Initially hidden — will be shown by CodexSystem.hasNew()
+    notifPyramid.visible = false;
+    notifLight.visible = false;
+
+    // Inject a DOM element for the JS notification system to toggle
+    const indEl = document.createElement('div');
+    indEl.id = 'codex-horus-indicator';
+    indEl.style.display = 'none';
+    indEl.dataset.grpRef = 'codex-notif';
+    document.body.appendChild(indEl);
+
+    // MutationObserver to sync 3D notif with DOM indicator
+    const mo = new MutationObserver(() => {
+      const visible = indEl.style.display !== 'none';
+      notifPyramid.visible = visible;
+      notifLight.visible = visible;
+    });
+    mo.observe(indEl, { attributes: true, attributeFilter: ['style'] });
+
+    _addNameSign(grp, def.label, 0, 3.8, 0);
     return grp;
   }
 

@@ -3013,6 +3013,18 @@
         } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {
           window.GameAccount.addXP(xpAmount, 'Enemy Kill', window.saveData);
         }
+        // Discover Codex entry on first kill of each enemy type
+        if (window.CodexSystem) {
+          const _t = this.typeIndex;
+          const _typeMap = {
+            0: 'enemy_tank', 1: 'enemy_fast', 2: 'enemy_balanced', 3: 'enemy_slow',
+            4: 'enemy_ranged', 5: 'enemy_flying', 6: 'enemy_hardtank', 7: 'enemy_hardfast',
+            8: 'enemy_elite'
+          };
+          if (_typeMap[_t]) window.CodexSystem.discover(_typeMap[_t]);
+          if (this.isBoss && !this.isFlyingBoss) window.CodexSystem.discover('enemy_miniboss');
+          if (this.isFlyingBoss) window.CodexSystem.discover('enemy_flyingboss');
+        }
         // Clear freeze state so no further update logic applies to dead enemy
         this.isFrozen = false;
         // Cancel pending squish timeout to prevent callback on dead enemy
