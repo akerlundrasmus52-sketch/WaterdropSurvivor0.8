@@ -118,6 +118,73 @@
     window._ENEMY_COLORS = _ENEMY_COLORS;
     const ENEMY_INSTANCING_ENABLED = window.ENEMY_INSTANCING_ENABLED === true;
 
+    // ── Shared enemy projectile resources — created once, reused by every enemy shot ──────────
+    // Previously fireProjectile() created a new SphereGeometry + MeshBasicMaterial on EVERY
+    // shot, causing severe VRAM growth and GC pressure.  One geometry + one material is shared
+    // across all live enemy projectile meshes; only the Mesh instance itself is per-shot.
+    // The pool below pre-allocates ENEMY_PROJ_POOL_SIZE meshes so that even firing-intensive
+    // encounters don't allocate new objects mid-frame.
+    const _ENEMY_PROJ_GEO = new THREE.SphereGeometry(0.2, 6, 6);
+    const _ENEMY_PROJ_MAT = new THREE.MeshBasicMaterial({ color: 0xFF6347 });
+    _ENEMY_PROJ_GEO._isShared = true;
+    _ENEMY_PROJ_MAT._isShared = true;
+    const ENEMY_PROJ_POOL_SIZE = 64;
+    const _enemyProjPool = []; // pool of { mesh, active, ... } objects
+    function _acquireEnemyProj() {
+      for (let _ei = 0; _ei < _enemyProjPool.length; _ei++) {
+        if (!_enemyProjPool[_ei].active) return _enemyProjPool[_ei];
+      }
+      // Pool exhausted — create a new slot (bounded by practical limits)
+      if (_enemyProjPool.length < ENEMY_PROJ_POOL_SIZE * 2) {
+        const _m = new THREE.Mesh(_ENEMY_PROJ_GEO, _ENEMY_PROJ_MAT);
+        _m.frustumCulled = false;
+        const _slot = { mesh: _m, active: false, lifetime: 0, speed: 0, direction: new THREE.Vector3(), damage: 0 };
+        _slot.update = _enemyProjUpdate;
+        _slot.destroy = _enemyProjDestroy;
+        _enemyProjPool.push(_slot);
+        return _slot;
+      }
+      return null;
+    }
+    function _enemyProjUpdate() {
+      if (!this.active) return false;
+      this.mesh.position.addScaledVector(this.direction, this.speed);
+      this.lifetime--;
+      if (this.lifetime <= 0) { this.destroy(); return false; }
+      // Collision with player
+      const _pp = (window.player && window.player.mesh) ? window.player.mesh.position : null;
+      if (_pp) {
+        const _pdx = this.mesh.position.x - _pp.x;
+        const _pdz = this.mesh.position.z - _pp.z;
+        if (_pdx * _pdx + _pdz * _pdz < 0.64) {
+          // Kinetic Mirror — 10% reflect
+          if (window._nmKineticMirror && !this._reflected && Math.random() < 0.10) {
+            this._reflected = true;
+            this.isEnemyProjectile = false;
+            this.direction.x = -this.direction.x * 3.0;
+            this.direction.z = -this.direction.z * 3.0;
+            this.speed *= 3.0;
+            if (typeof spawnParticles === 'function') spawnParticles(this.mesh.position, 0x00ffcc, 6);
+            return true;
+          }
+          if (window.player && typeof window.player.takeDamage === 'function') {
+            window.player.takeDamage(this.damage);
+          }
+          if (typeof spawnParticles === 'function') spawnParticles(this.mesh.position, 0xFF6347, 5);
+          if (typeof playSound === 'function') { try { playSound('hit'); } catch (e) {} }
+          this.destroy();
+          return false;
+        }
+      }
+      return true;
+    }
+    function _enemyProjDestroy() {
+      this.active = false;
+      this.isEnemyProjectile = false;
+      this._reflected = false;
+      if (this.mesh.parent) scene.remove(this.mesh);
+    }
+
     // Enemy types that display eyes (creatures with recognizable faces)
     const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17, 21]);
 
@@ -1671,35 +1738,31 @@
       }
 
       fireProjectile(targetPos) {
-        // Create enemy projectile
-        const projectile = {
-          startPos: this.mesh.position.clone(),
-          targetPos: targetPos.clone(),
-          mesh: null,
-          speed: this.projectileSpeed,
-          damage: this.damage,
-          lifetime: 100, // frames
-          isEnemyProjectile: true
-        };
-        
-        // Create visual
-        const geo = new THREE.SphereGeometry(0.2, 8, 8);
-        const mat = new THREE.MeshBasicMaterial({ color: 0xFF6347 });
-        projectile.mesh = new THREE.Mesh(geo, mat);
-        projectile.mesh.position.copy(this.mesh.position);
-        projectile.mesh.position.y = 0.5;
+        // Acquire a pooled enemy projectile slot (shared geometry + material — no VRAM growth)
+        const projectile = _acquireEnemyProj();
+        if (!projectile) return; // pool saturated — silently skip
+
+        const _startX = this.mesh.position.x;
+        const _startZ = this.mesh.position.z;
+        const dx = targetPos.x - _startX;
+        const dz = targetPos.z - _startZ;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 0.01) return; // degenerate case — target on top of enemy
+
+        projectile.active           = true;
+        projectile.isEnemyProjectile = true;
+        projectile._reflected       = false;
+        projectile.speed            = this.projectileSpeed || 0.15;
+        projectile.damage           = this.damage;
+        projectile.lifetime         = 120; // ~2 s at 60 fps
+        projectile.direction.set(dx / dist, 0, dz / dist);
+
+        projectile.mesh.position.set(_startX, 0.8, _startZ);
         scene.add(projectile.mesh);
-        
-        // Direction
-        const dx = targetPos.x - this.mesh.position.x;
-        const dz = targetPos.z - this.mesh.position.z;
-        const dist = Math.sqrt(dx*dx + dz*dz);
-        projectile.direction = new THREE.Vector3(dx/dist, 0, dz/dist);
-        
-        // Add to projectiles array (will be updated in main loop)
+
         projectiles.push(projectile);
-        
-        playSound('shoot');
+
+        if (typeof playSound === 'function') { try { playSound('shoot'); } catch (e) {} }
       }
 
       /**

@@ -1,5 +1,5 @@
 // js/neural-matrix.js — The Neural Matrix: synapse-constellation upgrade UI.
-// Players spend Astral Essence to unlock four powerful game-altering nodes.
+// Players spend Astral Essence (major nodes) or 1945 Credits (minor stat nodes) to upgrade.
 // Includes AIDA's Parasite Node puzzle that drains gold if the path is infected.
 // Depends on: save-system.js (saveData), audio.js (playSound)
 
@@ -8,6 +8,7 @@ window.NeuralMatrix = (function () {
 
   // ─── Node definitions ──────────────────────────────────────────────────────
   // Positions are in a normalised 0-1 coordinate space on the canvas.
+  // Major nodes cost Astral Essence (⚡). Minor stat nodes cost 1945 Credits (✈️).
   const NODES = [
     {
       id: 'start',
@@ -17,16 +18,131 @@ window.NeuralMatrix = (function () {
       cx: 0.50, cy: 0.50,
       color: '#00ccff',
       glowColor: 'rgba(0,204,255,0.4)',
-      connections: ['eventHorizon', 'bloodAlchemy', 'kineticMirror'],
+      connections: ['atk1_left', 'atk1_top', 'atk1_right', 'eventHorizon', 'bloodAlchemy', 'kineticMirror'],
       isStart: true,
       description: 'The origin node. Spend Astral Essence to branch outward.'
     },
+    // ── Minor ATK/SPD nodes between CORE and the three major nodes ─────────────
+    {
+      id: 'atk1_left',
+      label: 'ATK\n+1',
+      icon: '⚔',
+      cost: 20,
+      cx: 0.30, cy: 0.40,
+      color: '#ff8844',
+      glowColor: 'rgba(255,136,68,0.4)',
+      connections: ['eventHorizon'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { atk: 1 },
+      description: 'Play 1945 Striker to earn credits. +1 ATK — increases all damage by 5%.'
+    },
+    {
+      id: 'spd1_left',
+      label: 'SPD\n+1',
+      icon: '💨',
+      cost: 20,
+      cx: 0.22, cy: 0.34,
+      color: '#44ffcc',
+      glowColor: 'rgba(68,255,204,0.4)',
+      connections: ['eventHorizon'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { spd: 1 },
+      description: 'Play 1945 Striker to earn credits. +1 SPD — increases move speed by 3%.'
+    },
+    {
+      id: 'atk1_top',
+      label: 'ATK\n+1',
+      icon: '⚔',
+      cost: 20,
+      cx: 0.43, cy: 0.34,
+      color: '#ff8844',
+      glowColor: 'rgba(255,136,68,0.4)',
+      connections: ['bloodAlchemy'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { atk: 1 },
+      description: 'Play 1945 Striker to earn credits. +1 ATK — increases all damage by 5%.'
+    },
+    {
+      id: 'spd1_top',
+      label: 'SPD\n+1',
+      icon: '💨',
+      cost: 20,
+      cx: 0.57, cy: 0.34,
+      color: '#44ffcc',
+      glowColor: 'rgba(68,255,204,0.4)',
+      connections: ['bloodAlchemy'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { spd: 1 },
+      description: 'Play 1945 Striker to earn credits. +1 SPD — increases move speed by 3%.'
+    },
+    {
+      id: 'atk1_right',
+      label: 'ATK\n+1',
+      icon: '⚔',
+      cost: 20,
+      cx: 0.70, cy: 0.40,
+      color: '#ff8844',
+      glowColor: 'rgba(255,136,68,0.4)',
+      connections: ['kineticMirror'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { atk: 1 },
+      description: 'Play 1945 Striker to earn credits. +1 ATK — increases all damage by 5%.'
+    },
+    {
+      id: 'spd1_right',
+      label: 'SPD\n+1',
+      icon: '💨',
+      cost: 20,
+      cx: 0.78, cy: 0.34,
+      color: '#44ffcc',
+      glowColor: 'rgba(68,255,204,0.4)',
+      connections: ['kineticMirror'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { spd: 1 },
+      description: 'Play 1945 Striker to earn credits. +1 SPD — increases move speed by 3%.'
+    },
+    // ── Sleep upgrade minor nodes (between major nodes and Annunaki Protocol) ──
+    {
+      id: 'sleep_regen',
+      label: 'SLEEP\nREGEN',
+      icon: '😴',
+      cost: 30,
+      cx: 0.35, cy: 0.62,
+      color: '#8866ff',
+      glowColor: 'rgba(136,102,255,0.4)',
+      connections: ['annunakiProtocol'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { sleepRegen: 1 },
+      description: 'Play 1945 to unlock. Between runs: regenerate 10% max HP during idle/sleep phase.'
+    },
+    {
+      id: 'sleep_gold',
+      label: 'SLEEP\nGOLD',
+      icon: '💰',
+      cost: 30,
+      cx: 0.65, cy: 0.62,
+      color: '#ffdd44',
+      glowColor: 'rgba(255,221,68,0.4)',
+      connections: ['annunakiProtocol'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { sleepGold: 1 },
+      description: 'Play 1945 to unlock. Earn 5% more gold passively while idle between runs.'
+    },
+    // ── Major nodes ────────────────────────────────────────────────────────────
     {
       id: 'eventHorizon',
       label: 'EVENT\nHORIZON',
       icon: '⦿',
       cost: 40,
-      cx: 0.20, cy: 0.28,
+      cx: 0.20, cy: 0.22,
       color: '#aa44ff',
       glowColor: 'rgba(170,68,255,0.4)',
       connections: ['annunakiProtocol'],
@@ -37,7 +153,7 @@ window.NeuralMatrix = (function () {
       label: 'BLOOD\nALCHEMY',
       icon: '⬡',
       cost: 40,
-      cx: 0.50, cy: 0.22,
+      cx: 0.50, cy: 0.15,
       color: '#ff2244',
       glowColor: 'rgba(255,34,68,0.4)',
       connections: ['annunakiProtocol'],
@@ -48,7 +164,7 @@ window.NeuralMatrix = (function () {
       label: 'KINETIC\nMIRROR',
       icon: '◇',
       cost: 40,
-      cx: 0.80, cy: 0.28,
+      cx: 0.80, cy: 0.22,
       color: '#00ffaa',
       glowColor: 'rgba(0,255,170,0.4)',
       connections: ['annunakiProtocol'],
@@ -59,7 +175,7 @@ window.NeuralMatrix = (function () {
       label: 'THE\nANNUNAKI\nPROTOCOL',
       icon: '★',
       cost: 120,
-      cx: 0.50, cy: 0.72,
+      cx: 0.50, cy: 0.80,
       color: '#ffd700',
       glowColor: 'rgba(255,215,0,0.5)',
       connections: [],
@@ -327,10 +443,14 @@ window.NeuralMatrix = (function () {
 
     // Cost badge (only for locked non-start nodes)
     if (!unlocked && !node.isStart && !isParasite) {
-      const canAfford = (saveData && (saveData.astralEssence || 0) >= node.cost);
+      const isMinorNode = !!node.isMinor;
+      const cred = saveData ? (saveData.neural1945 ? (saveData.neural1945.credits || 0) : 0) : 0;
+      const ess  = saveData ? (saveData.astralEssence || 0) : 0;
+      const canAfford = isMinorNode ? (cred >= node.cost) : (ess >= node.cost);
       _ctx.font = 'bold 9px monospace';
       _ctx.fillStyle = canAfford ? '#00ffaa' : '#ff4444';
-      _ctx.fillText('⚡' + node.cost, x, y - R - 8);
+      const badge = isMinorNode ? ('✈' + node.cost) : ('⚡' + node.cost);
+      _ctx.fillText(badge, x, y - R - 8);
     }
 
     _ctx.restore();
@@ -415,16 +535,34 @@ window.NeuralMatrix = (function () {
       return;
     }
 
-    const essence = saveData ? (saveData.astralEssence || 0) : 0;
-    if (essence < node.cost) {
-      _showToast('Not enough Astral Essence! (Need ' + node.cost + ' ⚡)', '#ff4444');
-      return;
+    // Minor nodes cost 1945 Credits; major nodes cost Astral Essence
+    if (node.isMinor) {
+      const credits = saveData && saveData.neural1945 ? (saveData.neural1945.credits || 0) : 0;
+      if (credits < node.cost) {
+        _showToast('Need ' + node.cost + ' ✈️ 1945 Credits! Play the 1945 Striker to earn them.', '#ff8800');
+        return;
+      }
+      saveData.neural1945.credits -= node.cost;
+    } else {
+      const essence = saveData ? (saveData.astralEssence || 0) : 0;
+      if (essence < node.cost) {
+        _showToast('Not enough Astral Essence! (Need ' + node.cost + ' ⚡)', '#ff4444');
+        return;
+      }
+      saveData.astralEssence -= node.cost;
     }
 
-    // Spend essence
-    saveData.astralEssence -= node.cost;
     if (!saveData.neuralMatrix) saveData.neuralMatrix = {};
     saveData.neuralMatrix[nodeId] = true;
+
+    // Accumulate minor stat bonuses in saveData.neuralMatrix._statBonuses
+    if (node.statBonus) {
+      if (!saveData.neuralMatrix._statBonuses) saveData.neuralMatrix._statBonuses = {};
+      Object.keys(node.statBonus).forEach(k => {
+        saveData.neuralMatrix._statBonuses[k] = (saveData.neuralMatrix._statBonuses[k] || 0) + node.statBonus[k];
+      });
+    }
+
     _save();
 
     // Trigger unlock animation
@@ -446,7 +584,15 @@ window.NeuralMatrix = (function () {
       eventHorizon:     'Event Horizon online. Space folds when you dash.',
       bloodAlchemy:     'Blood Alchemy active. The ground\'s suffering heals you.',
       kineticMirror:    'Kinetic Mirror armed. Their bullets become your weapons.',
-      annunakiProtocol: 'THE ANNUNAKI PROTOCOL ENGAGED. Embrace the gold. Embrace the pain.'
+      annunakiProtocol: 'THE ANNUNAKI PROTOCOL ENGAGED. Embrace the gold. Embrace the pain.',
+      atk1_left: 'Synapse reinforced. Attack power +1.',
+      atk1_top:  'Neural pathway boosted. Damage output rising.',
+      atk1_right:'Strike protocol updated. +1 ATK.',
+      spd1_left: 'Motor cortex calibrated. Speed +1.',
+      spd1_top:  'Velocity routines optimised.',
+      spd1_right:'Neural drift engaged. Movement faster.',
+      sleep_regen:'Sleep cycle enhanced. Regeneration active between runs.',
+      sleep_gold: 'Passive income protocol loaded. Gold accumulation rate increased.'
     };
     if (typeof window.showNarratorLine === 'function') {
       window.showNarratorLine('AIDA: ' + (flavour[nodeId] || 'Node unlocked.'), 3500);
@@ -500,7 +646,10 @@ window.NeuralMatrix = (function () {
         btn.style.display = '';
         btn.dataset.nodeId = node.id;
         const unlocked = _isUnlocked(node.id);
-        btn.textContent = unlocked ? '[ UNLOCKED ]' : '[ UNLOCK — ' + node.cost + ' ⚡ ]';
+        const costLabel = node.isMinor
+          ? ('[ UNLOCK — ' + node.cost + ' ✈️ CREDITS ]')
+          : ('[ UNLOCK — ' + node.cost + ' ⚡ ]');
+        btn.textContent = unlocked ? '[ UNLOCKED ]' : costLabel;
         btn.style.opacity = unlocked ? '0.5' : '1';
         btn.disabled = !!unlocked;
       }
@@ -510,8 +659,10 @@ window.NeuralMatrix = (function () {
   function _updateEssenceDisplay() {
     if (!_overlay) return;
     const el = _overlay.querySelector('#nm-essence-count');
+    const cred = saveData && saveData.neural1945 ? (saveData.neural1945.credits || 0) : 0;
     if (el) el.textContent = '⚡ ' + (saveData ? (saveData.astralEssence || 0) : 0)
-      + '   🔷 ' + (saveData ? (saveData.neuralCores || 0) : 0);
+      + '   🔷 ' + (saveData ? (saveData.neuralCores || 0) : 0)
+      + '   ✈️ ' + cred;
   }
 
   // ─── Build UI ──────────────────────────────────────────────────────────────
@@ -654,6 +805,7 @@ window.NeuralMatrix = (function () {
     window._nmKineticMirror     = false;
     window._nmPathInfected      = false;
     window._nmForbiddenProtocol = false;
+    window._nmStatBonuses       = { atk: 0, spd: 0, sleepRegen: 0, sleepGold: 0 };
 
     if (!saveData || !saveData.neuralMatrix) return;
     const nm = saveData.neuralMatrix;
@@ -668,15 +820,35 @@ window.NeuralMatrix = (function () {
     // Forbidden Protocol: restore flag and spawn Source Glitches this run
     window._nmForbiddenProtocol = !!(nm.forbiddenProtocol);
 
-    if (window._nmAnnunakiActive && pStats) {
-      // Mark as active so player-class can switch material
-      pStats._annunakiActive = true;
-      // Double all damage output
-      pStats.damage = (pStats.damage || 1) * 2;
+    // Minor stat bonuses from 1945-credit nodes
+    if (nm._statBonuses) {
+      window._nmStatBonuses = Object.assign({}, nm._statBonuses);
+    }
+
+    if (pStats) {
+      if (window._nmAnnunakiActive) {
+        // Mark as active so player-class can switch material
+        pStats._annunakiActive = true;
+        // Double all damage output
+        pStats.damage = (pStats.damage || 1) * 2;
+      }
+      // Apply per-ATK and per-SPD minor node bonuses (5% per ATK stack, 3% per SPD stack)
+      const _sb = window._nmStatBonuses;
+      if (_sb.atk > 0 && pStats.damage) {
+        pStats.damage = pStats.damage * (1 + _sb.atk * 0.05);
+      }
+      if (_sb.spd > 0 && pStats.speed !== undefined) {
+        pStats.speed = (pStats.speed || 1) * (1 + _sb.spd * 0.03);
+      }
+      // Sleep regen: restore HP before the run starts
+      if (_sb.sleepRegen > 0 && pStats.maxHp) {
+        pStats.hp = Math.min(pStats.maxHp, (pStats.hp || pStats.maxHp) + Math.floor(pStats.maxHp * 0.10 * _sb.sleepRegen));
+      }
     }
   }
 
   // Called after a run ends to apply AIDA gold drain if path is infected.
+  // Also applies sleep gold bonus.
   function onRunEnd() {
     if (!saveData || !saveData.neuralMatrix) return;
     if (_isPathInfected()) {
@@ -692,6 +864,19 @@ window.NeuralMatrix = (function () {
             );
           }
         }, 3500);
+      }
+    }
+    // Sleep Gold bonus: add 5% of current gold per stack while idle
+    const _sb = window._nmStatBonuses || {};
+    if (_sb.sleepGold > 0 && saveData.gold > 0) {
+      const bonus = Math.floor(saveData.gold * 0.05 * _sb.sleepGold);
+      if (bonus > 0) {
+        saveData.gold += bonus;
+        setTimeout(() => {
+          if (typeof window.showNarratorLine === 'function') {
+            window.showNarratorLine('AIDA: "Passive income protocol active. +' + bonus + ' gold."', 3000);
+          }
+        }, 2000);
       }
     }
     // Reset per-session parasite state so it re-evaluates next session
