@@ -870,10 +870,23 @@
       // Clean up managed smoke particles
       smokeParticles.forEach(sp => {
         scene.remove(sp.mesh);
-        sp.geometry.dispose();
-        sp.material.dispose();
+        if (typeof _smokePool !== 'undefined' && _smokePool) {
+          _smokePool.release(sp);
+        } else if (sp.material) {
+          sp.material.dispose();
+        }
       });
       smokeParticles = [];
+      if (typeof _smokePool !== 'undefined' && _smokePool) _smokePool.releaseAll && _smokePool.releaseAll();
+
+      lavaParticles.forEach(lp => {
+        scene.remove(lp.mesh);
+        if (typeof _lavaPool !== 'undefined' && _lavaPool) {
+          _lavaPool.release(lp);
+        }
+      });
+      lavaParticles = [];
+      if (typeof _lavaPool !== 'undefined' && _lavaPool && _lavaPool.releaseAll) _lavaPool.releaseAll();
       
       meteors.forEach(m => {
         scene.remove(m.mesh);

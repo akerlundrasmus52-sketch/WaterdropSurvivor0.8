@@ -116,6 +116,62 @@
       }
     }
 
+    function _ensureSmokePool() {
+      if (_smokePool || typeof ObjectPool === 'undefined' || typeof THREE === 'undefined') return;
+      _ensureSharedGeo();
+      const _smokeGeoRef = (typeof _sharedSmokeSphereGeo !== 'undefined' && _sharedSmokeSphereGeo)
+        ? _sharedSmokeSphereGeo
+        : _sharedSmokeGeo;
+      _smokePool = new ObjectPool(
+        () => {
+          const mesh = new THREE.Mesh(_smokeGeoRef, new THREE.MeshBasicMaterial({
+            color: 0x666666,
+            transparent: true,
+            opacity: 0.5,
+            depthWrite: false
+          }));
+          mesh.visible = false;
+          return {
+            mesh,
+            material: mesh.material,
+            geometry: _smokeGeoRef,
+            velocity: { x: 0, y: 0, z: 0 },
+            life: 0,
+            maxLife: GAME_CONFIG.smokeDurationFrames
+          };
+        },
+        (entry) => {
+          entry.mesh.visible = false;
+          entry.mesh.position.set(0, -9999, 0);
+          entry.velocity.x = entry.velocity.y = entry.velocity.z = 0;
+          entry.material.opacity = 0.5;
+          if (entry.material.color) entry.material.color.setHex(0x666666);
+          entry.life = 0;
+          entry.maxLife = GAME_CONFIG.smokeDurationFrames;
+        },
+        MAX_SMOKE_PARTICLES
+      );
+    }
+
+    function _ensureLavaPool() {
+      if (_lavaPool || typeof ObjectPool === 'undefined' || typeof THREE === 'undefined') return;
+      _ensureSharedGeo();
+      _lavaPool = new ObjectPool(
+        () => {
+          const mesh = new THREE.Mesh(_sharedLavaGeo, _sharedLavaMats[0]);
+          mesh.visible = false;
+          return { mesh, vx: 0, vy: 0, vz: 0, life: 0 };
+        },
+        (entry) => {
+          entry.mesh.visible = false;
+          entry.mesh.position.set(0, -9999, 0);
+          entry.vx = entry.vy = entry.vz = 0;
+          entry.life = 0;
+        },
+        MAX_LAVA_PARTICLES
+      );
+    }
+
     // ─── Hit-Stop (Micro-Freeze) ────────────────────────────────────────────────────
     // Instantly freezes time for a short window (50–80 ms) to add weight to heavy blows.
     // Uses DopamineSystem.TimeDilation.snap(0) for an immediate freeze then lerps back.
@@ -3177,23 +3233,28 @@
         window._lavaSpoutTimer += dt;
         if (window._lavaSpoutTimer > (2 + Math.random() * 3)) { // Every 2-5 seconds
           window._lavaSpoutTimer = 0;
+          _ensureLavaPool();
           for (let ls = 0; ls < 8; ls++) {
             _ensureSharedGeo();
             const lavaMatIdx = Math.random() < 0.5 ? 0 : 1;
-            const lavaP = new THREE.Mesh(_sharedLavaGeo, _sharedLavaMats[lavaMatIdx]);
-            lavaP.position.set(lavaX + (Math.random() - 0.5) * 2, 22, lavaZ + (Math.random() - 0.5) * 2);
-            scene.add(lavaP);
-            const vx = (Math.random() - 0.5) * 0.3, vz = (Math.random() - 0.5) * 0.3;
-            let vy = 0.3 + Math.random() * 0.2, lpLife = 60;
-            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-              managedAnimations.push({ update(_dt2) {
-                lpLife--;
-                vy -= 0.012;
-                lavaP.position.x += vx; lavaP.position.y += vy; lavaP.position.z += vz;
-                if (lpLife <= 0) { scene.remove(lavaP); return false; }
-                return true;
-              }});
-            } else { scene.remove(lavaP); }
+            if (lavaParticles.length >= MAX_LAVA_PARTICLES && lavaParticles.length > 0) {
+              const oldest = lavaParticles.shift();
+              if (scene && oldest.mesh.parent === scene) scene.remove(oldest.mesh);
+              if (_lavaPool) _lavaPool.release(oldest);
+            }
+            const lavaEntry = _lavaPool ? _lavaPool.get() : {
+              mesh: new THREE.Mesh(_sharedLavaGeo, _sharedLavaMats[lavaMatIdx]),
+              vx: 0, vy: 0, vz: 0, life: 0
+            };
+            lavaEntry.mesh.material = _sharedLavaMats[lavaMatIdx];
+            lavaEntry.mesh.position.set(lavaX + (Math.random() - 0.5) * 2, 22, lavaZ + (Math.random() - 0.5) * 2);
+            lavaEntry.vx = (Math.random() - 0.5) * 0.3;
+            lavaEntry.vz = (Math.random() - 0.5) * 0.3;
+            lavaEntry.vy = 0.3 + Math.random() * 0.2;
+            lavaEntry.life = 60;
+            lavaEntry.mesh.visible = true;
+            if (!lavaEntry.mesh.parent && scene) scene.add(lavaEntry.mesh);
+            lavaParticles.push(lavaEntry);
           }
         }
       }
@@ -3214,16 +3275,40 @@
             sp.velocity.y = Math.abs(sp.velocity.y) * 0.1; // Damp vertical velocity at ground
           }
           sp.mesh.scale.multiplyScalar(1.05);
-          sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
+          if (sp.material) sp.material.opacity = (sp.life / sp.maxLife) * 0.5;
           if (sp.life <= 0) {
             scene.remove(sp.mesh);
-            // Don't dispose shared smoke geometry
-            sp.material.dispose();
+            if (_smokePool) {
+              _smokePool.release(sp);
+            } else {
+              // Don't dispose shared smoke geometry
+              sp.material.dispose();
+            }
             continue; // dropped from array
           }
           smokeParticles[_j++] = sp;
         }
         smokeParticles.length = _j;
+      }
+
+      // Update pooled lava spout particles (volcano)
+      {
+        let _j = 0;
+        for (let _i = 0; _i < lavaParticles.length; _i++) {
+          const lp = lavaParticles[_i];
+          lp.life--;
+          lp.vy -= 0.012;
+          lp.mesh.position.x += lp.vx;
+          lp.mesh.position.y += lp.vy;
+          lp.mesh.position.z += lp.vz;
+          if (lp.life <= 0) {
+            scene.remove(lp.mesh);
+            if (_lavaPool) _lavaPool.release(lp);
+            continue;
+          }
+          lavaParticles[_j++] = lp;
+        }
+        lavaParticles.length = _j;
       }
       
       const now = Date.now();
