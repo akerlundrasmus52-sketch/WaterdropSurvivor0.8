@@ -187,9 +187,9 @@
         }
       },
       progressionCenter: {
-        name: 'Progression Center',
+        name: 'Stat Forge',
         icon: '💪',
-        description: 'Purchase permanent stat upgrades. Increase damage, health, speed, and more!',
+        description: 'Forge permanent stat upgrades. Increase damage, health, speed, and more with permanent enhancements!',
         baseCost: 250,
         costMultiplier: 1.8,
         maxCost: 100000,
