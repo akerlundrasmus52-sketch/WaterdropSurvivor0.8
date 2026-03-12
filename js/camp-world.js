@@ -58,6 +58,8 @@
   let _callbacks   = {};         // { buildingId → fn() } set by main.js
   let _isBuilding  = false;      // guard against re-entrant _buildScene() calls
   let _saveData    = null;
+  // Track MutationObservers created by buildings so we can disconnect them on scene rebuild
+  const _buildingObservers = [];
 
   let _playerMesh  = null;
   let _playerVel   = { x: 0, z: 0 };
@@ -225,6 +227,8 @@
     const THREE = T();
     // Reset building mesh registry so stale refs from a previous failed build don't linger
     _buildingMeshes = {};
+    // Disconnect all MutationObservers from the previous scene build to prevent leaks
+    while (_buildingObservers.length) _buildingObservers.pop().disconnect();
     _campScene = new THREE.Scene();
     _campScene.background = new THREE.Color(0x0a0c18); // deep night sky
     _campScene.fog = new THREE.FogExp2(0x120e08, 0.025); // warm hearth fog
@@ -2693,6 +2697,10 @@
     notifPyramid.visible = false;
     notifLight.visible = false;
 
+    // Remove any stale indicator from previous scene builds
+    const existingInd = document.getElementById('codex-horus-indicator');
+    if (existingInd) existingInd.remove();
+
     // Inject a DOM element for the JS notification system to toggle
     const indEl = document.createElement('div');
     indEl.id = 'codex-horus-indicator';
@@ -2701,12 +2709,15 @@
     document.body.appendChild(indEl);
 
     // MutationObserver to sync 3D notif with DOM indicator
+    // The observer is registered in _buildingObservers so it is disconnected when
+    // the camp scene is rebuilt (preventing a leak on scene re-entry).
     const mo = new MutationObserver(() => {
       const visible = indEl.style.display !== 'none';
       notifPyramid.visible = visible;
       notifLight.visible = visible;
     });
     mo.observe(indEl, { attributes: true, attributeFilter: ['style'] });
+    _buildingObservers.push(mo);
 
     _addNameSign(grp, def.label, 0, 3.8, 0);
     return grp;

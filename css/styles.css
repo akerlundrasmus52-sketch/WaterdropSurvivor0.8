@@ -8340,6 +8340,20 @@
   box-sizing: border-box;
 }
 
+/* On very small screens (less than 400px height) fall back to scroll */
+@media (max-height: 400px) {
+  #stat-cards-overlay {
+    overflow-y: auto;
+  }
+  .stat-cards-container {
+    height: auto;
+  }
+  .cards-grid {
+    grid-template-rows: auto;
+    min-height: 300px;
+  }
+}
+
 .stat-cards-container {
   width: 100%;
   max-width: min(900px, 100vw);
