@@ -12,7 +12,12 @@
     SHARED_GEO.sphere._isShared = true;
     const SHARED_MAT = {
       // SHARED_MAT.enemy is only used as a fallback — type-specific colors come from SHARED_MAT_CACHE
-      enemy:  new THREE.MeshLambertMaterial({ color: 0x44AA44 }),
+      enemy:  new THREE.MeshPhongMaterial({
+        color: 0x44AA44,
+        emissive: 0x44AA44,
+        emissiveIntensity: 0.15,
+        shininess: 40
+      }),
       black:  new THREE.MeshBasicMaterial({ color: 0x000000 }),
       bullet: new THREE.MeshBasicMaterial({ color: 0xffff00 })
     };
@@ -26,12 +31,19 @@
     // Prevents creating N materials for N enemies of the same type while still giving each
     // type its own distinct visual appearance.  Tag with _isShared so takeDamage() knows to
     // clone before mutating (blood stain, freeze, fire char, etc.).
+    // Now using MeshPhongMaterial with emissive properties for camp-style visuals
     const SHARED_MAT_CACHE = {};
     function getOrCreateMat(colorHex, opts) {
       // Build a deterministic key: hex color + optional transparency flag
       const key = colorHex.toString(16) + (opts && opts.transparent ? '_t' : '');
       if (!SHARED_MAT_CACHE[key]) {
-        const m = new THREE.MeshLambertMaterial(Object.assign({ color: colorHex }, opts || {}));
+        // Use MeshPhongMaterial with emissive glow for better visuals (camp style)
+        const m = new THREE.MeshPhongMaterial(Object.assign({
+          color: colorHex,
+          emissive: colorHex,
+          emissiveIntensity: 0.15,  // Subtle inner glow
+          shininess: 40              // Water-like shine
+        }, opts || {}));
         m._isShared = true;
         SHARED_MAT_CACHE[key] = m;
       }
