@@ -7,44 +7,60 @@
       // Exclusion zones: each entry is { x, z, r } — no prop spawns within r units of (x,z)
       const exclusionZones = [];
 
-      // Ground - Enhanced ground with procedural detail texture for realistic appearance
-
-      // Create a detailed grass texture using canvas
+      // Ground - Enhanced ground with highly realistic procedural detail texture
+      // Create a detailed grass texture using canvas with improved realism
       const groundTexCanvas = document.createElement('canvas');
       groundTexCanvas.width = 512;
       groundTexCanvas.height = 512;
       const gCtx = groundTexCanvas.getContext('2d');
 
-      // Base grass color with subtle variation
-      gCtx.fillStyle = '#1e3a29';
+      // Base grass color with natural variation - richer, more realistic green
+      const baseGreen = '#1e3a29';
+      gCtx.fillStyle = baseGreen;
       gCtx.fillRect(0, 0, 512, 512);
 
-      // Add noise pattern for grass detail
-      for (let i = 0; i < 8000; i++) {
+      // Add detailed noise pattern for grass blades and texture
+      for (let i = 0; i < 12000; i++) { // Increased from 8000 for more detail
         const x = Math.random() * 512;
         const y = Math.random() * 512;
-        const brightness = Math.random() * 40 + 10;
-        const size = Math.random() * 2 + 0.5;
-        gCtx.fillStyle = `rgba(${brightness}, ${brightness + 20}, ${brightness}, 0.3)`;
+        const brightness = Math.random() * 50 + 10;
+        const size = Math.random() * 1.5 + 0.5;
+        // Mix of green tones for realistic grass
+        const greenTone = Math.random() * 30 + 20;
+        gCtx.fillStyle = `rgba(${brightness}, ${brightness + greenTone}, ${brightness + 5}, 0.35)`;
         gCtx.fillRect(x, y, size, size);
       }
 
-      // Add darker patches for variation
-      for (let i = 0; i < 50; i++) {
+      // Add organic darker patches for ground variation (dirt, worn paths, shadows)
+      for (let i = 0; i < 70; i++) { // Increased from 50 for more variation
         const x = Math.random() * 512;
         const y = Math.random() * 512;
-        const radius = Math.random() * 40 + 20;
+        const radius = Math.random() * 35 + 15;
         const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
-        grd.addColorStop(0, 'rgba(20, 40, 25, 0.4)');
-        grd.addColorStop(1, 'rgba(20, 40, 25, 0)');
+        // Brown-tinted dark patches for earthy realism
+        grd.addColorStop(0, 'rgba(25, 35, 20, 0.5)');
+        grd.addColorStop(0.5, 'rgba(20, 30, 18, 0.3)');
+        grd.addColorStop(1, 'rgba(20, 30, 18, 0)');
         gCtx.fillStyle = grd;
         gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       }
 
-      // Subtle long-form shading to anchor the ground to the lighting direction
+      // Add lighter grass highlights for sun-kissed areas
+      for (let i = 0; i < 40; i++) {
+        const x = Math.random() * 512;
+        const y = Math.random() * 512;
+        const radius = Math.random() * 25 + 10;
+        const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
+        grd.addColorStop(0, 'rgba(80, 120, 60, 0.25)');
+        grd.addColorStop(1, 'rgba(80, 120, 60, 0)');
+        gCtx.fillStyle = grd;
+        gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+      }
+
+      // Subtle directional shading to simulate natural sunlight and depth
       const sweepGrad = gCtx.createLinearGradient(0, 0, 512, 512);
-      sweepGrad.addColorStop(0, 'rgba(255, 255, 220, 0.04)'); // gentle sun-kissed highlight
-      sweepGrad.addColorStop(1, 'rgba(12, 24, 14, 0.08)');    // cooler shadowed side
+      sweepGrad.addColorStop(0, 'rgba(255, 255, 220, 0.05)'); // Sun-kissed highlight
+      sweepGrad.addColorStop(1, 'rgba(12, 24, 14, 0.10)');    // Cooler shadowed areas
       gCtx.globalCompositeOperation = 'soft-light';
       gCtx.fillStyle = sweepGrad;
       gCtx.fillRect(0, 0, 512, 512);
@@ -181,40 +197,104 @@
         roughness: 0.85,
       });
       
-      // Helper function to create a narrow dirt trail to landmarks
-      function createTrail(startX, startZ, endX, endZ) {
-        const trailWidth = 1.5; // Narrow trail
+      // Helper function to create stone-paved roads with varied stone sizes for natural, realistic appearance
+      function createStonePath(startX, startZ, endX, endZ) {
+        const pathWidth = 2.5; // Wider for stone path
         const length = Math.sqrt((endX - startX) ** 2 + (endZ - startZ) ** 2);
         const angle = Math.atan2(endZ - startZ, endX - startX);
-        const midX = (startX + endX) / 2;
-        const midZ = (startZ + endZ) / 2;
-        
-        // Create narrow dirt trail (no grass strip)
-        const roadGeo = new THREE.PlaneGeometry(trailWidth, length);
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI/2;
-        road.rotation.z = angle - Math.PI/2;
-        road.position.set(midX, 0.02, midZ);
-        road.receiveShadow = true;
-        scene.add(road);
+
+        // Create many small stones along the path for realistic appearance
+        const numStones = Math.floor(length * 3); // 3 stones per unit length
+        const dirX = (endX - startX) / length;
+        const dirZ = (endZ - startZ) / length;
+
+        // Stone materials with subtle color variations
+        const stoneMats = [
+          new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.9, metalness: 0.1 }), // Light gray
+          new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 0.92, metalness: 0.08 }), // Medium gray
+          new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.88, metalness: 0.12 }), // Lighter gray
+          new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.95, metalness: 0.05 }), // Darker gray
+        ];
+
+        // Create instanced mesh for all stones on this path for performance
+        const stoneGeo = new THREE.DodecahedronGeometry(1, 0);
+        const pathStones = new THREE.InstancedMesh(stoneGeo, stoneMats[0], numStones);
+        pathStones.castShadow = true;
+        pathStones.receiveShadow = true;
+
+        const tempMatrix = new THREE.Matrix4();
+        const tempPos = new THREE.Vector3();
+        const tempQuat = new THREE.Quaternion();
+        const tempScale = new THREE.Vector3();
+
+        for (let i = 0; i < numStones; i++) {
+          const t = i / numStones; // Progress along path (0 to 1)
+          const distance = t * length;
+
+          // Position along path with slight random offset
+          const offsetX = (Math.random() - 0.5) * pathWidth * 0.9;
+          const offsetZ = (Math.random() - 0.5) * pathWidth * 0.9;
+          const px = startX + dirX * distance + offsetX * Math.cos(angle + Math.PI/2);
+          const pz = startZ + dirZ * distance + offsetZ * Math.sin(angle + Math.PI/2);
+
+          // Varied stone sizes - mix of large and small for natural look
+          const sizeVariation = Math.random();
+          let stoneSize;
+          if (sizeVariation < 0.6) {
+            stoneSize = 0.15 + Math.random() * 0.15; // Small stones (60%)
+          } else if (sizeVariation < 0.9) {
+            stoneSize = 0.3 + Math.random() * 0.2; // Medium stones (30%)
+          } else {
+            stoneSize = 0.5 + Math.random() * 0.25; // Large stones (10%)
+          }
+
+          tempPos.set(px, stoneSize * 0.3, pz);
+
+          // Random rotation for each stone
+          tempQuat.setFromEuler(new THREE.Euler(
+            Math.random() * 0.3,
+            Math.random() * Math.PI * 2,
+            Math.random() * 0.3
+          ));
+
+          tempScale.setScalar(stoneSize);
+          tempMatrix.compose(tempPos, tempQuat, tempScale);
+          pathStones.setMatrixAt(i, tempMatrix);
+
+          // Apply color variation randomly
+          const colorIdx = Math.floor(Math.random() * stoneMats.length);
+          const color = new THREE.Color();
+          color.copy(stoneMats[colorIdx].color);
+          pathStones.setColorAt(i, color);
+        }
+
+        pathStones.instanceMatrix.needsUpdate = true;
+        if (pathStones.instanceColor) pathStones.instanceColor.needsUpdate = true;
+        scene.add(pathStones);
       }
-      
-      // Narrow dirt trails from spawn rondel to key landmarks (no wagon roads)
 
-      // 1. Trail to Stonehenge (32, 28) - OPTIMIZED: Updated to edge position
-      createTrail(rondelRadius * 0.707, rondelRadius * 0.707, 32, 28); // OPTIMIZED: Updated for ultra-compact (was 35, 30; before 60, 50)
+      // Stone-paved roads from spawn rondel to all major landmarks
 
-      // 2. Trail to Windmill (20, 20) - OPTIMIZED: Updated to adjusted position
-      createTrail(rondelRadius * 0.9, rondelRadius * 0.436, 20, 20); // OPTIMIZED: Updated for ultra-compact (was 18, 18; before 25, 25)
+      // 1. Road to Stonehenge (32, 28) - Northeast edge
+      createStonePath(rondelRadius * 0.707, rondelRadius * 0.707, 32, 28);
 
-      // 3. Trail to Tesla Tower (-32, -28) - OPTIMIZED: Updated to edge position
-      createTrail(-rondelRadius * 0.707, -rondelRadius * 0.707, -32, -28); // OPTIMIZED: Updated for ultra-compact (was -30, -30; before -50, -50)
+      // 2. Road to Windmill (20, 20) - Northeast
+      createStonePath(rondelRadius * 0.9, rondelRadius * 0.436, 20, 20);
 
-      // 4. Trail to Pyramid (32, -28) - OPTIMIZED: Updated to edge position
-      createTrail(rondelRadius * 0.707, -rondelRadius * 0.707, 32, -28); // OPTIMIZED: Updated for ultra-compact (was 25, -20; before 35, -35)
+      // 3. Road to Tesla Tower (-32, -28) - Southwest edge
+      createStonePath(-rondelRadius * 0.707, -rondelRadius * 0.707, -32, -28);
 
-      // 5. Trail to Lake/Waterfall (30, -30) - OPTIMIZED: Updated to edge lake position
-      createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 30, -30);
+      // 4. Road to Pyramid (32, -28) - Southeast edge
+      createStonePath(rondelRadius * 0.707, -rondelRadius * 0.707, 32, -28);
+
+      // 5. Road to Lake/Waterfall (30, -30) - Southeast
+      createStonePath(rondelRadius * 0.5, -rondelRadius * 0.866, 30, -30);
+
+      // 6. Road to UFO Crash Site (-50, 25) - Northwest edge, important landmark
+      createStonePath(-rondelRadius * 0.866, rondelRadius * 0.5, -50, 25);
+
+      // 7. Road to Eiffel Tower (-32, 35) - Northwest edge
+      createStonePath(-rondelRadius * 0.5, rondelRadius * 0.866, -32, 35);
       
       // Initialise fountain/lightning spawn sequence (replaces old circle portal)
       if (window.SpawnSequence) window.SpawnSequence.init(scene);
@@ -1779,14 +1859,16 @@
           if (d < ez.r) return true;
         }
 
-        // Path exclusion (5-unit buffer on each side of trail)
+        // Path exclusion (5-unit buffer on each side of stone paths)
         const PATH_WIDTH = 5;
         const r = rondelRadius;
-        if (distToSegment(x, z, r * 0.707, r * 0.707, 32, 28)     < PATH_WIDTH) return true; // → Stonehenge (OPTIMIZED for ultra-compact: was 35, 30; before 60, 50)
-        if (distToSegment(x, z, r * 0.9,   r * 0.436, 20, 20)     < PATH_WIDTH) return true; // → Windmill (OPTIMIZED for ultra-compact: was 18, 18; before 25, 25)
-        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -32, -28) < PATH_WIDTH) return true; // → Tesla Tower (OPTIMIZED for ultra-compact: was -30, -30; before -50, -50)
-        if (distToSegment(x, z, r * 0.707, -r * 0.707, 32, -28)   < PATH_WIDTH) return true; // → Pyramid (OPTIMIZED for ultra-compact: was 25, -20; before 35, -35)
-        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30)   < PATH_WIDTH) return true; // → Lake (OPTIMIZED for ultra-compact: was 14, -14; before 20, -20)
+        if (distToSegment(x, z, r * 0.707, r * 0.707, 32, 28)      < PATH_WIDTH) return true; // → Stonehenge
+        if (distToSegment(x, z, r * 0.9,   r * 0.436, 20, 20)      < PATH_WIDTH) return true; // → Windmill
+        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -32, -28)  < PATH_WIDTH) return true; // → Tesla Tower
+        if (distToSegment(x, z, r * 0.707, -r * 0.707, 32, -28)    < PATH_WIDTH) return true; // → Pyramid
+        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30)    < PATH_WIDTH) return true; // → Lake
+        if (distToSegment(x, z, -r * 0.866, r * 0.5, -50, 25)      < PATH_WIDTH) return true; // → UFO Crash Site
+        if (distToSegment(x, z, -r * 0.5, r * 0.866, -32, 35)      < PATH_WIDTH) return true; // → Eiffel Tower
 
         // Building exclusion zones
         if (Math.sqrt((x - 20) ** 2 + (z - 20) ** 2)   < 8)  return true; // Windmill (OPTIMIZED for ultra-compact: was 18, 18; before 25, 25)
@@ -1805,7 +1887,6 @@
       // Tree-specific placement validation: extends isPositionExcluded with extra landmark zones
       function isTreePlacementValid(x, z) {
         if (isPositionExcluded(x, z)) return false;
-        if (Math.sqrt((x + 15) ** 2 + (z - 15) ** 2) < 18) return false; // Colosseum (OPTIMIZED for ultra-compact: was -13, 13; before -18, 18)
         // Extra lake buffer for trees (prevent clipping into water)
         if (Math.sqrt((x - 30) ** 2 + (z + 30) ** 2) < 24) return false; // Lake + buffer (OPTIMIZED for ultra-compact: was 14, -14; before 20, -20)
         return true;
@@ -2407,118 +2488,7 @@
 
       // --- SCI-FI/ALIEN REGION (x: -120 to 0, z: 0 to 120) ---
       // Area 51 building - OPTIMIZED: Repositioned for ultra-compact 80x80 map
-      (function() {
-        const area51Group = new THREE.Group();
-        area51Group.position.set(-35, 0, 28); // OPTIMIZED: Moved from (-75, 0, 60) to fit 80x80 map
-        
-        const a51Mat = new THREE.MeshToonMaterial({ color: 0x888888 }); // Flat grey
-        // Main hangar building
-        const hangarGeo = new THREE.BoxGeometry(25, 6, 15);
-        const hangar = new THREE.Mesh(hangarGeo, a51Mat);
-        hangar.position.y = 3;
-        hangar.castShadow = true;
-        hangar.receiveShadow = true;
-        area51Group.add(hangar);
-        
-        // Hangar roof (slightly arched with cylinder)
-        const roofGeo = new THREE.CylinderGeometry(0.1, 14, 4, 4);
-        const roofMat = new THREE.MeshToonMaterial({ color: 0x666666 });
-        const roofMesh = new THREE.Mesh(roofGeo, roofMat);
-        roofMesh.position.y = 8;
-        roofMesh.rotation.y = Math.PI / 4;
-        roofMesh.castShadow = true;
-        area51Group.add(roofMesh);
-        
-        // Side building
-        const sideGeo = new THREE.BoxGeometry(10, 4, 8);
-        const sideBuilding = new THREE.Mesh(sideGeo, a51Mat);
-        sideBuilding.position.set(16, 2, 0);
-        sideBuilding.castShadow = true;
-        area51Group.add(sideBuilding);
-        
-        // Satellite dish
-        const dishBase = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.3, 0.3, 2, 6),
-          new THREE.MeshToonMaterial({ color: 0x444444 })
-        );
-        dishBase.position.set(-8, 7, 0);
-        area51Group.add(dishBase);
-        const dishGeo = new THREE.SphereGeometry(2, 12, 6, 0, Math.PI);
-        const dish = new THREE.Mesh(dishGeo, new THREE.MeshToonMaterial({ color: 0xBBBBBB }));
-        dish.position.set(-8, 9, 0);
-        dish.rotation.x = -Math.PI / 2;
-        area51Group.add(dish);
-        
-        // Warning signs / "CLASSIFIED" on building
-        const warningLight = new THREE.Mesh(
-          new THREE.SphereGeometry(0.3, 8, 8),
-          new THREE.MeshBasicMaterial({ color: 0xFF0000, transparent: true, opacity: 0.9 })
-        );
-        warningLight.position.set(0, 7, 7.5);
-        warningLight.userData = { isWarningLight: true, phase: 0 };
-        area51Group.add(warningLight);
-        
-        // "AREA 51" sign on main building wall
-        const a51SignCanvas = document.createElement('canvas');
-        a51SignCanvas.width = 512; a51SignCanvas.height = 128;
-        const a51Ctx = a51SignCanvas.getContext('2d');
-        a51Ctx.fillStyle = '#1A1A1A';
-        a51Ctx.fillRect(0, 0, 512, 128);
-        a51Ctx.fillStyle = '#FFD700';
-        a51Ctx.font = 'bold 72px Arial';
-        a51Ctx.textAlign = 'center';
-        a51Ctx.textBaseline = 'middle';
-        a51Ctx.fillText('AREA 51', 256, 64);
-        const a51SignTex = new THREE.CanvasTexture(a51SignCanvas);
-        const a51SignSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: a51SignTex }));
-        a51SignSprite.scale.set(8, 2, 1);
-        a51SignSprite.position.set(0, 6.5, 7.6);
-        area51Group.add(a51SignSprite);
-
-        // Perimeter fence posts with warning signs
-        const a51FenceMat = new THREE.MeshToonMaterial({ color: 0x777777 });
-        const warnCanvas = document.createElement('canvas');
-        warnCanvas.width = 256; warnCanvas.height = 128;
-        const wCtx = warnCanvas.getContext('2d');
-        wCtx.fillStyle = '#FF0000';
-        wCtx.fillRect(0, 0, 256, 128);
-        wCtx.fillStyle = '#FFFFFF';
-        wCtx.font = 'bold 18px Arial';
-        wCtx.textAlign = 'center';
-        wCtx.textBaseline = 'middle';
-        wCtx.fillText('TRESPASSERS', 128, 38);
-        wCtx.fillText('WILL BE KILLED', 128, 64);
-        wCtx.fillText('⚠ AUTHORIZED', 128, 90);
-        wCtx.fillText('PERSONNEL ONLY', 128, 110);
-        const warnTex = new THREE.CanvasTexture(warnCanvas);
-
-        const fenceRx = 20, fenceRz = 16;
-        for (let f = 0; f < 24; f++) {
-          const fAngle = (f / 24) * Math.PI * 2;
-          const fPost = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3, 6), a51FenceMat);
-          fPost.position.set(Math.cos(fAngle) * fenceRx, 1.5, Math.sin(fAngle) * fenceRz);
-          area51Group.add(fPost);
-          // Horizontal wire
-          const wAngle = ((f + 1) / 24) * Math.PI * 2;
-          const wireLenX = Math.cos(wAngle) * fenceRx - Math.cos(fAngle) * fenceRx;
-          const wireLenZ = Math.sin(wAngle) * fenceRz - Math.sin(fAngle) * fenceRz;
-          const wireLen = Math.sqrt(wireLenX * wireLenX + wireLenZ * wireLenZ);
-          const wireMesh = new THREE.Mesh(new THREE.BoxGeometry(wireLen, 0.06, 0.06), a51FenceMat);
-          wireMesh.position.set((Math.cos(fAngle) * fenceRx + Math.cos(wAngle) * fenceRx) * 0.5, 2.5, (Math.sin(fAngle) * fenceRz + Math.sin(wAngle) * fenceRz) * 0.5);
-          wireMesh.rotation.y = Math.atan2(wireLenZ, wireLenX);
-          area51Group.add(wireMesh);
-          // Warning signs on every 4th post
-          if (f % 4 === 0) {
-            const warnSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: warnTex }));
-            warnSprite.scale.set(2.5, 1.2, 1);
-            warnSprite.position.set(Math.cos(fAngle) * fenceRx, 3.5, Math.sin(fAngle) * fenceRz);
-            area51Group.add(warnSprite);
-          }
-        }
-        
-        scene.add(area51Group);
-        window.warningLight = warningLight;
-      })();
+      // Area 51 base removed per user request - only UFO crash site remains
 
       // Crashed alien spaceship - OPTIMIZED: Moved to northwest area, closer to center
       (function() {
@@ -2620,158 +2590,7 @@
       scifiGround.receiveShadow = true;
       scene.add(scifiGround);
 
-      // --- NEAR SPAWN: Roman Colosseum --- OPTIMIZED: Positioned in accessible area
-      (function() {
-        const colosseumGroup = new THREE.Group();
-        colosseumGroup.position.set(-15, 0, 15); // OPTIMIZED: Adjusted for ultra-compact (was -13, 13; before -18, 18)
-
-        // Primary palette: warm beige/travertine limestone
-        const stoneMat     = new THREE.MeshStandardMaterial({ color: 0xD4B896, roughness: 0.88, metalness: 0.0 });
-        const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0xC4A882, roughness: 0.92, metalness: 0.0 });
-        const columnMat    = new THREE.MeshStandardMaterial({ color: 0xE8D5B7, roughness: 0.80, metalness: 0.0 });
-        const rubbleMat    = new THREE.MeshStandardMaterial({ color: 0xB09070, roughness: 1.00, metalness: 0.0 });
-        const sandMat      = new THREE.MeshStandardMaterial({ color: 0xD4C4A0, roughness: 0.98, metalness: 0.0 });
-
-        const outerRadius  = 13;   // circular outer wall radius
-        const wallHeight   = 7;
-        const wallThick    = 1.4;
-        const numSections  = 24;   // 24-sided polygon → smooth circle
-
-        // ── Outer wall ring (CylinderGeometry gives solid circular wall) ──
-        const outerWallGeo = new THREE.CylinderGeometry(
-          outerRadius + wallThick * 0.5,   // top outer radius
-          outerRadius + wallThick * 0.5,   // bottom outer radius
-          wallHeight, numSections, 1, true // open-ended cylinder = ring face
-        );
-        // Build as segmented BoxGeometry pieces so each arc-segment can be ruined independently
-        for (let w = 0; w < numSections; w++) {
-          const angle     = (w       / numSections) * Math.PI * 2;
-          const angleNext = ((w + 1) / numSections) * Math.PI * 2;
-          const mx = Math.cos((angle + angleNext) * 0.5) * outerRadius;
-          const mz = Math.sin((angle + angleNext) * 0.5) * outerRadius;
-          const segAngle = Math.atan2(mz, mx) + Math.PI * 0.5;
-          const arcLen   = 2 * outerRadius * Math.sin(Math.PI / numSections) + 0.05;
-
-          const isRuined = (w >= 4 && w <= 5) || (w >= 16 && w <= 17);
-          const segH   = isRuined ? wallHeight * 0.40 : wallHeight;
-          const segMat = isRuined ? darkStoneMat : stoneMat;
-
-          const seg = new THREE.Mesh(new THREE.BoxGeometry(arcLen, segH, wallThick), segMat);
-          seg.position.set(mx, segH * 0.5, mz);
-          seg.rotation.y = segAngle;
-          seg.castShadow = true;
-          seg.receiveShadow = true;
-          colosseumGroup.add(seg);
-        }
-
-        // ── Crenellated battlements on top of full-height sections ──
-        for (let w = 0; w < numSections; w++) {
-          const isRuined = (w >= 4 && w <= 5) || (w >= 16 && w <= 17);
-          if (isRuined) continue;
-          const angle  = ((w + 0.5) / numSections) * Math.PI * 2;
-          const mx     = Math.cos(angle) * outerRadius;
-          const mz     = Math.sin(angle) * outerRadius;
-          const cren   = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.9, wallThick * 1.05), darkStoneMat);
-          cren.position.set(mx, wallHeight + 0.45, mz);
-          cren.rotation.y = angle + Math.PI * 0.5;
-          cren.castShadow = true;
-          colosseumGroup.add(cren);
-        }
-
-        // ── Inner second tier wall (smaller radius) ──
-        const innerRadius = 9;
-        const tier2Height = 3.8;
-        const numInner    = 20;
-        for (let w = 0; w < numInner; w++) {
-          if (w === 3 || w === 12) continue; // gaps for ruins look
-          const angle     = (w       / numInner) * Math.PI * 2;
-          const angleNext = ((w + 1) / numInner) * Math.PI * 2;
-          const mx        = Math.cos((angle + angleNext) * 0.5) * innerRadius;
-          const mz        = Math.sin((angle + angleNext) * 0.5) * innerRadius;
-          const segAngle  = Math.atan2(mz, mx) + Math.PI * 0.5;
-          const arcLen    = 2 * innerRadius * Math.sin(Math.PI / numInner) + 0.05;
-
-          const seg2 = new THREE.Mesh(new THREE.BoxGeometry(arcLen, tier2Height, 1.0), darkStoneMat);
-          seg2.position.set(mx, wallHeight + tier2Height * 0.5, mz);
-          seg2.rotation.y = segAngle;
-          seg2.castShadow = true;
-          colosseumGroup.add(seg2);
-        }
-
-        // ── Perimeter columns (CylinderGeometry, white/beige) ──
-        const numColumns  = 16;
-        const colRadius   = outerRadius + 0.1; // sit just outside the wall face
-        for (let c = 0; c < numColumns; c++) {
-          const angle = (c / numColumns) * Math.PI * 2;
-          const cx    = Math.cos(angle) * colRadius;
-          const cz    = Math.sin(angle) * colRadius;
-
-          // Fluted column shaft
-          const shaft = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.38, 0.45, wallHeight + 1.0, 8),
-            columnMat
-          );
-          shaft.position.set(cx, (wallHeight + 1.0) * 0.5, cz);
-          shaft.castShadow = true;
-          shaft.receiveShadow = true;
-          colosseumGroup.add(shaft);
-
-          // Column capital (wider top)
-          const capital = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.55, 0.40, 0.45, 8),
-            stoneMat
-          );
-          capital.position.set(cx, wallHeight + 1.0 + 0.22, cz);
-          capital.castShadow = true;
-          colosseumGroup.add(capital);
-
-          // Column base plinth
-          const plinth = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.55, 0.60, 0.35, 8),
-            stoneMat
-          );
-          plinth.position.set(cx, 0.18, cz);
-          plinth.castShadow = true;
-          plinth.receiveShadow = true;
-          colosseumGroup.add(plinth);
-        }
-
-        // ── Arena floor — circular sandy disc ──
-        const arenaFloor = new THREE.Mesh(
-          new THREE.CircleGeometry(innerRadius - 1.2, 40),
-          sandMat
-        );
-        arenaFloor.rotation.x = -Math.PI / 2;
-        arenaFloor.position.y = 0.05;
-        arenaFloor.receiveShadow = true;
-        colosseumGroup.add(arenaFloor);
-
-        // ── Ground ring between inner wall and outer wall (stone paving) ──
-        const pavingGeo = new THREE.RingGeometry(innerRadius - 1.1, outerRadius - wallThick * 0.5, 40);
-        const pavingMat = new THREE.MeshStandardMaterial({ color: 0xC8B090, roughness: 0.95, metalness: 0.0 });
-        const paving = new THREE.Mesh(pavingGeo, pavingMat);
-        paving.rotation.x = -Math.PI / 2;
-        paving.position.y = 0.05;
-        paving.receiveShadow = true;
-        colosseumGroup.add(paving);
-
-        // ── Scattered rubble at ruined sections ──
-        const rubbleData = [
-          { x: 11.5, z: 3.5, ry: 0.4 }, { x: -11,  z: 3,   ry: 0.8 },
-          { x: 12.5, z: -2,  ry: 0.2 }, { x: -12,  z: -2,  ry: 1.1 },
-          { x:  9.5, z: 5,   ry: 0.6 }, { x: -9.5, z: -4,  ry: 0.3 },
-        ];
-        rubbleData.forEach(r => {
-          const rb = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.75, 1.1), rubbleMat);
-          rb.position.set(r.x, 0.37, r.z);
-          rb.rotation.y = r.ry;
-          rb.castShadow = true;
-          rb.receiveShadow = true;
-          colosseumGroup.add(rb);
-        });
-
-        scene.add(colosseumGroup);
-      })();
+      // Colosseum removed per user request - landmarks moved to map edges for better layout
 
       // Ancient ruins near spawn (scattered pillars)
       (function() {

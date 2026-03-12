@@ -3189,10 +3189,7 @@
         window.teslaPointLight.userData.phase += dt * 5;
         window.teslaPointLight.intensity = 2 + Math.sin(window.teslaPointLight.userData.phase * 3) * 1.5;
       }
-      // Warning light blink (Area 51)
-      if (window.warningLight && window.warningLight.material) {
-        window.warningLight.material.opacity = Math.sin(gameTime * 3) > 0 ? 0.9 : 0.1;
-      }
+      // Area 51 warning light removed (Area 51 base removed from map)
 
       // All-Seeing Eye orb pulse animation (Illuminati pyramid)
       if (window._eyeOfHorusMesh) {
