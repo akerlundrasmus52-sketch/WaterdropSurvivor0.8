@@ -800,6 +800,36 @@
 
     function _showCurtainNow(newLevel, rewardLabel) {
       const curtain = document.getElementById('account-levelup-curtain');
+
+      // Determine rank title for this level
+      const rankTitle = (window.GameAccount && window.GameAccount.getCurrentTitle)
+        ? window.GameAccount.getCurrentTitle({ account: { level: newLevel } })
+        : '';
+      const prevTitle = (window.GameAccount && window.GameAccount.getCurrentTitle)
+        ? window.GameAccount.getCurrentTitle({ account: { level: newLevel - 1 } })
+        : '';
+      const isMilestone = rankTitle && rankTitle !== prevTitle;
+
+      // ── Regular level-up: small right-side notification ──────────────────
+      if (!isMilestone) {
+        const rarity = _getLevelUpRarity(newLevel);
+        const rarityColors = { common: '#aaddff', epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444' };
+        const col = rarityColors[rarity] || rarityColors.common;
+        const n = document.createElement('div');
+        n.style.cssText = 'position:fixed;top:20%;right:16px;background:linear-gradient(135deg,rgba(0,0,0,0.92),rgba(10,10,30,0.96));border:2px solid ' + col + ';border-radius:14px;padding:12px 18px;z-index:9999;display:flex;align-items:center;gap:12px;min-width:210px;box-shadow:0 0 18px ' + col + '55;animation:slideInRight 0.4s ease-out;pointer-events:none;';
+        n.innerHTML = '<span style="font-size:26px;">🏆</span><div><div style="color:' + col + ';font-family:Bangers,cursive;font-size:16px;letter-spacing:1px;">PROFILE LEVEL ' + newLevel + '</div><div style="color:#aaa;font-size:11px;">' + rewardLabel + '</div></div>';
+        document.body.appendChild(n);
+        setTimeout(function() {
+          n.style.transition = 'opacity 0.5s,transform 0.5s';
+          n.style.opacity = '0';
+          n.style.transform = 'translateX(120%)';
+          setTimeout(function() { n.remove(); }, 500);
+        }, 3500);
+        if (typeof playSound === 'function') playSound('levelup');
+        return;
+      }
+
+      // ── Rank-Up: full dramatic curtain ─────────────────────────────────────
       if (!curtain) return;
       // Clear any in-progress curtain
       if (_curtainTimer) { clearTimeout(_curtainTimer); _curtainTimer = null; }
@@ -808,51 +838,49 @@
         _curtainDismissHandler = null;
       }
 
-      // Determine rank title for this level
-      const rankTitle = (window.GameAccount && window.GameAccount.getCurrentTitle)
-        ? window.GameAccount.getCurrentTitle({ account: { level: newLevel } })
-        : '';
-
-      // Is this a milestone rank? (new title unlocked)
-      const prevTitle = (window.GameAccount && window.GameAccount.getCurrentTitle)
-        ? window.GameAccount.getCurrentTitle({ account: { level: newLevel - 1 } })
-        : '';
-      const isMilestone = rankTitle && rankTitle !== prevTitle;
+      // Rank color
+      const _RANK_COLORS = { Adventurer: '#55cc55', Wanderer: '#55cc55', Explorer: '#44aaff',
+        Survivor: '#44aaff', Pathfinder: '#44aaff', Warrior: '#6644cc', Skilled: '#6644cc',
+        Slayer: '#6644cc', Champion: '#aa44ff', Veteran: '#ffaa00', Elite: '#ffaa00',
+        Guardian: '#ffaa00', Warden: '#ffd700', Expert: '#ffd700', Conqueror: '#ffd700',
+        Hero: '#ffd700', Titan: '#ffd700', Master: '#88eeff', Grandmaster: '#88eeff',
+        Mythic: '#ff4444', Ascendant: '#ff4444', 'Waterdrop Survivor': '#ff88ff', H2O: '#ff88ff' };
+      const rankColor = _RANK_COLORS[rankTitle] || '#FFD700';
 
       curtain.classList.remove('curtain-teaser', 'curtain-enter', 'curtain-enter-done',
                                'curtain-exit', 'curtain-milestone');
       curtain.innerHTML = [
         '<div class="curtain-sunburst"></div>',
-        '<div class="curtain-icon">' + (isMilestone ? '⭐' : '🏆') + '</div>',
-        '<div class="curtain-levelup-text">' + (isMilestone ? 'RANK UP!' : 'LEVEL UP!') + '</div>',
-        `<div class="curtain-level-num">Level ${newLevel}</div>`,
-        rankTitle ? `<div class="curtain-rank-title">${rankTitle}</div>` : '',
+        '<div class="curtain-icon">⚡</div>',
+        '<div class="curtain-levelup-text" style="color:' + rankColor + ';">RANK UP!</div>',
+        `<div class="curtain-level-num" style="color:${rankColor};">${rankTitle}</div>`,
+        `<div class="curtain-rank-title">Profile Level ${newLevel}</div>`,
         `<div class="curtain-reward-text">${rewardLabel} · Tap to dismiss</div>`
       ].join('');
 
       // ── Phase 1: teaser peek (excitement builder) ─────────────
       void curtain.offsetWidth; // force reflow
       curtain.classList.add('curtain-teaser');
-      if (isMilestone) curtain.classList.add('curtain-milestone');
+      curtain.classList.add('curtain-milestone');
 
       // ── Phase 2: full spring-drop after teaser finishes ────────
       setTimeout(function() {
         curtain.classList.remove('curtain-teaser');
         void curtain.offsetWidth;
         curtain.classList.add('curtain-enter');
-        if (isMilestone) curtain.classList.add('curtain-milestone');
+        curtain.classList.add('curtain-milestone');
 
         // Once drop animation ends, switch to continuous border-glow pulse
         setTimeout(function() {
           curtain.classList.remove('curtain-enter');
           curtain.classList.add('curtain-enter-done');
-          if (isMilestone) curtain.classList.add('curtain-milestone');
+          curtain.classList.add('curtain-milestone');
         }, 700); // slightly longer than curtain-drop animation duration
 
       }, 400); // teaser duration
 
-      // Dopamine: confetti + sunburst on milestone rank-ups
-      if (isMilestone && window.DopamineSystem && window.DopamineSystem.RewardJuice) {
+      // Dopamine: confetti + sunburst on rank-ups
+      if (window.DopamineSystem && window.DopamineSystem.RewardJuice) {
         setTimeout(function() {
           window.DopamineSystem.RewardJuice.spawnConfetti(curtain);
           window.DopamineSystem.RewardJuice.addSunburst(curtain);
@@ -869,11 +897,7 @@
       _spawnLevelUpScreenFlash(_rarity);
       setTimeout(function() {
         if (typeof window.rarityEscalationReveal === 'function') {
-          window.rarityEscalationReveal(curtain, _rarity, {
-            onComplete: function() {
-              // confetti/rays already fired inside escalation
-            }
-          });
+          window.rarityEscalationReveal(curtain, _rarity, { onComplete: function() {} });
         } else {
           _spawnLevelUpRays(curtain, _rarity);
           _spawnLevelUpConfetti(curtain, _rarity);
@@ -893,13 +917,8 @@
       _curtainDismissHandler = dismissCurtain;
       curtain.addEventListener('click', dismissCurtain);
 
-      // Auto-dismiss — extend time for high-rarity escalation to fully play out
-      const _rarityDismissTimes = { common: 3500, uncommon: 3800, rare: 4200, epic: 5000, legendary: 6000, mythic: 7500 };
-      const _levelRarity = _getLevelUpRarity(newLevel);
-      const _curtainAutoMs = isMilestone
-        ? Math.max(5000, (_rarityDismissTimes[_levelRarity] || 3500) + 1500)
-        : (_rarityDismissTimes[_levelRarity] || 3500);
-      _curtainTimer = setTimeout(dismissCurtain, _curtainAutoMs);
+      // Auto-dismiss — extend time for rank-ups
+      _curtainTimer = setTimeout(dismissCurtain, 6000);
     }
 
     // Expose rarity burst effects globally so other modules (challenges, achievements) can reuse them
@@ -1940,15 +1959,21 @@
       if (!screen) return;
       screen.innerHTML = '';
 
+      // ── Comic Book Codex: 70s/80s retro magazine aesthetic ───────────────────
+      screen.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;display:flex;flex-direction:column;align-items:center;padding:12px 8px;box-sizing:border-box;overflow-y:auto;background:linear-gradient(180deg,#1a1000 0%,#0d0800 100%);font-family:"Bangers",cursive;';
+
       // ── Header ────────────────────────────────────────────────────────────
       const hdr = document.createElement('div');
-      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;max-width:860px;margin-bottom:10px;flex-shrink:0;';
+      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;max-width:860px;margin-bottom:8px;flex-shrink:0;background:linear-gradient(135deg,#FFD700,#FF8C00);border:3px solid #000;border-radius:0;padding:8px 14px;box-sizing:border-box;box-shadow:4px 4px 0 #000;';
       hdr.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:30px;">𓂀</span>
-          <div style="font-family:'Bangers',cursive;font-size:28px;color:#FFD700;letter-spacing:3px;text-shadow:0 0 12px rgba(255,215,0,0.6);">WATERDROP CODEX</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:34px;filter:drop-shadow(2px 2px 0 #000);animation:horusPulse 2s ease-in-out infinite;">𓂀</span>
+          <div>
+            <div style="font-size:28px;color:#000;letter-spacing:3px;text-shadow:1px 1px 0 rgba(255,255,255,0.3);">WATERDROP CODEX</div>
+            <div style="font-size:10px;color:#333;letter-spacing:2px;">★ THE OFFICIAL LORE MAGAZINE ★</div>
+          </div>
         </div>
-        <button id="codex-close-btn" style="background:rgba(255,68,68,0.8);border:2px solid #ff4444;color:#fff;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        <button id="codex-close-btn" style="background:#000;border:3px solid #fff;border-radius:4px;color:#FFD700;width:42px;height:42px;font-size:20px;cursor:pointer;font-family:'Bangers',cursive;box-shadow:3px 3px 0 #555;transition:transform 0.1s;">✕</button>
       `;
       screen.appendChild(hdr);
 
@@ -1960,18 +1985,19 @@
         _updateCodexBuildingNotif();
       };
 
-      // ── Category tabs ────────────────────────────────────────────────────
+      // ── Category tabs (comic book style speech bubbles) ──────────────────
       const tabs = document.createElement('div');
-      tabs.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%;max-width:860px;margin-bottom:12px;flex-shrink:0;';
+      tabs.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%;max-width:860px;margin-bottom:10px;flex-shrink:0;';
       Object.entries(CODEX_CATEGORIES).forEach(([key, cat]) => {
         const hasNew = window.CodexSystem.hasCategoryNew(key);
         const btn = document.createElement('button');
-        btn.style.cssText = 'padding:8px 14px;border-radius:8px;cursor:pointer;font-family:"Bangers",cursive;font-size:14px;letter-spacing:1px;transition:all 0.2s;position:relative;' +
-          (codexActiveCat === key
-            ? 'background:#FFD700;color:#000;border:2px solid #FFD700;'
-            : 'background:rgba(255,215,0,0.1);color:#FFD700;border:2px solid rgba(255,215,0,0.4);');
-        btn.innerHTML = cat.icon + ' ' + cat.label +
-          (hasNew ? '<span style="position:absolute;top:-4px;right:-4px;font-size:14px;line-height:1;animation:horusPulse 1.5s ease-in-out infinite;">𓂀</span>' : '');
+        const isActive = codexActiveCat === key;
+        btn.style.cssText = 'padding:7px 12px;cursor:pointer;font-family:"Bangers",cursive;font-size:13px;letter-spacing:1px;position:relative;transition:all 0.15s;box-shadow:3px 3px 0 #000;' +
+          (isActive
+            ? 'background:#FFD700;color:#000;border:2px solid #000;transform:translateY(-1px);'
+            : 'background:#1a1a1a;color:#FFD700;border:2px solid #FFD700;');
+        btn.innerHTML = '🗯️ ' + cat.label +
+          (hasNew ? '<span style="position:absolute;top:-6px;right:-6px;font-size:16px;line-height:1;animation:horusPulse 1.5s ease-in-out infinite;filter:drop-shadow(0 0 4px red);">𓂀</span>' : '');
         btn.onclick = () => { codexActiveCat = key; codexPage = 0; _renderCodexFull(); };
         tabs.appendChild(btn);
       });
@@ -1988,113 +2014,113 @@
       if (codexPage >= totalPages) codexPage = totalPages - 1;
       const pageEntries = visibleEntries.slice(codexPage * ITEMS_PER_PAGE, (codexPage + 1) * ITEMS_PER_PAGE);
 
-      // Spread wrapper
+      // Page flip wrapper (contains prev/next arrows + entries)
       const spread = document.createElement('div');
-      spread.style.cssText = 'position:relative;width:100%;max-width:860px;display:flex;gap:12px;flex:1;min-height:0;';
+      spread.id = 'codex-page-spread';
+      spread.style.cssText = 'position:relative;width:100%;max-width:860px;display:flex;gap:10px;flex:1;min-height:0;padding:0 44px;box-sizing:border-box;';
 
-      // Left page area
-      const leftPage = document.createElement('div');
-      leftPage.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden;';
-
-      // Page turn — left click / prev
+      // Page turn — prev
       const prevZone = document.createElement('div');
-      prevZone.title = 'Previous page';
-      prevZone.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:28px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;opacity:' + (codexPage > 0 ? '0.7' : '0.15') + ';color:#FFD700;font-size:26px;';
-      prevZone.innerHTML = '◀';
-      prevZone.onclick = () => { if (codexPage > 0) { codexPage--; _renderCodexFull(); } };
+      prevZone.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:40px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;';
+      const prevBtn = document.createElement('button');
+      prevBtn.style.cssText = 'background:' + (codexPage > 0 ? '#FFD700' : '#333') + ';color:#000;border:2px solid #000;width:32px;height:48px;cursor:' + (codexPage > 0 ? 'pointer' : 'default') + ';font-size:18px;box-shadow:3px 3px 0 #000;font-family:"Bangers",cursive;transition:transform 0.1s;';
+      prevBtn.innerHTML = '◀';
+      prevBtn.onclick = () => { if (codexPage > 0) { codexPage--; _renderCodexFull(); } };
+      prevZone.appendChild(prevBtn);
       spread.appendChild(prevZone);
 
-      // Right page turn zone
+      // Page turn — next
       const nextZone = document.createElement('div');
-      nextZone.title = 'Next page — turn page';
-      nextZone.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:40px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;opacity:' + (codexPage < totalPages - 1 ? '0.9' : '0.15') + ';color:#FFD700;font-size:32px;';
-      nextZone.innerHTML = '▶';
-      nextZone.onclick = () => { if (codexPage < totalPages - 1) { codexPage++; _renderCodexFull(); } };
+      nextZone.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:40px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;';
+      const nextBtn = document.createElement('button');
+      nextBtn.style.cssText = 'background:' + (codexPage < totalPages - 1 ? '#FFD700' : '#333') + ';color:#000;border:2px solid #000;width:32px;height:48px;cursor:' + (codexPage < totalPages - 1 ? 'pointer' : 'default') + ';font-size:18px;box-shadow:3px 3px 0 #000;font-family:"Bangers",cursive;transition:transform 0.1s;';
+      nextBtn.innerHTML = '▶';
+      nextBtn.onclick = () => { if (codexPage < totalPages - 1) { codexPage++; _renderCodexFull(); } };
+      nextZone.appendChild(nextBtn);
       spread.appendChild(nextZone);
 
-      spread.style.paddingLeft = '36px';
-      spread.style.paddingRight = '48px';
+      // Page content area
+      const pageArea = document.createElement('div');
+      pageArea.style.cssText = 'flex:1;display:flex;gap:10px;min-height:0;';
 
       pageEntries.forEach(entry => {
         const alreadyClaimed = data.expClaimed[entry.id];
         const card = document.createElement('div');
-        card.style.cssText = 'flex:1;background:rgba(10,10,20,0.88);border:2px solid rgba(255,215,0,0.5);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;min-height:0;';
+        card.style.cssText = 'flex:1;background:#fff;border:3px solid #000;box-shadow:5px 5px 0 #000;display:flex;flex-direction:column;gap:0;position:relative;overflow:hidden;min-height:0;';
 
-        const newBadge = !alreadyClaimed ? '<span style="position:absolute;top:8px;right:8px;background:#FFD700;color:#000;font-family:Bangers,cursive;font-size:11px;padding:2px 8px;border-radius:20px;letter-spacing:1px;">✦ NEW</span>' : '';
-        card.innerHTML = `
-          ${newBadge}
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:38px;">${entry.icon}</span>
-            <div>
-              <div style="font-family:'Bangers',cursive;font-size:20px;color:#FFD700;letter-spacing:2px;">${entry.name}</div>
-              <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:2px;">${CODEX_CATEGORIES[entry.category].label}</div>
-            </div>
+        // Comic book panel header (yellow bar)
+        const panelHdr = document.createElement('div');
+        panelHdr.style.cssText = 'background:#FFD700;border-bottom:3px solid #000;padding:8px 12px;display:flex;align-items:center;gap:10px;position:relative;';
+        panelHdr.innerHTML = `
+          <span style="font-size:32px;">${entry.icon}</span>
+          <div style="flex:1;">
+            <div style="font-size:20px;color:#000;letter-spacing:2px;">${entry.name}</div>
+            <div style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:2px;">${CODEX_CATEGORIES[entry.category].label}</div>
           </div>
-          <div style="font-size:12px;color:#ccc;line-height:1.5;border-left:3px solid rgba(255,215,0,0.4);padding-left:10px;">${entry.desc}</div>
-          <div style="font-size:11px;color:rgba(200,220,255,0.75);line-height:1.6;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 10px;flex:1;overflow-y:auto;">${entry.lore}</div>
+          ${!alreadyClaimed ? '<span style="background:#000;color:#FFD700;font-size:10px;padding:3px 8px;border-radius:20px;letter-spacing:1px;box-shadow:2px 2px 0 #555;">★ NEW</span>' : ''}
         `;
+        card.appendChild(panelHdr);
 
-        // Claim EXP button
+        // Comic panel body (dark background with halftone feel)
+        const panelBody = document.createElement('div');
+        panelBody.style.cssText = 'flex:1;background:#0d0d0d;padding:10px 12px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;';
+
+        // Speech bubble for description
+        const speechBubble = document.createElement('div');
+        speechBubble.style.cssText = 'background:#fff;border:2px solid #000;border-radius:8px 8px 8px 2px;padding:8px 12px;position:relative;';
+        speechBubble.innerHTML = '<span style="position:absolute;top:-8px;left:10px;font-size:14px;">💬</span><div style="font-size:11px;color:#111;line-height:1.5;margin-top:2px;">' + entry.desc + '</div>';
+        panelBody.appendChild(speechBubble);
+
+        // Lore text (comic book style)
+        const loreBox = document.createElement('div');
+        loreBox.style.cssText = 'flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,215,0,0.3);border-radius:4px;padding:8px;overflow-y:auto;';
+        loreBox.innerHTML = '<div style="font-size:11px;color:rgba(220,220,200,0.85);line-height:1.6;font-family:serif;">' + entry.lore + '</div>';
+        panelBody.appendChild(loreBox);
+
+        card.appendChild(panelBody);
+
+        // Claim EXP button (comic book style)
         const claimRow = document.createElement('div');
-        claimRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-top:4px;';
+        claimRow.style.cssText = 'background:#FFD700;border-top:3px solid #000;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
         if (!alreadyClaimed) {
           const claimBtn = document.createElement('button');
-          claimBtn.style.cssText = 'background:#FFD700;color:#000;border:none;border-radius:8px;padding:8px 18px;font-family:"Bangers",cursive;font-size:14px;letter-spacing:1px;cursor:pointer;transition:transform 0.15s;';
-          claimBtn.textContent = `✦ CLAIM +${entry.exp} EXP`;
-          claimBtn.onmouseenter = () => claimBtn.style.transform = 'scale(1.05)';
-          claimBtn.onmouseleave = () => claimBtn.style.transform = 'scale(1)';
+          claimBtn.style.cssText = 'background:#000;color:#FFD700;border:2px solid #FFD700;padding:7px 16px;font-family:"Bangers",cursive;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;box-shadow:2px 2px 0 #555;';
+          claimBtn.innerHTML = `𓂀 CLAIM +${entry.exp} EXP`;
+          claimBtn.onmouseenter = () => { claimBtn.style.background = '#FFD700'; claimBtn.style.color = '#000'; claimBtn.style.transform = 'scale(1.05)'; };
+          claimBtn.onmouseleave = () => { claimBtn.style.background = '#000'; claimBtn.style.color = '#FFD700'; claimBtn.style.transform = ''; };
           claimBtn.onclick = () => _claimCodexExp(entry, claimBtn);
           claimRow.appendChild(claimBtn);
+          const expLabel = document.createElement('span');
+          expLabel.style.cssText = 'font-size:11px;color:#000;letter-spacing:1px;';
+          expLabel.textContent = '+' + entry.exp + ' XP';
+          claimRow.appendChild(expLabel);
         } else {
-          claimRow.innerHTML = `<span style="color:rgba(0,255,136,0.7);font-size:12px;">✅ +${entry.exp} EXP claimed</span>`;
+          claimRow.innerHTML = `<span style="color:#000;font-size:12px;letter-spacing:1px;">✅ +${entry.exp} EXP claimed</span><span style="font-size:20px;">𓂀</span>`;
         }
         card.appendChild(claimRow);
-        leftPage.appendChild(card);
+
+        pageArea.appendChild(card);
       });
 
       // Filler cards for locked entries
       if (pageEntries.length < ITEMS_PER_PAGE) {
         for (let i = pageEntries.length; i < ITEMS_PER_PAGE; i++) {
           const filler = document.createElement('div');
-          filler.style.cssText = 'flex:1;background:rgba(10,10,20,0.5);border:2px solid rgba(255,215,0,0.15);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;';
-          filler.innerHTML = `<span style="font-size:40px;opacity:0.3;">𓂀</span><div style="color:rgba(255,215,0,0.3);font-family:'Bangers',cursive;font-size:14px;letter-spacing:2px;">LOCKED</div><div style="color:rgba(255,255,255,0.2);font-size:11px;">${lockedCount} entries not yet discovered</div>`;
-          leftPage.appendChild(filler);
+          filler.style.cssText = 'flex:1;background:#0d0d0d;border:3px dashed #333;box-shadow:5px 5px 0 #000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
+          filler.innerHTML = `<span style="font-size:48px;opacity:0.25;filter:grayscale(1);">𓂀</span><div style="color:rgba(255,215,0,0.3);font-size:14px;letter-spacing:2px;">LOCKED</div><div style="color:rgba(255,255,255,0.15);font-size:11px;font-family:sans-serif;">${lockedCount} entr${lockedCount === 1 ? 'y' : 'ies'} not yet discovered</div>`;
+          pageArea.appendChild(filler);
         }
       }
 
-      spread.appendChild(leftPage);
+      spread.appendChild(pageArea);
 
-      // Completion progress bar (right sidebar)
-      const sidebar = document.createElement('div');
-      sidebar.style.cssText = 'width:130px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;';
-      const cat = CODEX_CATEGORIES[codexActiveCat];
-      const discovered = entries.filter(e => e.trigger === 'always' || data.discovered[e.id]).length;
-      const claimed = entries.filter(e => data.expClaimed[e.id]).length;
-      const pct = entries.length > 0 ? Math.round((discovered / entries.length) * 100) : 100;
+      // Page counter
+      const pageCounter = document.createElement('div');
+      pageCounter.style.cssText = 'text-align:center;margin-top:8px;font-size:12px;color:rgba(255,215,0,0.7);letter-spacing:2px;flex-shrink:0;';
+      pageCounter.textContent = 'PAGE ' + (codexPage + 1) + ' / ' + totalPages;
 
-      sidebar.innerHTML = `
-        <div style="background:rgba(0,0,0,0.5);border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:10px;font-family:'Bangers',cursive;">
-          <div style="color:#FFD700;font-size:13px;letter-spacing:1px;margin-bottom:6px;">${cat.icon} PROGRESS</div>
-          <div style="font-size:22px;color:#fff;text-align:center;">${discovered}/${entries.length}</div>
-          <div style="background:rgba(255,255,255,0.1);border-radius:3px;height:6px;margin:6px 0;overflow:hidden;">
-            <div style="background:linear-gradient(90deg,#FFD700,#FFA500);height:100%;width:${pct}%;border-radius:3px;transition:width 0.5s;"></div>
-          </div>
-          <div style="font-size:10px;color:#888;">Discovered: ${pct}%</div>
-          <div style="font-size:10px;color:#aaa;margin-top:4px;">EXP Claimed: ${claimed}/${discovered}</div>
-        </div>
-        <div style="background:rgba(0,0,0,0.5);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:8px;font-family:'Bangers',cursive;">
-          <div style="color:#888;font-size:10px;letter-spacing:1px;margin-bottom:4px;">PAGE</div>
-          <div style="color:#FFD700;font-size:18px;text-align:center;">${codexPage + 1} / ${totalPages}</div>
-          <div style="color:#555;font-size:10px;text-align:center;margin-top:4px;">Click ▶ to turn</div>
-        </div>
-        <div style="background:rgba(0,0,0,0.5);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:8px;font-family:'Bangers',cursive;color:#888;font-size:10px;letter-spacing:1px;text-align:center;">
-          COMPLETION BONUS<br>
-          <span style="color:#FFD700;font-size:14px;">${cat.completionExp} EXP</span><br>
-          <span style="font-size:9px;color:#555;font-family:sans-serif;">${discovered >= entries.length ? '✅ ACHIEVED' : 'find all entries'}</span>
-        </div>
-      `;
-      spread.appendChild(sidebar);
       screen.appendChild(spread);
+      screen.appendChild(pageCounter);
     }
 
     function _claimCodexExp(entry, btn) {
@@ -2108,15 +2134,23 @@
       else if (window.GameAccount && typeof window.GameAccount.addXP === 'function')
         window.GameAccount.addXP(entry.exp, 'Codex: ' + entry.name, saveData);
 
+      // Eye of Horus flash: green → black pulse effect
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20000;display:flex;align-items:center;justify-content:center;';
+      flash.innerHTML = '<span style="font-size:80px;animation:horusFlash 0.8s ease-out forwards;">𓂀</span>';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 800);
+
       // Visual dopamine effect
       _codexExpBurst(btn, entry.exp);
       if (typeof playSound === 'function') playSound('levelup');
 
-      // Disable button
-      btn.style.background = 'rgba(0,255,136,0.3)';
-      btn.style.color = '#00ff88';
+      // Update button to claimed state (comic book style)
+      btn.style.background = '#00cc44';
+      btn.style.color = '#000';
+      btn.style.border = '2px solid #000';
       btn.style.cursor = 'default';
-      btn.textContent = `✅ +${entry.exp} EXP claimed`;
+      btn.innerHTML = `✅ +${entry.exp} EXP`;
       btn.onclick = null;
 
       // Check category completion

@@ -1870,30 +1870,43 @@
       overlay.id = 'camp-board-overlay';
       overlay.style.cssText = [
         'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
-        'background:rgba(0,0,0,0.88)', 'z-index:500',
+        'background:linear-gradient(180deg,rgba(0,10,30,0.96) 0%,rgba(0,5,20,0.98) 100%)', 'z-index:500',
         'display:flex', 'flex-direction:column', 'align-items:center',
         'justify-content:flex-start', 'padding:20px 16px', 'box-sizing:border-box', 'overflow-y:auto',
       ].join(';');
 
+      // Glowing top border
+      const topBorder = document.createElement('div');
+      topBorder.style.cssText = 'position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#00ccff,#8844ff,#00ccff,transparent);';
+      overlay.appendChild(topBorder);
+
       // Header row
       const header = document.createElement('div');
-      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:8px;';
-      header.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:26px;color:#FFD700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.5);">📋 CAMP BOARD</div>';
+      header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;width:100%;max-width:520px;margin-bottom:6px;margin-top:8px;';
+      header.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:32px;animation:portalSpin 3s linear infinite;display:inline-block;">🌀</span>
+        <div>
+          <div style="font-family:'Bangers',cursive;font-size:26px;color:#00ccff;letter-spacing:3px;text-shadow:0 0 20px rgba(0,200,255,0.8);">TELEPORT PORTAL</div>
+          <div style="font-size:10px;color:#446688;letter-spacing:2px;text-transform:uppercase;">Fast Travel · Master Menu</div>
+        </div>
+      </div>`;
       const closeBtn = document.createElement('button');
-      closeBtn.textContent = '✕';
-      closeBtn.style.cssText = 'background:#2a2a2a;border:2px solid #666;border-radius:50%;width:38px;height:38px;color:#fff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;flex-shrink:0;';
+      closeBtn.innerHTML = '✕';
+      closeBtn.style.cssText = 'background:rgba(0,204,255,0.1);border:2px solid #00ccff;border-radius:50%;width:38px;height:38px;color:#00ccff;font-size:18px;cursor:pointer;font-family:"Bangers",cursive;flex-shrink:0;transition:all 0.2s;';
+      closeBtn.onmouseenter = () => { closeBtn.style.background = 'rgba(0,204,255,0.25)'; closeBtn.style.transform = 'scale(1.1)'; };
+      closeBtn.onmouseleave = () => { closeBtn.style.background = 'rgba(0,204,255,0.1)'; closeBtn.style.transform = ''; };
       closeBtn.onclick = () => overlay.remove();
       header.appendChild(closeBtn);
       overlay.appendChild(header);
 
       const subtitle = document.createElement('div');
-      subtitle.style.cssText = 'color:#888;font-size:11px;margin-bottom:18px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;';
-      subtitle.textContent = 'Fast access — open any camp feature';
+      subtitle.style.cssText = 'color:#446688;font-size:11px;margin-bottom:16px;text-align:center;letter-spacing:1.5px;max-width:400px;text-transform:uppercase;border-bottom:1px solid rgba(0,204,255,0.15);padding-bottom:12px;width:100%;max-width:520px;';
+      subtitle.textContent = '⚡ Step onto the portal to access all unlocked camp buildings ⚡';
       overlay.appendChild(subtitle);
 
       // Building grid
       const grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%;max-width:520px;';
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:520px;';
 
       // Map each building to its open action
       const buildingActions = {
@@ -2025,18 +2038,19 @@
         const btn = document.createElement('button');
         btn.style.cssText = [
           'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
-          'gap:6px', 'background:linear-gradient(135deg,#1a1a2e,#0d1020)',
-          'border:2px solid #c8a248', 'border-radius:10px', 'padding:14px 10px',
-          'cursor:pointer', 'font-family:"Bangers",cursive', 'color:#FFD700',
-          'letter-spacing:1px', 'transition:filter 0.15s,transform 0.1s',
+          'gap:5px', 'background:linear-gradient(135deg,rgba(0,30,60,0.9),rgba(0,15,35,0.95))',
+          'border:1px solid rgba(0,204,255,0.35)', 'border-radius:12px', 'padding:12px 8px',
+          'cursor:pointer', 'font-family:"Bangers",cursive', 'color:#00ccff',
+          'letter-spacing:1px', 'transition:all 0.2s', 'box-shadow:0 0 8px rgba(0,100,200,0.2)',
+          'min-height:80px',
         ].join(';');
-        btn.innerHTML = `<span style="font-size:30px;line-height:1;">${building.icon}</span><span style="font-size:12px;text-transform:uppercase;color:#f0d890;">${building.name}</span>`;
+        btn.innerHTML = `<span style="font-size:26px;line-height:1;">${building.icon}</span><span style="font-size:10px;text-transform:uppercase;color:#88ccff;letter-spacing:0.5px;">${building.name}</span>`;
         if (action) {
           btn.onclick = action;
-          btn.onmouseenter = () => { btn.style.filter = 'brightness(1.3)'; btn.style.transform = 'translateY(-2px)'; };
-          btn.onmouseleave = () => { btn.style.filter = ''; btn.style.transform = ''; };
+          btn.onmouseenter = () => { btn.style.borderColor = 'rgba(0,204,255,0.8)'; btn.style.background = 'linear-gradient(135deg,rgba(0,60,100,0.9),rgba(0,30,70,0.95))'; btn.style.transform = 'translateY(-2px)'; btn.style.boxShadow = '0 0 16px rgba(0,150,255,0.5)'; };
+          btn.onmouseleave = () => { btn.style.borderColor = 'rgba(0,204,255,0.35)'; btn.style.background = 'linear-gradient(135deg,rgba(0,30,60,0.9),rgba(0,15,35,0.95))'; btn.style.transform = ''; btn.style.boxShadow = '0 0 8px rgba(0,100,200,0.2)'; };
         } else {
-          btn.style.opacity = '0.4';
+          btn.style.opacity = '0.3';
           btn.style.cursor = 'default';
         }
         grid.appendChild(btn);

@@ -35,7 +35,7 @@
     { id: 'achievementBuilding', x:  0,  z:-13,  label: 'Hall of Trophies',    icon: '🏆' },
     { id: 'armory',              x: -8,  z: -12,  label: 'Armory',              icon: '⚔️' },
     { id: 'inventory',           x:  8,  z: -12,  label: 'Inventory',           icon: '📦' },
-    { id: 'campBoard',           x: -3.5,z:  0,  label: 'Camp Board',          icon: '📋' },
+    { id: 'campBoard',           x: -3.5,z:  0,  label: 'Teleport Portal',     icon: '🌀' },
     { id: 'codex',               x:  3.5,z:  0,  label: 'Codex',               icon: '📖' },
     { id: 'specialAttacks',      x:  8,  z:  7,  label: 'Special Attacks',     icon: '⚡' },
     { id: 'warehouse',           x: -8,  z:  7,  label: 'Warehouse',           icon: '🏪' },
@@ -100,6 +100,7 @@
   let _campTime    = 0;
   let _isActive    = false;
   let _menuOpen    = false;  // true while a building menu overlay is visible
+  let _menuOpenTs  = 0;      // timestamp (ms) when _menuOpen was last set true
 
   // Campfire light + flame for flickering
   let _fireLight   = null;
@@ -288,6 +289,9 @@
 
     // ── Surrounding trees / scenery ─────────────────────────
     _buildAmbientForest();
+
+    // ── Small reflection pond near campfire ─────────────────
+    _buildCampPond();
 
     // ── Lake (Waterdrop's ultimate goal, south of forest ring) ──
     _buildLake();
@@ -522,6 +526,46 @@
       _smokeLifetimes.push(0);
       _smokeVelocities.push({ x: (Math.random() - 0.5) * 0.3, y: 0.8 + Math.random() * 0.4, z: (Math.random() - 0.5) * 0.3 });
     }
+  }
+
+  // ── Small aesthetic reflection pond near campfire ────────
+  function _buildCampPond() {
+    const THREE = T();
+
+    // Pond water surface — dark reflective ellipse
+    const pondGeo = new THREE.EllipseCurve(-6, 5, 2.5, 1.5, 0, Math.PI * 2, false, 0);
+    const pondShape = new THREE.Shape(pondGeo.getPoints(40));
+    const pondPlaneGeo = new THREE.ShapeGeometry(pondShape);
+    const pondMat = new THREE.MeshPhongMaterial({
+      color: 0x001a2e, emissive: 0x001833, emissiveIntensity: 0.5,
+      transparent: true, opacity: 0.82, shininess: 200, specular: 0x88ccff,
+      side: THREE.DoubleSide
+    });
+    const pond = new THREE.Mesh(pondPlaneGeo, pondMat);
+    pond.rotation.x = -Math.PI / 2;
+    pond.position.set(-6, 0.04, 5);
+    pond._pondSurface = true;
+    _campScene.add(pond);
+
+    // Pond edge stones (small pebbles)
+    const pebblePositions = [
+      [-7.8, 5.0], [-7.5, 4.0], [-7.0, 3.8], [-6.0, 3.7],
+      [-5.0, 4.0], [-4.5, 5.0], [-4.8, 6.0], [-5.8, 6.5],
+      [-7.0, 6.4], [-7.6, 5.8]
+    ];
+    pebblePositions.forEach(([px, pz]) => {
+      const pGeo = new THREE.SphereGeometry(0.08 + Math.random() * 0.12, 5, 4);
+      const pMat = new THREE.MeshPhongMaterial({ color: 0x4a4a5a, emissive: 0x111111, emissiveIntensity: 0.1 });
+      const pebble = new THREE.Mesh(pGeo, pMat);
+      pebble.position.set(px, 0.05, pz);
+      pebble.scale.set(1, 0.5, 1);
+      _campScene.add(pebble);
+    });
+
+    // Soft water reflection light
+    const pondLight = new THREE.PointLight(0x3388cc, 0.8, 8, 2);
+    pondLight.position.set(-6, 0.5, 5);
+    _campScene.add(pondLight);
   }
 
   // ── Star field ───────────────────────────────────────────
@@ -2680,72 +2724,91 @@
     return grp;
   }
 
-  // ── Generic fallback building ────────────────────────────
-  // ── Camp Board ─ glowing notice board near campfire ──────
+  // ── Teleport Portal ─ glowing ground portal for fast travel ──
   function _buildCampBoard(def) {
-    // High-tech hub — replaces the old wooden billboard
     const THREE = T();
     const grp = new THREE.Group();
     grp.position.set(def.x, 0, def.z);
 
-    // Hexagonal base platform
-    const baseGeo = new THREE.CylinderGeometry(1.6, 1.8, 0.22, 6);
-    const base = _mesh(baseGeo, _mat(0x111122, 0x2233aa, 0.25));
-    base.position.y = 0.11;
-    grp.add(base);
-
-    // Central pillar
-    const pillarGeo = new THREE.CylinderGeometry(0.18, 0.22, 3.0, 8);
-    const pillar = _mesh(pillarGeo, _mat(0x223355, 0x334466, 0.2));
-    pillar.position.y = 1.61;
-    pillar.castShadow = true;
-    grp.add(pillar);
-
-    // Three rotating ring arcs
-    const ringMat = _mat(0x00ccff, 0x00ccff, 0.9);
-    for (let i = 0; i < 3; i++) {
-      const ringGeo = new THREE.TorusGeometry(1.0, 0.04, 8, 32, Math.PI * 1.4);
-      const ring = _mesh(ringGeo, ringMat);
-      ring.position.y = 1.2 + i * 0.8;
-      ring.rotation.y = (i / 3) * Math.PI * 2;
-      ring.rotation.x = Math.PI / 2;
-      grp.add(ring);
-    }
-
-    // Holographic panel frame at top
-    const panelGeo = new THREE.BoxGeometry(1.8, 1.2, 0.08);
-    const panel = _mesh(panelGeo, _mat(0x001133, 0x0066ff, 0.4));
-    panel.position.y = 3.6;
-    grp.add(panel);
-
-    // Glowing screen surface
-    const screenGeo = new THREE.BoxGeometry(1.6, 1.0, 0.04);
-    const screenMat = new THREE.MeshPhongMaterial({
-      color: 0x003366, emissive: 0x0055cc, emissiveIntensity: 0.8,
-      transparent: true, opacity: 0.85
+    // Outer stone ring platform
+    const platformGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.18, 12);
+    const platformMat = new THREE.MeshPhongMaterial({
+      color: 0x1a1a2e, emissive: 0x0a0a1a, emissiveIntensity: 0.15, shininess: 60
     });
-    const screen = new THREE.Mesh(screenGeo, screenMat);
-    screen.position.set(0, 3.6, 0.07);
-    grp.add(screen);
+    const platform = new THREE.Mesh(platformGeo, platformMat);
+    platform.position.y = 0.09;
+    platform.receiveShadow = true;
+    grp.add(platform);
 
-    // Blue point light from screen
-    const screenLight = new THREE.PointLight(0x0088ff, 2.0, 7, 2);
-    screenLight.position.set(0, 3.6, 0.8);
-    grp.add(screenLight);
+    // Inner swirling portal disc (glowing cyan/blue)
+    const portalGeo = new THREE.CircleGeometry(1.5, 48);
+    const portalMat = new THREE.MeshBasicMaterial({
+      color: 0x00ccff, transparent: true, opacity: 0.35,
+      side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const portal = new THREE.Mesh(portalGeo, portalMat);
+    portal.rotation.x = -Math.PI / 2;
+    portal.position.y = 0.19;
+    portal._portalDisc = true;
+    grp.add(portal);
 
-    // 4 corner antenna spires
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-      const spireGeo = new THREE.CylinderGeometry(0.04, 0.07, 1.0, 6);
-      const spire = _mesh(spireGeo, _mat(0x334455, 0x0077aa, 0.3));
-      spire.position.set(Math.cos(a) * 0.8, 3.0, Math.sin(a) * 0.8);
-      grp.add(spire);
-      const tipLight = new THREE.PointLight(0x00aaff, 0.8, 3, 2);
-      tipLight.position.set(Math.cos(a) * 0.8, 3.6, Math.sin(a) * 0.8);
-      grp.add(tipLight);
+    // Second layer portal (slightly smaller, different phase)
+    const portal2Geo = new THREE.CircleGeometry(1.1, 48);
+    const portal2Mat = new THREE.MeshBasicMaterial({
+      color: 0x8844ff, transparent: true, opacity: 0.30,
+      side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const portal2 = new THREE.Mesh(portal2Geo, portal2Mat);
+    portal2.rotation.x = -Math.PI / 2;
+    portal2.position.y = 0.20;
+    portal2._portalDisc2 = true;
+    grp.add(portal2);
+
+    // 6 rune stones around the ring
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const r = 1.9;
+      const stoneGeo = new THREE.CylinderGeometry(0.14, 0.18, 0.55, 5);
+      const stoneMat = new THREE.MeshPhongMaterial({
+        color: 0x223355, emissive: 0x0044aa, emissiveIntensity: 0.5, shininess: 80
+      });
+      const stone = new THREE.Mesh(stoneGeo, stoneMat);
+      stone.position.set(Math.sin(a) * r, 0.36, Math.cos(a) * r);
+      stone.castShadow = true;
+      grp.add(stone);
+      // Glowing tip on each runestone
+      const tipGeo = new THREE.SphereGeometry(0.10, 6, 6);
+      const tipMat = new THREE.MeshBasicMaterial({ color: 0x00eeff });
+      const tip = new THREE.Mesh(tipGeo, tipMat);
+      tip.position.set(Math.sin(a) * r, 0.68, Math.cos(a) * r);
+      grp.add(tip);
     }
 
-    _addNameSign(grp, def.label, 0, 4.6, 0);
+    // Central hovering energy gem
+    const gemGeo = new THREE.OctahedronGeometry(0.4, 1);
+    const gemMat = new THREE.MeshPhongMaterial({
+      color: 0x44aaff, emissive: 0x0066cc, emissiveIntensity: 1.2,
+      transparent: true, opacity: 0.9, shininess: 200
+    });
+    const gem = new THREE.Mesh(gemGeo, gemMat);
+    gem.position.set(0, 1.0, 0);
+    gem._portalGem = true;
+    grp.add(gem);
+
+    // Wireframe overlay on gem
+    const wireGeo = new THREE.OctahedronGeometry(0.43, 1);
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.4 });
+    const wire = new THREE.Mesh(wireGeo, wireMat);
+    wire.position.set(0, 1.0, 0);
+    wire._portalGemWire = true;
+    grp.add(wire);
+
+    // Portal light column glow
+    const portalLight = new THREE.PointLight(0x00aaff, 3.0, 10, 2);
+    portalLight.position.set(0, 0.8, 0);
+    grp.add(portalLight);
+
+    _addNameSign(grp, def.label, 0, 1.9, 0);
     return grp;
   }
 
@@ -3564,6 +3627,28 @@
       f.scale.set(s, 0.85 + 0.2 * Math.sin(_campTime * (6 + i * 2.7)), s);
       f.material.opacity = 0.7 + 0.15 * Math.sin(_campTime * (5 + i * 1.5));
     });
+    // Animate Teleport Portal gem and discs
+    const portalMesh = _buildingMeshes['campBoard'];
+    if (portalMesh) {
+      portalMesh.traverse(function(child) {
+        if (child._portalGem) {
+          child.position.y = 1.0 + Math.sin(_campTime * 2.0) * 0.15;
+          child.rotation.y += dt * 1.5;
+        }
+        if (child._portalGemWire) {
+          child.position.y = 1.0 + Math.sin(_campTime * 2.0) * 0.15;
+          child.rotation.y -= dt * 1.0;
+        }
+        if (child._portalDisc && child.material) {
+          child.material.opacity = 0.25 + 0.15 * Math.abs(Math.sin(_campTime * 1.8));
+          child.rotation.z += dt * 0.8;
+        }
+        if (child._portalDisc2 && child.material) {
+          child.material.opacity = 0.20 + 0.12 * Math.abs(Math.sin(_campTime * 2.3 + 1.2));
+          child.rotation.z -= dt * 1.1;
+        }
+      });
+    }
     // Flicker torch lights for cozy atmosphere
     _updateTorchFlicker();
     // Pulse alien lights on prismReliquary and astralGateway
@@ -4220,7 +4305,7 @@
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         const DS = window.DialogueSystem;
         if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
-          _menuOpen = true;
+          _menuOpen = true; _menuOpenTs = Date.now();
           _playerVel.x = 0; _playerVel.z = 0;
           _keys = {}; _touch.active = false;
           if (_promptEl) _promptEl.style.display = 'none';
@@ -4284,7 +4369,7 @@
     const fn = _callbacks[_nearBuilding];
     if (typeof fn === 'function') {
       // Pause camp input while the building menu is open
-      _menuOpen = true;
+      _menuOpen = true; _menuOpenTs = Date.now();
       _playerVel.x = 0;
       _playerVel.z = 0;
       _keys = {};
@@ -4331,6 +4416,9 @@
    */
   function _checkMenuClosed() {
     if (!_menuOpen) return;
+    // Wait at least 350ms after menu opened before checking — avoids race where
+    // the overlay hasn't been appended to the DOM yet in the same frame.
+    if (Date.now() - _menuOpenTs < 350) return;
     const campScreen = document.getElementById('camp-screen');
     // If camp-screen itself is hidden, another full-screen took over; wait for it.
     if (campScreen && campScreen.style.display === 'none') return;
@@ -4892,7 +4980,7 @@
         'letter-spacing:1px',
         'padding:10px 20px',
         'display:none',
-        'z-index:200',
+        'z-index:80',
         'pointer-events:none',
         'text-shadow:0 0 8px rgba(200,162,72,0.6)',
         'box-shadow:0 0 16px rgba(200,162,72,0.3)',
@@ -4922,9 +5010,8 @@
         'font-size:17px',
         'font-weight:bold',
         'display:none',
-        'z-index:200',
+        'z-index:80',
         'cursor:pointer',
-        'box-shadow:0 0 24px rgba(200,162,72,0.8),0 4px 12px rgba(0,0,0,0.6)',
         'letter-spacing:1px',
         'touch-action:manipulation',
         'text-shadow:0 1px 3px rgba(0,0,0,0.5)',
@@ -5411,7 +5498,7 @@
     if (!sd.companions.greyAlien.skills) sd.companions.greyAlien.skills = {};
     const skills = sd.companions.greyAlien.skills;
     const sp = sd.companionSkillPoints || 0;
-    _menuOpen = true;
+    _menuOpen = true; _menuOpenTs = Date.now();
 
     const overlay = document.createElement('div');
     overlay.style.cssText = [
@@ -5675,7 +5762,7 @@
   window.CampWorld = {
     get isActive() { return _isActive; },
     get menuOpen() { return _menuOpen; },
-    pauseInput: function () { _menuOpen = true; },
+    pauseInput: function () { _menuOpen = true; _menuOpenTs = Date.now(); },
     resumeInput: _resumeInput,
     _forceResumeInput: _resumeInput,
     enter,
