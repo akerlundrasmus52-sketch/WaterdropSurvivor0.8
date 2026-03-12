@@ -31,11 +31,25 @@ window.NeuralMatrix = (function () {
       cx: 0.30, cy: 0.40,
       color: '#ff8844',
       glowColor: 'rgba(255,136,68,0.4)',
-      connections: ['eventHorizon'],
+      connections: ['melee1_left'],
       isMinor: true,
       currency: 'credits1945',
       statBonus: { atk: 1 },
       description: 'Play 1945 Striker to earn credits. +1 ATK — increases all damage by 5%.'
+    },
+    {
+      id: 'melee1_left',
+      label: 'MELEE\n+1%',
+      icon: '🗡',
+      cost: 15,
+      cx: 0.26, cy: 0.32,
+      color: '#ff6644',
+      glowColor: 'rgba(255,102,68,0.3)',
+      connections: ['eventHorizon'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { meleeAtk: 1 },
+      description: 'Play 1945 Striker to earn credits. +1% melee weapon damage.'
     },
     {
       id: 'spd1_left',
@@ -59,11 +73,25 @@ window.NeuralMatrix = (function () {
       cx: 0.43, cy: 0.34,
       color: '#ff8844',
       glowColor: 'rgba(255,136,68,0.4)',
-      connections: ['bloodAlchemy'],
+      connections: ['headshot1_top'],
       isMinor: true,
       currency: 'credits1945',
       statBonus: { atk: 1 },
       description: 'Play 1945 Striker to earn credits. +1 ATK — increases all damage by 5%.'
+    },
+    {
+      id: 'headshot1_top',
+      label: 'HDSHOT\n+0.2%',
+      icon: '🎯',
+      cost: 15,
+      cx: 0.46, cy: 0.26,
+      color: '#ffaa44',
+      glowColor: 'rgba(255,170,68,0.3)',
+      connections: ['bloodAlchemy'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { headshotChance: 0.2 },
+      description: 'Play 1945 Striker to earn credits. +0.2% headshot chance for critical hits.'
     },
     {
       id: 'spd1_top',
@@ -87,11 +115,25 @@ window.NeuralMatrix = (function () {
       cx: 0.70, cy: 0.40,
       color: '#ff8844',
       glowColor: 'rgba(255,136,68,0.4)',
-      connections: ['kineticMirror'],
+      connections: ['ranged1_right'],
       isMinor: true,
       currency: 'credits1945',
       statBonus: { atk: 1 },
       description: 'Play 1945 Striker to earn credits. +1 ATK — increases all damage by 5%.'
+    },
+    {
+      id: 'ranged1_right',
+      label: 'RANGED\n+1%',
+      icon: '🏹',
+      cost: 15,
+      cx: 0.74, cy: 0.32,
+      color: '#ff8866',
+      glowColor: 'rgba(255,136,102,0.3)',
+      connections: ['kineticMirror'],
+      isMinor: true,
+      currency: 'credits1945',
+      statBonus: { rangedAtk: 1 },
+      description: 'Play 1945 Striker to earn credits. +1% ranged weapon damage.'
     },
     {
       id: 'spd1_right',
@@ -378,7 +420,13 @@ window.NeuralMatrix = (function () {
   function _drawNode(node, isParasite) {
     const { x, y } = _canvasXY(node);
     const unlocked = isParasite ? false : _isUnlocked(node.id);
-    const R = node.isFinal ? 32 : node.isStart ? 28 : 24;
+    // Determine node size: smaller for intermediate stat nodes (melee/ranged/headshot)
+    const isSmallNode = node.id && (
+      node.id.includes('melee') ||
+      node.id.includes('ranged') ||
+      node.id.includes('headshot')
+    );
+    const R = node.isFinal ? 32 : node.isStart ? 28 : isSmallNode ? 18 : 24;
 
     _ctx.save();
 
