@@ -14,7 +14,7 @@
       // SHARED_MAT.enemy is only used as a fallback — type-specific colors come from SHARED_MAT_CACHE
       enemy:  new THREE.MeshPhongMaterial({
         color: 0x44AA44,
-        emissive: 0x44AA44,
+        emissive: new THREE.Color(0x44AA44).multiplyScalar(0.6),
         emissiveIntensity: 0.15,
         shininess: 40
       }),
@@ -38,9 +38,11 @@
       const key = colorHex.toString(16) + (opts && opts.transparent ? '_t' : '');
       if (!SHARED_MAT_CACHE[key]) {
         // Use MeshPhongMaterial with emissive glow for better visuals (camp style)
+        // Emissive color is darkened (60% of base) to prevent washing out the appearance
+        const darkEmissive = new THREE.Color(colorHex).multiplyScalar(0.6);
         const m = new THREE.MeshPhongMaterial(Object.assign({
           color: colorHex,
-          emissive: colorHex,
+          emissive: darkEmissive,
           emissiveIntensity: 0.15,  // Subtle inner glow
           shininess: 40              // Water-like shine
         }, opts || {}));
@@ -625,7 +627,7 @@
         if (type === 10 || type === 11) {
           const _bossMat = new THREE.MeshPhongMaterial({
             color: _colorHex,
-            emissive: new THREE.Color(_colorHex),
+            emissive: new THREE.Color(_colorHex).multiplyScalar(0.7),
             emissiveIntensity: 0.3,
             shininess: 90  // Higher shininess for bosses to make them stand out
           });
