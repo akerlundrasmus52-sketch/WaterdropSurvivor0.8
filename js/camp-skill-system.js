@@ -77,10 +77,10 @@
           story: 'This tree grew from a single water droplet that absorbed centuries of knowledge. Each skill you unlock is a branch of understanding.'
         },
         forge: {
-          name: 'Progression Upgrades',
+          name: 'Artisan\'s Workshop',
           icon: '🔨',
-          description: 'A place to permanently upgrade your abilities and power.',
-          story: 'Fueled by the heat of a thousand defeated enemies, this place shapes even the hardest challenges.'
+          description: 'A masterful workshop where weapons, tools, and equipment are forged to perfection.',
+          story: 'Fueled by the heat of a thousand defeated enemies, this place shapes metal, wood, and magic into legendary creations.'
         },
         companionHouse: {
           name: 'Companion Sanctuary',
@@ -167,9 +167,9 @@
         }
       },
       forge: {
-        name: 'Weaponsmith',
+        name: 'Artisan\'s Workshop',
         icon: '⚒️',
-        description: 'Craft and upgrade weapons. Higher tiers unlock better rarities',
+        description: 'Craft and upgrade all types of equipment - weapons, tools, and gear. Higher tiers unlock better rarities',
         baseCost: 250,
         costMultiplier: 1.8,
         maxCost: 100000,

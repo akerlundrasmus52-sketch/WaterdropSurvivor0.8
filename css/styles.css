@@ -3615,8 +3615,13 @@
         bottom: 12px !important;
       }
 
-      /* Show settings/stats buttons in landscape (enough horizontal space) */
+      /* In landscape mode, hide overlapping buttons - only show menu button
+         User accesses these features through the menu button instead */
       #settings-btn, #stats-btn, #equipment-btn {
+        display: none !important;
+      }
+
+      #menu-btn {
         display: flex !important;
       }
     }
