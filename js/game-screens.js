@@ -705,13 +705,13 @@
       camera.position.y = origPosY + 60;
       camera.updateProjectionMatrix();
 
-      // Region label data (optimized positions - 40% more compact)
+      // Region label data (ultra-compact positions - 80x80 map, all landmarks at edges)
       const regions = [
-        { label: '⚙️ Windmill',       wx: 18,  wy: 0, wz: 18  },
-        { label: '⛰️ Montana',        wx: 0,   wy: 0, wz: -60 },
-        { label: '⚡ Eiffel Tower',    wx: -50, wy: 0, wz: 90  },
-        { label: '🗿 Stonehenge',      wx: 35,  wy: 0, wz: 30  },
-        { label: '🔺 Pyramid',         wx: 25,  wy: 0, wz: -20 },
+        { label: '⚙️ Windmill',       wx: 20,  wy: 0, wz: 20  },
+        { label: '⛰️ Montana',        wx: 0,   wy: 0, wz: -36 },
+        { label: '⚡ Eiffel Tower',    wx: -32, wy: 0, wz: 35  },
+        { label: '🗿 Stonehenge',      wx: 32,  wy: 0, wz: 28  },
+        { label: '🔺 Pyramid',         wx: 32,  wy: 0, wz: -28 },
         { label: '🏠 Spawn',           wx: 0,   wy: 0, wz: 0   }
       ];
 

@@ -3201,13 +3201,13 @@
         }
       }
 
-      // Lava damage: player takes damage when close to volcano (OPTIMIZED: at -60, 0, -72)
+      // Lava damage: player takes damage when close to volcano (OPTIMIZED: ultra-compact at -35, 0, -35)
       if (player && isGameActive && !isGameOver) {
         const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
         const LAVA_WARN_RADIUS = 14;    // Distance at which warning appears
         const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
         const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
-        const lavaX = -60, lavaZ = -72; // OPTIMIZED: Updated to match volcano position from world-gen.js:2264
+        const lavaX = -35, lavaZ = -35; // OPTIMIZED: Updated for ultra-compact 80x80 map (was -60, -72)
         const ldx = player.mesh.position.x - lavaX;
         const ldz = player.mesh.position.z - lavaZ;
         const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);
