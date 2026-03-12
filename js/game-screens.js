@@ -861,6 +861,17 @@
       // Apply Neural Matrix upgrades for this run
       if (window.NeuralMatrix) window.NeuralMatrix.applyToRun(playerStats);
 
+      // Apply Advanced Idle Clicker main-game bonuses for this run
+      if (window.AdvancedClicker && typeof saveData !== 'undefined') {
+        const _clickBonuses = window.AdvancedClicker.getMainGameBonuses(saveData);
+        if (_clickBonuses.goldPct > 0) {
+          window._idleClickerGoldBonus = _clickBonuses.goldPct / 100;
+        }
+        if (_clickBonuses.atkBonus > 0 && playerStats) {
+          playerStats.damage = (playerStats.damage || 1) * (1 + _clickBonuses.atkBonus * 0.05);
+        }
+      }
+
       // Reset Event Horizon holes and blood pool counter at run start
       window._eventHorizonHoles = [];
       window._activeBloodPools = 0;
@@ -4839,7 +4850,9 @@
     function addGold(amount) {
       // Apply gold bonus from permanent upgrades
       const bonus = PERMANENT_UPGRADES.goldEarned.effect(saveData.upgrades.goldEarned);
-      const finalAmount = Math.floor(amount * (1 + bonus));
+      // Apply Idle Clicker passive gold bonus
+      const _clickerBonus = window._idleClickerGoldBonus || 0;
+      const finalAmount = Math.floor(amount * (1 + bonus) * (1 + _clickerBonus));
       playerStats.gold += finalAmount;
       saveData.gold += finalAmount;
       saveData.totalGoldEarned += finalAmount;

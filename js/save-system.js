@@ -344,6 +344,10 @@
       // ── Astral Dive rewards ──────────────────────────────────
       astralEssence: 0,  // Collected inside Astral Dive — used in Neural Matrix
       neuralCores:   0,  // Rare drops from Firewall bosses inside the Dive
+      // ── 1945 Striker minigame ─────────────────────────────
+      neural1945: { highScore: 0, credits: 0, upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 } },
+      // ── Advanced Idle Clicker (Idle House) ────────────────
+      advancedClicker: null,  // Initialised lazily by AdvancedClicker.getDefaults()
       // ── AIDA Dark Pacts ──────────────────────────────────────
       aidaDarkPacts: {
         hpReduction:      1.0,  // Multiplicative HP cap (e.g. 0.85 = −15%)
@@ -579,6 +583,13 @@
           // ── Astral Dive rewards migration ──
           saveData.astralEssence = saveData.astralEssence || 0;
           saveData.neuralCores   = saveData.neuralCores   || 0;
+          // ── 1945 Striker save migration ──
+          if (!saveData.neural1945) {
+            saveData.neural1945 = { highScore: 0, credits: 0, upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 } };
+          }
+          saveData.neural1945.credits   = saveData.neural1945.credits   || 0;
+          saveData.neural1945.highScore = saveData.neural1945.highScore || 0;
+          saveData.neural1945.upgrades  = saveData.neural1945.upgrades  || { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 };
           // ── Neural Matrix migration ──
           saveData.neuralMatrix = saveData.neuralMatrix || {};
           // Ensure parasiteSeenThisSession starts as false (re-rolls once per session)

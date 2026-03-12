@@ -607,19 +607,32 @@
     // Collision detection
     checkCollisions();
 
-    // Spawn enemies
-    if (gameState.enemies.length < 5 && Math.random() < 0.02) {
-      spawnEnemy();
+    // Wave management: track whether we have already started filling this wave
+    if (!gameState._waveSpawned) gameState._waveSpawned = 0;
+    if (!gameState._waveEnemyCount) gameState._waveEnemyCount = 3 + Math.floor(gameState.wave * 1.5);
+
+    // Spawn enemies continuously until we've spawned the wave target
+    if (!gameState.bossActive && gameState._waveSpawned < gameState._waveEnemyCount) {
+      if (gameState.enemies.length < Math.min(8, 3 + gameState.wave) && Math.random() < 0.04) {
+        spawnEnemy();
+        gameState._waveSpawned++;
+      }
     }
 
-    // Spawn boss every 5 waves
-    if (!gameState.bossActive && gameState.enemies.length === 0 && gameState.wave % 5 === 0) {
+    // Trigger boss when we've cleared enough waves
+    if (!gameState.bossActive && gameState._waveSpawned >= gameState._waveEnemyCount
+        && gameState.enemies.length === 0 && gameState.wave % 5 === 0 && !gameState._bossTriggeredThisWave) {
+      gameState._bossTriggeredThisWave = true;
       spawnBoss();
     }
 
-    // Next wave
-    if (!gameState.bossActive && gameState.enemies.length === 0) {
+    // Advance to next wave when all enemies and boss are gone
+    if (!gameState.bossActive && gameState.enemies.length === 0
+        && gameState._waveSpawned >= gameState._waveEnemyCount) {
       gameState.wave++;
+      gameState._waveSpawned = 0;
+      gameState._waveEnemyCount = 3 + Math.floor(gameState.wave * 1.5);
+      gameState._bossTriggeredThisWave = false;
       updateUI();
     }
 
@@ -1133,6 +1146,11 @@
     gameState.player.maxHp = shieldLevel.maxHp;
     gameState.player.invulnerable = 0;
 
+    // Reset wave tracking state
+    gameState._waveSpawned = 0;
+    gameState._waveEnemyCount = 3 + Math.floor(gameState.wave * 1.5);
+    gameState._bossTriggeredThisWave = false;
+
     updateHPBar();
     updateUI();
   }
@@ -1140,13 +1158,15 @@
   // Save progress
   function saveProgress() {
     if (!window.saveData) window.saveData = {};
-    window.saveData.neural1945 = {
-      highScore: gameState.highScore,
-      credits: gameState.credits,
-      upgrades: gameState.upgrades
-    };
-    if (typeof window.saveGame === 'function') {
-      window.saveGame();
+    if (!window.saveData.neural1945) window.saveData.neural1945 = {};
+    window.saveData.neural1945.highScore = gameState.highScore;
+    window.saveData.neural1945.credits   = gameState.credits;
+    window.saveData.neural1945.upgrades  = gameState.upgrades;
+    // Use saveSaveData (main game save function) or saveGame fallback
+    if (typeof saveSaveData === 'function') {
+      try { saveSaveData(); } catch (e) {}
+    } else if (typeof window.saveGame === 'function') {
+      try { window.saveGame(); } catch (e) {}
     }
   }
 
