@@ -1265,16 +1265,14 @@
                 const speed = 2 + Math.random() * 2;
                 const particle = particlePool.get();
                 if (particle) {
-                  particle.mesh.position.copy(player.mesh.position);
-                  particle.velocity.set(
+                  particle.reset(player.mesh.position, 0x4169E1);
+                  particle.vel.set(
                     Math.cos(angle) * speed,
                     3 + Math.random() * 2,
                     Math.sin(angle) * speed
                   );
-                  particle.mesh.material.color.setHex(0x4169E1); // Blue
-                  particle.mesh.visible = true;
-                  particle.active = true;
-                  particle.life = 1.0;
+                  // Short, contained burst for pickup feedback
+                  particle.life = Math.floor(Particle.MAX_LIFETIME * 0.5);
                 }
               }
             }
@@ -1319,12 +1317,9 @@
                 const speed = 2 + Math.random() * 3;
                 const particle = particlePool.get();
                 if (particle) {
-                  particle.mesh.position.copy(player.mesh.position);
-                  particle.velocity.set(Math.cos(angle) * speed, 4 + Math.random() * 2, Math.sin(angle) * speed);
-                  particle.mesh.material.color.setHex(0x00FFB4);
-                  particle.mesh.visible = true;
-                  particle.active = true;
-                  particle.life = 1.5;
+                  particle.reset(player.mesh.position, 0x00FFB4);
+                  particle.vel.set(Math.cos(angle) * speed, 4 + Math.random() * 2, Math.sin(angle) * speed);
+                  particle.life = Math.floor(Particle.MAX_LIFETIME * 0.6);
                 }
               }
             }

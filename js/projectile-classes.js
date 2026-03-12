@@ -1945,15 +1945,14 @@
         this.mesh.castShadow = false;
         this.mesh.receiveShadow = false;
         this.mesh.position.copy(pos);
+        this.mesh.visible = false;
         
         this.vel = new THREE.Vector3(
           (Math.random() - 0.5) * Particle.VEL_XZ_RANGE,
           Particle.VEL_Y_MIN + Math.random() * Particle.VEL_Y_RANGE,
           (Math.random() - 0.5) * Particle.VEL_XZ_RANGE
         );
-        
-        scene.add(this.mesh);
-        this.life = Particle.MAX_LIFETIME;
+        this.life = 0;
       }
       
       reset(pos, color) {
@@ -2014,5 +2013,4 @@
       }
     }
     window.Particle = Particle;
-
 

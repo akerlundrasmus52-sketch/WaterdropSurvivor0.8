@@ -23,8 +23,19 @@
       
       // Phase 5: Initialize particle object pool for performance (100 particles pre-allocated)
       particlePool = new ObjectPool(
-        () => new Particle(new THREE.Vector3(0, 0, 0), 0xFFFFFF),
-        (particle) => particle.mesh.visible = false,
+        () => {
+          const p = new Particle(new THREE.Vector3(0, 0, 0), 0xFFFFFF);
+          p.mesh.visible = false;
+          return p;
+        },
+        (particle) => {
+          // Keep pooled particles out of the scene to avoid stranded meshes
+          if (scene && particle.mesh.parent === scene) scene.remove(particle.mesh);
+          particle.mesh.visible = false;
+          particle.mesh.position.set(0, -9999, 0);
+          if (particle.vel) particle.vel.set(0, 0, 0);
+          particle.life = 0;
+        },
         100
       );
 
@@ -5839,4 +5850,3 @@
         }, 50);
       }, 4000);
     }
-

@@ -814,11 +814,21 @@
       });
       projectiles = [];
       
-      particles.forEach(p => {
-        scene.remove(p.mesh);
-        p.mesh.geometry.dispose();
-        p.mesh.material.dispose();
-      });
+      if (particlePool) {
+        particles.forEach(p => {
+          scene.remove(p.mesh);
+          particlePool.release(p);
+        });
+        // Reset recycle cursor so the next spawn starts clean
+        if (typeof _particleRecycleIdx !== 'undefined') _particleRecycleIdx = 0;
+        particlePool.releaseAll();
+      } else {
+        particles.forEach(p => {
+          scene.remove(p.mesh);
+          p.mesh.geometry.dispose();
+          p.mesh.material.dispose();
+        });
+      }
       particles = [];
       
       // Clean up any active flash lights
@@ -1065,4 +1075,3 @@
         setGamePaused(true);
       }
     }
-
