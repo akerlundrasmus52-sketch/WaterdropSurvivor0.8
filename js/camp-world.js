@@ -178,6 +178,7 @@
   let _nearBuilding  = null;   // id of nearest building (if within radius)
   let _promptEl      = null;   // the DOM prompt element
   let _interactBtn   = null;   // mobile interact button
+  let _buildingNameEl = null;  // separate building name display element
 
   // Alien Incubator pod state
   let _incubatorMesh = null;
@@ -4238,14 +4239,21 @@
     if (_menuOpen) {
       _promptEl.style.display = 'none';
       if (_interactBtn) _interactBtn.style.display = 'none';
+      if (_buildingNameEl) _buildingNameEl.style.display = 'none';
       return;
     }
     if (_nearBuilding) {
       const def = BUILDING_DEFS.find(d => d.id === _nearBuilding);
       if (def) {
+        // Display building name in separate element
+        if (_buildingNameEl) {
+          _buildingNameEl.textContent = `${def.icon}  ${def.label}`;
+          _buildingNameEl.style.display = 'block';
+        }
+
         if (_isBuildingUnlocked(_nearBuilding)) {
           // Building is built (level > 0) — show ENTER
-          _promptEl.textContent = `${def.icon}  ${def.label}  —  Tap / [E]`;
+          _promptEl.textContent = `Press [E] to Enter`;
           if (_interactBtn) {
             _interactBtn.textContent = 'ENTER';
             _interactBtn.style.background = 'linear-gradient(135deg,#c8a248,#8b6914)';
@@ -4253,21 +4261,21 @@
           }
         } else if (_isBuildingNeedsBuild(_nearBuilding)) {
           // Building unlocked by quest but not yet built — show BUILD
-          _promptEl.textContent = `🔨  ${def.label}  —  Build this building! [E]`;
+          _promptEl.textContent = `Press [E] to Build`;
           if (_interactBtn) {
             _interactBtn.textContent = 'BUILD';
             _interactBtn.style.background = 'linear-gradient(135deg,#2980b9,#1a5276)';
             _interactBtn.style.display = 'block';
           }
         } else if (_isBuildingReadyForBuild(_nearBuilding)) {
-          _promptEl.textContent = `🔨  ${def.label}  —  Ready to Build! [E]`;
+          _promptEl.textContent = `Press [E] to Build`;
           if (_interactBtn) {
             _interactBtn.textContent = 'BUILD';
             _interactBtn.style.background = 'linear-gradient(135deg,#2980b9,#1a5276)';
             _interactBtn.style.display = 'block';
           }
         } else {
-          _promptEl.textContent = `🔒  ${def.label}  —  Complete quests to unlock this building`;
+          _promptEl.textContent = `🔒 Complete quests to unlock`;
           if (_interactBtn) _interactBtn.style.display = 'none';
         }
         _promptEl.style.display = 'block';
@@ -4275,6 +4283,7 @@
     } else {
       _promptEl.style.display = 'none';
       if (_interactBtn) _interactBtn.style.display = 'none';
+      if (_buildingNameEl) _buildingNameEl.style.display = 'none';
     }
   }
 
@@ -5024,6 +5033,35 @@
       _interactBtn = btn;
     } else {
       _interactBtn = document.getElementById('camp-interact-btn');
+    }
+
+    // Building name display (positioned next to the interact button)
+    if (!document.getElementById('camp-building-name')) {
+      const nameEl = document.createElement('div');
+      nameEl.id = 'camp-building-name';
+      nameEl.style.cssText = [
+        'position:fixed',
+        'bottom:18%',
+        'right:calc(6% + 86px)',
+        'background:linear-gradient(135deg,rgba(34,34,51,0.95),rgba(20,20,35,0.95))',
+        'border:2px solid rgba(200,162,72,0.6)',
+        'border-radius:10px',
+        'padding:12px 18px',
+        'color:#e8c547',
+        'font-family:"Bangers",cursive',
+        'font-size:16px',
+        'display:none',
+        'z-index:80',
+        'pointer-events:none',
+        'text-shadow:0 0 8px rgba(200,162,72,0.6)',
+        'box-shadow:0 0 16px rgba(200,162,72,0.3)',
+        'white-space:nowrap',
+        'letter-spacing:1px',
+      ].join(';');
+      document.body.appendChild(nameEl);
+      _buildingNameEl = nameEl;
+    } else {
+      _buildingNameEl = document.getElementById('camp-building-name');
     }
 
     // Touch joystick indicator (virtual stick shown at touch origin)
