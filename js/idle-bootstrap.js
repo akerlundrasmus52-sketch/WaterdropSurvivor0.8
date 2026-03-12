@@ -11,7 +11,7 @@
   var TABS = [
     { id: 'idle',         label: '⛏ Idle' },
     { id: 'fountain',     label: '💧 Fountain' },
-    { id: 'clicker',      label: '🏠 Clicker' },
+    { id: 'clicker',      label: '💧 Runner' },
     { id: 'expeditions',  label: '🗺 Expeditions' },
     { id: 'prestige',     label: '⭐ Prestige' },
     { id: 'dailies',      label: '📅 Dailies' },
@@ -98,6 +98,7 @@
     if (!container) return;
     if (_activeTab === 'idle' && ui) ui.renderIdleDashboard(sd, container);
     else if (_activeTab === 'fountain' && ui) ui.renderClickerFountain(sd, container);
+    else if (_activeTab === 'clicker' && window.WaterDropRunner) window.WaterDropRunner.renderPanel(sd, container);
     else if (_activeTab === 'clicker' && window.AdvancedClicker) window.AdvancedClicker.renderPanel(sd, container);
     else if (_activeTab === 'expeditions' && ui) ui.renderExpeditionPanel(sd, container);
     else if (_activeTab === 'prestige' && ui) ui.renderPrestigePanel(sd, container);

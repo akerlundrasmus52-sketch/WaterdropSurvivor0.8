@@ -160,7 +160,7 @@
 
     // Managed animations array - replaces orphaned requestAnimationFrame loops in death/damage effects
     let managedAnimations = [];
-    const MAX_MANAGED_ANIMATIONS = 350; // Increased to accommodate body chunks, head rolls, blood pools
+    const MAX_MANAGED_ANIMATIONS = 600; // Increased: 5 blood pools × 50 enemies + 50 fall anims = ~300 slots comfortable headroom
 
     // Smoke particles managed array (avoids RAF accumulation over long sessions)
     let smokeParticles = [];

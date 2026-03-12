@@ -9,7 +9,7 @@ const COLORS = {
   enemySquare: 0xFF69B4, // Hot Pink
   enemyTriangle: 0xFFD700, // Gold
   enemyRound: 0x9370DB, // Purple
-  ground: 0x2D5A1A, // Dark forest green (unified ground colour)
+  ground: 0x4A8C2A, // Light-medium grass green (user's preferred lighter grass look)
   forest: 0x98FB98, // Pale Green
   lake: 0x1E90FF, // Dodger Blue (More water-like)
   cabin: 0xDEB887, // Burlywood
@@ -21,9 +21,8 @@ const COLORS = {
 const GAME_CONFIG = {
   playerSpeedBase: 0.10, // Slower start — upgrades improve speed
   // Enemy speed base is expressed in world units per second.
-  // Previous value (0.05) was scaled by a *60 multiplier in enemy code; after removing
-  // that multiplier enemies became effectively frozen. 3.0 restores the intended pace.
-  enemySpeedBase: 3.0,
+  // Reduced from 3.0 to 2.0 to give the player a fair chance to react and manoeuvre.
+  enemySpeedBase: 2.0,
   waveInterval: 300, // Frames between waves (approx 5s)
   expValue: 15,      // Increased from 10 — supports the Level-100 goal
   baseExpReq: 30,    // Increased from 20 — deeper XP curve for long progression

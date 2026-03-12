@@ -422,7 +422,7 @@
     const _ENEMY_FLYING_TYPES = new Set([5, 11, 14, 16, 17, 19, 20]);
     const _TREE_COLL_R = 1.0;
     const _PROP_COLL_R = 0.7;
-    const _MELEE_KNOCKBACK_DIST = 2.0; // units pushed away from player on each melee strike
+    const _MELEE_STOP_DIST      = 1.5; // Enemies stop at this distance to avoid overlap/jitter
     // Reptilian Shifter visibility thresholds
     const _REPTILIAN_VISIBLE_DIST = 3;   // distance at which shifter becomes fully visible
     const _REPTILIAN_CAMO_OPACITY = 0.2; // default camo opacity (80% invisible)
@@ -954,13 +954,8 @@
         this.wobbleOffset = Math.random() * 100;
         this.lastAttackTime = 0;
         this.attackCooldown = 1000; // 1 second cooldown
-        // AI state for smarter behaviors
-        this._aiState = 'approach'; // approach, flank, retreat, dive, wait
-        this._aiTimer = 0;
-        this._aiCooldown = 1.0 + Math.random() * 2.0; // Randomize decision intervals
-        this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
-        this._packRush = false; // Pack behavior: periodic group rush flag
-        this._dodgeDir  = (Math.random() > 0.5) ? 1 : -1; // dodge/strafe direction
+        // Simple movement — no AI state machine (removed to fix FPS spikes and erratic behavior)
+        this._aiTimer = 0; // retained to avoid breaking any pool-recycling references
 
         // Blink timer vars for enemy eye animation (fire only when leftEye is set)
         this.blinkTimer = 0;
@@ -1218,17 +1213,12 @@
           vx += avoidX;
           vz += avoidZ;
           
-          // ═══════════════════════════════════════════════════════════════════════════════
-          // STATE-MACHINE AI — engaging enemy behaviors, optimized for smooth performance
-          // ► Decisions throttled: only when _aiTimer ≥ _aiCooldown (~0.2–2.6 s intervals)
-          // ► No per-frame object allocations; dist² comparisons avoid unnecessary sqrt
-          // ► States: approach | flank | lunge | wait | ambush | dodge
-          // ═══════════════════════════════════════════════════════════════════════════════
-
+          // ── Simple direct movement — no complex state machine to avoid FPS spikes ──
+          // Removed: flank, lunge, wait, ambush, dodge states (caused jitter and FPS drops).
           const _distSq       = dist * dist;
           const _isRangedType = (this.type === 4 || this.type === 12 || this.type === 17);
 
-          // Source Glitch (type 20) — unique teleport behavior; skip state machine
+          // Source Glitch (type 20) — unique teleport behavior
           if (this.type === 20) {
             this._glitchTP = (this._glitchTP || 0) + dt;
             if (this._glitchTP > 1.8 && _distSq < 144) {
@@ -1242,66 +1232,6 @@
             if (this.mesh.material) {
               const _gp = [0xFF00FF, 0x00FFFF, 0xFF8800];
               this.mesh.material.color.setHex(_gp[Math.floor(gameTime * 15) % 3]);
-            }
-          }
-
-          // ── AI STATE TRANSITIONS (time-throttled — not every frame) ─────────────────
-          if (this._aiTimer >= this._aiCooldown) {
-            this._aiTimer = 0;
-            if (!_isRangedType && this.type !== 20) {
-              const _r = Math.random();
-              switch (this._aiState) {
-                case 'approach':
-                  if (_distSq < 25 && _r < 0.30) {           // ≤5u: orbit / flank
-                    this._aiState    = 'flank';
-                    this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (0.9 + Math.random() * 0.6);
-                    this._aiCooldown = 1.2 + Math.random() * 1.4;
-                  } else if (_distSq < 100 && _r < 0.22) {   // ≤10u: lunge sprint
-                    this._aiState    = 'lunge';
-                    this._aiCooldown = 0.35 + Math.random() * 0.35;
-                  } else if (_distSq > 49 && _r < 0.14) {    // >7u: wait then ambush
-                    this._aiState    = 'wait';
-                    this._aiCooldown = 0.20 + Math.random() * 0.35;
-                  } else if (_distSq < 36 && _r < 0.18) {    // ≤6u: dodge
-                    this._aiState    = 'dodge';
-                    this._dodgeDir   = (Math.random() > 0.5) ? 1 : -1;
-                    this._aiCooldown = 0.20 + Math.random() * 0.25;
-                  } else {
-                    this._aiCooldown = 0.5 + Math.random() * 0.8;
-                  }
-                  break;
-                case 'flank':
-                  this._aiState    = 'approach';
-                  this._aiCooldown = 0.5 + Math.random() * 0.7;
-                  break;
-                case 'lunge':
-                  this._aiState    = 'approach';
-                  this._aiCooldown = 0.5 + Math.random() * 0.7;
-                  break;
-                case 'wait':
-                  this._aiState    = 'ambush';
-                  this._aiCooldown = 0.45 + Math.random() * 0.45;
-                  break;
-                case 'ambush':
-                  this._aiState    = 'approach';
-                  this._aiCooldown = 0.5 + Math.random() * 0.7;
-                  break;
-                case 'dodge':
-                  this._aiState    = 'approach';
-                  this._aiCooldown = 0.4 + Math.random() * 0.6;
-                  break;
-                default:
-                  this._aiState    = 'approach';
-                  this._aiCooldown = 0.7 + Math.random() * 0.8;
-              }
-              // Emergency reset: if practically touching player, abandon complex maneuvers
-              if (_distSq < 2.25 && this._aiState !== 'approach') {
-                this._aiState    = 'approach';
-                this._aiCooldown = 0.4;
-              }
-            } else {
-              // Ranged / glitch enemies: shorter re-decision window
-              this._aiCooldown = 0.4 + Math.random() * 0.6;
             }
           }
 
@@ -1320,59 +1250,16 @@
             }
           }
 
-          // ── STATE-BASED VELOCITY (melee/chase enemies only) ──────────────────────────
-          if (!_isRangedType && this.type !== 20) {
-            switch (this._aiState) {
-              case 'flank': {
-                // Orbit around player: compute desired position on the orbit circle
-                const _curA  = Math.atan2(
-                  this.mesh.position.z - targetPos.z,
-                  this.mesh.position.x - targetPos.x
-                );
-                const _nextA  = _curA + this._flankAngle * dt * 1.4;
-                const _orbR   = Math.max(2.0, dist * 0.9);
-                const _desX   = targetPos.x + Math.cos(_nextA) * _orbR;
-                const _desZ   = targetPos.z + Math.sin(_nextA) * _orbR;
-                const _fdx    = _desX - this.mesh.position.x;
-                const _fdz    = _desZ - this.mesh.position.z;
-                const _fLenSq = _fdx * _fdx + _fdz * _fdz;
-                if (_fLenSq > 0.0001) {
-                  const _flankDistInv = 1 / Math.sqrt(_fLenSq);
-                  vx = _fdx * _flankDistInv * this.speed * 1.1;
-                  vz = _fdz * _flankDistInv * this.speed * 1.1;
-                }
-                break;
-              }
-              case 'lunge':
-                // Burst sprint directly at player
-                vx = dx * _safeDistInv * this.speed * 2.4;
-                vz = dz * _safeDistInv * this.speed * 2.4;
-                break;
-              case 'wait':
-                // Freeze in place before ambush charge
-                vx = 0;
-                vz = 0;
-                break;
-              case 'ambush':
-                // Hard charge at high speed
-                vx = dx * _safeDistInv * this.speed * 2.8;
-                vz = dz * _safeDistInv * this.speed * 2.8;
-                break;
-              case 'dodge': {
-                // Strafe perpendicular to the player direction
-                const _px = dz * _safeDistInv;
-                const _pz = -(dx * _safeDistInv);
-                vx = _px * (this._dodgeDir || 1) * this.speed * 1.8;
-                vz = _pz * (this._dodgeDir || 1) * this.speed * 1.8;
-                break;
-              }
-              // 'approach': default vx/vz already set at top of movement block
-            }
+          // ── STOP DISTANCE: melee enemies halt at _MELEE_STOP_DIST to prevent overlap/jitter ──
+          // This is the key fix for the shaking/jitter bug: enemies stop before entering
+          // the player's collision radius, so they never get pushed back and rush in again.
+          if (!_isRangedType && this.type !== 20 && dist < _MELEE_STOP_DIST) {
+            vx = 0;
+            vz = 0;
           }
 
-          // Clamp velocity magnitude to prevent teleportation on lunge/ambush states
-          // (3.5× cap ensures even the fastest ambush charge can't skip through walls)
-          const _MAX_VEL = this.speed * 3.5;
+          // Clamp velocity magnitude to prevent teleportation
+          const _MAX_VEL = this.speed * 2.0;
           const _velMag = Math.sqrt(vx * vx + vz * vz);
           if (_velMag > _MAX_VEL) {
             const _velScale = _MAX_VEL / _velMag;
@@ -1483,17 +1370,15 @@
           if (windmillQuest.windmill.userData.hp <= 0) {
             failWindmillQuest();
           }
-        } else if (dist < 1.0 && this.type !== 4) { // Ranged enemies don't melee attack
+        } else if (dist < _MELEE_STOP_DIST && this.type !== 4) { // Attack within stop distance (melee enemies only)
           // Attack player with cooldown to prevent instant death
           const now = Date.now();
           if (now - this.lastAttackTime > this.attackCooldown) {
             player.takeDamage(this.damage);
             this.lastAttackTime = now;
             
-            // Knockback on attack: push enemy away from player once per strike
-            // (moved inside cooldown check to prevent per-frame oscillation/stutter)
-            this.mesh.position.x -= (dx / dist) * _MELEE_KNOCKBACK_DIST;
-            this.mesh.position.z -= (dz / dist) * _MELEE_KNOCKBACK_DIST;
+            // No position knockback — enemies stop at _MELEE_STOP_DIST which prevents jitter.
+            // The cooldown gap provides the rhythm without spatial oscillation.
             
             // Thorns damage - reflect damage back to enemy if still alive
             if (playerStats.thornsPercent > 0 && !this.isDead) {
@@ -3384,8 +3269,11 @@
             _sharedGeo: true
           });
         }
-        // Dynamic blood pools: more pools with bigger sizes
-        const airBloodCount = this.isMiniBoss ? 24 : 16;
+        // Dynamic blood pools: reduced count to keep managedAnimations queue healthy.
+        // Previously 16-24 pools per death quickly saturated the 350-slot limit when
+        // multiple enemies died in quick succession, causing the fallback path to be hit
+        // and enemies to vanish instantly instead of playing their death animation.
+        const airBloodCount = this.isMiniBoss ? 8 : 5;
         for (let ab = 0; ab < airBloodCount; ab++) {
           if (managedAnimations.length >= MAX_MANAGED_ANIMATIONS) break;
           const landX = deathPos.x + (Math.random() - 0.5) * 5;

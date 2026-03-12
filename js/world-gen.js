@@ -14,45 +14,45 @@
       groundTexCanvas.height = 512;
       const gCtx = groundTexCanvas.getContext('2d');
 
-      // Base grass color with natural variation - richer, more realistic green
-      const baseGreen = '#1e3a29';
+      // Base grass color with natural variation - lighter, sun-kissed green
+      const baseGreen = '#3a6b28';
       gCtx.fillStyle = baseGreen;
       gCtx.fillRect(0, 0, 512, 512);
 
       // Add detailed noise pattern for grass blades and texture
-      for (let i = 0; i < 12000; i++) { // Increased from 8000 for more detail
+      for (let i = 0; i < 12000; i++) {
         const x = Math.random() * 512;
         const y = Math.random() * 512;
-        const brightness = Math.random() * 50 + 10;
+        const brightness = Math.random() * 60 + 20;
         const size = Math.random() * 1.5 + 0.5;
-        // Mix of green tones for realistic grass
-        const greenTone = Math.random() * 30 + 20;
+        // Mix of lighter green tones for brighter grass look
+        const greenTone = Math.random() * 40 + 30;
         gCtx.fillStyle = `rgba(${brightness}, ${brightness + greenTone}, ${brightness + 5}, 0.35)`;
         gCtx.fillRect(x, y, size, size);
       }
 
       // Add organic darker patches for ground variation (dirt, worn paths, shadows)
-      for (let i = 0; i < 70; i++) { // Increased from 50 for more variation
+      for (let i = 0; i < 50; i++) {
         const x = Math.random() * 512;
         const y = Math.random() * 512;
         const radius = Math.random() * 35 + 15;
         const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
-        // Brown-tinted dark patches for earthy realism
-        grd.addColorStop(0, 'rgba(25, 35, 20, 0.5)');
-        grd.addColorStop(0.5, 'rgba(20, 30, 18, 0.3)');
-        grd.addColorStop(1, 'rgba(20, 30, 18, 0)');
+        // Slightly lighter brown-tinted patches
+        grd.addColorStop(0, 'rgba(35, 55, 25, 0.4)');
+        grd.addColorStop(0.5, 'rgba(30, 50, 22, 0.25)');
+        grd.addColorStop(1, 'rgba(30, 50, 22, 0)');
         gCtx.fillStyle = grd;
         gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       }
 
       // Add lighter grass highlights for sun-kissed areas
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 60; i++) {
         const x = Math.random() * 512;
         const y = Math.random() * 512;
-        const radius = Math.random() * 25 + 10;
+        const radius = Math.random() * 30 + 12;
         const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
-        grd.addColorStop(0, 'rgba(80, 120, 60, 0.25)');
-        grd.addColorStop(1, 'rgba(80, 120, 60, 0)');
+        grd.addColorStop(0, 'rgba(100, 160, 70, 0.30)');
+        grd.addColorStop(1, 'rgba(100, 160, 70, 0)');
         gCtx.fillStyle = grd;
         gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       }
@@ -73,7 +73,7 @@
       // One ground plane with enhanced material - OPTIMIZED: Reduced from 200x200 to 120x120, now 80x80 for ultra-compact world
       const mainGroundGeo = new THREE.PlaneGeometry(80, 80);
       const mainGroundMat = new THREE.MeshStandardMaterial({
-        color: 0x2D5A1A,
+        color: 0x4A8C2A,  // Light-medium grass green matching COLORS.ground
         map: groundTexture,
         roughness: 0.95,
         metalness: 0.0,
@@ -87,7 +87,7 @@
 
       // Decorative terrain hills/bumps for visual depth (low-profile so they don't block movement)
       // OPTIMIZED: Repositioned for ultra-compact world layout (80x80 map)
-      const hillMat = new THREE.MeshStandardMaterial({ color: 0x2D5A1A, roughness: 0.96, metalness: 0.0 });
+      const hillMat = new THREE.MeshStandardMaterial({ color: 0x4A8C2A, roughness: 0.96, metalness: 0.0 });
       const hillDataList = [
         { x: -18, z: 10, rx: 6, ry: 1.2, rz: 5 }, { x: 22, z: -8, rx: 7, ry: 1.3, rz: 6 },
         { x: -12, z: -20, rx: 8, ry: 1.4, rz: 7 }, { x: 18, z: 22, rx: 6, ry: 1.1, rz: 5 },
