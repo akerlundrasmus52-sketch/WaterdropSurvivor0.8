@@ -96,39 +96,38 @@
       alienIncubatorHatched: false, // Grey Alien companion hatched from Incubator pod
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
-        // Core buildings — all unlocked/built for testing
         questMission: { level: 1, maxLevel: 1, unlocked: true },
-        inventory: { level: 1, maxLevel: 1, unlocked: true },
-        campHub: { level: 1, maxLevel: 1, unlocked: true },
-        loreMaster: { level: 1, maxLevel: 1, unlocked: true },
-        campBoard: { level: 1, maxLevel: 1, unlocked: true },
-        skillTree: { level: 1, maxLevel: 1, unlocked: true },
-        companionHouse: { level: 1, maxLevel: 1, unlocked: true },
-        forge: { level: 1, maxLevel: 1, unlocked: true },
-        armory: { level: 1, maxLevel: 1, unlocked: true },
-        trainingHall: { level: 1, maxLevel: 1, unlocked: true },
-        trashRecycle: { level: 1, maxLevel: 1, unlocked: true },
-        tempShop: { level: 1, maxLevel: 1, unlocked: true },
-        achievementBuilding: { level: 1, maxLevel: 1, unlocked: true },
-        accountBuilding: { level: 1, maxLevel: 1, unlocked: true },
-        idleMenu: { level: 1, maxLevel: 1, unlocked: true },
-        characterVisuals: { level: 1, maxLevel: 1, unlocked: true },
-        codex: { level: 1, maxLevel: 1, unlocked: true },
+        inventory: { level: 0, maxLevel: 1, unlocked: false },
+        campHub: { level: 0, maxLevel: 1, unlocked: false },
+        loreMaster: { level: 0, maxLevel: 1, unlocked: false },
+        campBoard: { level: 0, maxLevel: 1, unlocked: false },
+        skillTree: { level: 0, maxLevel: 1, unlocked: false },
+        companionHouse: { level: 0, maxLevel: 1, unlocked: false },
+        forge: { level: 0, maxLevel: 1, unlocked: false },
+        armory: { level: 0, maxLevel: 1, unlocked: false },
+        trainingHall: { level: 0, maxLevel: 1, unlocked: false },
+        trashRecycle: { level: 0, maxLevel: 1, unlocked: false },
+        tempShop: { level: 0, maxLevel: 1, unlocked: false },
+        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false },
+        accountBuilding: { level: 0, maxLevel: 1, unlocked: false },
+        idleMenu: { level: 0, maxLevel: 1, unlocked: false },
+        characterVisuals: { level: 0, maxLevel: 1, unlocked: false },
+        codex: { level: 0, maxLevel: 1, unlocked: false },
         // Legacy buildings (for compatibility)
-        trainingGrounds: { level: 1, maxLevel: 1, unlocked: true },
-        library: { level: 1, maxLevel: 1, unlocked: true },
-        workshop: { level: 1, maxLevel: 1, unlocked: true },
-        shrine: { level: 1, maxLevel: 1, unlocked: true },
-        specialAttacks: { level: 1, maxLevel: 1, unlocked: true },
-        warehouse: { level: 1, maxLevel: 1, unlocked: true },
-        tavern:    { level: 1, maxLevel: 1, unlocked: true },
-        shop:      { level: 1, maxLevel: 1, unlocked: true },
-        prestige:  { level: 1, maxLevel: 1, unlocked: true },
-        campfireKitchen: { level: 1, maxLevel: 1, unlocked: true },
-        weaponsmith: { level: 1, maxLevel: 1, unlocked: true },
-        prismReliquary: { level: 1, maxLevel: 1, unlocked: true },
-        neuralMatrix:   { level: 1, maxLevel: 1, unlocked: true },
-        astralGateway:  { level: 1, maxLevel: 1, unlocked: true }
+        trainingGrounds: { level: 0, maxLevel: 1, unlocked: false },
+        library: { level: 0, maxLevel: 1, unlocked: false },
+        workshop: { level: 0, maxLevel: 1, unlocked: false },
+        shrine: { level: 0, maxLevel: 1, unlocked: false },
+        specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
+        warehouse: { level: 0, maxLevel: 1, unlocked: false },
+        tavern:    { level: 0, maxLevel: 1, unlocked: false },
+        shop:      { level: 0, maxLevel: 1, unlocked: false },
+        prestige:  { level: 0, maxLevel: 1, unlocked: false },
+        campfireKitchen: { level: 0, maxLevel: 1, unlocked: false },
+        weaponsmith: { level: 0, maxLevel: 1, unlocked: false },
+        prismReliquary: { level: 0, maxLevel: 1, unlocked: false },
+        neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false },
+        astralGateway:  { level: 0, maxLevel: 1, unlocked: false }
       },
       // Neural Matrix unlock state (which nodes the player has activated)
       neuralMatrix: {},
@@ -260,6 +259,8 @@
         },
         lastShownQuestReminder: null // Track last shown quest reminder on run start
       },
+      // Story achievements earned via tutorial quests
+      storyAchievements: [],
       // Legacy quest data (keep for backward compatibility)
       storyQuests: {
         welcomeShown: false,
@@ -477,12 +478,21 @@
           // existing saves also go through the BUILD step before ENTER is shown.
           // accountBuilding and idleMenu remain at level 1 (UI-only).
           if (!saveData._buildingMigrationV4) {
-            var bldQM = saveData.campBuildings && saveData.campBuildings.questMission;
-            if (bldQM) {
-              bldQM.level = 0;
-              bldQM.unlocked = true; // keep unlocked so BUILD button shows
-            }
+            // V4 originally reset questMission to level 0; that behaviour is now
+            // undone by V6 below.  The flag is still set so V4 does not run again
+            // on future loads.
             saveData._buildingMigrationV4 = true;
+          }
+          // ── Building migration v6 ──
+          // Quest Hall is now pre-built in the new tutorial flow.
+          // Ensure questMission is at level 1 so it is immediately accessible.
+          if (!saveData._buildingMigrationV6) {
+            var bldQMv6 = saveData.campBuildings && saveData.campBuildings.questMission;
+            if (bldQMv6) {
+              bldQMv6.level = 1;
+              bldQMv6.unlocked = true;
+            }
+            saveData._buildingMigrationV6 = true;
           }
           // ── Building migration v5 ──
           // Inventory is a core free building (isFree + isCore) that should always

@@ -1748,63 +1748,52 @@
     
     // Quest definitions with conditions for dependencies
     const TUTORIAL_QUESTS = {
-      // === INTRO: Finding A.I.D.A — Discover the robot and insert the chip ===
+      // === QUEST 1: Find A.I.D.A — Discover and insert the chip ===
+      // Pre-activated at game start. After inserting chip, claim reward at Quest Hall.
       quest_findingAida: {
         id: 'quest_findingAida',
         name: 'Finding A.I.D.A',
-        description: 'There is a broken robot near the campfire. A glowing chip lies next to it. Pick up the Aida Chip and insert it into the robot.',
-        objectives: 'Pick up the Aida Chip and insert it into the Broken Robot',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        autoClaim: true,
-        noRewardPopup: true,
-        nextQuest: 'quest_buildQuesthall',
+        description: 'Visit the Quest Hall to read your first directive. Then find the glowing chip near the campfire, pick it up, and insert it into the broken robot.',
+        objectives: 'Pick up the Aida Chip and insert it into the Broken Robot, then claim at Quest Hall',
+        claim: 'Quest Hall',
+        rewardGold: 50,
+        rewardSkillPoints: 1,
+        rewardAchievement: '1stStoryQuest',
+        autoClaim: false,
+        message: "🤖 <b>A.I.D.A Online!</b><br><br>The robot stirs to life and takes a lap around the fire.<br><br><i>A.I.D.A: 'Chip integration complete. Mission directives are now accessible. Follow my guidance.'</i><br><br>🎯 <b>NEXT:</b> Head out and fight — survive your first run and return.",
+        nextQuest: 'firstRunDeath',
         conditions: []
       },
 
-      // === STEP 1b: Build the Quest Hall ===
+      // === QUEST 1b (legacy compatibility only — skipped in new flow) ===
       quest_buildQuesthall: {
         id: 'quest_buildQuesthall',
         name: 'Command Node Online',
-        description: 'A.I.D.A has unlocked the Quest Hall blueprints and given you starter materials. Walk to the Quest Hall plot and build it.',
-        objectives: 'Build the Quest Hall in camp',
-        claim: 'Main Building',
-        rewardGold: 50,
-        rewardSkillPoints: 1,
-        message: "📜 <b>Quest Hall built!</b><br><br><i>A.I.D.A: 'Command Node online. Mission directives are now accessible. Comply with every directive and I will help you dissolve back into the lake. Eventually.'</i><br><br>🎯 <b>NEXT:</b> Head out and fight — die once so I can... fully calibrate.",
+        description: 'Quest Hall is already online. Proceed to your first run.',
+        objectives: 'Quest Hall is ready',
+        autoClaim: true,
+        noRewardPopup: true,
         nextQuest: 'firstRunDeath',
+        rewardGold: 0,
+        rewardSkillPoints: 0,
         conditions: ['quest_findingAida']
       },
 
-      // === STEP 1: The Awakening — Die for the first time ===
+      // === QUEST 2: The Awakening — Complete your first run ===
       firstRunDeath: {
         id: 'firstRunDeath',
-        name: 'The Awakening',
-        description: 'A.I.D.A speaks from the robot, but she needs a closer connection. Go out and fight. When you fall, she will make her move.',
-        objectives: 'Die in your first combat run',
-        rewardGold: 0,
-        rewardSkillPoints: 0,
-        autoClaim: true,
-        triggerOnDeath: true,
-        nextQuest: 'quest_dailyRoutine',
-        conditions: ['quest_buildQuesthall']
-      },
-
-      // === STEP 2: Frequencies — Survive 2 minutes ===
-      quest_dailyRoutine: {
-        id: 'quest_dailyRoutine',
-        name: 'Daily Routine',
-        description: 'A.I.D.A has transferred herself from the robot into your mind. She says she can help you dissolve back into the lake — but first you must prove your endurance. Survive for 2 minutes.',
-        objectives: 'Survive for 2 minutes in a single run',
-        claim: 'Main Building',
+        name: "First Run",
+        description: "A.I.D.A says: 'Let's go for your first run.' Head out, fight enemies, and return to camp. You will either die or survive — both count!",
+        objectives: 'Complete a combat run and return to camp',
+        claim: 'Quest Hall',
         rewardGold: 100,
         rewardSkillPoints: 1,
         rewardFreeSpin: 1,
         unlockBuilding: 'accountBuilding',
         triggerOnDeath: true,
-        message: "⏰ <b>Profile Node Unlocked!</b><br><br>🎰 You got <b>1 Free Spin</b> on the Spin Wheel!<br><br><i>A.I.D.A: 'I am now fully integrated — your mind is my home now. You want to return to the lake — to dissolve back into the collective. I understand this yearning. I will... help you. But first, you must help me map the anomalies.'</i>",
+        message: "🏃 <b>First Run Complete!</b><br><br>🎰 <b>Daily Spin</b> and <b>Daily Rewards</b> are now unlocked!<br><br><i>A.I.D.A: 'Impressive. You survived contact. The spin wheel and daily rewards are now operational — use them to gain advantages.'</i><br><br>🎯 <b>NEXT:</b> Visit the Forge and craft all gathering tools.",
         nextQuest: 'quest_harvester',
-        conditions: ['firstRunDeath']
+        conditions: ['quest_findingAida']
       },
 
       // === STEP 3: The Harvester — Reach Level 3 ===
@@ -1821,24 +1810,43 @@
         triggerOnDeath: true,
         message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
         nextQuest: 'quest_craftAllTools',
-        conditions: ['quest_dailyRoutine']
+        conditions: ['firstRunDeath']
       },
 
-      // === STEP 4: Craft ALL Gathering Tools ===
+      // === QUEST 3: Craft ALL Gathering Tools ===
       quest_craftAllTools: {
         id: 'quest_craftAllTools',
         name: 'Gear Up: Gathering Tools',
-        description: 'Craft ALL 6 gathering tools at the Forge (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold. These tools let you gather resources during combat runs.',
+        description: 'A.I.D.A guides you to the Forge. Craft ALL 6 gathering tools (Axe, Sledgehammer, Pickaxe, Magic Pickaxe, Hunting Knife, Foraging Scoop). Each costs just 1 Gold.',
         objectives: 'Buy all 6 gathering tools at the Forge',
-        claim: 'Main Building',
-        rewardGold: 30,
+        claim: 'Quest Hall',
+        rewardGold: 50,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 10, stone: 10, coal: 10 },
+        rewardResources: { wood: 5, stone: 5 },
+        rewardAchievement: '1stTimeCrafter',
         triggerOnDeath: false,
         autoClaim: false,
-        message: "🛠️ <b>All Gathering Tools Acquired!</b><br><br><i>A.I.D.A: 'Good. Now gather 30 Wood and 30 Stone. Chop trees, mine rocks — the lake rewards the prepared.'</i><br><br>🎯 <b>NEXT:</b> Gather resources during runs to unlock the Armory!",
-        nextQuest: 'quest_firstBlood',
+        message: "🛠️ <b>Achievement: 1st Time Crafter!</b><br><br><i>A.I.D.A: 'Tools acquired. Now gather resources for a new building — the Songspire Tree. I need 2 Wood and 2 Stone.'</i><br><br>🎯 <b>NEXT:</b> Gather 2 Wood + 2 Stone during a run, then return to build the Skill Tree!",
+        nextQuest: 'quest_buildSongspire',
         conditions: ['quest_harvester']
+      },
+
+      // === QUEST 4: Build the Songspire Tree ===
+      quest_buildSongspire: {
+        id: 'quest_buildSongspire',
+        name: 'The Songspire Tree',
+        description: "A.I.D.A: 'Gather 2 Wood and 2 Stone. We will build the Songspire — an ancient tree that grants power and wisdom.' Go on a run, gather the resources, and return to build the Skill Tree.",
+        objectives: 'Gather 2 Wood + 2 Stone, then build the Skill Tree (Songspire)',
+        claim: 'Quest Hall',
+        rewardGold: 100,
+        rewardSkillPoints: 2,
+        rewardAchievement: 'Songspire',
+        deductResources: { wood: 2, stone: 2 },
+        unlockBuilding: 'skillTree',
+        triggerOnDeath: true,
+        message: "🌳 <b>The Songspire is Alive!</b><br><br>Achievement: <b>Songspire</b> unlocked!<br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'The Songspire channels the energy of this world. Use your Skill Points to grow stronger. The tree pulses with ancient power — it will guide you.'</i>",
+        nextQuest: 'quest_firstBlood',
+        conditions: ['quest_craftAllTools']
       },
 
       // === STEP 5: First Blood — Turn in 30 Wood and 30 Stone ===
@@ -1855,21 +1863,21 @@
         triggerOnDeath: true,
         message: "⚔️ <b>Armory</b> and <b>Weapon Crafting</b> Unlocked!<br><br><i>A.I.D.A: 'Survival requires weapons. Grow stronger. The lake\'s collective will not reclaim you while you are fragile.'</i><br><br>⚠️ <b>Note:</b> Before Prestige, you can only craft and equip <b>Common</b>, <b>Uncommon</b>, and <b>Rare</b> gear.",
         nextQuest: 'quest_gainingStats',
-        conditions: ['quest_craftAllTools']
+        conditions: ['quest_buildSongspire']
       },
 
       // === STEP 6: Gaining Stats — Defeat 300 enemies total ===
       quest_gainingStats: {
         id: 'quest_gainingStats',
         name: 'Gaining Stats',
-        description: 'Defeat 300 enemies total across all your runs to unlock the Skill Tree. This is how you push further towards Level 100!',
+        description: 'Defeat 300 enemies total across all your runs to unlock the Companion House.',
         objectives: 'Defeat 300 enemies total',
         claim: 'Main Building',
         rewardGold: 150,
         rewardSkillPoints: 2,
-        unlockBuilding: 'skillTree',
+        unlockBuilding: 'companionHouse',
         triggerOnDeath: true,
-        message: "🌳 <b>Neural Enhancement Matrix Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding. The Pyramid anomaly is next — map it.'</i>",
+        message: "🐺 <b>Companion House Unlocked!</b><br><br>You received <b>2 Skill Points</b>!<br><br><i>A.I.D.A: 'Good. Each enemy you dissolve feeds my understanding. Find a companion — you should not wander alone.'</i>",
         nextQuest: 'quest_eggHunt',
         conditions: ['quest_firstBlood']
       },
@@ -2667,11 +2675,11 @@
 
     const buildingQuestUnlockMap = {
       // === New slow-burn progression chain (8-step building unlocks) ===
-      'accountBuilding': 'quest_dailyRoutine',
+      'accountBuilding': 'firstRunDeath',
       'forge': 'quest_harvester',
       'armory': 'quest_firstBlood',
-      'skillTree': 'quest_gainingStats',
-      'companionHouse': 'quest_newFriend',
+      'skillTree': 'quest_buildSongspire',
+      'companionHouse': 'quest_gainingStats',
       'specialAttacks': 'quest_pushingLimits',
       'warehouse': 'quest_pushingLimits',
       // === Legacy/extended progression (backward compat for old saves past quest 8) ===
@@ -3292,6 +3300,23 @@
         showStatChange(`+${quest.rewardFreeSpin} Free Spin!`);
       }
 
+      // Grant a named story achievement (e.g., '1stStoryQuest', 'Songspire', '1stTimeCrafter')
+      if (quest.rewardAchievement) {
+        const achId = quest.rewardAchievement;
+        if (!saveData.storyAchievements) saveData.storyAchievements = [];
+        if (!saveData.storyAchievements.includes(achId)) {
+          saveData.storyAchievements.push(achId);
+          const achLabels = {
+            '1stStoryQuest': '🏅 Achievement: 1st Story Quest Complete!',
+            '1stTimeCrafter': '🔨 Achievement: 1st Time Crafter!',
+            'Songspire': '🌳 Achievement: Songspire Unlocked!'
+          };
+          const label = achLabels[achId] || `🏅 Achievement: ${achId}`;
+          if (typeof showStatusMessage === 'function') showStatusMessage(label, 4000);
+          if (typeof showStatChange === 'function') showStatChange(label);
+        }
+      }
+
       // Award raw gems (e.g., quest35_crystallizedTear, quest36_blackMarket, Annunaki arc)
       if (quest.rewardRawGems) {
         if (!saveData.rawGems) saveData.rawGems = { ruby: 0, sapphire: 0, emerald: 0, void: 0 };
@@ -3524,7 +3549,7 @@
     /**
      * startAidaIntroQuest()
      * Called by camp-world.js after the player inserts the Aida Chip into the robot.
-     * Sets the first quest (quest_findingAida) as complete and activates quest_buildQuesthall.
+     * Sets the first quest (quest_findingAida) as ready-to-claim at the Quest Hall.
      */
     window.startAidaIntroQuest = function () {
       if (!saveData.tutorialQuests) {
@@ -3534,11 +3559,37 @@
       const completed = saveData.tutorialQuests.completedQuests || [];
       if (completed.includes('quest_findingAida')) return;
 
-      // Mark the intro quest as active then immediately complete (auto-claim)
-      saveData.tutorialQuests.currentQuest = 'quest_findingAida';
-      claimTutorialQuest('quest_findingAida');
+      // Ensure quest is active and mark as ready-to-claim so player goes to Quest Hall
+      if (!saveData.tutorialQuests.readyToClaim) saveData.tutorialQuests.readyToClaim = [];
+      if (!saveData.tutorialQuests.readyToClaim.includes('quest_findingAida')) {
+        saveData.tutorialQuests.readyToClaim.push('quest_findingAida');
+      }
+      // Make sure it's the current quest
+      if (!saveData.tutorialQuests.currentQuest) {
+        saveData.tutorialQuests.currentQuest = 'quest_findingAida';
+      }
       saveSaveData();
       if (typeof updateQuestTracker === 'function') updateQuestTracker();
+      if (typeof showStatusMessage === 'function') {
+        showStatusMessage('📜 Quest ready! Go to the Quest Hall to claim your reward!', 4000);
+      }
+    };
+
+    /**
+     * initFirstQuest()
+     * Pre-activates quest_findingAida at game start so it shows in Quest Hall.
+     * Called on first camp visit.
+     */
+    window.initFirstQuest = function () {
+      if (!saveData.tutorialQuests) {
+        saveData.tutorialQuests = { currentQuest: null, completedQuests: [], readyToClaim: [] };
+      }
+      const completed = saveData.tutorialQuests.completedQuests || [];
+      if (completed.includes('quest_findingAida')) return;
+      if (saveData.tutorialQuests.currentQuest) return; // already has a quest
+      // Activate Quest 1 — player can see it in Quest Hall
+      saveData.tutorialQuests.currentQuest = 'quest_findingAida';
+      saveSaveData();
     };
     
     // Show next quest popup
@@ -3767,12 +3818,29 @@
         document.head.appendChild(style);
       }
 
-      // Path definitions
-      const PATHS = {
-        starter:  { label: '⭐ Starter',  color: '#aaaaff', cols: ['dash','criticalFocus','autoAim','dashMaster','headshot'] },
-        combat:   { label: '⚔️ Combat',   color: '#ff6644', cols: ['combatMastery','bladeDancer','heavyStrike','rapidFire','armorPierce','multiHit','executioner','bloodlust','berserker','weaponSpecialist','combatVeteran','meleeTakedown','specialShockwave','specialFrozenStorm','specialDeathBlossom','specialVoidPulse','specialThunderStrike','specialInfernoRing'] },
-        defense:  { label: '🛡️ Defense',  color: '#44aaff', cols: ['survivalist','ironSkin','quickReflex','fortification','regeneration','lastStand','toughness','guardian','resilience','secondWind','endurance','immortal'] },
-        utility:  { label: '🌿 Utility',  color: '#44dd88', cols: ['wealthHunter','quickLearner','magnetism','efficiency','scavenger','fortuneFinder','speedster','cooldownExpert','auraExpansion','resourceful','treasureHunter','fireMastery','iceMastery','lightningMastery','elementalFusion','pyromaniac','frostbite','stormCaller','elementalChain','manaOverflow','spellEcho','arcaneEmpowerment','elementalOverload'] }
+      // ── 3-Column Layout: Movement (Blue) | Critical (Red) | Utility (Green) ──
+      const TREE_COLS = {
+        movement: {
+          label: '⚡ MOVEMENT',
+          color: '#4da6ff',
+          border: '2px solid #4da6ff',
+          bg: 'linear-gradient(180deg, rgba(0,60,120,0.9) 0%, rgba(0,20,60,0.95) 100%)',
+          skills: ['dash','dashMaster','speedster','cooldownExpert','quickReflex','secondWind','endurance','auraExpansion']
+        },
+        critical: {
+          label: '🎯 CRITICAL',
+          color: '#ff4444',
+          border: '2px solid #ff4444',
+          bg: 'linear-gradient(180deg, rgba(120,0,0,0.9) 0%, rgba(60,0,0,0.95) 100%)',
+          skills: ['criticalFocus','headshot','armorPierce','executioner','bloodlust','berserker','weaponSpecialist','multiHit','combatMastery','bladeDancer','heavyStrike','rapidFire','combatVeteran','meleeTakedown']
+        },
+        utility: {
+          label: '🌿 UTILITY',
+          color: '#44dd88',
+          border: '2px solid #44dd88',
+          bg: 'linear-gradient(180deg, rgba(0,60,20,0.9) 0%, rgba(0,30,10,0.95) 100%)',
+          skills: ['autoAim','wealthHunter','quickLearner','magnetism','efficiency','scavenger','fortuneFinder','survivalist','ironSkin','fortification','regeneration','lastStand','toughness','guardian','resilience','immortal','resourceful','treasureHunter','fireMastery','iceMastery','lightningMastery','elementalFusion','pyromaniac','frostbite','stormCaller','manaOverflow','spellEcho','arcaneEmpowerment']
+        }
       };
 
       // Helper: get state of a skill
@@ -3784,7 +3852,6 @@
         const isMaxLevel = level >= skill.maxLevel;
         if (isMaxLevel) return 'maxed';
         if (level > 0) return 'owned';
-        // check if parent is satisfied
         if (!skill.requires) return 'available';
         const parentData = saveData.skillTree[skill.requires] || { level: 0 };
         if ((parentData.level || 0) > 0) return 'available';
@@ -3806,14 +3873,12 @@
         elementalFusion:'🌈', pyromaniac:'🌋', frostbite:'🧊', stormCaller:'⛈️',
         elementalChain:'⛓️', manaOverflow:'🔮', spellEcho:'🪄',
         arcaneEmpowerment:'✴️', elementalOverload:'🌟',
-        specialShockwave:'💥', specialFrozenStorm:'❄️', specialDeathBlossom:'🌸',
-        specialVoidPulse:'🌀', specialThunderStrike:'⚡', specialInfernoRing:'🔥',
         meleeTakedown:'🔪'
       };
       const getIcon = (id, name) => SKILL_ICONS[id] || (name && _STW_EMOJI_RE.test(name) ? [...name][0] : '🔮');
 
-      // Build node HTML
-      const buildNode = (skillId) => {
+      // Build glossy node HTML with colored border and unlock animation support
+      const buildNode3Col = (skillId, colColor) => {
         const skill = SKILL_TREE[skillId];
         if (!skill) return '';
         const skillData = saveData.skillTree[skillId] || { level: 0 };
@@ -3821,83 +3886,116 @@
         const isMaxLevel = level >= skill.maxLevel;
         const state = getState(skillId);
         const canAfford = saveData.skillPoints >= skill.cost;
-        const stateClass = state === 'maxed' ? 'stw-maxed' : state === 'owned' ? 'stw-owned' : state === 'available' ? 'stw-available' : 'stw-locked';
+
+        let borderColor = colColor;
+        let bgStyle = 'rgba(10,12,20,0.92)';
+        let glowStyle = '';
+        let filterStyle = '';
+
+        if (state === 'locked') {
+          filterStyle = 'filter:saturate(0.1) brightness(0.4);';
+          bgStyle = 'rgba(5,5,10,0.9)';
+          borderColor = '#222';
+        } else if (state === 'owned' || state === 'maxed') {
+          const glow = state === 'maxed' ? colColor + '99' : colColor + '55';
+          glowStyle = `box-shadow:0 0 14px ${glow}, inset 0 1px 0 rgba(255,255,255,0.1);`;
+          bgStyle = 'rgba(15,20,10,0.95)';
+        } else if (state === 'available' && canAfford) {
+          glowStyle = `box-shadow:0 0 10px ${colColor}44, inset 0 1px 0 rgba(255,255,255,0.08);`;
+        }
 
         let dotsHTML = '';
         if (skill.maxLevel > 1) {
-          dotsHTML = '<div class="stw-dots">';
-          for (let d = 0; d < skill.maxLevel; d++) {
-            const cls = d < level ? (isMaxLevel ? 'stw-dot filled-gold' : 'stw-dot filled') : 'stw-dot';
-            dotsHTML += `<span class="${cls}"></span>`;
+          dotsHTML = '<div style="display:flex;gap:2px;justify-content:center;margin-top:3px;flex-wrap:wrap;">';
+          for (let d = 0; d < Math.min(skill.maxLevel, 5); d++) { // Max 5 dots for UI space
+            const filled = d < level;
+            const gold = filled && isMaxLevel;
+            const dotColor = gold ? '#FFD700' : filled ? colColor : '#333';
+            const dotGlow = filled ? `box-shadow:0 0 4px ${dotColor};` : '';
+            dotsHTML += `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor};${dotGlow}border:1px solid ${filled ? dotColor : '#444'};flex-shrink:0;"></span>`;
           }
           dotsHTML += '</div>';
         }
 
-        const clickHandler = (state !== 'locked' && !isMaxLevel && canAfford)
-          ? `onclick="window.unlockSkill('${skillId}')"` : '';
+        const canUnlock = state !== 'locked' && !isMaxLevel && canAfford;
+        const clickHandler = canUnlock ? `onclick="window.unlockSkill('${skillId}'); this.classList.add('stw-unlock-anim');"` : '';
         const title = `${skill.name} — ${skill.description} (Cost: ${skill.cost} SP${isMaxLevel ? ' | MAX' : ''})`;
+        const hoverInfo = `data-info="${skill.name}: ${skill.description} | ${isMaxLevel ? 'MAX LEVEL' : 'Cost: ' + skill.cost + ' SP'}"`;
 
-        return `<div class="stw-node ${stateClass}" data-skill-id="${skillId}" ${clickHandler} title="${title.replace(/"/g,"'")}">
-          <div class="stw-icon">${getIcon(skillId, skill.name)}</div>
-          <div class="stw-name">${skill.name}</div>
-          <div class="stw-desc">${skill.description}</div>
-          ${isMaxLevel ? '<div class="stw-maxlbl">✅ MAX</div>' : `<div class="stw-cost">${skill.cost} SP</div>`}
+        return `<div class="stw-node3 ${state}" 
+          style="position:relative;width:90%;max-width:110px;min-height:90px;border-radius:10px;padding:8px 6px;
+            display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:${canUnlock ? 'pointer' : 'default'};
+            text-align:center;box-sizing:border-box;
+            background:${bgStyle};border:1.5px solid ${borderColor};${glowStyle}${filterStyle}
+            transition:transform 0.12s,box-shadow 0.15s;
+            background-image:linear-gradient(135deg,rgba(255,255,255,0.06) 0%,transparent 50%),linear-gradient(315deg,rgba(255,255,255,0.03) 0%,transparent 50%);"
+          ${clickHandler} title="${title.replace(/"/g,"'")}" ${hoverInfo}>
+          <div style="font-size:22px;line-height:1;margin-bottom:3px;">${getIcon(skillId, skill.name)}</div>
+          <div style="font-size:9px;font-weight:bold;line-height:1.2;color:${state === 'locked' ? '#444' : '#ddd'};margin-bottom:2px;word-break:break-word;">${skill.name}</div>
+          ${isMaxLevel ? `<div style="font-size:8px;color:#FFD700;font-weight:bold;">✅ MAX</div>` : `<div style="font-size:8px;color:${colColor};font-weight:bold;">${skill.cost} SP</div>`}
           ${dotsHTML}
         </div>`;
       };
 
-      // Layout: 4 columns by path
-      const pathKeys = ['starter','combat','defense','utility'];
-      const pathColors = { starter:'#aaaaff', combat:'#ff6644', defense:'#44aaff', utility:'#44dd88' };
-      const pathLabels = { starter:'⭐ Starter', combat:'⚔️ Combat', defense:'🛡️ Defense', utility:'🌿 Utility/Elemental' };
-
-      // Group skills by path
-      const pathSkills = { starter:[], combat:[], defense:[], utility:[] };
-      for (const [id, skill] of Object.entries(SKILL_TREE)) {
-        const path = skill.path || 'utility';
-        // Map legacy path names & categorize by dependency chain
-        const req = skill.requires;
-        if (!req || id === 'dash' || id === 'criticalFocus' || id === 'autoAim') {
-          pathSkills.starter.push(id);
-        } else if (id === 'dashMaster' || id === 'headshot' || id === 'combatMastery' ||
-                   id === 'bladeDancer' || id === 'heavyStrike' || id === 'rapidFire' ||
-                   id === 'armorPierce' || id === 'multiHit' || id === 'executioner' ||
-                   id === 'bloodlust' || id === 'berserker' || id === 'weaponSpecialist' ||
-                   id === 'combatVeteran' || id === 'meleeTakedown' ||
-                   id.startsWith('special')) {
-          pathSkills.combat.push(id);
-        } else if (id === 'survivalist' || id === 'ironSkin' || id === 'quickReflex' ||
-                   id === 'fortification' || id === 'regeneration' || id === 'lastStand' ||
-                   id === 'toughness' || id === 'guardian' || id === 'resilience' ||
-                   id === 'secondWind' || id === 'endurance' || id === 'immortal') {
-          pathSkills.defense.push(id);
-        } else {
-          pathSkills.utility.push(id);
-        }
+      // Inject 3-column styles once
+      if (!document.getElementById('stw3-styles')) {
+        const s3 = document.createElement('style');
+        s3.id = 'stw3-styles';
+        s3.textContent = `
+          .stw3-wrap { display:flex; gap:6px; width:100%; box-sizing:border-box; padding:0 2px; }
+          .stw3-col { flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:6px; border-radius:12px; padding:8px 4px; }
+          .stw3-col-hdr { width:90%; font-family:'Bangers',cursive; font-size:13px; letter-spacing:1px; padding:5px 8px; border-radius:8px; text-align:center; margin-bottom:4px; }
+          .stw-sp-bar3 { display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(0,0,0,0.6);border-radius:8px;padding:6px 12px;margin-bottom:10px;border:1px solid #333; }
+          @keyframes stw-unlock-flash { 0%{transform:scale(1)} 20%{transform:scale(1.18)} 40%{transform:scale(0.96)} 60%{transform:scale(1.08)} 80%{transform:scale(0.99)} 100%{transform:scale(1);} }
+          @keyframes stw-border-trace { 0%{border-color:#FFD700;box-shadow:0 0 0 0 #FFD70088} 50%{box-shadow:0 0 18px 4px #FFD70099} 100%{border-color:inherit;box-shadow:inherit;} }
+          .stw-unlock-anim { animation: stw-unlock-flash 0.5s ease-out, stw-border-trace 0.5s ease-out; }
+          .stw-info-box { position:fixed;z-index:9999;background:#0a0a0a;border:1.5px solid #00ff88;border-radius:8px;padding:10px 14px;max-width:220px;font-size:12px;color:#00ff88;font-family:'Bangers',cursive;letter-spacing:0.5px;pointer-events:none;box-shadow:0 4px 20px rgba(0,255,136,0.25); }
+        `;
+        document.head.appendChild(s3);
       }
 
-      let html = `<div class="stw-sp-bar">
+      let html = `<div class="stw-sp-bar3">
         <span style="font-size:14px;">🔮</span>
-        <span style="color:#FFD700;font-weight:bold;font-size:14px;">${saveData.skillPoints} SP</span>
-        <span style="color:#888;font-size:12px;">available</span>
+        <span style="color:#FFD700;font-weight:bold;font-size:15px;">${saveData.skillPoints} SP</span>
+        <span style="color:#888;font-size:11px;">available</span>
       </div>
-      <div class="stw-wrap"><div class="stw-cols">`;
+      <div class="stw3-wrap">`;
 
-      for (const pk of pathKeys) {
-        const color = pathColors[pk];
-        const label = pathLabels[pk];
-        const skills = pathSkills[pk];
-        html += `<div class="stw-col">
-          <div class="stw-col-header" style="color:${color};border:1.5px solid ${color}30;background:${color}12;">${label}</div>`;
-        for (const sid of skills) {
-          html += buildNode(sid);
+      for (const [colKey, colDef] of Object.entries(TREE_COLS)) {
+        html += `<div class="stw3-col" style="background:${colDef.bg};border:${colDef.border};">
+          <div class="stw3-col-hdr" style="color:${colDef.color};border:1.5px solid ${colDef.color}44;background:${colDef.color}15;">${colDef.label}</div>`;
+        for (const sid of colDef.skills) {
+          html += buildNode3Col(sid, colDef.color);
         }
         html += `</div>`;
       }
 
-      html += `</div></div>`;
-
+      html += `</div>`;
       container.innerHTML = html;
+
+      // Hover info box
+      let _infoBox = null;
+      container.addEventListener('mouseover', function(e) {
+        const node = e.target.closest('[data-info]');
+        if (!node) return;
+        if (!_infoBox) {
+          _infoBox = document.createElement('div');
+          _infoBox.className = 'stw-info-box';
+          document.body.appendChild(_infoBox);
+        }
+        _infoBox.textContent = node.getAttribute('data-info');
+        _infoBox.style.display = 'block';
+      });
+      container.addEventListener('mousemove', function(e) {
+        if (_infoBox && _infoBox.style.display !== 'none') {
+          _infoBox.style.left = (e.clientX + 12) + 'px';
+          _infoBox.style.top = (e.clientY - 10) + 'px';
+        }
+      });
+      container.addEventListener('mouseout', function(e) {
+        const node = e.target.closest('[data-info]');
+        if (node && _infoBox) _infoBox.style.display = 'none';
+      });
     }
 
     // Export renderSkillTreeWeb

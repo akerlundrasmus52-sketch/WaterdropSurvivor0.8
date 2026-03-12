@@ -130,6 +130,12 @@ window.DialogueSystem = (function () {
       { text: '> First directive: construct the Quest Hall. I have allocated starter materials.', emotion: 'goal', isGoal: true },
       { text: '> Follow my guidance. I am... here to help you. For now.', emotion: 'happy' }
     ],
+    // AIDA post-chip-insert: nudge player toward Quest Hall
+    aidaQuestHallHint: [
+      { text: '> Systems nominal. Chip integration: COMPLETE.', emotion: 'task' },
+      { text: '> The Quest Hall is operational. Report there for your first directive.', emotion: 'goal', isGoal: true },
+      { text: '> I will be... watching. Do not delay.', emotion: 'thinking' }
+    ],
     // AIDA drilling into cortex (later — happens on first death, she transfers from robot to head)
     aidaChipInstalled: [
       { text: '> You perished. Interesting. I used the moment to... relocate.', emotion: 'thinking' },
