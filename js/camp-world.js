@@ -1878,7 +1878,12 @@
   }
   function _lambert(color) {
     const THREE = T();
-    return new THREE.MeshLambertMaterial( { color } );
+    return new THREE.MeshPhongMaterial({
+      color: color,
+      emissive: color,
+      emissiveIntensity: 0.12,
+      shininess: 25
+    });
   }
 
   // ── Quest Hall ─ rustic log cabin with quest board ───────
@@ -2483,7 +2488,13 @@
 
     // Low stone wall ring
     const wallGeo = new THREE.CylinderGeometry(3.6, 3.6, 1.1, 8, 1, true);
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x404055, side: THREE.DoubleSide });
+    const wallMat = new THREE.MeshPhongMaterial({
+      color: 0x404055,
+      emissive: 0x20202a,
+      emissiveIntensity: 0.1,
+      shininess: 20,
+      side: THREE.DoubleSide
+    });
     const wall = new THREE.Mesh(wallGeo, wallMat);
     wall.position.y = 0.75;
     grp.add(wall);
