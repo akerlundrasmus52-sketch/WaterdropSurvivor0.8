@@ -890,6 +890,7 @@
         this._aiCooldown = 1.0 + Math.random() * 2.0; // Randomize decision intervals
         this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (Math.PI * 0.3 + Math.random() * Math.PI * 0.4);
         this._packRush = false; // Pack behavior: periodic group rush flag
+        this._dodgeDir  = (Math.random() > 0.5) ? 1 : -1; // dodge/strafe direction
 
         // Blink timer vars for enemy eye animation (fire only when leftEye is set)
         this.blinkTimer = 0;
@@ -1148,59 +1149,159 @@
           vz += avoidZ;
           
           // ═══════════════════════════════════════════════════════════════════════════════
-          // SIMPLIFIED AI SYSTEM - Simple direct movement, no complex behaviors
-          // All complex state machines, prediction, flanking, ambushing, etc. removed
-          // to fix FPS drops and jittery behavior. Enemies now simply move toward player.
+          // STATE-MACHINE AI — engaging enemy behaviors, optimized for smooth performance
+          // ► Decisions throttled: only when _aiTimer ≥ _aiCooldown (~0.2–2.6 s intervals)
+          // ► No per-frame object allocations; dist² comparisons avoid unnecessary sqrt
+          // ► States: approach | flank | lunge | wait | ambush | dodge
           // ═══════════════════════════════════════════════════════════════════════════════
 
-          // Ranged enemies (types 4, 12, 17) - simple retreat when too close
-          if ((this.type === 4 || this.type === 12 || this.type === 17) && dist < 6.0) {
-            vx = -(dx / dist) * this.speed * 0.7;
-            vz = -(dz / dist) * this.speed * 0.7;
-            // Fire projectiles periodically
-            if (!this._rangedShotTimer) this._rangedShotTimer = 0;
-            this._rangedShotTimer += dt;
-            if (this._rangedShotTimer >= 2.5 && dist < 18) {
+          const _distSq       = dist * dist;
+          const _isRangedType = (this.type === 4 || this.type === 12 || this.type === 17);
+
+          // Source Glitch (type 20) — unique teleport behavior; skip state machine
+          if (this.type === 20) {
+            this._glitchTP = (this._glitchTP || 0) + dt;
+            if (this._glitchTP > 1.8 && _distSq < 144) {
+              this._glitchTP = 0;
+              this.mesh.position.x += (Math.random() - 0.5) * 5;
+              this.mesh.position.z += (Math.random() - 0.5) * 5;
+              if (window.playSound) window.playSound('teleport', 0.4);
+            }
+            this.mesh.rotation.x = Math.sin(gameTime * 6 + this.wobbleOffset) * 0.8;
+            this.mesh.rotation.z = Math.cos(gameTime * 5 + this.wobbleOffset) * 0.6;
+            if (this.mesh.material) {
+              const _gp = [0xFF00FF, 0x00FFFF, 0xFF8800];
+              this.mesh.material.color.setHex(_gp[Math.floor(gameTime * 15) % 3]);
+            }
+          }
+
+          // ── AI STATE TRANSITIONS (time-throttled — not every frame) ─────────────────
+          if (this._aiTimer >= this._aiCooldown) {
+            this._aiTimer = 0;
+            if (!_isRangedType && this.type !== 20) {
+              const _r = Math.random();
+              switch (this._aiState) {
+                case 'approach':
+                  if (_distSq < 25 && _r < 0.30) {           // ≤5u: orbit / flank
+                    this._aiState    = 'flank';
+                    this._flankAngle = (Math.random() > 0.5 ? 1 : -1) * (0.9 + Math.random() * 0.6);
+                    this._aiCooldown = 1.2 + Math.random() * 1.4;
+                  } else if (_distSq < 100 && _r < 0.22) {   // ≤10u: lunge sprint
+                    this._aiState    = 'lunge';
+                    this._aiCooldown = 0.35 + Math.random() * 0.35;
+                  } else if (_distSq > 49 && _r < 0.14) {    // >7u: wait then ambush
+                    this._aiState    = 'wait';
+                    this._aiCooldown = 0.20 + Math.random() * 0.35;
+                  } else if (_distSq < 36 && _r < 0.18) {    // ≤6u: dodge
+                    this._aiState    = 'dodge';
+                    this._dodgeDir   = (Math.random() > 0.5) ? 1 : -1;
+                    this._aiCooldown = 0.20 + Math.random() * 0.25;
+                  } else {
+                    this._aiCooldown = 0.5 + Math.random() * 0.8;
+                  }
+                  break;
+                case 'flank':
+                  this._aiState    = 'approach';
+                  this._aiCooldown = 0.5 + Math.random() * 0.7;
+                  break;
+                case 'lunge':
+                  this._aiState    = 'approach';
+                  this._aiCooldown = 0.5 + Math.random() * 0.7;
+                  break;
+                case 'wait':
+                  this._aiState    = 'ambush';
+                  this._aiCooldown = 0.45 + Math.random() * 0.45;
+                  break;
+                case 'ambush':
+                  this._aiState    = 'approach';
+                  this._aiCooldown = 0.5 + Math.random() * 0.7;
+                  break;
+                case 'dodge':
+                  this._aiState    = 'approach';
+                  this._aiCooldown = 0.4 + Math.random() * 0.6;
+                  break;
+                default:
+                  this._aiState    = 'approach';
+                  this._aiCooldown = 0.7 + Math.random() * 0.8;
+              }
+              // Emergency reset: if practically touching player, abandon complex maneuvers
+              if (_distSq < 2.25 && this._aiState !== 'approach') {
+                this._aiState    = 'approach';
+                this._aiCooldown = 0.4;
+              }
+            } else {
+              // Ranged / glitch enemies: shorter re-decision window
+              this._aiCooldown = 0.4 + Math.random() * 0.6;
+            }
+          }
+
+          // ── RANGED ENEMY: maintain distance & fire periodically ──────────────────────
+          if (_isRangedType) {
+            if (dist < 6.0) {
+              vx = -(dx * _safeDistInv) * this.speed * 0.8;
+              vz = -(dz * _safeDistInv) * this.speed * 0.8;
+            }
+            this._rangedShotTimer = (this._rangedShotTimer || 0) + dt;
+            const _fireInterval = (this.type === 17) ? 2.0 : 2.5;
+            const _fireRange = this.attackRange || (this.type === 17 ? 11 : 18);
+            if (this._rangedShotTimer >= _fireInterval && dist <= _fireRange) {
               this._rangedShotTimer = 0;
               this.fireProjectile(targetPos);
             }
           }
 
-          // Grey Alien Scout - fires plasma bolts
-          if (this.type === 17) {
-            if (!this._alienShotTimer) this._alienShotTimer = 0;
-            this._alienShotTimer += dt;
-            if (this._alienShotTimer >= 2.0 && dist <= (this.attackRange || 11)) {
-              this._alienShotTimer = 0;
-              this.fireProjectile(targetPos);
+          // ── STATE-BASED VELOCITY (melee/chase enemies only) ──────────────────────────
+          if (!_isRangedType && this.type !== 20) {
+            switch (this._aiState) {
+              case 'flank': {
+                // Orbit around player: compute desired position on the orbit circle
+                const _curA  = Math.atan2(
+                  this.mesh.position.z - targetPos.z,
+                  this.mesh.position.x - targetPos.x
+                );
+                const _nextA  = _curA + this._flankAngle * dt * 1.4;
+                const _orbR   = Math.max(2.0, dist * 0.9);
+                const _desX   = targetPos.x + Math.cos(_nextA) * _orbR;
+                const _desZ   = targetPos.z + Math.sin(_nextA) * _orbR;
+                const _fdx    = _desX - this.mesh.position.x;
+                const _fdz    = _desZ - this.mesh.position.z;
+                const _fLenSq = _fdx * _fdx + _fdz * _fdz;
+                if (_fLenSq > 0.0001) {
+                  const _flankDistInv = 1 / Math.sqrt(_fLenSq);
+                  vx = _fdx * _flankDistInv * this.speed * 1.1;
+                  vz = _fdz * _flankDistInv * this.speed * 1.1;
+                }
+                break;
+              }
+              case 'lunge':
+                // Burst sprint directly at player
+                vx = dx * _safeDistInv * this.speed * 2.4;
+                vz = dz * _safeDistInv * this.speed * 2.4;
+                break;
+              case 'wait':
+                // Freeze in place before ambush charge
+                vx = 0;
+                vz = 0;
+                break;
+              case 'ambush':
+                // Hard charge at high speed
+                vx = dx * _safeDistInv * this.speed * 2.8;
+                vz = dz * _safeDistInv * this.speed * 2.8;
+                break;
+              case 'dodge': {
+                // Strafe perpendicular to the player direction
+                const _px = dz * _safeDistInv;
+                const _pz = -(dx * _safeDistInv);
+                vx = _px * (this._dodgeDir || 1) * this.speed * 1.8;
+                vz = _pz * (this._dodgeDir || 1) * this.speed * 1.8;
+                break;
+              }
+              // 'approach': default vx/vz already set at top of movement block
             }
           }
 
-          // Source Glitch (type 20) - simple teleport behavior (keep for uniqueness)
-          if (this.type === 20) {
-            if (!this._glitchTP) this._glitchTP = 0;
-            this._glitchTP += dt;
-            if (this._glitchTP > 1.8 && dist < 12) {
-              this._glitchTP = 0;
-              // Random micro-teleport
-              this.mesh.position.x += (Math.random() - 0.5) * 5;
-              this.mesh.position.z += (Math.random() - 0.5) * 5;
-              if (window.playSound) window.playSound('teleport', 0.4);
-            }
-            // Chaotic rotation and color cycling
-            this.mesh.rotation.x = Math.sin(gameTime * 6 + this.wobbleOffset) * 0.8;
-            this.mesh.rotation.z = Math.cos(gameTime * 5 + this.wobbleOffset) * 0.6;
-            if (this.mesh.material) {
-              const _glitchPalette = [0xFF00FF, 0x00FFFF, 0xFF8800];
-              this.mesh.material.color.setHex(_glitchPalette[Math.floor(gameTime * 15) % _glitchPalette.length]);
-            }
-          }
-
-          // All other enemies: simple direct approach - that's it!
-          // No prediction, no state machines, no complex behaviors
-          // vx and vz are already set to move toward player at the top of the function
-
-          // Clamp velocity magnitude to prevent teleportation
+          // Clamp velocity magnitude to prevent teleportation on lunge/ambush states
+          // (3.5× cap ensures even the fastest ambush charge can't skip through walls)
           const _MAX_VEL = this.speed * 3.5;
           const _velMag = Math.sqrt(vx * vx + vz * vz);
           if (_velMag > _MAX_VEL) {
