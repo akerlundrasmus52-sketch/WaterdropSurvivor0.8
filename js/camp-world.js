@@ -1359,6 +1359,20 @@
         }
       }
     }
+    // ─ Post-insertion prompt: open Aida menu ─
+    if (_aidaIntroState.chipInserted) {
+      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
+      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+        _promptEl.textContent = '🤖 A.I.D.A — Access Terminal [E]';
+        _promptEl.style.display = 'block';
+        if (_interactBtn) {
+          _interactBtn.textContent = 'ACCESS';
+          _interactBtn.style.background = 'linear-gradient(135deg,#8800cc,#440066)';
+          _interactBtn.style.display = 'block';
+        }
+      }
+    }
   }
 
   // Pick up the Aida Chip (called from E-key / interact button)
@@ -4056,6 +4070,23 @@
         return;
       }
     }
+    // Post-insertion: pressing E near the robot opens the Aida building menu
+    if (_aidaIntroState.chipInserted) {
+      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
+      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
+        const fn = _callbacks['accountBuilding'];
+        if (typeof fn === 'function') {
+          _menuOpen = true;
+          _playerVel.x = 0; _playerVel.z = 0;
+          _keys = {}; _touch.active = false;
+          if (_promptEl) _promptEl.style.display = 'none';
+          if (_interactBtn) _interactBtn.style.display = 'none';
+          fn();
+          return;
+        }
+      }
+    }
 
     if (!_nearBuilding) return;
 
@@ -4137,7 +4168,7 @@
     'prism-reliquary-overlay', 'neural-matrix-overlay',
     'armory-overlay', 'recycle-overlay', 'campfire-kitchen-overlay',
     'workshop-overlay', 'gacha-store-overlay', 'aida-dark-pact-overlay',
-    'aida-modal-overlay', 'camp-codex-screen', 'character-visuals-screen',
+    'aida-modal-overlay', 'camp-codex-screen', 'character-visuals-screen', 'codex-screen',
     'weaponsmith-overlay',
     // Progression upgrades overlay (camp-bld-overlay style)
     'progression-shop-overlay',

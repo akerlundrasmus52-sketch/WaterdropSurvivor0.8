@@ -96,42 +96,39 @@
       alienIncubatorHatched: false, // Grey Alien companion hatched from Incubator pod
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
-        // Core buildings — unlocked on first camp visit but must be BUILT (level 0→1)
-        questMission: { level: 0, maxLevel: 1, unlocked: false }, // Must unlock through gameplay
-        inventory: { level: 1, maxLevel: 1, unlocked: true }, // Core free building — always built
-        campHub: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked
-        loreMaster: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked (placeholder)
-        campBoard: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest21
-        // Quest-unlockable buildings — locked initially, unlock through quest progression
-        skillTree: { level: 0, maxLevel: 1, unlocked: false }, // Unlock after Quest 1
-        companionHouse: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        forge: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        armory: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        trainingHall: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        trashRecycle: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        tempShop: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        achievementBuilding: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest11
-        accountBuilding: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — account stats (UI-only)
-        idleMenu: { level: 1, maxLevel: 1, unlocked: true }, // Always unlocked — idle progression (UI-only)
-        characterVisuals: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
-        codex: { level: 0, maxLevel: 1, unlocked: false }, // Unlock via quest
+        // Core buildings — all unlocked/built for testing
+        questMission: { level: 1, maxLevel: 1, unlocked: true },
+        inventory: { level: 1, maxLevel: 1, unlocked: true },
+        campHub: { level: 1, maxLevel: 1, unlocked: true },
+        loreMaster: { level: 1, maxLevel: 1, unlocked: true },
+        campBoard: { level: 1, maxLevel: 1, unlocked: true },
+        skillTree: { level: 1, maxLevel: 1, unlocked: true },
+        companionHouse: { level: 1, maxLevel: 1, unlocked: true },
+        forge: { level: 1, maxLevel: 1, unlocked: true },
+        armory: { level: 1, maxLevel: 1, unlocked: true },
+        trainingHall: { level: 1, maxLevel: 1, unlocked: true },
+        trashRecycle: { level: 1, maxLevel: 1, unlocked: true },
+        tempShop: { level: 1, maxLevel: 1, unlocked: true },
+        achievementBuilding: { level: 1, maxLevel: 1, unlocked: true },
+        accountBuilding: { level: 1, maxLevel: 1, unlocked: true },
+        idleMenu: { level: 1, maxLevel: 1, unlocked: true },
+        characterVisuals: { level: 1, maxLevel: 1, unlocked: true },
+        codex: { level: 1, maxLevel: 1, unlocked: true },
         // Legacy buildings (for compatibility)
-        trainingGrounds: { level: 0, maxLevel: 1, unlocked: false },
-        library: { level: 0, maxLevel: 1, unlocked: false },
-        workshop: { level: 0, maxLevel: 1, unlocked: false },
-        shrine: { level: 0, maxLevel: 1, unlocked: false },
-        // Special Attacks arena — unlocked via quest
-        specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
-        // New buildings — unlocked through quest progression
-        warehouse: { level: 0, maxLevel: 1, unlocked: false },   // Quest 7
-        tavern:    { level: 0, maxLevel: 1, unlocked: false },   // Quest 8
-        shop:      { level: 0, maxLevel: 1, unlocked: false },   // Quest 9
-        prestige:  { level: 0, maxLevel: 1, unlocked: false },   // Quest 10
-        campfireKitchen: { level: 0, maxLevel: 1, unlocked: false }, // Quest 30
-        weaponsmith: { level: 0, maxLevel: 1, unlocked: false },      // Quest 31
-        prismReliquary: { level: 0, maxLevel: 1, unlocked: false },   // Unlocks after 10 min survival
-        neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false },   // Unlocked via Astral Gateway
-        astralGateway:  { level: 0, maxLevel: 1, unlocked: false }    // Unlocked via quest/Annunaki arc
+        trainingGrounds: { level: 1, maxLevel: 1, unlocked: true },
+        library: { level: 1, maxLevel: 1, unlocked: true },
+        workshop: { level: 1, maxLevel: 1, unlocked: true },
+        shrine: { level: 1, maxLevel: 1, unlocked: true },
+        specialAttacks: { level: 1, maxLevel: 1, unlocked: true },
+        warehouse: { level: 1, maxLevel: 1, unlocked: true },
+        tavern:    { level: 1, maxLevel: 1, unlocked: true },
+        shop:      { level: 1, maxLevel: 1, unlocked: true },
+        prestige:  { level: 1, maxLevel: 1, unlocked: true },
+        campfireKitchen: { level: 1, maxLevel: 1, unlocked: true },
+        weaponsmith: { level: 1, maxLevel: 1, unlocked: true },
+        prismReliquary: { level: 1, maxLevel: 1, unlocked: true },
+        neuralMatrix:   { level: 1, maxLevel: 1, unlocked: true },
+        astralGateway:  { level: 1, maxLevel: 1, unlocked: true }
       },
       // Neural Matrix unlock state (which nodes the player has activated)
       neuralMatrix: {},

@@ -1945,6 +1945,7 @@
         screen.style.display = 'none';
         const campScreen = document.getElementById('camp-screen');
         if (campScreen) campScreen.style.display = 'flex';
+        if (window.CampWorld && typeof window.CampWorld.resumeInput === 'function') window.CampWorld.resumeInput();
         _updateCodexBuildingNotif();
       };
 
@@ -3236,7 +3237,10 @@
         ? saveData.tutorialQuests.completedQuests.length : 0;
       const totalGold = saveData.totalGoldEarned || 0;
       const sp = saveData.skillPoints || 0;
-
+      // Use live in-run playerStats when available, otherwise use defaults
+      const ps = (window.GamePlayer && typeof window.GamePlayer.getDefaultPlayerStats === 'function')
+        ? window.GamePlayer.getDefaultPlayerStats(20) : {};
+      const live = (typeof playerStats !== 'undefined' && playerStats) ? playerStats : ps;
       container.innerHTML = `
         <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;">
           <div style="background:rgba(255,215,0,0.08);border:2px solid #FFD700;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
@@ -3260,9 +3264,67 @@
             <div style="font-size:10px;color:#aaa;letter-spacing:1px;">SKILL PTS</div>
           </div>` : ''}
         </div>
-        <div style="color:rgba(180,220,255,0.55);font-size:11px;text-align:center;">
+        <div style="color:rgba(180,220,255,0.55);font-size:11px;text-align:center;margin-bottom:10px;">
           💰 Total Gold Earned: <span style="color:#FFD700;">${totalGold.toLocaleString()}</span>
+        </div>
+        <div id="profile-rpg-stats" style="max-height:340px;overflow-y:auto;padding-right:4px;">
+          ${_buildRpgStatsHTML(live)}
         </div>`;
+    }
+
+    function _buildRpgStatsHTML(s) {
+      function row(label, value, color) {
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 6px;border-radius:4px;background:rgba(255,255,255,0.03);margin-bottom:2px;">
+          <span style="color:#ccc;font-size:11px;">${label}</span>
+          <span style="color:${color || '#FFD700'};font-size:12px;font-weight:bold;">${value}</span>
+        </div>`;
+      }
+      function section(title, color) {
+        return `<div style="font-family:'Bangers',cursive;font-size:13px;color:${color || '#FFD700'};letter-spacing:2px;margin:8px 0 3px 0;border-bottom:1px solid rgba(255,215,0,0.2);padding-bottom:2px;">${title}</div>`;
+      }
+      function pct(v) { return Math.round((v || 0) * 100) + '%'; }
+      function mul(v) { return (v != null ? Number(v) : 1).toFixed(2) + 'x'; }
+      function plus(v) { return ((v || 0) >= 0 ? '+' : '') + (v || 0); }
+
+      return `
+        ${section('⚔️ OFFENSE', '#FF6644')}
+        ${row('Melee Damage', plus(s.meleeDamage), '#FF8866')}
+        ${row('Projectile Damage', plus(s.projectileDamage), '#FF8866')}
+        ${row('Melee Attack Speed', mul(s.meleeAttackSpeed), '#FF8866')}
+        ${row('Projectile Fire Rate', mul(s.projectileFireRate), '#FF8866')}
+        ${row('Projectile Speed', mul(s.projectileSpeed), '#FFaa66')}
+        ${row('Projectile Size', mul(s.projectileSize), '#FFaa66')}
+        ${row('Armor Penetration', pct(s.armorPenetration), '#FF4444')}
+        ${row('Crit Chance', pct(s.critChance), '#FFD700')}
+        ${row('Crit Damage', mul(s.critDmg), '#FFD700')}
+        ${section('⏱️ COOLDOWNS', '#44AAFF')}
+        ${row('Melee Cooldown', mul(s.meleeCooldown), '#88CCFF')}
+        ${row('Skill Cooldown', mul(s.skillCooldown), '#88CCFF')}
+        ${row('Dash/Dodge Cooldown', mul(s.dashCooldown), '#88CCFF')}
+        ${section('🏃 MOVEMENT', '#44FF88')}
+        ${row('Base Movement Speed', mul(s.baseMovementSpeed), '#66FFAA')}
+        ${row('Sprint / Dash Speed', mul(s.sprintDashSpeed), '#66FFAA')}
+        ${section('🛡️ DEFENSE & UTILITY', '#AAAAFF')}
+        ${row('Max HP', s.maxHp || 100, '#FF4466')}
+        ${row('HP Regen', (s.hpRegenRate || s.hpRegen || 0) + '/s', '#FF6688')}
+        ${row('Armor', (s.armor || 0) + '%', '#AAAAFF')}
+        ${row('Damage Reduction', pct(s.damageReduction), '#AAAAFF')}
+        ${row('Dodge Chance', pct((s.dodgeChance || 0) + (s.dodgeChanceBonus || 0)), '#CCCCFF')}
+        ${row('Lifesteal', pct(s.lifesteal || s.lifeStealPercent), '#FF44AA')}
+        ${section('🔥 ELEMENTAL', '#FF8844')}
+        ${row('Fire Damage', pct(s.fireDamage || s.fireDmgBonus), '#FF4400')}
+        ${row('Fire Resist', pct(s.fireResist), '#FF6622')}
+        ${row('Ice Damage', pct(s.iceDamage), '#44CCFF')}
+        ${row('Ice Resist', pct(s.iceResist), '#66DDFF')}
+        ${row('Poison Damage', pct(s.poisonDamage), '#44FF44')}
+        ${row('Poison Resist', pct(s.poisonResist), '#66FF66')}
+        ${row('Lightning Damage', pct(s.lightningDamage || s.lightningDmgBonus), '#FFFF00')}
+        ${row('Lightning Resist', pct(s.lightningResist), '#FFFF88')}
+        ${section('💰 ECONOMY', '#FFD700')}
+        ${row('Gold Drop Bonus', pct(s.goldDropBonus), '#FFD700')}
+        ${row('EXP Gain Bonus', pct(s.expGainBonus), '#FFD700')}
+        ${row('Item Drop Rate (Luck)', mul(s.itemDropRate || s.dropRate), '#FFD700')}
+      `;
     }
 
     function updateCampScreen() {
@@ -3406,6 +3468,13 @@
           },
           accountBuilding:     () => showAccountBuildingOverlay(),
           idleMenu:            () => showIdleSection(),
+          codex:               () => {
+            if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest17_visitCodex') {
+              progressTutorialQuest('quest17_visitCodex', true);
+              saveSaveData();
+            }
+            openCodex();
+          },
         };
         window.CampWorld.enter(renderer, saveData, campCallbacks);
         // Mark camp-screen as 3D mode only if CampWorld successfully activated

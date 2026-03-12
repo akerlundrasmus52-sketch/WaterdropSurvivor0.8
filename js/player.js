@@ -84,6 +84,36 @@ function getDefaultPlayerStats(baseExpReq) {
     spellEchoChance: 0,    // chance elemental effect fires twice
     elementalChain: 0,     // number of extra elemental chain jumps
     elementalGuaranteed: false, // elemental effects always trigger
+    // Elemental — damage bonus by element
+    fireDmgBonus: 0,       // % bonus to fire damage output
+    iceResist: 0,          // % reduction from incoming ice damage
+    fireResist: 0,         // % reduction from incoming fire damage
+    poisonDamage: 0,       // % bonus to poison damage output
+    poisonResist: 0,       // % reduction from incoming poison damage
+    lightningDmgBonus: 0,  // % bonus to lightning damage output
+    lightningResist: 0,    // % reduction from incoming lightning damage
+    // Offense (granular)
+    meleeDamage: 0,        // additive bonus to melee hit damage
+    projectileDamage: 0,   // additive bonus to projectile damage
+    meleeAttackSpeed: 1.0, // multiplier for melee swing rate
+    projectileFireRate: 1.0, // multiplier for projectile fire rate
+    projectileSpeed: 1.0,  // multiplier for projectile travel speed
+    projectileSize: 1.0,   // multiplier for projectile hitbox/visual size
+    // Cooldowns
+    meleeCooldown: 1.0,    // multiplier for melee cooldown (lower = faster)
+    skillCooldown: 1.0,    // multiplier for active skill cooldown
+    dashCooldown: 1.0,     // multiplier for dash/dodge cooldown
+    // Movement
+    baseMovementSpeed: 1.0, // multiplier for walk speed
+    sprintDashSpeed: 1.0,   // multiplier for sprint/dash speed
+    // Defense / Utility
+    lifesteal: 0,           // fraction of damage dealt returned as HP
+    dodgeChanceBonus: 0,    // additional flat dodge chance (stacks with dodgeChance)
+    hpRegenRate: 0,         // HP regenerated per second (flat)
+    // Economy
+    goldDropBonus: 0,       // additive % bonus to gold dropped by enemies
+    expGainBonus: 0,        // additive % bonus to all EXP gained
+    itemDropRate: 1.0,      // multiplier for item drop chance (Luck)
     // Mobility (Flexibility stat)
     mobilityScore: 1.0,    // overall mobility: affects turn speed, dash fluidity
     turnResponse: 1.0,     // how quickly player changes direction (scales with flexibility)
