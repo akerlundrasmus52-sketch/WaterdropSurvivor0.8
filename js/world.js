@@ -24,10 +24,10 @@ const GAME_CONFIG = {
   waveInterval: 300, // Frames between waves (approx 5s)
   expValue: 15,      // Increased from 10 — supports the Level-100 goal
   baseExpReq: 30,    // Increased from 20 — deeper XP curve for long progression
-  // Lake configuration - used for spawn avoidance
-  lakeCenterX: 20,
-  lakeCenterZ: -20,
-  lakeRadius: 18,
+  // Lake configuration - used for spawn avoidance - OPTIMIZED: Repositioned for compact world
+  lakeCenterX: 14,   // OPTIMIZED: Moved from 20 - southeast of spawn
+  lakeCenterZ: -14,  // OPTIMIZED: Moved from -20 - southeast of spawn
+  lakeRadius: 16,    // OPTIMIZED: Slightly reduced from 18 for compact layout
   // Performance optimization - Phase 1
   maxEnemiesOnScreen: 50, // Hard cap to prevent lag (docs specify 50 max)
   // Movement physics — slow and sluggish at start to reward movement upgrades

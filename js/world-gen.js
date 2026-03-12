@@ -54,8 +54,8 @@
       groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
       groundTexture.repeat.set(20, 20); // Tile the texture for detail
 
-      // One ground plane with enhanced material
-      const mainGroundGeo = new THREE.PlaneGeometry(200, 200);
+      // One ground plane with enhanced material - OPTIMIZED: Reduced from 200x200 to 120x120 for compact world
+      const mainGroundGeo = new THREE.PlaneGeometry(120, 120);
       const mainGroundMat = new THREE.MeshStandardMaterial({
         color: 0x2D5A1A,
         map: groundTexture,
@@ -70,13 +70,13 @@
       scene.add(mainGround);
 
       // Decorative terrain hills/bumps for visual depth (low-profile so they don't block movement)
+      // OPTIMIZED: Reduced and repositioned for compact, beautiful world layout
       const hillMat = new THREE.MeshStandardMaterial({ color: 0x2D5A1A, roughness: 0.96, metalness: 0.0 });
       const hillDataList = [
-        { x: -36, z: 18, rx: 8, ry: 1.4, rz: 7 }, { x: 48, z: -12, rx: 10, ry: 1.6, rz: 8 },
-        { x: -24, z: -42, rx: 12, ry: 1.8, rz: 10 }, { x: 42, z: 48, rx: 9, ry: 1.5, rz: 7 },
-        { x: -48, z: 36, rx: 11, ry: 1.3, rz: 9 }, { x: 60, z: -36, rx: 7, ry: 1.2, rz: 6 },
-        { x: 18, z: 54, rx: 8, ry: 1.4, rz: 7 }, { x: -60, z: -24, rx: 13, ry: 1.9, rz: 11 },
-        { x: -12, z: 48, rx: 6, ry: 1.1, rz: 5 }, { x: 66, z: 24, rx: 9, ry: 1.3, rz: 8 },
+        { x: -22, z: 12, rx: 7, ry: 1.3, rz: 6 }, { x: 28, z: -8, rx: 8, ry: 1.4, rz: 7 },
+        { x: -15, z: -25, rx: 9, ry: 1.5, rz: 8 }, { x: 25, z: 28, rx: 7, ry: 1.2, rz: 6 },
+        { x: -28, z: 22, rx: 8, ry: 1.2, rz: 7 }, { x: 35, z: -22, rx: 6, ry: 1.1, rz: 5 },
+        { x: 12, z: 32, rx: 7, ry: 1.3, rz: 6 }, { x: -35, z: -15, rx: 10, ry: 1.6, rz: 9 },
       ];
       hillDataList.forEach(h => {
         const hillGeo = new THREE.SphereGeometry(1, 10, 8);
@@ -100,11 +100,11 @@
       dCtx.fillStyle = dGrad; dCtx.fillRect(0, 0, 128, 128);
       const desertTex = new THREE.CanvasTexture(desertGradCanvas);
       const desertOverlay = new THREE.Mesh(
-        new THREE.PlaneGeometry(100, 100),
+        new THREE.PlaneGeometry(60, 60), // OPTIMIZED: Reduced from 100x100 to 60x60
         new THREE.MeshStandardMaterial({ map: desertTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
       );
       desertOverlay.rotation.x = -Math.PI / 2;
-      desertOverlay.position.set(70, 0.01, -50);
+      desertOverlay.position.set(40, 0.01, -30); // OPTIMIZED: Moved closer (was 70, -50)
       scene.add(desertOverlay);
 
       // Snow region (northwest) - white ground overlay
@@ -118,11 +118,11 @@
       sCtx.fillStyle = sGrad; sCtx.fillRect(0, 0, 128, 128);
       const snowTex = new THREE.CanvasTexture(snowGradCanvas);
       const snowOverlay = new THREE.Mesh(
-        new THREE.PlaneGeometry(100, 100),
+        new THREE.PlaneGeometry(60, 60), // OPTIMIZED: Reduced from 100x100 to 60x60
         new THREE.MeshStandardMaterial({ map: snowTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })
       );
       snowOverlay.rotation.x = -Math.PI / 2;
-      snowOverlay.position.set(-70, 0.01, -60);
+      snowOverlay.position.set(-40, 0.01, -35); // OPTIMIZED: Moved closer (was -70, -60)
       scene.add(snowOverlay);
 
       // Darker forest floor ring around the fountain spawn area
@@ -201,20 +201,20 @@
       
       // Narrow dirt trails from spawn rondel to key landmarks (no wagon roads)
       
-      // 1. Trail to Stonehenge (60, 50) - Northeast direction
-      createTrail(rondelRadius * 0.707, rondelRadius * 0.707, 60, 50);
+      // 1. Trail to Stonehenge (35, 30) - OPTIMIZED: Updated to new position
+      createTrail(rondelRadius * 0.707, rondelRadius * 0.707, 35, 30); // OPTIMIZED: Updated from (60, 50)
+
+      // 2. Trail to Windmill (18, 18) - OPTIMIZED: Updated to new position
+      createTrail(rondelRadius * 0.9, rondelRadius * 0.436, 18, 18); // OPTIMIZED: Updated from (25, 25)
+
+      // 3. Trail to Tesla Tower (-30, -30) - OPTIMIZED: Updated to new position
+      createTrail(-rondelRadius * 0.707, -rondelRadius * 0.707, -30, -30); // OPTIMIZED: Updated from (-50, -50)
+
+      // 4. Trail to Pyramid (25, -20) - OPTIMIZED: Updated to new position
+      createTrail(rondelRadius * 0.707, -rondelRadius * 0.707, 25, -20); // OPTIMIZED: Updated from (35, -35)
       
-      // 2. Trail to Windmill (25, 25) - East direction
-      createTrail(rondelRadius * 0.9, rondelRadius * 0.436, 25, 25);
-      
-      // 3. Trail to Tesla Tower (-50, -50) - Southwest direction
-      createTrail(-rondelRadius * 0.707, -rondelRadius * 0.707, -50, -50);
-      
-      // 4. Trail to Pyramid (35, -35) - Southeast direction
-      createTrail(rondelRadius * 0.707, -rondelRadius * 0.707, 35, -35);
-      
-      // 5. Trail to Lake/Waterfall (20, -20) - South direction
-      createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 20, -20);
+      // 5. Trail to Lake/Waterfall (14, -14) - OPTIMIZED: Updated to new lake position
+      createTrail(rondelRadius * 0.5, -rondelRadius * 0.866, 14, -14);
       
       // Initialise fountain/lightning spawn sequence (replaces old circle portal)
       if (window.SpawnSequence) window.SpawnSequence.init(scene);
@@ -247,17 +247,17 @@
         scene.add(fieldMesh);
       });
 
-      // Wooden fences around play area - now breakable!
+      // Wooden fences around play area - now breakable! OPTIMIZED: Smaller perimeter (40 units from 55)
       window.breakableFences = []; // Store all fences for collision/damage detection
       const fenceMat = new THREE.MeshToonMaterial({ color: 0x8B4513 });
       const postGeo = new THREE.BoxGeometry(0.3, 2, 0.3);
       const railGeo = new THREE.BoxGeometry(4, 0.2, 0.2);
-      
-      // Create fence segments around perimeter
+
+      // Create fence segments around perimeter - OPTIMIZED: Reduced radius from 55 to 40
       for(let i=0; i<40; i++) {
         const angle = (i / 40) * Math.PI * 2;
-        const x = Math.cos(angle) * 55;
-        const z = Math.sin(angle) * 55;
+        const x = Math.cos(angle) * 40; // OPTIMIZED: Reduced from 55 to 40
+        const z = Math.sin(angle) * 40; // OPTIMIZED: Reduced from 55 to 40
         
         // Fence post
         const post = new THREE.Mesh(postGeo, fenceMat.clone());
@@ -278,18 +278,18 @@
         }
       }
 
-      // Cabin (Box)
+      // Cabin (Box) - OPTIMIZED: Brought closer to spawn area, northwest position
       const cabinGeo = new THREE.BoxGeometry(6, 5, 6);
       const cabinMat = new THREE.MeshToonMaterial({ color: COLORS.cabin });
       const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-      cabin.position.set(-14, 2.5, -14);
+      cabin.position.set(-10, 2.5, -10); // OPTIMIZED: Moved from (-14, 2.5, -14) - closer to spawn
       cabin.castShadow = true;
       cabin.receiveShadow = true;
       scene.add(cabin);
 
-      // Windmill with improvements
+      // Windmill with improvements - OPTIMIZED: Moved to northeast, compact position
       const wmGroup = new THREE.Group();
-      wmGroup.position.set(25, 0, 25);
+      wmGroup.position.set(18, 0, 18); // OPTIMIZED: Moved from (25, 0, 25) - 30% closer
       const wmBase = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 8, 8), new THREE.MeshToonMaterial({color: 0xD2B48C})); // Beige
       wmBase.position.y = 4;
       wmBase.castShadow = true;
@@ -312,7 +312,7 @@
       wmLight.position.set(0, 9, 0);
       wmGroup.add(wmLight);
       
-      // Add ground light circle
+      // Add ground light circle - OPTIMIZED: Adjusted to new windmill position
       const groundLightGeo = new THREE.CircleGeometry(5, 32);
       const groundLightMat = new THREE.MeshBasicMaterial({
         color: 0xFFFFAA,
@@ -321,7 +321,7 @@
       });
       const groundLight = new THREE.Mesh(groundLightGeo, groundLightMat);
       groundLight.rotation.x = -Math.PI/2;
-      groundLight.position.set(25, 0.05, 25);
+      groundLight.position.set(18, 0.05, 18); // OPTIMIZED: Updated from (25, 0.05, 25)
       scene.add(groundLight);
       
       // Windmill hub
@@ -375,11 +375,11 @@
         bladeGroup.add(singleBlade);
       }
 
-      // Spinning shadow on the ground that rotates with blades
+      // Spinning shadow on the ground that rotates with blades - OPTIMIZED: Updated position
       const windmillShadowGeo = new THREE.PlaneGeometry(0.8, bLen);
       const windmillShadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
       const shadowGroup = new THREE.Group();
-      shadowGroup.position.set(25, 0.03, 25);
+      shadowGroup.position.set(18, 0.03, 18); // OPTIMIZED: Updated from (25, 0.03, 25)
       shadowGroup.rotation.x = -Math.PI / 2;
       for (let si = 0; si < 4; si++) {
         const shadowBlade = new THREE.Mesh(windmillShadowGeo, windmillShadowMat.clone());
@@ -393,8 +393,8 @@
       // Store blades reference for rotation animation (includes ground shadow)
       wmGroup.userData = { isWindmill: true, blades: [bladeGroup], shadowGroup: shadowGroup, hp: 600, maxHp: 600, questActive: false, light: wmLight };
       scene.add(wmGroup);
-      // Windmill exclusion zone: no props within 12 units
-      exclusionZones.push({ x: 25, z: 25, r: 12 });
+      // Windmill exclusion zone: no props within 12 units - OPTIMIZED: Updated position
+      exclusionZones.push({ x: 18, z: 18, r: 12 }); // OPTIMIZED: Updated from (25, 25)
       
       // Hay bales outside windmill
       const hayBaleMat = new THREE.MeshToonMaterial({ color: 0xD4A855 }); // Golden hay color
@@ -501,9 +501,9 @@
         farmerNPC = farmerGroup;
       })();
       
-      // Barn: placed south of windmill, 18 units away — clearly separated
+      // Barn: placed south of windmill - OPTIMIZED: Moved closer for compact layout
       const barnGroup = new THREE.Group();
-      barnGroup.position.set(25, 0, 38); // 13 units south of Windmill (25,25) → separation = 13
+      barnGroup.position.set(18, 0, 28); // OPTIMIZED: Moved from (25, 0, 38) - closer to windmill
       // Barn body
       const barnBodyGeo = new THREE.BoxGeometry(8, 5, 10);
       const barnBodyMat = new THREE.MeshToonMaterial({ color: 0xA0522D }); // Sienna red barn
@@ -532,15 +532,15 @@
       barnWindow.position.set(0, 4.5, 5.1);
       barnGroup.add(barnWindow);
       scene.add(barnGroup);
-      // Barn exclusion zone: no props within 12 units
-      exclusionZones.push({ x: 25, z: 38, r: 12 });
-      
+      // Barn exclusion zone: no props within 12 units - OPTIMIZED: Updated position
+      exclusionZones.push({ x: 18, z: 28, r: 12 }); // OPTIMIZED: Updated from (25, 38)
+
       // Realistic farm fields: wide soil strips with crop rows — placed east of windmill
-      // CropField at (38, 0, 25): 13 units east of Windmill (25,25) → separation = 13
+      // OPTIMIZED: Repositioned for compact layout
       const fieldSoilMat = new THREE.MeshToonMaterial({ color: 0x5C3A1A }); // Rich dark soil
       const cropMat = new THREE.MeshToonMaterial({ color: 0x7CBA3E }); // Crop green
       const windmillFieldGroup = new THREE.Group();
-      windmillFieldGroup.position.set(38, 0, 25); // 13 units east of windmill — clearly separated
+      windmillFieldGroup.position.set(28, 0, 18); // OPTIMIZED: Moved from (38, 0, 25) - east of windmill
       // Wide field base
       const fieldBaseMesh = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshToonMaterial({ color: 0x5C3A1A }));
       fieldBaseMesh.rotation.x = -Math.PI / 2;
@@ -562,23 +562,23 @@
         }
       }
       scene.add(windmillFieldGroup);
-      // CropField exclusion zone: no props within 12 units of field center
-      exclusionZones.push({ x: 38, z: 25, r: 12 });
+      // CropField exclusion zone: no props within 12 units of field center - OPTIMIZED: Updated position
+      exclusionZones.push({ x: 28, z: 18, r: 12 }); // OPTIMIZED: Updated from (38, 25)
       
-      // Mine
+      // Mine - OPTIMIZED: Brought closer to center
       const mineGeo = new THREE.DodecahedronGeometry(5);
       const mineMat = new THREE.MeshToonMaterial({ color: 0x555555 });
       const mine = new THREE.Mesh(mineGeo, mineMat);
-      mine.position.set(-25, 2, 25);
+      mine.position.set(-18, 2, 18); // OPTIMIZED: Moved from (-25, 2, 25) - northwest position
       scene.add(mine);
       const mineEnt = new THREE.Mesh(new THREE.CircleGeometry(2, 16), new THREE.MeshBasicMaterial({color: 0x000000}));
-      mineEnt.position.set(-25, 2, 28);
+      mineEnt.position.set(-18, 2, 21); // OPTIMIZED: Adjusted from (-25, 2, 28)
       mineEnt.rotation.y = Math.PI;
       scene.add(mineEnt);
 
-      // Phase 4: Stonehenge - Circle of big rocks - Relocated to new mystical location
+      // Phase 4: Stonehenge - Circle of big rocks - OPTIMIZED: Relocated to northeast mystical area
       const stonehengeGroup = new THREE.Group();
-      stonehengeGroup.position.set(60, 0, 50); // Moved northeast — separated from farm area
+      stonehengeGroup.position.set(35, 0, 30); // OPTIMIZED: Moved from (60, 0, 50) - 40% closer
       
       const stoneMat = new THREE.MeshToonMaterial({ color: 0x808080 }); // Gray stone
       const numStones = 30; // Real Stonehenge has ~30 stones in outer circle
@@ -660,8 +660,8 @@
       blueGlowLight.position.set(0, 0.3, 0);
       stonehengeChestGroup.add(blueGlowLight);
       
-      // Position on altar
-      stonehengeChestGroup.position.set(60, 1, 50); // On top of Stonehenge altar
+      // Position on altar - OPTIMIZED: Updated to new Stonehenge position
+      stonehengeChestGroup.position.set(35, 1, 30); // OPTIMIZED: Moved from (60, 1, 50) - on top of Stonehenge altar
       stonehengeChestGroup.userData = { 
         isStonehengeChest: true, 
         questItem: true,
@@ -670,9 +670,9 @@
       scene.add(stonehengeChestGroup);
       window.stonehengeChest = stonehengeChestGroup; // Store reference for proximity check
 
-      // Great Pyramid of Giza - Egyptian stepped pyramid
+      // Great Pyramid of Giza - Egyptian stepped pyramid - OPTIMIZED: Moved to southeast desert area
       const mayanGroup = new THREE.Group();
-      mayanGroup.position.set(35, 0, -35);
+      mayanGroup.position.set(25, 0, -20); // OPTIMIZED: Moved from (35, 0, -35) - 40% closer, in desert region
       
       // Multi-material sandstone look with weathering
       const pyramidMatLight = new THREE.MeshStandardMaterial({ color: 0xE8D5A3, roughness: 0.92, metalness: 0.0 }); // Light sandstone face
@@ -807,13 +807,14 @@
       // Pyramid scattered stones — partially destroyed look (scattered/fallen stone blocks)
       const pyramidScatterMat = new THREE.MeshStandardMaterial({ color: 0xBBA080, roughness: 0.9, metalness: 0.0 });
       const pyramidScatterPositions = [
-        { x: 55, z: -55, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
-        { x: 44, z: -44, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
-        { x: 58, z: -44, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
-        { x: 43, z: -56, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
-        { x: 60, z: -50, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 },
-        { x: 47, z: -60, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
-        { x: 53, z: -42, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
+        // OPTIMIZED: Adjusted scatter positions around new pyramid location (25, -20)
+        { x: 32, z: -24, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
+        { x: 22, z: -22, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
+        { x: 34, z: -22, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
+        { x: 21, z: -27, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
+        { x: 35, z: -25, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 }, // OPTIMIZED from (60, -50)
+        { x: 24, z: -30, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
+        { x: 30, z: -18, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
       ];
       pyramidScatterPositions.forEach(pos => {
         const sGeo = new THREE.BoxGeometry(pos.sx, pos.sy, pos.sz);
@@ -1086,8 +1087,9 @@
       }
 
       // Comet Stone - Beside the lake where player spawns (brings the water droplet to life)
+      // OPTIMIZED: Updated to new lake position
       const cometGroup = new THREE.Group();
-      cometGroup.position.set(27, 0, -20); // Right beside lake where player spawns
+      cometGroup.position.set(20, 0, -14); // OPTIMIZED: Updated from (27, 0, -20) - beside new lake position
       
       // Impact crater (dark brown ring)
       const craterGeo = new THREE.RingGeometry(2, 3, 16); // Reduced segments for performance
@@ -1280,9 +1282,9 @@
       
       scene.add(waterfallGroup);
 
-      // Reflective Lake - Enhanced with realistic water properties
-      const enhancedLakeGeo = new THREE.CircleGeometry(18, 48); // More segments for smoother circle
-      const enhancedLakeMat = new THREE.MeshPhysicalMaterial({ 
+      // Reflective Lake - Enhanced with realistic water properties - OPTIMIZED: Updated position and size
+      const enhancedLakeGeo = new THREE.CircleGeometry(16, 48); // OPTIMIZED: Reduced from 18 to 16 radius
+      const enhancedLakeMat = new THREE.MeshPhysicalMaterial({
         color: COLORS.lake,
         metalness: 0.5,
         roughness: 0.1,
@@ -1298,18 +1300,18 @@
       });
       const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
       enhancedLake.rotation.x = -Math.PI / 2;
-      enhancedLake.position.set(20, 0.03, -20); // Raised slightly above ground to prevent z-fighting
+      enhancedLake.position.set(14, 0.03, -14); // OPTIMIZED: Moved from (20, 0.03, -20) - new compact position
       enhancedLake.receiveShadow = true;
       scene.add(enhancedLake);
-      // Lake exclusion zone: no props within 22 units of lake center (radius 18 + buffer 4)
-      exclusionZones.push({ x: 20, z: -20, r: 22 });
-      
-      // Sandy shore ring around lake for visual border
-      const shoreGeo = new THREE.RingGeometry(17.5, 20, 48);
+      // Lake exclusion zone: no props within 20 units of lake center (radius 16 + buffer 4)
+      exclusionZones.push({ x: 14, z: -14, r: 20 }); // OPTIMIZED: Updated from (20, -20, 22)
+
+      // Sandy shore ring around lake for visual border - OPTIMIZED: Adjusted to new lake size/position
+      const shoreGeo = new THREE.RingGeometry(15.5, 18, 48); // OPTIMIZED: Adjusted from (17.5, 20)
       const shoreMat = new THREE.MeshStandardMaterial({ color: 0xC2B280, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
       const shore = new THREE.Mesh(shoreGeo, shoreMat);
       shore.rotation.x = -Math.PI / 2;
-      shore.position.set(20, 0.02, -20);
+      shore.position.set(14, 0.02, -14); // OPTIMIZED: Updated from (20, 0.02, -20)
       shore.receiveShadow = true;
       scene.add(shore);
       
@@ -1391,8 +1393,8 @@
       shimmerRing.userData = { isShimmerRing: true, phase: 0 };
       underwaterChestGroup.add(shimmerRing);
       
-      // Place chest at lake center, slightly submerged
-      underwaterChestGroup.position.set(20, -0.4, -20);
+      // Place chest at lake center, slightly submerged - OPTIMIZED: Updated to new lake position
+      underwaterChestGroup.position.set(14, -0.4, -14); // OPTIMIZED: Moved from (20, -0.4, -20)
       underwaterChestGroup.userData = {
         isUnderwaterChest: true,
         collected: false,
@@ -1424,7 +1426,7 @@
 
       // Montana Landmark - Snowy area in the north (snow biome)
       const montanaGroup = new THREE.Group();
-      montanaGroup.position.set(0, 0, -100); // North in snow biome
+      montanaGroup.position.set(0, 0, -60); // OPTIMIZED: Moved from (0, 0, -100) - North in snow biome, 40% closer
       
       // Base platform
       const montanaBaseMat = new THREE.MeshToonMaterial({ color: 0xD3D3D3 }); // Light gray
@@ -1647,9 +1649,9 @@
       scene.add(eiffelGroup);
       eiffelLandmark = eiffelGroup; // Store reference for efficient distance checks
 
-      // FRESH IMPLEMENTATION: Tesla Tower with Active Lightning Arcs
+      // FRESH IMPLEMENTATION: Tesla Tower with Active Lightning Arcs - OPTIMIZED: Relocated closer
       const teslaGroup = new THREE.Group();
-      teslaGroup.position.set(-50, 0, -50); // Southwest corner, compact location
+      teslaGroup.position.set(-30, 0, -30); // OPTIMIZED: Moved from (-50, 0, -50) - 40% closer, southwest corner
       
       // Tower base - wider platform
       const teslaBaseGeo = new THREE.CylinderGeometry(3, 4, 2, 8);
@@ -1721,19 +1723,19 @@
       glow.position.y = 19;
       teslaGroup.add(glow);
       
-      // Lightning arc points (4 ground points around tower)
+      // Lightning arc points (4 ground points around tower) - OPTIMIZED: Updated for new position
       const arcPoints = [
-        new THREE.Vector3(-50 + 8, 0.5, -50),
-        new THREE.Vector3(-50 - 8, 0.5, -50),
-        new THREE.Vector3(-50, 0.5, -50 + 8),
-        new THREE.Vector3(-50, 0.5, -50 - 8)
+        new THREE.Vector3(-30 + 8, 0.5, -30),
+        new THREE.Vector3(-30 - 8, 0.5, -30),
+        new THREE.Vector3(-30, 0.5, -30 + 8),
+        new THREE.Vector3(-30, 0.5, -30 - 8)
       ];
-      
-      // Store Tesla Tower data for animation
-      teslaGroup.userData = { 
+
+      // Store Tesla Tower data for animation - OPTIMIZED: Updated top position
+      teslaGroup.userData = {
         isTeslaTower: true,
         arcPoints: arcPoints,
-        topPosition: new THREE.Vector3(-50, 19, -50),
+        topPosition: new THREE.Vector3(-30, 19, -30), // OPTIMIZED: Updated from (-50, 19, -50)
         arcLines: [] // Will store line meshes
       };
       
@@ -1779,21 +1781,21 @@
         // Path exclusion (5-unit buffer on each side of trail)
         const PATH_WIDTH = 5;
         const r = rondelRadius;
-        if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 50)     < PATH_WIDTH) return true; // → Stonehenge
-        if (distToSegment(x, z, r * 0.9,   r * 0.436, 25, 25)     < PATH_WIDTH) return true; // → Windmill
-        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -50, -50) < PATH_WIDTH) return true; // → Tesla Tower
-        if (distToSegment(x, z, r * 0.707, -r * 0.707, 35, -35)   < PATH_WIDTH) return true; // → Pyramid
-        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 20, -20)   < PATH_WIDTH) return true; // → Lake
+        if (distToSegment(x, z, r * 0.707, r * 0.707, 35, 30)     < PATH_WIDTH) return true; // → Stonehenge (OPTIMIZED from 60, 50)
+        if (distToSegment(x, z, r * 0.9,   r * 0.436, 18, 18)     < PATH_WIDTH) return true; // → Windmill (OPTIMIZED from 25, 25)
+        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -30, -30) < PATH_WIDTH) return true; // → Tesla Tower (OPTIMIZED from -50, -50)
+        if (distToSegment(x, z, r * 0.707, -r * 0.707, 25, -20)   < PATH_WIDTH) return true; // → Pyramid (OPTIMIZED from 35, -35)
+        if (distToSegment(x, z, r * 0.5,   -r * 0.866, 14, -14)   < PATH_WIDTH) return true; // → Lake (OPTIMIZED from 20, -20)
 
         // Building exclusion zones
-        if (Math.sqrt((x - 25) ** 2 + (z - 25) ** 2)   < 8)  return true; // Windmill
-        if (Math.sqrt((x + 14) ** 2 + (z + 14) ** 2)   < 8)  return true; // Cabin
+        if (Math.sqrt((x - 18) ** 2 + (z - 18) ** 2)   < 8)  return true; // Windmill (OPTIMIZED from 25, 25)
+        if (Math.sqrt((x + 10) ** 2 + (z + 10) ** 2)   < 8)  return true; // Cabin (OPTIMIZED from 14, 14)
         if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2)   < 8)  return true; // Mine entrance
 
         // Landmark exclusion zones
-        if (Math.sqrt((x - 60) ** 2 + (z - 50) ** 2)   < 22) return true; // Stonehenge
-        if (Math.sqrt((x - 35) ** 2 + (z + 35) ** 2)   < 22) return true; // Pyramid
-        if (Math.sqrt((x + 50) ** 2 + (z + 50) ** 2)   < 27) return true; // Tesla Tower
+        if (Math.sqrt((x - 35) ** 2 + (z - 30) ** 2)   < 22) return true; // Stonehenge (OPTIMIZED from 60, 50)
+        if (Math.sqrt((x - 25) ** 2 + (z + 20) ** 2)   < 22) return true; // Pyramid (OPTIMIZED from 35, -35)
+        if (Math.sqrt((x + 30) ** 2 + (z + 30) ** 2)   < 27) return true; // Tesla Tower (OPTIMIZED from 50, 50)
         if (Math.sqrt((x + 50) ** 2 + (z - 90) ** 2)   < 20) return true; // Eiffel Tower
 
         return false;
@@ -1802,9 +1804,9 @@
       // Tree-specific placement validation: extends isPositionExcluded with extra landmark zones
       function isTreePlacementValid(x, z) {
         if (isPositionExcluded(x, z)) return false;
-        if (Math.sqrt((x + 18) ** 2 + (z - 18) ** 2) < 18) return false; // Colosseum
+        if (Math.sqrt((x + 13) ** 2 + (z - 13) ** 2) < 18) return false; // Colosseum (OPTIMIZED from -18, 18)
         // Extra lake buffer for trees (prevent clipping into water)
-        if (Math.sqrt((x - 20) ** 2 + (z + 20) ** 2) < 24) return false; // Lake + buffer
+        if (Math.sqrt((x - 14) ** 2 + (z + 14) ** 2) < 24) return false; // Lake + buffer (OPTIMIZED from 20, -20)
         return true;
       }
 
@@ -2203,12 +2205,13 @@
       // Sand dunes in desert
       const sandMat = new THREE.MeshToonMaterial({ color: 0xE8C880 });
       const dunePositions = [
-        { x: 60, z: -50, rx: 0.6, rz: 1.2 },
-        { x: 84, z: -36, rx: 0.8, rz: 1.5 },
-        { x: 72, z: -78, rx: 0.5, rz: 1.0 },
-        { x: 96, z: -60, rx: 0.7, rz: 1.3 },
-        { x: 54, z: -90, rx: 0.6, rz: 1.1 },
-        { x: 102, z: -84, rx: 0.9, rz: 1.6 },
+        // OPTIMIZED: Adjusted sand dunes to cluster near pyramid and desert landmarks
+        { x: 35, z: -25, rx: 0.6, rz: 1.2 }, // OPTIMIZED from (60, -50) - near pyramid at (25, -20)
+        { x: 48, z: -18, rx: 0.8, rz: 1.5 }, // Adjusted closer
+        { x: 42, z: -38, rx: 0.5, rz: 1.0 }, // Adjusted closer
+        { x: 55, z: -30, rx: 0.7, rz: 1.3 }, // Adjusted closer
+        { x: 30, z: -42, rx: 0.6, rz: 1.1 }, // Adjusted closer
+        { x: 58, z: -42, rx: 0.9, rz: 1.6 }, // Adjusted closer
       ];
       dunePositions.forEach(d => {
         const duneGeo = new THREE.SphereGeometry(d.rx, 8, 6);
@@ -2359,10 +2362,11 @@
       const stonehengeTreeTrunkMat = new THREE.MeshToonMaterial({ color: 0x4A2C0A });
       const stonehengeTreeLeavesMat = new THREE.MeshToonMaterial({ color: 0x1A7A1A });
       const stonehengeDenseTreeData = [
-        {x:48, z:38}, {x:50, z:34}, {x:46, z:42}, {x:52, z:40},
-        {x:26, z:38}, {x:25, z:34}, {x:27, z:42}, {x:23, z:40},
-        {x:38, z:26}, {x:34, z:25}, {x:42, z:27}, {x:40, z:23},
-        {x:38, z:48}, {x:34, z:50}, {x:42, z:46}, {x:40, z:52},
+        // OPTIMIZED: Adjusted tree positions around Stonehenge (moved from ~60,50 to 35,30)
+        {x:28, z:22}, {x:30, z:18}, {x:26, z:26}, {x:32, z:24}, // NW cluster around (35, 30)
+        {x:40, z:28}, {x:42, z:24}, {x:38, z:32}, {x:44, z:30}, // NE cluster
+        {x:28, z:36}, {x:24, z:34}, {x:32, z:38}, {x:26, z:40}, // SW cluster
+        {x:40, z:36}, {x:42, z:32}, {x:38, z:40}, {x:44, z:38}, // SE cluster
       ];
       stonehengeDenseTreeData.forEach(td => {
         const tg = new THREE.Group();
@@ -2379,9 +2383,10 @@
       const mushroomCapMat = new THREE.MeshToonMaterial({ color: 0xC0392B }); // Red mushroom cap
       const mushroomStemMat = new THREE.MeshToonMaterial({ color: 0xFFF8DC }); // Cream stem
       const mushroomData = [
-        {x:45, z:45, s:1.0}, {x:52, z:48, s:0.7}, {x:54, z:42, s:1.2},
-        {x:42, z:54, s:0.8}, {x:60, z:48, s:1.0}, {x:48, z:60, s:0.6},
-        {x:66, z:42, s:1.3}, {x:40, z:66, s:0.9},
+        // OPTIMIZED: Adjusted mushroom positions to cluster around new Stonehenge location (35, 30)
+        {x:30, z:30, s:1.0}, {x:35, z:35, s:0.7}, {x:38, z:28, s:1.2},
+        {x:28, z:38, s:0.8}, {x:42, z:32, s:1.0}, {x:32, z:42, s:0.6},
+        {x:45, z:28, s:1.3}, {x:26, z:45, s:0.9},
       ];
       mushroomData.forEach(m => {
         const mGroup = new THREE.Group();
@@ -2513,10 +2518,10 @@
         window.warningLight = warningLight;
       })();
 
-      // Crashed alien spaceship
+      // Crashed alien spaceship - OPTIMIZED: Moved to northwest area, closer to center
       (function() {
         const shipGroup = new THREE.Group();
-        shipGroup.position.set(-90, 0, 40);
+        shipGroup.position.set(-50, 0, 25); // OPTIMIZED: Moved from (-90, 0, 40) - 45% closer
         shipGroup.rotation.y = 0.8;
         
         // Disc body (saucer shape)
@@ -2573,19 +2578,19 @@
         shipGroup.rotation.x = 0.25;
         shipGroup.rotation.z = -0.15;
         
-        // Crash crater under ship
+        // Crash crater under ship - OPTIMIZED: Updated position
         const crashGeo = new THREE.RingGeometry(6, 10, 16);
         const crashMat = new THREE.MeshBasicMaterial({ color: 0x4A3728, transparent: true, opacity: 0.7 });
         const crashCrater = new THREE.Mesh(crashGeo, crashMat);
         crashCrater.rotation.x = -Math.PI / 2;
-        crashCrater.position.set(-90, 0.01, 40);
+        crashCrater.position.set(-50, 0.01, 25); // OPTIMIZED: Updated from (-90, 0.01, 40)
         scene.add(crashCrater);
-        
+
         scene.add(shipGroup);
 
-        // Add a glowing Companion Egg near the UFO crash site (quest18 objective)
+        // Add a glowing Companion Egg near the UFO crash site (quest18 objective) - OPTIMIZED: Updated position
         const eggGroup = new THREE.Group();
-        eggGroup.position.set(-88, 0, 38);
+        eggGroup.position.set(-48, 0, 23); // OPTIMIZED: Moved from (-88, 0, 38) - near new UFO position
         const eggGeo = new THREE.SphereGeometry(0.7, 12, 10);
         eggGeo.scale(1, 1.3, 1);
         const eggMat = new THREE.MeshPhysicalMaterial({
@@ -2605,18 +2610,18 @@
         window.companionEggObject = eggGroup;
       })();
 
-      // Alien/sci-fi ground overlay
+      // Alien/sci-fi ground overlay - OPTIMIZED: Moved closer to UFO area
       const scifiGroundMat = new THREE.MeshToonMaterial({ color: 0x334433, transparent: true, opacity: 0.3, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-      const scifiGround = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), scifiGroundMat);
+      const scifiGround = new THREE.Mesh(new THREE.PlaneGeometry(70, 70), scifiGroundMat); // OPTIMIZED: Reduced from 120x120 to 70x70
       scifiGround.rotation.x = -Math.PI / 2;
-      scifiGround.position.set(-60, 0.006, 60);
+      scifiGround.position.set(-40, 0.006, 35); // OPTIMIZED: Moved from (-60, 0.006, 60) - near UFO area
       scifiGround.receiveShadow = true;
       scene.add(scifiGround);
 
-      // --- NEAR SPAWN: Roman Colosseum ---
+      // --- NEAR SPAWN: Roman Colosseum --- OPTIMIZED: Slightly adjusted for better spacing
       (function() {
         const colosseumGroup = new THREE.Group();
-        colosseumGroup.position.set(-18, 0, 18);
+        colosseumGroup.position.set(-13, 0, 13); // OPTIMIZED: Moved from (-18, 0, 18) - closer to spawn, northwest
 
         // Primary palette: warm beige/travertine limestone
         const stoneMat     = new THREE.MeshStandardMaterial({ color: 0xD4B896, roughness: 0.88, metalness: 0.0 });
@@ -2808,9 +2813,9 @@
 
       // --- RIVERS: 2 winding paths of flat blue planes ---
       const riverMat = new THREE.MeshBasicMaterial({ color: 0x4499CC, transparent: true, opacity: 0.65 });
-      // River 1: from lake (20,-20) northeast toward Stonehenge direction
+      // River 1: from lake (14,-14) northeast toward Stonehenge direction - OPTIMIZED: Updated to new lake position
       const river1Points = [
-        [20, -20], [16, -10], [13, 0], [10, 10], [16, 20]
+        [14, -14], [12, -6], [10, 2], [8, 10], [12, 18]
       ];
       for (let r = 0; r < river1Points.length - 1; r++) {
         const [ax, az] = river1Points[r];
@@ -2902,7 +2907,7 @@
 
       // --- Tesla Tower Point Light (blue/white) ---
       const teslaLight = new THREE.PointLight(0x00CCFF, 3, 30);
-      teslaLight.position.set(-50, 18, -50);
+      teslaLight.position.set(-30, 18, -30); // OPTIMIZED: Moved from (-50, 18, -50) to match Tesla Tower position
       teslaLight.userData = { isTeslaLight: true, phase: 0 };
       scene.add(teslaLight);
       window.teslaPointLight = teslaLight;

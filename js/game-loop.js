@@ -1528,7 +1528,7 @@
       // Track landmark visits for quest11_findAllLandmarks
       if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest11_findAllLandmarks') {
         if (!saveData.tutorialQuests.landmarksFound) {
-          saveData.tutorialQuests.landmarksFound = { stonehenge: false, pyramid: false, montana: false, teslaTower: false };
+          saveData.tutorialQuests.landmarksFound = { stonehenge: false, pyramid: false, montana: false, teslaTower: false, eiffel: false };
         }
         const lf = saveData.tutorialQuests.landmarksFound;
         const px = player.mesh.position.x, pz = player.mesh.position.z;
@@ -3201,13 +3201,13 @@
         }
       }
 
-      // Lava damage: player takes damage when close to volcano (at -100, 0, -120)
+      // Lava damage: player takes damage when close to volcano (OPTIMIZED: at -60, 0, -72)
       if (player && isGameActive && !isGameOver) {
         const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
         const LAVA_WARN_RADIUS = 14;    // Distance at which warning appears
         const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
         const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
-        const lavaX = -100, lavaZ = -120;
+        const lavaX = -60, lavaZ = -72; // OPTIMIZED: Updated to match volcano position from world-gen.js:2264
         const ldx = player.mesh.position.x - lavaX;
         const ldz = player.mesh.position.z - lavaZ;
         const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);

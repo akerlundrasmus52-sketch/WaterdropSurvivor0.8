@@ -62,7 +62,7 @@
       // Start quest when player visits Stonehenge area (only after tutorial stonehenge quest is done)
       if (player && !saveData.extendedQuests.legendaryCigar.started &&
           saveData.tutorialQuests && isQuestClaimed('quest3_stonehengeGear')) {
-        const stonehengePos = { x: 60, z: 50 };
+        const stonehengePos = { x: 35, z: 30 }; // OPTIMIZED: Updated from (60, 50)
         const dist = Math.sqrt(
           Math.pow(player.mesh.position.x - stonehengePos.x, 2) +
           Math.pow(player.mesh.position.z - stonehengePos.z, 2)

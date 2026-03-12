@@ -258,6 +258,7 @@
           pyramid: false,
           montana: false,
           teslaTower: false,
+          eiffel: false,
           ufoSight: false
         },
         lastShownQuestReminder: null // Track last shown quest reminder on run start
