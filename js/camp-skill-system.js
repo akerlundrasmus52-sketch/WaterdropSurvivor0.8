@@ -1414,6 +1414,33 @@
         updateCampScreen();
         // Immediately re-render the skill tree panel so nodes update state visually
         if (typeof renderSkillTreeWeb === 'function') renderSkillTreeWeb();
+
+        // Trigger dopamine-inducing unlock animation
+        setTimeout(() => {
+          const skillNode = document.querySelector(`[data-skill-id="${skillId}"]`);
+          if (skillNode) {
+            // Add animation class
+            skillNode.classList.add('just-unlocked');
+
+            // Create particle burst effect overlay
+            const particleOverlay = document.createElement('div');
+            particleOverlay.className = 'skill-unlock-particles';
+            particleOverlay.style.cssText = `
+              background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%);
+              animation: particleBurst 0.8s ease-out forwards;
+            `;
+            skillNode.appendChild(particleOverlay);
+
+            // Remove animation class and particle overlay after animation completes
+            setTimeout(() => {
+              skillNode.classList.remove('just-unlocked');
+              if (particleOverlay.parentNode === skillNode) {
+                skillNode.removeChild(particleOverlay);
+              }
+            }, 800);
+          }
+        }, 50); // Small delay to ensure DOM is updated
+
         playSound('collect');
         
         // Refresh special attack loadout HUD if a special attack or melee node was unlocked
