@@ -634,8 +634,22 @@
         const _isBoss = (type === 10 || type === 11 || type === 19);
         this.mesh.castShadow = _isBoss;
         this.mesh.receiveShadow = _isBoss;
-        this._usesInstancing = false;
-        scene.add(this.mesh);
+
+        // ── INSTANCING: Types 0, 1, 2 use instanced rendering for performance ────────
+        // Check if the instanced renderer is available and active. If so, mark this
+        // enemy for instancing (mesh won't be added to scene, rendered via InstancedMesh)
+        // and hide its individual mesh. Otherwise fall back to regular scene rendering.
+        const _shouldInstance = (type === 0 || type === 1 || type === 2)
+          && window._instancedRenderer && window._instancedRenderer.active;
+
+        if (_shouldInstance) {
+          this._usesInstancing = true;
+          this.mesh.visible = false; // Hidden — rendered via InstancedMesh batch
+          // Don't add to scene — instanced renderer handles it
+        } else {
+          this._usesInstancing = false;
+          scene.add(this.mesh);
+        }
 
         // ── HEAD — proper sphere sitting on top of the torso body ───────────────────
         // Uses SHARED_HEAD_GEO (one geometry for all enemies) + a slightly lighter
