@@ -3993,9 +3993,9 @@
         _setBlueprintMode(grp, false);
         _setConstructionMode(grp, true);
       } else {
-        // Locked — show as semi-transparent blueprint outline
-        grp.visible = true;
-        _setBlueprintMode(grp, true);
+        // Locked — completely hidden, camp starts empty and builds piece by piece
+        grp.visible = false;
+        _setBlueprintMode(grp, false);
         _setConstructionMode(grp, false);
       }
     }
@@ -4064,6 +4064,101 @@
     });
   }
 
+  // Play animation when a building is first unlocked and appears as construction scaffolding
+  function _playBuildingAppearAnimation(buildingId) {
+    const grp = _buildingMeshes[buildingId];
+    if (!grp) return;
+    const THREE = T();
+
+    // Building materializes from transparency with shimmer effect
+    const APPEAR_DURATION_MS = 800;
+    const startTime = performance.now();
+
+    // Start with construction mode already applied
+    _setBlueprintMode(grp, false);
+    _setConstructionMode(grp, true);
+    grp.visible = true;
+
+    // Create initial shimmer/reveal particles
+    if (_campScene) {
+      const SHIMMER_COUNT = 50;
+      const shimmerGeo = new THREE.BufferGeometry();
+      const shimmerPos = new Float32Array(SHIMMER_COUNT * 3);
+      const shimmerVel = [];
+
+      for (let i = 0; i < SHIMMER_COUNT; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * 3;
+        const h = Math.random() * 4;
+        shimmerPos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        shimmerPos[i * 3 + 1] = h;
+        shimmerPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+
+        shimmerVel.push({
+          x: (Math.random() - 0.5) * 0.5,
+          y: 0.3 + Math.random() * 0.5,
+          z: (Math.random() - 0.5) * 0.5
+        });
+      }
+
+      shimmerGeo.setAttribute('position', new THREE.BufferAttribute(shimmerPos, 3));
+      const shimmerMat = new THREE.PointsMaterial({
+        color: 0xFF9933, // Orange construction color
+        size: 0.25,
+        transparent: true,
+        opacity: 1.0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const shimmerParticles = new THREE.Points(shimmerGeo, shimmerMat);
+      _campScene.add(shimmerParticles);
+
+      const pStartMs = performance.now();
+      function animShimmer() {
+        const pt = Math.min((performance.now() - pStartMs) / 1500, 1);
+        shimmerMat.opacity = 1.0 - pt;
+
+        for (let i = 0; i < SHIMMER_COUNT; i++) {
+          shimmerPos[i * 3]     += shimmerVel[i].x * 0.016;
+          shimmerPos[i * 3 + 1] += shimmerVel[i].y * 0.016;
+          shimmerPos[i * 3 + 2] += shimmerVel[i].z * 0.016;
+        }
+        shimmerGeo.attributes.position.needsUpdate = true;
+
+        if (pt < 1) {
+          requestAnimationFrame(animShimmer);
+        } else {
+          _campScene.remove(shimmerParticles);
+          shimmerGeo.dispose();
+          shimmerMat.dispose();
+        }
+      }
+      requestAnimationFrame(animShimmer);
+    }
+
+    // Fade in the construction wireframe
+    grp.traverse(child => {
+      if (child.isMesh && child.userData._constructionMat) {
+        const mat = child.userData._constructionMat;
+        const originalOpacity = 0.45;
+        mat.opacity = 0;
+
+        function fadeIn() {
+          const elapsed = performance.now() - startTime;
+          const t = Math.min(elapsed / APPEAR_DURATION_MS, 1.0);
+          mat.opacity = originalOpacity * t;
+
+          if (t < 1.0) {
+            requestAnimationFrame(fadeIn);
+          } else {
+            mat.opacity = originalOpacity;
+          }
+        }
+        requestAnimationFrame(fadeIn);
+      }
+    });
+  }
+
   // Play a construction animation when a building is first unlocked
   function _playBuildingUnlockAnimation(buildingId) {
     const grp = _buildingMeshes[buildingId];
@@ -4074,72 +4169,221 @@
     _setBlueprintMode(grp, false);
     _setConstructionMode(grp, false);
 
-    // Flash effect: scale up from 0 → 1.07 → 1.0 over ~0.7 seconds (ease-out with slight overshoot)
-    const ANIM_DURATION_MS      = 700;
-    const OVERSHOOT_THRESHOLD   = 0.85; // fraction of duration at which peak overshoot is reached
-    const OVERSHOOT_PEAK_SCALE  = 1.07; // maximum scale during overshoot
-    const OVERSHOOT_AMOUNT      = OVERSHOOT_PEAK_SCALE - 1.0; // how much past 1.0 we go
+    // Enhanced build animation: ground glow → foundation → scale up with stunning particles
+    const ANIM_DURATION_MS      = 1200; // Longer for more drama
+    const OVERSHOOT_THRESHOLD   = 0.85;
+    const OVERSHOOT_PEAK_SCALE  = 1.10; // More overshoot for impact
+    const OVERSHOOT_AMOUNT      = OVERSHOOT_PEAK_SCALE - 1.0;
 
     const startTime = performance.now();
     grp.scale.set(0.01, 0.01, 0.01);
 
+    // ═══ 1. Ground foundation glow that appears first ═══
+    const foundationGeo = new THREE.CircleGeometry(3.5, 32);
+    const foundationMat = new THREE.MeshBasicMaterial({
+      color: 0xFFD700,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const foundation = new THREE.Mesh(foundationGeo, foundationMat);
+    foundation.rotation.x = -Math.PI / 2;
+    foundation.position.set(grp.position.x, 0.02, grp.position.z);
+    _campScene.add(foundation);
+
+    // ═══ 2. Building scale animation with foundation glow ═══
     function animStep() {
       const elapsed = performance.now() - startTime;
       const t = Math.min(elapsed / ANIM_DURATION_MS, 1.0);
+
+      // Scale building with overshoot
       const scale = t < OVERSHOOT_THRESHOLD
         ? OVERSHOOT_PEAK_SCALE * (t / OVERSHOOT_THRESHOLD)
         : OVERSHOOT_PEAK_SCALE - OVERSHOOT_AMOUNT * ((t - OVERSHOOT_THRESHOLD) / (1.0 - OVERSHOOT_THRESHOLD));
       grp.scale.set(scale, scale, scale);
+
+      // Foundation glow pulse (appears, pulses, fades)
+      if (t < 0.3) {
+        foundationMat.opacity = (t / 0.3) * 0.6; // Fade in
+      } else if (t < 0.7) {
+        const pulse = Math.sin((t - 0.3) * Math.PI * 8) * 0.15; // Pulse
+        foundationMat.opacity = 0.6 + pulse;
+      } else {
+        foundationMat.opacity = 0.6 * (1 - (t - 0.7) / 0.3); // Fade out
+      }
+
       if (t < 1.0) {
         requestAnimationFrame(animStep);
       } else {
         grp.scale.set(1, 1, 1);
+        _campScene.remove(foundation);
+        foundationGeo.dispose();
+        foundationMat.dispose();
       }
     }
     requestAnimationFrame(animStep);
 
-    // Golden particle burst to celebrate the unlock
+    // ═══ 3. Enhanced multi-layer particle system ═══
     if (_campScene) {
-      const PART_COUNT = 40;
-      const pGeo = new THREE.BufferGeometry();
-      const pPos = new Float32Array(PART_COUNT * 3);
-      const pVel = [];
-      for (let i = 0; i < PART_COUNT; i++) {
+      // Layer 1: Golden burst particles (radial explosion)
+      const BURST_COUNT = 80; // More particles for dramatic effect
+      const burstGeo = new THREE.BufferGeometry();
+      const burstPos = new Float32Array(BURST_COUNT * 3);
+      const burstVel = [];
+      const burstColors = new Float32Array(BURST_COUNT * 3);
+
+      for (let i = 0; i < BURST_COUNT; i++) {
         const a = Math.random() * Math.PI * 2;
-        const r = Math.random() * 2.5;
-        pPos[i * 3]     = grp.position.x + Math.sin(a) * r;
-        pPos[i * 3 + 1] = grp.position.y + 0.5 + Math.random() * 2;
-        pPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
-        pVel.push({
-          x: (Math.random() - 0.5) * 2.5,
-          y: 2.5 + Math.random() * 3.5,
-          z: (Math.random() - 0.5) * 2.5
+        const r = Math.random() * 1.5;
+        burstPos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        burstPos[i * 3 + 1] = grp.position.y + 0.3;
+        burstPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+
+        burstVel.push({
+          x: Math.sin(a) * (2.5 + Math.random() * 2),
+          y: 3.5 + Math.random() * 4,
+          z: Math.cos(a) * (2.5 + Math.random() * 2)
+        });
+
+        // Golden to white gradient for sparkle effect
+        const c = Math.random() > 0.3 ? 1.0 : 0.9;
+        burstColors[i * 3]     = c;
+        burstColors[i * 3 + 1] = c * 0.84;
+        burstColors[i * 3 + 2] = 0;
+      }
+
+      burstGeo.setAttribute('position', new THREE.BufferAttribute(burstPos, 3));
+      burstGeo.setAttribute('color', new THREE.BufferAttribute(burstColors, 3));
+
+      const burstMat = new THREE.PointsMaterial({
+        size: 0.35,
+        transparent: true,
+        opacity: 1.0,
+        vertexColors: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const burstParticles = new THREE.Points(burstGeo, burstMat);
+      _campScene.add(burstParticles);
+
+      // Layer 2: Ascending magic sparkles (rising from ground)
+      const SPARKLE_COUNT = 60;
+      const sparkleGeo = new THREE.BufferGeometry();
+      const sparklePos = new Float32Array(SPARKLE_COUNT * 3);
+      const sparkleVel = [];
+
+      for (let i = 0; i < SPARKLE_COUNT; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * 3;
+        sparklePos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        sparklePos[i * 3 + 1] = 0.1;
+        sparklePos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+
+        sparkleVel.push({
+          x: (Math.random() - 0.5) * 0.8,
+          y: 1.5 + Math.random() * 2,
+          z: (Math.random() - 0.5) * 0.8,
+          spin: Math.random() * 0.3
         });
       }
-      pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-      const pMat = new THREE.PointsMaterial({
-        color: 0xFFD700, size: 0.25, transparent: true, opacity: 1.0
-      });
-      const particles = new THREE.Points(pGeo, pMat);
-      _campScene.add(particles);
 
+      sparkleGeo.setAttribute('position', new THREE.BufferAttribute(sparklePos, 3));
+      const sparkleMat = new THREE.PointsMaterial({
+        color: 0xFFFFAA,
+        size: 0.2,
+        transparent: true,
+        opacity: 1.0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const sparkleParticles = new THREE.Points(sparkleGeo, sparkleMat);
+      _campScene.add(sparkleParticles);
+
+      // Layer 3: Construction dust cloud (brown/tan particles settling)
+      const DUST_COUNT = 50;
+      const dustGeo = new THREE.BufferGeometry();
+      const dustPos = new Float32Array(DUST_COUNT * 3);
+      const dustVel = [];
+
+      for (let i = 0; i < DUST_COUNT; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * 2.5;
+        dustPos[i * 3]     = grp.position.x + Math.sin(a) * r;
+        dustPos[i * 3 + 1] = 0.5 + Math.random() * 2;
+        dustPos[i * 3 + 2] = grp.position.z + Math.cos(a) * r;
+
+        dustVel.push({
+          x: (Math.random() - 0.5) * 1.5,
+          y: 0.5 + Math.random() * 1.5,
+          z: (Math.random() - 0.5) * 1.5
+        });
+      }
+
+      dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+      const dustMat = new THREE.PointsMaterial({
+        color: 0x8B7355,
+        size: 0.4,
+        transparent: true,
+        opacity: 0.7,
+        depthWrite: false
+      });
+      const dustParticles = new THREE.Points(dustGeo, dustMat);
+      _campScene.add(dustParticles);
+
+      // ═══ Animate all particle layers ═══
       const pStartMs = performance.now();
       function animParticles() {
-        const pt = Math.min((performance.now() - pStartMs) / 1800, 1);
-        pMat.opacity = 1.0 - pt;
-        for (let i = 0; i < PART_COUNT; i++) {
-          pPos[i * 3]     += pVel[i].x * 0.016;
-          pPos[i * 3 + 1] += pVel[i].y * 0.016;
-          pPos[i * 3 + 2] += pVel[i].z * 0.016;
-          pVel[i].y -= 4 * 0.016; // gravity
+        const pt = Math.min((performance.now() - pStartMs) / 2500, 1);
+
+        // Burst particles: explosive outward with gravity
+        burstMat.opacity = 1.0 - pt;
+        for (let i = 0; i < BURST_COUNT; i++) {
+          burstPos[i * 3]     += burstVel[i].x * 0.016;
+          burstPos[i * 3 + 1] += burstVel[i].y * 0.016;
+          burstPos[i * 3 + 2] += burstVel[i].z * 0.016;
+          burstVel[i].y -= 6 * 0.016; // Gravity
+          burstVel[i].x *= 0.98; // Air resistance
+          burstVel[i].z *= 0.98;
         }
-        pGeo.attributes.position.needsUpdate = true;
+        burstGeo.attributes.position.needsUpdate = true;
+
+        // Sparkle particles: rising with gentle drift
+        sparkleMat.opacity = 1.0 - pt * pt; // Slower fade
+        for (let i = 0; i < SPARKLE_COUNT; i++) {
+          sparklePos[i * 3]     += sparkleVel[i].x * 0.016;
+          sparklePos[i * 3 + 1] += sparkleVel[i].y * 0.016;
+          sparklePos[i * 3 + 2] += sparkleVel[i].z * 0.016;
+          sparkleVel[i].y *= 0.96; // Slow down as they rise
+        }
+        sparkleGeo.attributes.position.needsUpdate = true;
+
+        // Dust particles: settling down with drift
+        dustMat.opacity = 0.7 * (1.0 - pt);
+        for (let i = 0; i < DUST_COUNT; i++) {
+          dustPos[i * 3]     += dustVel[i].x * 0.016;
+          dustPos[i * 3 + 1] += dustVel[i].y * 0.016;
+          dustPos[i * 3 + 2] += dustVel[i].z * 0.016;
+          dustVel[i].y -= 2 * 0.016; // Gravity (slower than burst)
+        }
+        dustGeo.attributes.position.needsUpdate = true;
+
         if (pt < 1) {
           requestAnimationFrame(animParticles);
         } else {
-          _campScene.remove(particles);
-          pGeo.dispose();
-          pMat.dispose();
+          // Cleanup all particle systems
+          _campScene.remove(burstParticles);
+          burstGeo.dispose();
+          burstMat.dispose();
+
+          _campScene.remove(sparkleParticles);
+          sparkleGeo.dispose();
+          sparkleMat.dispose();
+
+          _campScene.remove(dustParticles);
+          dustGeo.dispose();
+          dustMat.dispose();
         }
       }
       requestAnimationFrame(animParticles);
@@ -4874,6 +5118,7 @@
     update,
     render,
     refreshBuildings,
+    playBuildingAppearAnimation: _playBuildingAppearAnimation,
     playBuildingUnlockAnimation: _playBuildingUnlockAnimation,
     bennyWalkToBuild: _bennyWalkToBuild,
     bennyWalkToBuildThenDialog: _bennyWalkToBuildThenDialog,
@@ -4887,7 +5132,7 @@
         _saveData.campBuildings[buildingId].unlocked = true;
       }
       _refreshBuildings();
-      _playBuildingUnlockAnimation(buildingId);
+      _playBuildingAppearAnimation(buildingId); // Use appear animation for quest unlock
     },
     onResize,
     warmUp,
