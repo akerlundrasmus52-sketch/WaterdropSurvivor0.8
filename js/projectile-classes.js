@@ -100,7 +100,12 @@
           const group = new THREE.Group();
           const headGeo = new THREE.SphereGeometry(size * 0.5, 8, 8);
           headGeo.scale(1, 1.3, 0.9);
-          const headMat = new THREE.MeshLambertMaterial({ color: 0x90A090 });
+          const headMat = new THREE.MeshPhongMaterial({
+            color: 0x90A090,
+            emissive: 0x485048,
+            emissiveIntensity: 0.15,
+            shininess: 30
+          });
           const head = new THREE.Mesh(headGeo, headMat);
           head.position.y = size * 0.5;
           head.castShadow = false;
@@ -117,7 +122,12 @@
           group.add(eyeR);
           // Small body
           const bodyGeo = new THREE.CylinderGeometry(size * 0.2, size * 0.15, size * 0.5, 6);
-          const bodyMat = new THREE.MeshLambertMaterial({ color: 0x708070 });
+          const bodyMat = new THREE.MeshPhongMaterial({
+            color: 0x708070,
+            emissive: 0x384038,
+            emissiveIntensity: 0.15,
+            shininess: 30
+          });
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           body.position.y = size * 0.05;
           body.castShadow = false;
@@ -129,7 +139,12 @@
           // Storm Wolf — brown blocky wolf shape
           const group = new THREE.Group();
           const bodyGeo = new THREE.BoxGeometry(size * 1.2, size * 0.6, size * 0.5);
-          const bodyMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+          const bodyMat = new THREE.MeshPhongMaterial({
+            color: 0x8B4513,
+            emissive: 0x452309,
+            emissiveIntensity: 0.15,
+            shininess: 25
+          });
           const body = new THREE.Mesh(bodyGeo, bodyMat);
           body.position.y = size * 0.3;
           body.castShadow = false;
@@ -145,9 +160,13 @@
         } else {
           // Default fallback — colored box
           const geo = new THREE.BoxGeometry(size, size, size);
-          const mat = new THREE.MeshLambertMaterial({ 
-            color: this.data.type === 'melee' ? 0x8B4513 : 
-                   this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1
+          const matColor = this.data.type === 'melee' ? 0x8B4513 :
+                   this.data.type === 'ranged' ? 0x4169E1 : 0x00CED1;
+          const mat = new THREE.MeshPhongMaterial({
+            color: matColor,
+            emissive: matColor,
+            emissiveIntensity: 0.15,
+            shininess: 30
           });
           mesh = new THREE.Mesh(geo, mat);
           mesh.castShadow = false;
@@ -1568,11 +1587,12 @@
       constructor(x, z, target) {
         // Ice shard — elongated octahedron for a crystalline look (4-sided cone approximation)
         const geometry = new THREE.ConeGeometry(0.12, 0.7, 4);
-        // Bright ice-blue material — cheap Lambert so no PBR light bounce cost
-        const material = new THREE.MeshLambertMaterial({
+        // Bright ice-blue material — using MeshPhongMaterial for camp-style visuals
+        const material = new THREE.MeshPhongMaterial({
           color: 0xAEEEFF,
           emissive: 0x005577,
           emissiveIntensity: 0.8,
+          shininess: 100,  // High shininess for ice/crystal
           transparent: true,
           opacity: 0.95
         });
@@ -1913,12 +1933,13 @@
       
       constructor(pos, color) {
         const geo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
-        const mat = new THREE.MeshLambertMaterial({ 
+        const mat = new THREE.MeshPhongMaterial({
           color: color,
           transparent: true,
           opacity: Particle.INITIAL_OPACITY,
           emissive: color,
-          emissiveIntensity: 0.5
+          emissiveIntensity: 0.5,
+          shininess: 40
         });
         this.mesh = new THREE.Mesh(geo, mat);
         this.mesh.castShadow = false;
