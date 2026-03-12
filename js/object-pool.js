@@ -307,6 +307,13 @@ window.enemyPool = (function () {
         }
       }
     }
+
+    // CRITICAL FIX: Restore base color for instanced enemies (types 0, 1, 2)
+    // Instanced enemies use shared materials (white) but store their real color in
+    // _baseColorHex. This must be restored when recycling so they render correctly.
+    const _resetColorHex = window._ENEMY_COLORS ? (window._ENEMY_COLORS[type] !== undefined ? window._ENEMY_COLORS[type] : window._ENEMY_COLORS[0]) : 0x44AA44;
+    enemy._baseColorHex = _resetColorHex;
+
     if (enemy.mesh.material && !enemy.mesh.material._isSpiderHitbox) {
       enemy.mesh.material.needsUpdate = true;
     }
