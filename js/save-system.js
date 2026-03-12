@@ -587,9 +587,9 @@
           if (!saveData.neural1945) {
             saveData.neural1945 = { highScore: 0, credits: 0, upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 } };
           }
-          saveData.neural1945.credits  = saveData.neural1945.credits  || 0;
-          saveData.neural1945.highScore= saveData.neural1945.highScore || 0;
-          saveData.neural1945.upgrades = saveData.neural1945.upgrades  || { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 };
+          saveData.neural1945.credits   = saveData.neural1945.credits   || 0;
+          saveData.neural1945.highScore = saveData.neural1945.highScore || 0;
+          saveData.neural1945.upgrades  = saveData.neural1945.upgrades  || { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 };
           // ── Neural Matrix migration ──
           saveData.neuralMatrix = saveData.neuralMatrix || {};
           // Ensure parasiteSeenThisSession starts as false (re-rolls once per session)

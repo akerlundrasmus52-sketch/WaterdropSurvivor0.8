@@ -585,14 +585,14 @@ window.NeuralMatrix = (function () {
       bloodAlchemy:     'Blood Alchemy active. The ground\'s suffering heals you.',
       kineticMirror:    'Kinetic Mirror armed. Their bullets become your weapons.',
       annunakiProtocol: 'THE ANNUNAKI PROTOCOL ENGAGED. Embrace the gold. Embrace the pain.',
-      atk1_left: 'Synapse reinforced. Attack power +1.',
-      atk1_top:  'Neural pathway boosted. Damage output rising.',
-      atk1_right:'Strike protocol updated. +1 ATK.',
-      spd1_left: 'Motor cortex calibrated. Speed +1.',
-      spd1_top:  'Velocity routines optimised.',
-      spd1_right:'Neural drift engaged. Movement faster.',
-      sleep_regen:'Sleep cycle enhanced. Regeneration active between runs.',
-      sleep_gold: 'Passive income protocol loaded. Gold accumulation rate increased.'
+      atk1_left:  'Synapse reinforced. Attack power +1.',
+      atk1_top:   'Neural pathway boosted. Damage output rising.',
+      atk1_right: 'Strike protocol updated. +1 ATK.',
+      spd1_left:  'Motor cortex calibrated. Speed +1.',
+      spd1_top:   'Velocity routines optimised.',
+      spd1_right: 'Neural drift engaged. Movement faster.',
+      sleep_regen: 'Sleep cycle enhanced. Regeneration active between runs.',
+      sleep_gold:  'Passive income protocol loaded. Gold accumulation rate increased.'
     };
     if (typeof window.showNarratorLine === 'function') {
       window.showNarratorLine('AIDA: ' + (flavour[nodeId] || 'Node unlocked.'), 3500);

@@ -357,9 +357,9 @@ window.AdvancedClicker = (function () {
   function getClickSE(data) {
     const ascMult   = 1 + (data.ascensions || 0) * ASCENSION_MULT_PER_LEVEL;
     const clickMult = getClickMult(data.upgrades);
-    const sePerSecond = Math.max(1, getTotalSEPS(data));
-    // Click gives 1% of total SEPS (min 1) × click upgrades × ascension bonus
-    return Math.max(1, sePerSecond * 0.01) * clickMult * ascMult;
+    // Click gives 1% of total SEPS × upgrades × ascension (min of 1 SE total)
+    const sePerSecond = getTotalSEPS(data);
+    return Math.max(1, sePerSecond * 0.01 * clickMult * ascMult);
   }
 
   // ─── Clicker "level" (logarithmic scale based on lifetime SE) ──────────
@@ -397,7 +397,7 @@ window.AdvancedClicker = (function () {
     const data = _getData(saveData);
     if (!data.lastTick) data.lastTick = Date.now();
 
-    const secs = Math.min(300, elapsedMs / 1000); // cap offline gain at 5 min
+    const secs = Math.min(300, elapsedMs / 1000); // cap offline gain at 300 seconds (5 minutes)
     const sePerSec = getTotalSEPS(data);
     const gained = sePerSec * secs;
 

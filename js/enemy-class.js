@@ -124,18 +124,21 @@
     // across all live enemy projectile meshes; only the Mesh instance itself is per-shot.
     // The pool below pre-allocates ENEMY_PROJ_POOL_SIZE meshes so that even firing-intensive
     // encounters don't allocate new objects mid-frame.
+    // 64 slots: typically ≤6 ranged enemies × fire-rate ~6 active projectiles each = ~36 concurrent;
+    // 64 gives comfortable headroom with minimal VRAM cost.
     const _ENEMY_PROJ_GEO = new THREE.SphereGeometry(0.2, 6, 6);
     const _ENEMY_PROJ_MAT = new THREE.MeshBasicMaterial({ color: 0xFF6347 });
     _ENEMY_PROJ_GEO._isShared = true;
     _ENEMY_PROJ_MAT._isShared = true;
-    const ENEMY_PROJ_POOL_SIZE = 64;
+    const ENEMY_PROJ_POOL_SIZE     = 64;  // Initial pool allocation
+    const ENEMY_PROJ_POOL_SIZE_MAX = 128; // Hard cap — beyond this, shots are silently dropped
     const _enemyProjPool = []; // pool of { mesh, active, ... } objects
     function _acquireEnemyProj() {
       for (let _ei = 0; _ei < _enemyProjPool.length; _ei++) {
         if (!_enemyProjPool[_ei].active) return _enemyProjPool[_ei];
       }
-      // Pool exhausted — create a new slot (bounded by practical limits)
-      if (_enemyProjPool.length < ENEMY_PROJ_POOL_SIZE * 2) {
+      // Pool exhausted — create a new slot up to the hard cap
+      if (_enemyProjPool.length < ENEMY_PROJ_POOL_SIZE_MAX) {
         const _m = new THREE.Mesh(_ENEMY_PROJ_GEO, _ENEMY_PROJ_MAT);
         _m.frustumCulled = false;
         const _slot = { mesh: _m, active: false, lifetime: 0, speed: 0, direction: new THREE.Vector3(), damage: 0 };
