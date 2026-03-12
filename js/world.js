@@ -20,7 +20,10 @@ const COLORS = {
 // Core game configuration constants
 const GAME_CONFIG = {
   playerSpeedBase: 0.10, // Slower start — upgrades improve speed
-  enemySpeedBase: 0.05,  // Slower as requested
+  // Enemy speed base is expressed in world units per second.
+  // Previous value (0.05) was scaled by a *60 multiplier in enemy code; after removing
+  // that multiplier enemies became effectively frozen. 3.0 restores the intended pace.
+  enemySpeedBase: 3.0,
   waveInterval: 300, // Frames between waves (approx 5s)
   expValue: 15,      // Increased from 10 — supports the Level-100 goal
   baseExpReq: 30,    // Increased from 20 — deeper XP curve for long progression
