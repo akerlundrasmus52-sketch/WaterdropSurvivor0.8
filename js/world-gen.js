@@ -807,13 +807,14 @@
       // Pyramid scattered stones — partially destroyed look (scattered/fallen stone blocks)
       const pyramidScatterMat = new THREE.MeshStandardMaterial({ color: 0xBBA080, roughness: 0.9, metalness: 0.0 });
       const pyramidScatterPositions = [
-        { x: 55, z: -55, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
-        { x: 44, z: -44, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
-        { x: 58, z: -44, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
-        { x: 43, z: -56, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
-        { x: 60, z: -50, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 },
-        { x: 47, z: -60, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
-        { x: 53, z: -42, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
+        // OPTIMIZED: Adjusted scatter positions around new pyramid location (25, -20)
+        { x: 32, z: -24, ry: 0.3, sx: 1.5, sy: 0.8, sz: 1.2 },
+        { x: 22, z: -22, ry: 1.1, sx: 1.0, sy: 0.6, sz: 1.0 },
+        { x: 34, z: -22, ry: 0.7, sx: 1.8, sy: 0.7, sz: 1.4 },
+        { x: 21, z: -27, ry: 0.2, sx: 1.2, sy: 0.5, sz: 0.9 },
+        { x: 35, z: -25, ry: 1.5, sx: 0.8, sy: 0.6, sz: 1.0 }, // OPTIMIZED from (60, -50)
+        { x: 24, z: -30, ry: 0.9, sx: 1.3, sy: 0.7, sz: 1.1 },
+        { x: 30, z: -18, ry: 0.4, sx: 0.6, sy: 0.4, sz: 0.8 },
       ];
       pyramidScatterPositions.forEach(pos => {
         const sGeo = new THREE.BoxGeometry(pos.sx, pos.sy, pos.sz);
@@ -2204,12 +2205,13 @@
       // Sand dunes in desert
       const sandMat = new THREE.MeshToonMaterial({ color: 0xE8C880 });
       const dunePositions = [
-        { x: 60, z: -50, rx: 0.6, rz: 1.2 },
-        { x: 84, z: -36, rx: 0.8, rz: 1.5 },
-        { x: 72, z: -78, rx: 0.5, rz: 1.0 },
-        { x: 96, z: -60, rx: 0.7, rz: 1.3 },
-        { x: 54, z: -90, rx: 0.6, rz: 1.1 },
-        { x: 102, z: -84, rx: 0.9, rz: 1.6 },
+        // OPTIMIZED: Adjusted sand dunes to cluster near pyramid and desert landmarks
+        { x: 35, z: -25, rx: 0.6, rz: 1.2 }, // OPTIMIZED from (60, -50) - near pyramid at (25, -20)
+        { x: 48, z: -18, rx: 0.8, rz: 1.5 }, // Adjusted closer
+        { x: 42, z: -38, rx: 0.5, rz: 1.0 }, // Adjusted closer
+        { x: 55, z: -30, rx: 0.7, rz: 1.3 }, // Adjusted closer
+        { x: 30, z: -42, rx: 0.6, rz: 1.1 }, // Adjusted closer
+        { x: 58, z: -42, rx: 0.9, rz: 1.6 }, // Adjusted closer
       ];
       dunePositions.forEach(d => {
         const duneGeo = new THREE.SphereGeometry(d.rx, 8, 6);
@@ -2360,10 +2362,11 @@
       const stonehengeTreeTrunkMat = new THREE.MeshToonMaterial({ color: 0x4A2C0A });
       const stonehengeTreeLeavesMat = new THREE.MeshToonMaterial({ color: 0x1A7A1A });
       const stonehengeDenseTreeData = [
-        {x:48, z:38}, {x:50, z:34}, {x:46, z:42}, {x:52, z:40},
-        {x:26, z:38}, {x:25, z:34}, {x:27, z:42}, {x:23, z:40},
-        {x:38, z:26}, {x:34, z:25}, {x:42, z:27}, {x:40, z:23},
-        {x:38, z:48}, {x:34, z:50}, {x:42, z:46}, {x:40, z:52},
+        // OPTIMIZED: Adjusted tree positions around Stonehenge (moved from ~60,50 to 35,30)
+        {x:28, z:22}, {x:30, z:18}, {x:26, z:26}, {x:32, z:24}, // NW cluster around (35, 30)
+        {x:40, z:28}, {x:42, z:24}, {x:38, z:32}, {x:44, z:30}, // NE cluster
+        {x:28, z:36}, {x:24, z:34}, {x:32, z:38}, {x:26, z:40}, // SW cluster
+        {x:40, z:36}, {x:42, z:32}, {x:38, z:40}, {x:44, z:38}, // SE cluster
       ];
       stonehengeDenseTreeData.forEach(td => {
         const tg = new THREE.Group();
@@ -2380,9 +2383,10 @@
       const mushroomCapMat = new THREE.MeshToonMaterial({ color: 0xC0392B }); // Red mushroom cap
       const mushroomStemMat = new THREE.MeshToonMaterial({ color: 0xFFF8DC }); // Cream stem
       const mushroomData = [
-        {x:45, z:45, s:1.0}, {x:52, z:48, s:0.7}, {x:54, z:42, s:1.2},
-        {x:42, z:54, s:0.8}, {x:60, z:48, s:1.0}, {x:48, z:60, s:0.6},
-        {x:66, z:42, s:1.3}, {x:40, z:66, s:0.9},
+        // OPTIMIZED: Adjusted mushroom positions to cluster around new Stonehenge location (35, 30)
+        {x:30, z:30, s:1.0}, {x:35, z:35, s:0.7}, {x:38, z:28, s:1.2},
+        {x:28, z:38, s:0.8}, {x:42, z:32, s:1.0}, {x:32, z:42, s:0.6},
+        {x:45, z:28, s:1.3}, {x:26, z:45, s:0.9},
       ];
       mushroomData.forEach(m => {
         const mGroup = new THREE.Group();
