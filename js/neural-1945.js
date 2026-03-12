@@ -14,7 +14,7 @@
   const SCROLL_SPEED = 1.5;
   const MAX_MAP_LEVEL = 100;
   const SHIP_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-  const MAX_SHIPS = 5;
+  const MAX_SHIPS = 3; // Limit to 3 ships as per game design requirements
 
   // Ship definitions with unique characteristics
   const SHIP_TYPES = [
