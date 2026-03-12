@@ -328,9 +328,9 @@
         bonus: (level) => ({})
       },
       warehouse: {
-        name: 'Warehouse',
-        icon: '🏪',
-        description: 'Store and manage your resources and items. Unlocked after Quest 7.',
+        name: 'Stat Cards',
+        icon: '🎰',
+        description: 'Spin the slot machine to unlock powerful permanent stat upgrades! Each roll costs gold and reveals a random stat card.',
         baseCost: 0,
         costMultiplier: 0,
         maxCost: 0,
