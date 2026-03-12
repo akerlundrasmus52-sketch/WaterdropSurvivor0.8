@@ -2656,11 +2656,20 @@
 
         // Propagate each enemy's current material colour as its per-instance colour so that
         // damage flashes (blood stain, freeze tint, etc.) are visible on instanced bodies.
-        // The batch materials use white base colour so setColorAt() passes through unchanged.
+        // CRITICAL FIX: For instanced enemies, use their stored base color (_baseColorHex)
+        // instead of material.color, because instanced enemies use shared white materials.
+        // This ensures each enemy type renders with its correct color (green, blue, teal, etc.)
+        // instead of all appearing white or green.
         for (let _ei = 0; _ei < enemies.length; _ei++) {
           const _e = enemies[_ei];
-          if (_e && _e.mesh && !_e.isDead && _e._usesInstancing && _e.mesh.material) {
-            _e._instanceColor = _e.mesh.material.color;
+          if (_e && _e.mesh && !_e.isDead && _e._usesInstancing) {
+            // Use the stored base color hex for instanced enemies
+            if (_e._baseColorHex !== undefined) {
+              _e._instanceColor = _e._baseColorHex;
+            } else if (_e.mesh.material) {
+              // Fallback to material color if base color not set
+              _e._instanceColor = _e.mesh.material.color;
+            }
           }
         }
 

@@ -616,6 +616,13 @@
         // Types whose material opacity/emissive must change per-instance get a clone.
         const _bodyGeo = getEnemyGeo(type);
         const _colorHex = _ENEMY_COLORS[type] !== undefined ? _ENEMY_COLORS[type] : DEFAULT_ENEMY_COLOR;
+
+        // CRITICAL FIX: Store the enemy's actual color for instanced rendering
+        // Instanced enemies (types 0,1,2) use shared white materials, but need their
+        // real color stored separately so the instanced renderer can apply per-instance
+        // color tinting. Without this, all instanced enemies render as white/green.
+        this._baseColorHex = _colorHex;
+
         // Types that animate their own material properties each frame need a per-instance copy
         const _needsUniqueMat = (type === 18 || type === 19 || type === 20);
         const _baseMat = getOrCreateMat(_colorHex,

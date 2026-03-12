@@ -36,6 +36,21 @@
       this._count = 0;
       this._prevCount = 0;
       this._dirty = false;
+
+      // CRITICAL FIX: Initialize instanceColor buffer for per-instance color tinting
+      // Without this, setColorAt() calls are silently ignored and all instances render
+      // with the base material color (white), making all enemies appear the same color.
+      // This buffer stores RGB color for each instance and is used by the shader to
+      // multiply against the base material color, allowing unique colors per enemy.
+      const colors = new Float32Array(maxCount * 3);
+      // Initialize all colors to white (1, 1, 1) so instances render normally by default
+      for (let i = 0; i < maxCount * 3; i += 3) {
+        colors[i] = 1.0;     // R
+        colors[i + 1] = 1.0; // G
+        colors[i + 2] = 1.0; // B
+      }
+      this.mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+      this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     }
 
     /** Begin a new frame — reset the instance counter. */
@@ -218,23 +233,40 @@
     // --- Enemy batches (one per common enemy geometry) ---------
     // Type 0 — Tank (sphere)
     // White base colour so per-instance setColorAt() renders the actual enemy colour correctly.
-    ir.register('enemy_tank', 
+    // CRITICAL: Use MeshPhongMaterial with emissive properties to match enemy-class.js
+    // Without emissive, enemies appear washed out and lose their characteristic glow.
+    ir.register('enemy_tank',
       new THREE.SphereGeometry(0.6, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.7, metalness: 0.1 }),
+      new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        emissive: 0xFFFFFF,
+        emissiveIntensity: 0.15,
+        shininess: 40
+      }),
       500
     );
 
     // Type 1 — Fast (capsule)
     ir.register('enemy_fast',
       new THREE.CapsuleGeometry(0.3, 0.8, 6, 8),
-      new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.6, metalness: 0.15 }),
+      new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        emissive: 0xFFFFFF,
+        emissiveIntensity: 0.15,
+        shininess: 40
+      }),
       500
     );
 
     // Type 2 — Balanced (dodecahedron)
     ir.register('enemy_balanced',
       new THREE.DodecahedronGeometry(0.5, 0),
-      new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.5, metalness: 0.2 }),
+      new THREE.MeshPhongMaterial({
+        color: 0xFFFFFF,
+        emissive: 0xFFFFFF,
+        emissiveIntensity: 0.15,
+        shininess: 40
+      }),
       500
     );
 
