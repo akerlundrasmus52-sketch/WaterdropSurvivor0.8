@@ -97,7 +97,7 @@
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
         // Core buildings — unlocked on first camp visit but must be BUILT (level 0→1)
-        questMission: { level: 0, maxLevel: 1, unlocked: true }, // BUILD required on first visit
+        questMission: { level: 0, maxLevel: 1, unlocked: false }, // Must unlock through gameplay
         inventory: { level: 1, maxLevel: 1, unlocked: true }, // Core free building — always built
         campHub: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked
         loreMaster: { level: 0, maxLevel: 1, unlocked: false }, // Initially locked (placeholder)
