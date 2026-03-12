@@ -518,8 +518,11 @@ window.WaterDropRunner = (function () {
 
     data.totalRuns = (data.totalRuns || 0) + 1;
 
-    canvas.width  = canvas.offsetWidth  || 600;
-    canvas.height = canvas.offsetHeight || 300;
+    // Use offsetWidth/Height with reliable fallbacks; getBoundingClientRect() returns
+    // fractional values even before layout paints, so use it as a secondary check.
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = Math.max(canvas.offsetWidth  || 0, Math.floor(rect.width)  || 0) || 600;
+    canvas.height = Math.max(canvas.offsetHeight || 0, Math.floor(rect.height) || 0) || 300;
 
     _lastTime = performance.now();
 

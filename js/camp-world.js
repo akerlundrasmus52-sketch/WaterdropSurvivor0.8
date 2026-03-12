@@ -4314,13 +4314,11 @@
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         const DS = window.DialogueSystem;
         if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
-          _menuOpen = true; _menuOpenTs = Date.now();
+          _openMenu();
           _playerVel.x = 0; _playerVel.z = 0;
           _keys = {}; _touch.active = false;
-          if (_promptEl) _promptEl.style.display = 'none';
-          if (_interactBtn) _interactBtn.style.display = 'none';
           DS.show(DS.DIALOGUES.aidaQuestHallHint, {
-            onComplete: function() { _menuOpen = false; }
+            onComplete: function() { _menuOpen = false; document.body.classList.remove('camp-menu-open'); }
           });
         }
         return;
@@ -4378,7 +4376,7 @@
     const fn = _callbacks[_nearBuilding];
     if (typeof fn === 'function') {
       // Pause camp input while the building menu is open
-      _menuOpen = true; _menuOpenTs = Date.now();
+      _openMenu();
       _playerVel.x = 0;
       _playerVel.z = 0;
       _keys = {};
@@ -4386,8 +4384,6 @@
       _touch.x = 0;
       _touch.y = 0;
       _hideTouchIndicator();
-      if (_promptEl) _promptEl.style.display = 'none';
-      if (_interactBtn) _interactBtn.style.display = 'none';
       // Hide A.I.D.A terminal dialogue when any building menu opens
       if (window.DialogueSystem && typeof window.DialogueSystem.hideOnMenuOpen === 'function') {
         window.DialogueSystem.hideOnMenuOpen();
@@ -4416,6 +4412,12 @@
     'progression-shop-overlay',
     // Profile/account building overlay
     'account-building-overlay',
+    // 1945 minigame overlay
+    'neural-1945-overlay',
+    // WaterDrop Runner overlay
+    'wdr-overlay',
+    // Advanced Clicker overlay
+    'adv-clicker-overlay',
   ];
   window._CAMP_OVERLAY_IDS = _OVERLAY_IDS;
 
@@ -4456,12 +4458,24 @@
   function _resumeInput() {
     if (!_menuOpen) return;
     _menuOpen = false;
+    document.body.classList.remove('camp-menu-open');
     _keys = {};
     _touch.active = false;
     _touch.x = 0;
     _touch.y = 0;
     // Refresh prompt in case building state changed while menu was open
     _updatePromptUI();
+  }
+
+  // Helper: mark menu as open, add CSS class to body, and immediately hide the interact prompt.
+  // Use this instead of setting _menuOpen manually to ensure the CSS class (used by
+  // .camp-menu-open #camp-interact-prompt { display: none !important }) is always in sync.
+  function _openMenu() {
+    _menuOpen = true; _menuOpenTs = Date.now();
+    document.body.classList.add('camp-menu-open');
+    if (_promptEl) _promptEl.style.display = 'none';
+    if (_interactBtn) _interactBtn.style.display = 'none';
+    if (_buildingNameEl) _buildingNameEl.style.display = 'none';
   }
 
   // ──────────────────────────────────────────────────────────
@@ -4981,19 +4995,22 @@
         'bottom:25%',
         'left:50%',
         'transform:translateX(-50%)',
-        'background:rgba(10,8,4,0.82)',
-        'border:2px solid #c8a248',
-        'border-radius:10px',
-        'color:#f0d890',
+        'background:rgba(5,4,2,0.88)',
+        'border:none',
+        'border-radius:50px',
+        'color:#f5e17a',
         'font-family:"Bangers",cursive',
         'font-size:18px',
-        'letter-spacing:1px',
-        'padding:10px 20px',
+        'letter-spacing:2px',
+        'padding:10px 28px',
         'display:none',
         'z-index:80',
         'pointer-events:none',
-        'text-shadow:0 0 8px rgba(200,162,72,0.6)',
-        'box-shadow:0 0 16px rgba(200,162,72,0.3)',
+        'text-shadow:0 0 10px rgba(255,220,80,0.7),0 0 20px rgba(255,180,0,0.4)',
+        'box-shadow:0 0 18px rgba(200,162,72,0.5),0 0 6px rgba(0,0,0,0.9)',
+        'backdrop-filter:blur(4px)',
+        '-webkit-backdrop-filter:blur(4px)',
+        'white-space:nowrap',
       ].join(';');
       document.body.appendChild(prompt);
       _promptEl = prompt;
@@ -5417,6 +5434,7 @@
     _isActive = false;
     if (typeof window._syncJoystickZone === 'function') window._syncJoystickZone();
     _menuOpen = false;
+    document.body.classList.remove('camp-menu-open');
     _keys = {};
     _touch.active = false;
     _touch.x = 0;
@@ -5538,6 +5556,7 @@
     const skills = sd.companions.greyAlien.skills;
     const sp = sd.companionSkillPoints || 0;
     _menuOpen = true; _menuOpenTs = Date.now();
+    document.body.classList.add('camp-menu-open');
 
     const overlay = document.createElement('div');
     overlay.style.cssText = [
@@ -5577,7 +5596,7 @@
             skills[id] = (skills[id] || 0) + 1;
             sd.companionSkillPoints = (sd.companionSkillPoints || 0) - 1;
             if (typeof saveSaveData === 'function') saveSaveData();
-            if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); _menuOpen = false; }
+            if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); _menuOpen = false; document.body.classList.remove('camp-menu-open'); }
             _showIncubatorSkillUI(); // Refresh
           }
         };
@@ -5606,7 +5625,7 @@
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '[ CLOSE ]';
     closeBtn.style.cssText = 'display:block;margin:14px auto 0;background:none;color:#00ff88;border:1px solid #00ff88;border-radius:3px;padding:6px 18px;cursor:pointer;font-family:inherit;letter-spacing:1px;';
-    closeBtn.onclick = function () { if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); _menuOpen = false; } };
+    closeBtn.onclick = function () { if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); _menuOpen = false; document.body.classList.remove('camp-menu-open'); } };
     panel.appendChild(closeBtn);
 
     overlay.appendChild(panel);
@@ -5801,7 +5820,7 @@
   window.CampWorld = {
     get isActive() { return _isActive; },
     get menuOpen() { return _menuOpen; },
-    pauseInput: function () { _menuOpen = true; _menuOpenTs = Date.now(); },
+    pauseInput: function () { _menuOpen = true; _menuOpenTs = Date.now(); document.body.classList.add('camp-menu-open'); },
     resumeInput: _resumeInput,
     _forceResumeInput: _resumeInput,
     enter,

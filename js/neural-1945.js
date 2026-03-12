@@ -336,7 +336,7 @@
       width: 100%;
       height: 100%;
       background: linear-gradient(180deg, #000814 0%, #001d3d 100%);
-      z-index: 1000;
+      z-index: 9100;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -485,7 +485,7 @@
       border: 3px solid #ffd700;
       border-radius: 20px;
       padding: 30px;
-      z-index: 1001;
+      z-index: 9101;
       max-width: 600px;
       max-height: 80vh;
       overflow-y: auto;
