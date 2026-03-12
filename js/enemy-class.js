@@ -75,6 +75,7 @@
         case 18: geo = new THREE.BoxGeometry(0.8, 0.9, 0.75);        break; // Reptilian Shifter — scaly block
         case 19: geo = new THREE.OctahedronGeometry(1.0, 1);         break; // Annunaki Orb
         case 20: geo = new THREE.DodecahedronGeometry(0.9, 0);       break; // Source Glitch
+        case 21: geo = new THREE.IcosahedronGeometry(0.75, 1);       break; // Water Organism — watery angular creature
         default: return SHARED_GEO.sphere; // Types 0,2,11 share generic sphere
       }
       SHARED_GEO_TYPE[type] = geo;
@@ -105,7 +106,8 @@
       0xAABBCC,  // 17: Grey Alien — blue-grey
       0x556633,  // 18: Reptilian Shifter — camo green
       0xFFD700,  // 19: Annunaki Orb — gold
-      0xFF00FF   // 20: Source Glitch — magenta
+      0xFF00FF,  // 20: Source Glitch — magenta
+      0x4FC3F7   // 21: Water Organism — cyan blue (matching player water color)
     ];
     // Fallback color for any type not listed in _ENEMY_COLORS
     const DEFAULT_ENEMY_COLOR = _ENEMY_COLORS[0]; // green (same as Tank/index-0)
@@ -113,7 +115,7 @@
     window._ENEMY_COLORS = _ENEMY_COLORS;
 
     // Enemy types that display eyes (creatures with recognizable faces)
-    const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17]);
+    const ENEMY_TYPES_WITH_EYES = new Set([0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 17, 21]);
 
     // Enemy types that fly (need a ground shadow disc)
     const ENEMY_TYPES_FLYING = new Set([5, 11, 14, 16, 17, 19]);

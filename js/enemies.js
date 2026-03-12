@@ -24,7 +24,8 @@ const ENEMY_TYPES = {
   GREY_ALIEN_SCOUT:  17, // Minute-10 alien scout — ranged kiter, drops Alien Biomatter
   REPTILIAN_SHIFTER: 18, // Active-camo flanker — 80% transparent, fully visible at ≤3 units
   ANNUNAKI_ORB:      19, // Minute-15 boss — golden geometric drone, teleports, laser sweep
-  SOURCE_GLITCH:     20  // Forbidden Protocol spawn — reality-breaking glitch entity
+  SOURCE_GLITCH:     20, // Forbidden Protocol spawn — reality-breaking glitch entity
+  WATER_ORGANISM:    21  // Level-1 water creature — camp-style graphics, balanced stats
 };
 
 const MINI_BOSS_HP_SCALING_RATE = 0.20; // 20% HP increase per player level above start (was 15%)
@@ -201,6 +202,10 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.projectileSpeed = 0.12;
     stats.aiBehavior     = 'annunaki';     // Custom behavior handled in enemy-class.js
     stats.elementalResistance = { fire: 0.20, ice: 0.20, lightning: 0.20, physical: 0.30 };
+  } else if (type === 21) {   // Water Organism — watery creature with camp-style graphics (level-1)
+    stats.hp    = 100 * ls;
+    stats.speed = speedBase * 1.8;
+    stats.aiBehavior = 'pack'; // Coordinates with others, spreads out
   }
 
   stats.maxHp  = stats.hp;
@@ -218,11 +223,12 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 18) stats.damage = 55  * ls;  // Reptilian Shifter — ambush strike
   if (type === 19) stats.damage = 120 * ls; // Annunaki Orb — laser devastation
   if (type === 20) stats.damage = 60  * ls; // Source Glitch — erratic digital strikes
+  if (type === 21) stats.damage = 40  * ls; // Water Organism — balanced melee damage
 
   // ── Phasing mutation (Level 60+) ────────────────────────────────────────────
-  // Above level 60 all basic enemy types (0–9, 12–16) can randomly phase —
+  // Above level 60 all basic enemy types (0–9, 12–16, 21) can randomly phase —
   // turning 50% transparent and absorbing the next hit entirely.
-  const PHASING_ELIGIBLE_TYPES = [0,1,2,3,4,5,6,7,8,9,12,13,14,15,16];
+  const PHASING_ELIGIBLE_TYPES = [0,1,2,3,4,5,6,7,8,9,12,13,14,15,16,21];
   if (playerLevel >= 60 && PHASING_ELIGIBLE_TYPES.includes(type)) {
     stats._phasingEnabled = true; // flag consumed by takeDamage() in enemy-class.js
   }
@@ -252,6 +258,7 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   if (type === 14) { stats.elementalResistance.lightning = -0.20; } // Bug Fast: lightning vulnerable
   if (type === 17) { stats.elementalResistance.fire = 0.10; stats.elementalResistance.ice = -0.20; } // Grey Alien: ice vulnerable
   if (type === 18) { stats.elementalResistance.lightning = -0.25; stats.elementalResistance.fire = 0.15; } // Reptilian: weak to lightning
+  if (type === 21) { stats.elementalResistance.lightning = -0.30; stats.elementalResistance.ice = 0.20; } // Water Organism: weak to lightning, resistant to ice
   // Type 19 (Annunaki Orb) elemental resistance is already set inline in the stats block above
 
   return stats;

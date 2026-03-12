@@ -4269,6 +4269,7 @@
         // 0: Tank, 1: Fast, 2: Balanced, 3: Slowing (lvl 8+), 4: Ranged (lvl 10+)
         // 5: Flying (lvl 8+), 6-9: Hard variants (lvl 12+), 12-14: Bug variants (lvl 15+)
         // 15: Daddy Longlegs spider (wave 1+), 16: Sweeping Swarm (after 3 kills, lvl 10+)
+        // 21: Water Organism (lvl 1+) - new camp-style graphics creature
 
         // Early game safety: runs 0 and 1 (the first two runs) spawn only gentle enemies
         const totalRuns = saveData.totalRuns || 0;
@@ -4283,26 +4284,26 @@
           if (playerStats.lvl >= 16) maxType = 8; // Add hard balanced
           if (playerStats.lvl >= 18) maxType = 9; // Add elite
         }
-        
+
         let type = Math.floor(Math.random() * (maxType + 1));
-        
+
         // Special spawning logic for specific types
         // Exclude type 4 (ranged) from random selection at level 8-9, only available at 10+
         if (type === 4 && playerStats.lvl < 10) {
           type = 3; // Fall back to slowing
         }
-        
+
         if (!isEarlyGame) {
           // Flying enemies (type 5) - 15% chance at level 8+
           if (playerStats.lvl >= 8 && Math.random() < 0.15) {
             type = 5;
           }
-          
+
           // Ranged enemies (type 4) - 30% chance at level 10+ for more variety
           if (type === 4 && Math.random() > 0.3) {
             type = Math.floor(Math.random() * 3);
           }
-          
+
           // Hard variants (6-9) - reduce spawn rate to 30%
           if (type >= 6 && type <= 9 && Math.random() > 0.3) {
             // Fallback to types 0-5 (all basic types)
@@ -4313,27 +4314,35 @@
               type = Math.floor(Math.random() * 3);
             }
           }
-          
+
+          // Water Organism (type 21) — available from level 1, ~20% chance
+          // Camp-style graphics creature with balanced stats
+          if (Math.random() < 0.20) {
+            type = 21;
+          }
+
           // Daddy Longlegs spider (type 15) — available from wave 1, ~15% chance
           if (Math.random() < 0.15) {
             type = 15;
           }
-          
+
           // Bug/water-being enemies (types 12-14) — available from level 15+
           // ~20% chance to spawn one of the bug variants when available
           if (playerStats.lvl >= 15 && Math.random() < 0.20) {
             type = 12 + Math.floor(Math.random() * 3); // 12, 13, or 14
           }
-          
+
           // Sweeping Swarm (type 16) — available after 3 kills + level 10+, ~10% chance
           const killsMilestone = saveData.totalKills || 0;
           if (playerStats.lvl >= 10 && killsMilestone >= 3 && Math.random() < 0.10) {
             type = 16;
           }
         } else {
-          // Early game: reliably include Daddy Longlegs (spider) and the
-          // yellow easy enemy (type 7 — visually distinct, manageable at low levels)
-          if (Math.random() < 0.30) {
+          // Early game: reliably include Water Organism (type 21), Daddy Longlegs (spider),
+          // and the yellow easy enemy (type 7 — visually distinct, manageable at low levels)
+          if (Math.random() < 0.25) {
+            type = 21; // Water Organism — camp-style creature, balanced stats
+          } else if (Math.random() < 0.30) {
             type = 15; // Daddy Longlegs — tiny body, huge legs, low HP like yellow enemy
           } else if (Math.random() < 0.25) {
             type = 7;  // Yellow easy enemy — gold colour, low HP at early-game scaling
