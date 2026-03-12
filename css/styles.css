@@ -2644,7 +2644,6 @@
       z-index: 10000;
       overflow: hidden;
       transition: opacity 0.5s ease-out;
-      filter: brightness(0.82) contrast(1.08) saturate(0.98);
     }
 
     #loading-screen.fade-out {

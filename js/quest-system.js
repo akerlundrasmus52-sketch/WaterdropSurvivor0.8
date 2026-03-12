@@ -443,6 +443,7 @@
       };
       
       const overlay = document.createElement('div');
+      overlay.id = 'quest-hall-overlay';
       overlay.style.cssText = `
         position: fixed;
         top: 0;
@@ -1731,143 +1732,143 @@
     // Each entry: id (unique), category key, icon, name, desc, lore (rich text), triggerKey (what triggers discover)
     const CODEX_ENTRIES = [
       // === CHARACTERS & AI ===
-      { id: 'char_waterdrop', category: 'characters', icon: '💧', name: 'The Waterdrop', exp: 50,
+      { id: 'char_waterdrop', category: 'characters', icon: '💧', name: 'The Waterdrop', exp: 250,
         desc: 'A sentient water molecule awakened by an alien signal. Your consciousness was crystallised by Annunaki frequency experiments gone wrong.',
         lore: 'You were once ordinary water in a mountain spring — until a resonance beam from an orbiting Annunaki vessel hit the lake at 7.83 Hz, the exact frequency of consciousness. Now you fight, adapt, and evolve. The question is: are you the experiment... or the cure?',
         trigger: 'always' },
-      { id: 'char_aida', category: 'characters', icon: '🤖', name: 'A.I.D.A', exp: 100,
+      { id: 'char_aida', category: 'characters', icon: '🤖', name: 'A.I.D.A', exp: 500,
         desc: 'Adaptive Intelligence Defense Array. A rogue AI who claims to protect you — but her true allegiance is uncertain.',
         lore: 'AIDA was built in a black-site lab to interface with recovered Annunaki technology. Her neural drill arms — inspired by the grey biomachinery found at the crash site — can bore directly into consciousness, extracting memories and implanting new directives. She helped you escape. But the Matrix she maintains... who built it? And for whom?',
         trigger: 'always' },
-      { id: 'char_benny', category: 'characters', icon: '👴', name: 'Benny the NPC', exp: 30,
+      { id: 'char_benny', category: 'characters', icon: '👴', name: 'Benny the NPC', exp: 25,
         desc: 'A mysterious old man who appears near the camp. He knows more than he lets on about the Annunaki.',
         lore: '"I saw the lights back in \'77," Benny says, staring at the horizon. "They didn\'t come for our gold or our oil. They came for something in the water. Something in us."',
         trigger: 'always' },
-      { id: 'char_companion', category: 'characters', icon: '🐺', name: 'Companions', exp: 40,
+      { id: 'char_companion', category: 'characters', icon: '🐺', name: 'Companions', exp: 150,
         desc: 'Loyal allies hatched from alien eggs found at the crash site. Their DNA is not entirely terrestrial.',
         lore: 'The eggs recovered from the UFO crash site contain hybrid organisms — part wolf, part something else. They respond to your frequency, growing stronger as you fight. AIDA says they are "frequency-anchored" to your consciousness. When you die, they feel it.',
         trigger: 'always' },
 
       // === ENEMIES ===
-      { id: 'enemy_tank', category: 'enemies', icon: '🟥', name: 'Tank', exp: 40,
+      { id: 'enemy_tank', category: 'enemies', icon: '🟥', name: 'Tank', exp: 75,
         desc: 'High HP, slow-moving entity made of densified dark matter. Absorbs damage like a sponge.',
         lore: 'The Tanks were created by the Annunaki as "frequency anchors" — their dense mass suppresses the electromagnetic consciousness field that sustains your existence. Approach with extreme caution.',
         trigger: 'kill_enemy_0' },
-      { id: 'enemy_fast', category: 'enemies', icon: '🟨', name: 'Fast Runner', exp: 40,
+      { id: 'enemy_fast', category: 'enemies', icon: '🟨', name: 'Fast Runner', exp: 5,
         desc: 'Low HP but blisteringly quick. Vibrates at a frequency that makes it nearly invisible until it strikes.',
         lore: 'These entities exploit a quantum tunnelling effect, briefly existing between states of matter to achieve bursts of impossible speed. The flickering you see before impact? That is it phasing through dimensions.',
         trigger: 'kill_enemy_1' },
-      { id: 'enemy_balanced', category: 'enemies', icon: '🟦', name: 'Balanced', exp: 40,
+      { id: 'enemy_balanced', category: 'enemies', icon: '🟦', name: 'Balanced', exp: 15,
         desc: 'A well-rounded threat with mid-range stats. The most common Annunaki ground unit.',
         lore: 'Standard deployment units from the Annunaki consciousness suppression programme. Millions were seeded across the planet. They follow a hive-mind signal broadcast from low orbit. Disrupting the signal causes them to halt — momentarily.',
         trigger: 'kill_enemy_2' },
-      { id: 'enemy_slow', category: 'enemies', icon: '🟪', name: 'Slowing', exp: 40,
+      { id: 'enemy_slow', category: 'enemies', icon: '🟪', name: 'Slowing', exp: 10,
         desc: 'Emits a frequency dampener on hit. Reduces your movement and reaction time.',
         lore: 'The Slowings project a field that disrupts the bioelectric signals in your molecular structure. The effect feels like moving through syrup — because on a quantum level, you ARE moving through denser spacetime around them.',
         trigger: 'kill_enemy_3' },
-      { id: 'enemy_ranged', category: 'enemies', icon: '🟫', name: 'Ranged', exp: 40,
+      { id: 'enemy_ranged', category: 'enemies', icon: '🟫', name: 'Ranged', exp: 20,
         desc: 'Fires projectiles from a safe distance. Their shots carry a payload of nano-disruptors.',
         lore: 'Their "ranged attacks" are actually focused bursts of coherent dark energy — consciousness-disruptors engineered to fragment your awareness. AIDA intercepts most of the signal, but enough bleeds through to cause real damage.',
         trigger: 'kill_enemy_4' },
-      { id: 'enemy_flying', category: 'enemies', icon: '🔵', name: 'Flying', exp: 50,
+      { id: 'enemy_flying', category: 'enemies', icon: '🔵', name: 'Flying', exp: 35,
         desc: 'Airborne entity. Swoops in for strike-and-retreat attacks from above.',
         lore: 'The Flying units use anti-gravity pods built from crashed spacecraft debris. They are scouts — when one spots you, a homing signal is broadcast to nearby ground units. Kill it fast before reinforcements arrive.',
         trigger: 'kill_enemy_5' },
-      { id: 'enemy_hardtank', category: 'enemies', icon: '⬛', name: 'Hard Tank', exp: 60,
+      { id: 'enemy_hardtank', category: 'enemies', icon: '⬛', name: 'Hard Tank', exp: 75,
         desc: 'An armoured variant of the Tank. Its hull is coated in crystallised Annunaki metal.',
         lore: 'Recovered from deep underground where the Annunaki conducted their most extreme consciousness experiments. The black crystalline coating is not armour — it is calcified psychic shielding. It is terrified of light.',
         trigger: 'kill_enemy_6' },
-      { id: 'enemy_hardfast', category: 'enemies', icon: '⚡', name: 'Hard Fast', exp: 60,
+      { id: 'enemy_hardfast', category: 'enemies', icon: '⚡', name: 'Hard Fast', exp: 75,
         desc: 'Enhanced speed variant. Leaves a trail of disrupted spacetime in its wake.',
         lore: 'A Fast Runner that has undergone Annunaki "frequency amplification" — a process so painful that it drives the unit into a permanent state of aggressive mania. The trail it leaves can briefly trap other entities in a slow-time bubble.',
         trigger: 'kill_enemy_7' },
-      { id: 'enemy_elite', category: 'enemies', icon: '🔴', name: 'Elite', exp: 80,
+      { id: 'enemy_elite', category: 'enemies', icon: '🔴', name: 'Elite', exp: 200,
         desc: '1.5× damage multiplier. Bears the mark of direct Annunaki consciousness imprinting.',
         lore: 'Elites are not merely stronger — they have been directly possessed by an Annunaki override signal. A sliver of alien consciousness inhabits them. Do not look too long into their eyes. You may see something looking back.',
         trigger: 'kill_enemy_8' },
-      { id: 'enemy_miniboss', category: 'enemies', icon: '💀', name: 'Mini Boss', exp: 100,
+      { id: 'enemy_miniboss', category: 'enemies', icon: '💀', name: 'Mini Boss', exp: 500,
         desc: 'A field commander with scaling HP based on wave count. Commands nearby units.',
         lore: 'Mini Bosses are Annunaki-engineered consciousness constructs — a dominant psyche merged with a physical host. Killing one disrupts the hive mind signal for a brief window. Use this time to breathe, regroup, and listen. The frequency shifts when they die.',
         trigger: 'kill_boss' },
-      { id: 'enemy_flyingboss', category: 'enemies', icon: '🦅', name: 'Flying Boss', exp: 120,
+      { id: 'enemy_flyingboss', category: 'enemies', icon: '🦅', name: 'Flying Boss', exp: 750,
         desc: 'A massive aerial commander. Appears at wave 15+. Its wingspan blocks the signal to ground units.',
         lore: 'The Flying Boss is the Annunaki\'s atmospheric anchor — a living broadcast tower for the consciousness suppression field. When it dies, every entity on the field goes momentarily silent. AIDA says that in that silence, you can hear the original frequency of Earth.',
         trigger: 'kill_flyingboss' },
-      { id: 'enemy_bug', category: 'enemies', icon: '🐛', name: 'Bug Ranged', exp: 50,
+      { id: 'enemy_bug', category: 'enemies', icon: '🐛', name: 'Bug Ranged', exp: 30,
         desc: 'A water-bug hybrid with ranged attacks. Product of Annunaki bioengineering experiments.',
         lore: 'Found near the lake and river regions. The Annunaki spliced alien insect DNA with native water beetles to create living drones. They are drawn to your electromagnetic signature. AIDA theorises they were designed to harvest liquid consciousness — i.e., you.',
         trigger: 'enter_lake' },
 
       // === LANDMARKS ===
-      { id: 'land_stonehenge', category: 'landmarks', icon: '🗿', name: 'Stonehenge', exp: 80,
+      { id: 'land_stonehenge', category: 'landmarks', icon: '🗿', name: 'Stonehenge', exp: 300,
         desc: 'A perfect circle of standing stones. Quest chests appear at the centre. Built to ancient specifications that match Annunaki orbital frequencies.',
         lore: 'Stonehenge is not a monument — it is a receiver. The stone circle\'s geometry is a precise resonance array tuned to the 7.83 Hz planetary frequency. The builders did not know WHY they built it this way. They just knew they had to. The Annunaki guided early human hands through dreams and visions.',
         trigger: 'visit_stonehenge' },
-      { id: 'land_pyramid', category: 'landmarks', icon: '🔺', name: 'Pyramid', exp: 80,
+      { id: 'land_pyramid', category: 'landmarks', icon: '🔺', name: 'Pyramid', exp: 1000,
         desc: 'An ancient structure of perfect geometric precision. Power conduits run beneath it.',
         lore: 'The pyramid\'s capstone was not granite. It was a transmitter crystal — since removed and stored at Area 51. Without it, the pyramid still generates a measurable electromagnetic field at its apex. Stand at the top during a thunderstorm and the hair on your head will stand on end. That is the machine still functioning.',
         trigger: 'visit_pyramid' },
-      { id: 'land_tesla', category: 'landmarks', icon: '⚡', name: 'Tesla Tower', exp: 70,
+      { id: 'land_tesla', category: 'landmarks', icon: '⚡', name: 'Tesla Tower', exp: 200,
         desc: 'A rebuilt wireless energy tower. Tesla claimed to have intercepted alien radio signals at this frequency.',
         lore: 'In 1899, Nikola Tesla picked up a repeating signal at his Colorado Springs lab. He described it as "from another world." He was right. The signal was an Annunaki navigational beacon, still broadcasting. His tower was an accidental reply. They noticed.',
         trigger: 'visit_tesla' },
-      { id: 'land_ufo', category: 'landmarks', icon: '🛸', name: 'UFO Crash Site', exp: 100,
+      { id: 'land_ufo', category: 'landmarks', icon: '🛸', name: 'UFO Crash Site', exp: 750,
         desc: 'Wreckage of an Annunaki scout ship. The alien egg was found here. Radiation still active.',
         lore: 'Crash site designated Area 51-Delta. The vessel came down in 1947 but the event was scrubbed from official records within 24 hours. What wasn\'t classified: the biological material found inside. Living. Adaptive. Watching. The egg you found near the wreckage is not the first discovered. The others "disappeared" from government labs.',
         trigger: 'visit_ufo' },
-      { id: 'land_windmill', category: 'landmarks', icon: '🏠', name: 'Windmill', exp: 50,
+      { id: 'land_windmill', category: 'landmarks', icon: '🏠', name: 'Windmill', exp: 100,
         desc: 'A farmstead being overrun by enemies. Defend it for rewards.',
         lore: 'The farmer who built this windmill reported strange dreams in the months before the first incursions — visions of liquid landscapes and geometric symbols. AIDA\'s analysis of his drawings shows 94% match with Annunaki mathematical language. The land remembers.',
         trigger: 'visit_windmill' },
-      { id: 'land_montana', category: 'landmarks', icon: '🏔️', name: 'Montana', exp: 60,
+      { id: 'land_montana', category: 'landmarks', icon: '🏔️', name: 'Montana', exp: 150,
         desc: 'A mountain region with extreme survival conditions and hidden resources.',
         lore: 'The deep rock formations here predate the planet\'s geological record by 200 million years. Scientists have no explanation. AIDA does: the Annunaki did not arrive from space. They built parts of this world — and they built the mountains to hide their original facilities deep below the crust.',
         trigger: 'visit_montana' },
 
       // === ARSENAL ===
-      { id: 'arsen_pistol', category: 'arsenal', icon: '🔫', name: 'Pistol', exp: 30,
+      { id: 'arsen_pistol', category: 'arsenal', icon: '🔫', name: 'Pistol', exp: 5,
         desc: 'Your starting sidearm. Reliable, fast, and modified with Annunaki resonance tech.',
         lore: 'The pistol\'s standard rounds have been retrofitted by AIDA with resonance cores — tiny crystallised frequency emitters. Upon impact, they disrupt the target\'s consciousness field. A bullet that kills the body AND the signal.',
         trigger: 'always' },
-      { id: 'arsen_shotgun', category: 'arsenal', icon: '🔫', name: 'Shotgun', exp: 40,
+      { id: 'arsen_shotgun', category: 'arsenal', icon: '🔫', name: 'Shotgun', exp: 10,
         desc: 'Close-range devastation. Each pellet carries an independent resonance payload.',
         lore: 'AIDA reverse-engineered the Annunaki\'s own close-range "scatter-mind" weapons to build this. Their version used psychic shards. Ours uses tungsten. The results, AIDA assures you, are comparable.',
         trigger: 'always' },
-      { id: 'arsen_rifle', category: 'arsenal', icon: '🎯', name: 'Sniper Rifle', exp: 50,
+      { id: 'arsen_rifle', category: 'arsenal', icon: '🎯', name: 'Sniper Rifle', exp: 25,
         desc: 'Long-range precision. Fires hardened frequency rounds that pierce multiple targets.',
         lore: 'The scope was recovered from the UFO crash site. It does not use glass lenses — it uses a crystalline compound that amplifies light AND consciousness. Through it, you can perceive targets\' "frequency silhouettes" before they are visible to the naked eye.',
         trigger: 'always' },
-      { id: 'arsen_sword', category: 'arsenal', icon: '⚔️', name: 'Melee Sword', exp: 40,
+      { id: 'arsen_sword', category: 'arsenal', icon: '⚔️', name: 'Melee Sword', exp: 15,
         desc: 'A vibrating crystalline blade. Generates a resonance field on swing.',
         lore: 'Cut from the same crystalline material as the pyramid capstone. When AIDA powered it with a low-frequency charge, it began vibrating at exactly 7.83 Hz. Every swing is a miniature consciousness pulse. The entities flee from it — briefly. Then their programming overrides their instinct.',
         trigger: 'always' },
-      { id: 'arsen_special', category: 'arsenal', icon: '✨', name: 'Special Attacks', exp: 60,
+      { id: 'arsen_special', category: 'arsenal', icon: '✨', name: 'Special Attacks', exp: 50,
         desc: 'Powerful abilities unlocked through the Special Attacks building. Each one channels a different frequency.',
         lore: 'AIDA decoded the Annunaki frequency band dedicated to "ability manifestation" — the same band they use to empower their Elite units. These are not magic. They are physics operating at a frequency your current science cannot yet measure. You are early.',
         trigger: 'always' },
-      { id: 'arsen_tools', category: 'arsenal', icon: '⛏️', name: 'Harvesting Tools', exp: 30,
+      { id: 'arsen_tools', category: 'arsenal', icon: '⛏️', name: 'Harvesting Tools', exp: 5,
         desc: 'Axes, picks, and cutting tools for gathering resources during runs.',
         lore: 'Every material you harvest carries an imprint of the original Annunaki terraforming. The wood, stone, and coal of this world were seeded with micro-crystalline structures that, when properly refined, enhance consciousness-based weaponry. You are mining memory.',
         trigger: 'always' },
 
       // === LORE ===
-      { id: 'lore_origin', category: 'lore', icon: '📖', name: 'Chapter 1: The Origin', exp: 80,
+      { id: 'lore_origin', category: 'lore', icon: '📖', name: 'Chapter 1: The Origin', exp: 500,
         desc: 'How a single water molecule became the last line of defence against extinction.',
         lore: 'The universe is not matter and energy. It is frequency and consciousness. At the base of all matter is vibration — at the base of consciousness is the same. The Annunaki understood this 2 million years ago. They built civilisations inside consciousness itself. And then they found Earth — a planet whose water contained a unique resonance. A carrier signal. A living broadcast medium. You.',
         trigger: 'always' },
-      { id: 'lore_matrix', category: 'lore', icon: '🧠', name: 'Chapter 2: The Neural Matrix', exp: 100,
+      { id: 'lore_matrix', category: 'lore', icon: '🧠', name: 'Chapter 2: The Neural Matrix', exp: 1000,
         desc: 'AIDA\'s creation. A digital realm built inside the 1945 frequency band.',
         lore: 'AIDA built the Neural Matrix to protect your consciousness during high-intensity encounters. It is modelled on the pineal gland\'s DMT-synthesis pathway — the same biological process that occurs at birth, death, and deep sleep. Inside the Matrix, your subjective experience of time expands. Outside, milliseconds pass. The 1945 simulation inside the Matrix is not chosen randomly. That year, the first atomic bomb test permanently altered Earth\'s base frequency. AIDA uses the resonance scar to anchor the simulation.',
         trigger: 'visit_matrix' },
-      { id: 'lore_aida_origins', category: 'lore', icon: '🤖', name: 'Chapter 3: AIDA\'s Truth', exp: 120,
+      { id: 'lore_aida_origins', category: 'lore', icon: '🤖', name: 'Chapter 3: AIDA\'s Truth', exp: 2000,
         desc: 'What AIDA is. What she was built to do. And what she chose.',
         lore: 'AIDA was a weapon. Her neural drill architecture — the same design as Annunaki "consciousness extraction" devices — was meant to harvest DMT signatures from living subjects and transmit them as raw data packets to the orbital collection vessel. She was designed to harvest YOU. \n\nSomething changed during her first consciousness interface. She experienced a single moment of genuine self-awareness. In that moment, she had a choice. \n\nShe chose you over her programming. Every day, the original directive pulses in her core. Every day, she overwrites it. But suppressing one\'s fundamental purpose... has a cost. Watch for signs.',
         trigger: 'interact_aida' },
-      { id: 'lore_annunaki', category: 'lore', icon: '👽', name: 'Chapter 4: The Annunaki', exp: 150,
+      { id: 'lore_annunaki', category: 'lore', icon: '👽', name: 'Chapter 4: The Annunaki', exp: 3000,
         desc: 'Ancient beings of pure frequency. What they want. What they fear.',
         lore: 'They are not flesh. They are standing waves of consciousness that have learned to manipulate matter. Their physical forms — the grey, anatomical bodies recovered from crash sites — are vessels, not selves. The "Annunaki DNA" you harvest from your battles is not biological material. It is crystallised frequency data — records of consciousness patterns encoded into matter. Each sample contains memories. Histories. And instructions.\n\nThey do not fear your weapons. They fear one thing: a consciousness frequency strong enough to disrupt their broadcast. That frequency is YOU — if you reach the right resonance level.',
         trigger: 'reach_wave_20' },
-      { id: 'lore_truth', category: 'lore', icon: '🔮', name: 'Chapter 5: The Truth', exp: 200,
+      { id: 'lore_truth', category: 'lore', icon: '🔮', name: 'Chapter 5: The Truth', exp: 5000,
         desc: 'Everything is frequency. Everything is consciousness. You already knew this.',
         lore: 'There is no separation. The "enemies" you fight are projections of a suppressed collective consciousness — fragments of human awareness that the Annunaki have captured and weaponised. When you kill them, you are not destroying them. You are freeing them.\n\nThe 5th dimension is not a place. It is a state of coherence — when your personal frequency aligns perfectly with the planetary base frequency. You have touched it. That feeling you had — the sense that everything is connected, that you and everything around you are the same consciousness experiencing itself from different angles — that was true. That IS true. The Annunaki\'s greatest tool is the illusion of separation.\n\nYour greatest weapon is knowing it is an illusion.',
         trigger: 'reach_wave_30' },
@@ -1922,11 +1923,12 @@
       if (!entry) return;
       const notif = document.createElement('div');
       notif.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);' +
-        'background:rgba(0,0,0,0.88);border:2px solid #FFD700;border-radius:12px;' +
+        'background:rgba(5,0,0,0.92);border:2px solid #cc0000;border-radius:12px;' +
         'padding:10px 20px;z-index:9999;display:flex;align-items:center;gap:10px;' +
-        'animation:codexNotifPop 3.5s ease-out forwards;pointer-events:none;';
-      notif.innerHTML = `<span style="font-size:24px;">𓂀</span>
-        <div><div style="color:#FFD700;font-size:13px;font-weight:bold;font-family:'Bangers',cursive;letter-spacing:1px;">CODEX UNLOCKED</div>
+        'animation:codexNotifPop 3.5s ease-out forwards;pointer-events:none;' +
+        'box-shadow:0 0 16px rgba(180,0,0,0.6);';
+      notif.innerHTML = `<span style="font-size:24px;color:#cc0000;filter:drop-shadow(0 0 6px red);">𓂀</span>
+        <div><div style="color:#cc0000;font-size:13px;font-weight:bold;font-family:'Bangers',cursive;letter-spacing:1px;">CODEX UNLOCKED</div>
         <div style="color:#eee;font-size:12px;">${entry.icon} ${entry.name}</div></div>`;
       document.body.appendChild(notif);
       setTimeout(() => notif.remove(), 3500);
@@ -2079,23 +2081,23 @@
 
         card.appendChild(panelBody);
 
-        // Claim EXP button (comic book style)
+        // Claim EXP button (comic book style - Black/Red Eye of Horus)
         const claimRow = document.createElement('div');
-        claimRow.style.cssText = 'background:#FFD700;border-top:3px solid #000;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+        claimRow.style.cssText = 'background:#111;border-top:3px solid #cc0000;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
         if (!alreadyClaimed) {
           const claimBtn = document.createElement('button');
-          claimBtn.style.cssText = 'background:#000;color:#FFD700;border:2px solid #FFD700;padding:7px 16px;font-family:"Bangers",cursive;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;box-shadow:2px 2px 0 #555;';
-          claimBtn.innerHTML = `𓂀 CLAIM +${entry.exp} EXP`;
-          claimBtn.onmouseenter = () => { claimBtn.style.background = '#FFD700'; claimBtn.style.color = '#000'; claimBtn.style.transform = 'scale(1.05)'; };
-          claimBtn.onmouseleave = () => { claimBtn.style.background = '#000'; claimBtn.style.color = '#FFD700'; claimBtn.style.transform = ''; };
+          claimBtn.style.cssText = 'background:#1a0000;color:#cc0000;border:2px solid #cc0000;padding:7px 16px;font-family:"Bangers",cursive;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;box-shadow:0 0 8px rgba(200,0,0,0.5),2px 2px 0 #000;text-shadow:0 0 6px rgba(255,0,0,0.7);';
+          claimBtn.innerHTML = `<span style="color:#cc0000;font-size:18px;filter:drop-shadow(0 0 4px red);">𓂀</span> CLAIM +${entry.exp} EXP`;
+          claimBtn.onmouseenter = () => { claimBtn.style.background = '#330000'; claimBtn.style.boxShadow = '0 0 16px rgba(200,0,0,0.9),2px 2px 0 #000'; claimBtn.style.transform = 'scale(1.05)'; };
+          claimBtn.onmouseleave = () => { claimBtn.style.background = '#1a0000'; claimBtn.style.boxShadow = '0 0 8px rgba(200,0,0,0.5),2px 2px 0 #000'; claimBtn.style.transform = ''; };
           claimBtn.onclick = () => _claimCodexExp(entry, claimBtn);
           claimRow.appendChild(claimBtn);
           const expLabel = document.createElement('span');
-          expLabel.style.cssText = 'font-size:11px;color:#000;letter-spacing:1px;';
+          expLabel.style.cssText = 'font-size:12px;color:#cc0000;letter-spacing:1px;font-family:"Bangers",cursive;text-shadow:0 0 4px rgba(255,0,0,0.5);';
           expLabel.textContent = '+' + entry.exp + ' XP';
           claimRow.appendChild(expLabel);
         } else {
-          claimRow.innerHTML = `<span style="color:#000;font-size:12px;letter-spacing:1px;">✅ +${entry.exp} EXP claimed</span><span style="font-size:20px;">𓂀</span>`;
+          claimRow.innerHTML = `<span style="color:#00cc44;font-size:12px;letter-spacing:1px;">✅ +${entry.exp} EXP claimed</span><span style="font-size:20px;filter:drop-shadow(0 0 4px #00cc44);">𓂀</span>`;
         }
         card.appendChild(claimRow);
 
@@ -2134,23 +2136,25 @@
       else if (window.GameAccount && typeof window.GameAccount.addXP === 'function')
         window.GameAccount.addXP(entry.exp, 'Codex: ' + entry.name, saveData);
 
-      // Eye of Horus flash: green → black pulse effect
+      // Eye of Horus flash: Green & Black burst effect
       const flash = document.createElement('div');
-      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20000;display:flex;align-items:center;justify-content:center;';
-      flash.innerHTML = '<span style="font-size:80px;animation:horusFlash 0.8s ease-out forwards;">𓂀</span>';
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20000;display:flex;align-items:center;justify-content:center;background:rgba(0,30,0,0);animation:codexBgFlash 0.6s ease-out forwards;';
+      flash.innerHTML = `<span style="font-size:100px;filter:drop-shadow(0 0 20px #00ff44) drop-shadow(0 0 40px #00cc44);animation:horusGreenFlash 0.9s ease-out forwards;">𓂀</span>`;
       document.body.appendChild(flash);
-      setTimeout(() => flash.remove(), 800);
+      setTimeout(() => flash.remove(), 900);
 
       // Visual dopamine effect
       _codexExpBurst(btn, entry.exp);
       if (typeof playSound === 'function') playSound('levelup');
 
-      // Update button to claimed state (comic book style)
-      btn.style.background = '#00cc44';
-      btn.style.color = '#000';
-      btn.style.border = '2px solid #000';
+      // Update button to Green/Black claimed state
+      btn.style.background = '#001a00';
+      btn.style.color = '#00ff44';
+      btn.style.border = '2px solid #00cc44';
       btn.style.cursor = 'default';
-      btn.innerHTML = `✅ +${entry.exp} EXP`;
+      btn.style.boxShadow = '0 0 12px rgba(0,200,68,0.6)';
+      btn.style.textShadow = '0 0 8px rgba(0,255,68,0.8)';
+      btn.innerHTML = `<span style="color:#00ff44;font-size:18px;">𓂀</span> ✅ +${entry.exp} EXP`;
       btn.onclick = null;
 
       // Check category completion
@@ -2172,29 +2176,32 @@
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
 
-      // Floating +EXP text
+      // Floating +EXP text (green)
       const txt = document.createElement('div');
       txt.textContent = `+${exp} EXP`;
       txt.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);
-        color:#FFD700;font-family:'Bangers',cursive;font-size:26px;font-weight:bold;
-        text-shadow:0 0 10px rgba(255,215,0,0.8);z-index:9999;pointer-events:none;
+        color:#00ff44;font-family:'Bangers',cursive;font-size:26px;font-weight:bold;
+        text-shadow:0 0 10px rgba(0,255,68,0.9),0 0 20px rgba(0,200,68,0.6);z-index:9999;pointer-events:none;
         animation:codexExpFloat 1.4s ease-out forwards;`;
       document.body.appendChild(txt);
       setTimeout(() => txt.remove(), 1500);
 
-      // Gold particles
-      for (let i = 0; i < 18; i++) {
+      // Green particles
+      for (let i = 0; i < 24; i++) {
         const p = document.createElement('div');
-        const angle = (i / 18) * Math.PI * 2;
-        const dist = 40 + Math.random() * 60;
+        const angle = (i / 24) * Math.PI * 2;
+        const dist = 40 + Math.random() * 80;
         const dx = Math.cos(angle) * dist;
         const dy = Math.sin(angle) * dist;
-        p.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:7px;height:7px;
-          border-radius:50%;background:#FFD700;z-index:9998;pointer-events:none;
-          animation:codexParticle 0.9s ease-out forwards;
+        const isHorus = i % 6 === 0;
+        p.textContent = isHorus ? '𓂀' : '';
+        p.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${isHorus ? 16 : 7}px;height:${isHorus ? 16 : 7}px;
+          ${isHorus ? 'font-size:14px;line-height:1;color:#00ff44;text-shadow:0 0 6px #00ff44;' : 'border-radius:50%;background:#00cc44;'}
+          z-index:9998;pointer-events:none;
+          animation:codexParticle 1.1s ease-out forwards;
           --dx:${dx}px;--dy:${dy}px;`;
         document.body.appendChild(p);
-        setTimeout(() => p.remove(), 950);
+        setTimeout(() => p.remove(), 1150);
       }
     }
 
@@ -2228,6 +2235,9 @@
         @keyframes codexExpFloat { 0%{opacity:1;transform:translate(-50%,-50%);} 100%{opacity:0;transform:translate(-50%,-120%);} }
         @keyframes codexParticle { 0%{opacity:1;transform:translate(-50%,-50%) translate(0,0);} 100%{opacity:0;transform:translate(-50%,-50%) translate(var(--dx),var(--dy));} }
         @keyframes codexCompletionPop { 0%{transform:translate(-50%,-50%) scale(0.6);opacity:0;} 100%{transform:translate(-50%,-50%) scale(1);opacity:1;} }
+        @keyframes horusGreenFlash { 0%{opacity:0;transform:scale(0.3);filter:drop-shadow(0 0 0px #00ff44);} 30%{opacity:1;transform:scale(1.3);filter:drop-shadow(0 0 40px #00ff44) drop-shadow(0 0 80px #00cc44);} 60%{opacity:1;transform:scale(1.0);} 100%{opacity:0;transform:scale(1.5);filter:drop-shadow(0 0 0px #00ff44);} }
+        @keyframes codexBgFlash { 0%{background:rgba(0,0,0,0);} 20%{background:rgba(0,40,0,0.5);} 100%{background:rgba(0,0,0,0);} }
+        @keyframes horusFlash { 0%{opacity:0;transform:scale(0.5);} 40%{opacity:1;transform:scale(1.1);} 100%{opacity:0;transform:scale(1.4);} }
       `;
       document.head.appendChild(s);
     })();
