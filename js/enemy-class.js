@@ -3006,6 +3006,13 @@
         if (typeof window.registerCombatKill === 'function') window.registerCombatKill();
         // Record kill milestone progress
         if (window.GameMilestones) window.GameMilestones.recordKill();
+        // Grant Account XP for kill (2-5 XP based on enemy tier)
+        const xpAmount = this.isBoss ? 15 : Math.min(5, Math.max(2, this.tier || 1));
+        if (typeof addAccountXP === 'function') {
+          addAccountXP(xpAmount);
+        } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function' && window.saveData) {
+          window.GameAccount.addXP(xpAmount, 'Enemy Kill', window.saveData);
+        }
         // Clear freeze state so no further update logic applies to dead enemy
         this.isFrozen = false;
         // Cancel pending squish timeout to prevent callback on dead enemy

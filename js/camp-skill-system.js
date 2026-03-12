@@ -3719,11 +3719,11 @@
         style.textContent = `
           .stw-wrap { position:relative; width:100%; overflow-x:auto; padding-bottom:20px; }
           .stw-svg   { position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
-          .stw-cols  { display:flex; gap:0; position:relative; z-index:1; min-width:600px; }
-          .stw-col   { flex:1; display:flex; flex-direction:column; align-items:center; padding:0 4px; gap:10px; }
-          .stw-col-header { font-family:'Bangers',cursive; font-size:13px; letter-spacing:1px; padding:4px 10px; border-radius:6px; margin-bottom:4px; text-align:center; }
+          .stw-cols  { display:flex; gap:12px; position:relative; z-index:1; min-width:100%; justify-content:center; flex-wrap:wrap; }
+          .stw-col   { flex:1; min-width:min(180px, 100%); display:flex; flex-direction:column; align-items:center; padding:0 8px; gap:12px; }
+          .stw-col-header { font-family:'Bangers',cursive; font-size:14px; letter-spacing:1px; padding:6px 12px; border-radius:6px; margin-bottom:6px; text-align:center; }
           .stw-node {
-            width:88px; min-height:88px; border-radius:12px; padding:6px 5px 5px;
+            width:100%; max-width:120px; min-height:110px; border-radius:12px; padding:10px 8px;
             display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
             cursor:pointer; position:relative; transition:transform 0.12s, box-shadow 0.15s;
             text-align:center; box-sizing:border-box;
@@ -3747,11 +3747,11 @@
             background:rgba(20,16,4,0.96); border:2px solid #FFD700;
             box-shadow:0 0 18px rgba(255,215,0,0.55), inset 0 0 8px rgba(255,215,0,0.12);
           }
-          .stw-icon   { font-size:22px; line-height:1; margin-bottom:2px; }
-          .stw-name   { font-size:9px; font-weight:bold; line-height:1.2; color:#ddd; margin-bottom:2px; max-width:80px; word-break:break-word; }
-          .stw-desc   { font-size:7.5px; color:#888; line-height:1.3; margin-bottom:3px; }
-          .stw-cost   { font-size:8.5px; color:#5DADE2; font-weight:bold; }
-          .stw-maxlbl { font-size:8px; color:#FFD700; font-weight:bold; }
+          .stw-icon   { font-size:24px; line-height:1; margin-bottom:4px; }
+          .stw-name   { font-size:10px; font-weight:bold; line-height:1.2; color:#ddd; margin-bottom:3px; word-break:break-word; }
+          .stw-desc   { font-size:8px; color:#888; line-height:1.3; margin-bottom:4px; }
+          .stw-cost   { font-size:9px; color:#5DADE2; font-weight:bold; }
+          .stw-maxlbl { font-size:9px; color:#FFD700; font-weight:bold; }
           .stw-dots   { display:flex; gap:2px; justify-content:center; margin-top:2px; flex-wrap:wrap; }
           .stw-dot    { width:6px; height:6px; border-radius:50%; background:#333; border:1px solid #555; flex-shrink:0; }
           .stw-dot.filled { background:#4CAF50; border-color:#4CAF50; box-shadow:0 0 4px #4CAF50; }

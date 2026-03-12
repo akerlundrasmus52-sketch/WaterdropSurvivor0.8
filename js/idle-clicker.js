@@ -430,6 +430,14 @@ window.AdvancedClicker = (function () {
     data.se = (data.se || 0) + clickSE;
     data.lifetimeSE = (data.lifetimeSE || 0) + clickSE;
     data.totalClicks = (data.totalClicks || 0) + 1;
+    // Grant Account XP for clicking (1 XP every 10 clicks)
+    if (data.totalClicks % 10 === 0) {
+      if (typeof addAccountXP === 'function') {
+        addAccountXP(1);
+      } else if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+        window.GameAccount.addXP(1, 'Idle Clicker', saveData);
+      }
+    }
     return { gained: clickSE };
   }
 
