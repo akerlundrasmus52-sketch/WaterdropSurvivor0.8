@@ -1568,6 +1568,9 @@
         '  <span class="ach-gold-icon">🪙</span>',
         '  <span class="ach-gold-num" id="ach-gold-num">0</span>',
         '  <span class="ach-gold-label"> GOLD</span>',
+        '</div>',
+        '<div class="ach-notif-claim-hint" style="margin-top:12px;font-size:11px;color:#ffaa00;text-transform:uppercase;letter-spacing:1px;opacity:0.85">',
+        '  🏆 Claim rewards in Achievement Building',
         '</div>'
       ].join('');
 
