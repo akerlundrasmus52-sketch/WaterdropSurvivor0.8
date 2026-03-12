@@ -12,6 +12,18 @@
   const BULLET_SPEED = 8;
   const ENEMY_SPEED = 2;
   const SCROLL_SPEED = 1.5;
+  const MAX_MAP_LEVEL = 100;
+  const SHIP_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+  const MAX_SHIPS = 5;
+
+  // Ship definitions with unique characteristics
+  const SHIP_TYPES = [
+    { id: 'falcon', name: 'Sky Falcon', icon: '🦅', color: '#4488ff', bonusFireRate: 1.2, bonusDamage: 1.0, bonusSpeed: 1.1 },
+    { id: 'phoenix', name: 'Crimson Phoenix', icon: '🔥', color: '#ff4444', bonusFireRate: 1.0, bonusDamage: 1.3, bonusSpeed: 0.9 },
+    { id: 'thunder', name: 'Thunder Bolt', icon: '⚡', color: '#ffff44', bonusFireRate: 1.5, bonusDamage: 0.9, bonusSpeed: 1.0 },
+    { id: 'viper', name: 'Viper Strike', icon: '🐍', color: '#44ff44', bonusFireRate: 1.1, bonusDamage: 1.1, bonusSpeed: 1.2 },
+    { id: 'omega', name: 'Omega Destroyer', icon: '💀', color: '#ff00ff', bonusFireRate: 0.8, bonusDamage: 1.5, bonusSpeed: 0.8 }
+  ];
 
   // Ship upgrade tiers
   const SHIP_UPGRADES = {
@@ -159,6 +171,9 @@
     highScore: 0,
     wave: 1,
     credits: 0,
+    mapLevel: 1, // Current map level (1-100)
+    selectedShip: 0, // Index of currently selected ship
+    resourcesCollected: 0, // Resources collected this run
 
     player: {
       x: CANVAS_WIDTH / 2,
@@ -195,7 +210,7 @@
     bossActive: false,
     boss: null,
 
-    mode: 'playing' // 'playing', 'upgrades', 'gameover'
+    mode: 'playing' // 'playing', 'upgrades', 'gameover', 'shipselect', 'mapselect'
   };
 
   // Initialize game
@@ -207,12 +222,107 @@
       gameState.upgrades = window.saveData.neural1945.upgrades || {
         fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0
       };
+      gameState.mapLevel = window.saveData.neural1945.mapLevel || 1;
+      gameState.selectedShip = window.saveData.neural1945.selectedShip || 0;
+
+      // Initialize ships with cooldowns if not exists
+      if (!window.saveData.neural1945.ships) {
+        window.saveData.neural1945.ships = SHIP_TYPES.map((ship, i) => ({
+          id: ship.id,
+          unlocked: i === 0, // First ship unlocked by default
+          lastUsed: 0,
+          cooldownReduction: 0 // Can be upgraded in idle clicker
+        }));
+      }
     }
 
     // Apply shield upgrade
     const shieldLevel = SHIP_UPGRADES.shield.levels[gameState.upgrades.shield];
     gameState.player.maxHp = shieldLevel.maxHp;
     gameState.player.hp = shieldLevel.maxHp;
+  }
+
+  // Helper: Check if ship is on cooldown
+  function isShipOnCooldown(shipIndex) {
+    if (!window.saveData || !window.saveData.neural1945 || !window.saveData.neural1945.ships) return false;
+    const ship = window.saveData.neural1945.ships[shipIndex];
+    if (!ship || !ship.lastUsed) return false;
+
+    const now = Date.now();
+    const cooldownTime = SHIP_COOLDOWN_MS * (1 - ship.cooldownReduction * 0.05); // 5% reduction per upgrade
+    return (now - ship.lastUsed) < cooldownTime;
+  }
+
+  // Helper: Get remaining cooldown time for ship
+  function getShipCooldownRemaining(shipIndex) {
+    if (!window.saveData || !window.saveData.neural1945 || !window.saveData.neural1945.ships) return 0;
+    const ship = window.saveData.neural1945.ships[shipIndex];
+    if (!ship || !ship.lastUsed) return 0;
+
+    const now = Date.now();
+    const cooldownTime = SHIP_COOLDOWN_MS * (1 - ship.cooldownReduction * 0.05);
+    const remaining = cooldownTime - (now - ship.lastUsed);
+    return Math.max(0, remaining);
+  }
+
+  // Helper: Mark ship as used
+  function markShipUsed(shipIndex) {
+    if (!window.saveData || !window.saveData.neural1945 || !window.saveData.neural1945.ships) return;
+    window.saveData.neural1945.ships[shipIndex].lastUsed = Date.now();
+    saveSaveData();
+  }
+
+  // Helper: Calculate map difficulty multiplier
+  function getMapDifficultyMultiplier() {
+    // Maps 1-10: 1.0x - 1.5x
+    // Maps 11-50: 1.5x - 3.0x
+    // Maps 51-100: 3.0x - 10.0x
+    const level = gameState.mapLevel;
+    if (level <= 10) {
+      return 1.0 + (level - 1) * 0.05;
+    } else if (level <= 50) {
+      return 1.5 + (level - 10) * 0.0375;
+    } else {
+      return 3.0 + (level - 50) * 0.14;
+    }
+  }
+
+  // Helper: Calculate map reward multiplier
+  function getMapRewardMultiplier() {
+    // Rewards scale faster than difficulty
+    const level = gameState.mapLevel;
+    if (level <= 10) {
+      return 1.0 + (level - 1) * 0.1;
+    } else if (level <= 50) {
+      return 2.0 + (level - 10) * 0.1;
+    } else {
+      return 6.0 + (level - 50) * 0.2;
+    }
+  }
+
+  // Helper: Spawn resource pickup (chance-based)
+  function trySpawnResource(x, y) {
+    const chance = 0.15 * getMapDifficultyMultiplier(); // Higher levels = more resources
+    if (Math.random() < chance) {
+      gameState.powerUps.push({
+        x: x,
+        y: y,
+        type: 'resource',
+        speed: 1,
+        size: 20,
+        color: '#00ffaa'
+      });
+    }
+  }
+
+  // Apply ship bonuses to player stats
+  function applyShipBonuses() {
+    const ship = SHIP_TYPES[gameState.selectedShip];
+    return {
+      fireRate: ship.bonusFireRate,
+      damage: ship.bonusDamage,
+      speed: ship.bonusSpeed
+    };
   }
 
   // Create overlay UI
@@ -763,12 +873,13 @@
     const types = Object.keys(ENEMY_TYPES);
     const typeKey = types[Math.floor(Math.random() * types.length)];
     const type = ENEMY_TYPES[typeKey];
+    const difficultyMult = getMapDifficultyMultiplier();
 
     gameState.enemies.push({
       x: Math.random() * (CANVAS_WIDTH - 40) + 20,
       y: -type.size,
-      hp: type.hp * (1 + gameState.wave * 0.1),
-      maxHp: type.hp * (1 + gameState.wave * 0.1),
+      hp: type.hp * (1 + gameState.wave * 0.1) * difficultyMult,
+      maxHp: type.hp * (1 + gameState.wave * 0.1) * difficultyMult,
       type: type,
       time: 0
     });
@@ -778,13 +889,14 @@
   function spawnBoss() {
     const bossIndex = Math.min(Math.floor(gameState.wave / 5) - 1, BOSSES.length - 1);
     const bossDef = BOSSES[bossIndex];
+    const difficultyMult = getMapDifficultyMultiplier();
 
     gameState.bossActive = true;
     gameState.boss = {
       x: CANVAS_WIDTH / 2,
       y: -100,
-      hp: bossDef.hp * (1 + gameState.wave * 0.05),
-      maxHp: bossDef.hp * (1 + gameState.wave * 0.05),
+      hp: bossDef.hp * (1 + gameState.wave * 0.05) * difficultyMult,
+      maxHp: bossDef.hp * (1 + gameState.wave * 0.05) * difficultyMult,
       size: bossDef.size,
       color: bossDef.color,
       name: bossDef.name,
@@ -796,7 +908,9 @@
 
   // Check collisions
   function checkCollisions() {
+    const shipBonuses = applyShipBonuses();
     const damageLevel = SHIP_UPGRADES.damage.levels[gameState.upgrades.damage];
+    const rewardMultiplier = getMapRewardMultiplier();
 
     // Player bullets vs enemies
     for (let i = gameState.bullets.length - 1; i >= 0; i--) {
@@ -805,14 +919,20 @@
       for (let j = gameState.enemies.length - 1; j >= 0; j--) {
         const enemy = gameState.enemies[j];
         if (checkRectCollision(bullet, { x: enemy.x - enemy.type.size / 2, y: enemy.y - enemy.type.size / 2, width: enemy.type.size, height: enemy.type.size })) {
-          enemy.hp -= damageLevel.value;
+          enemy.hp -= damageLevel.value * shipBonuses.damage;
           gameState.bullets.splice(i, 1);
           createParticles(enemy.x, enemy.y, enemy.type.color);
 
           if (enemy.hp <= 0) {
-            gameState.score += enemy.type.score;
-            gameState.credits += Math.floor(enemy.type.score / 5);
+            const scoreGain = Math.floor(enemy.type.score * rewardMultiplier);
+            const creditsGain = Math.floor(scoreGain / 5);
+            gameState.score += scoreGain;
+            gameState.credits += creditsGain;
             createExplosion(enemy.x, enemy.y, enemy.type.color);
+
+            // Try to spawn resource pickup
+            trySpawnResource(enemy.x, enemy.y);
+
             // Grant Account XP for enemy kill (1 XP per kill)
             if (typeof addAccountXP === 'function') {
               addAccountXP(1);
@@ -904,6 +1024,21 @@
           hitPlayer();
           enemy.hp = 0;
         }
+      }
+    }
+
+    // Player vs powerUps/resources
+    for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+      const powerUp = gameState.powerUps[i];
+      if (checkRectCollision(
+        { x: powerUp.x - powerUp.size / 2, y: powerUp.y - powerUp.size / 2, width: powerUp.size, height: powerUp.size },
+        { x: gameState.player.x - gameState.player.width / 2, y: gameState.player.y - gameState.player.height / 2, width: gameState.player.width, height: gameState.player.height }
+      )) {
+        if (powerUp.type === 'resource') {
+          gameState.resourcesCollected++;
+          createParticles(powerUp.x, powerUp.y, powerUp.color);
+        }
+        gameState.powerUps.splice(i, 1);
       }
     }
   }
