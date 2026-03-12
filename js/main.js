@@ -618,7 +618,8 @@
       stonehenge:  { x:  35, z:  30, radius: 20, key: 'stonehenge',  label: 'Stonehenge'  }, // OPTIMIZED: Moved from (60, 50)
       pyramid:     { x:  25, z: -20, radius: 20, key: 'pyramid',     label: 'Pyramid'     }, // OPTIMIZED: Moved from (35, -35)
       montana:     { x:   0, z: -60, radius: 25, key: 'montana',     label: 'Montana'     }, // OPTIMIZED: Moved from (0, -100)
-      teslaTower:  { x: -30, z: -30, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }  // OPTIMIZED: Moved from (-50, -50)
+      teslaTower:  { x: -30, z: -30, radius: 25, key: 'teslaTower',  label: 'Tesla Tower' }, // OPTIMIZED: Moved from (-50, -50)
+      eiffel:      { x: -50, z:  90, radius: 25, key: 'eiffel',      label: 'Eiffel Tower'} // NOT OPTIMIZED: Still in original position
     };
     
     // Countdown system (PR #70-71)

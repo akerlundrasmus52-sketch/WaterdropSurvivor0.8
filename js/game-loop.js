@@ -3207,7 +3207,7 @@
         const LAVA_WARN_RADIUS = 14;    // Distance at which warning appears
         const LAVA_MAX_DAMAGE = 10;     // Max damage per tick at volcano center
         const LAVA_TICK_INTERVAL = 0.5; // Seconds between lava damage ticks
-        const lavaX = -100, lavaZ = -120;
+        const lavaX = -60, lavaZ = -72; // OPTIMIZED: Updated to match volcano position from world-gen.js:2264
         const ldx = player.mesh.position.x - lavaX;
         const ldz = player.mesh.position.z - lavaZ;
         const lavaDist = Math.sqrt(ldx * ldx + ldz * ldz);

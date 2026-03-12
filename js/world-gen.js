@@ -1780,21 +1780,21 @@
         // Path exclusion (5-unit buffer on each side of trail)
         const PATH_WIDTH = 5;
         const r = rondelRadius;
-        if (distToSegment(x, z, r * 0.707, r * 0.707, 60, 50)     < PATH_WIDTH) return true; // → Stonehenge
-        if (distToSegment(x, z, r * 0.9,   r * 0.436, 25, 25)     < PATH_WIDTH) return true; // → Windmill
-        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -50, -50) < PATH_WIDTH) return true; // → Tesla Tower
-        if (distToSegment(x, z, r * 0.707, -r * 0.707, 35, -35)   < PATH_WIDTH) return true; // → Pyramid
+        if (distToSegment(x, z, r * 0.707, r * 0.707, 35, 30)     < PATH_WIDTH) return true; // → Stonehenge (OPTIMIZED from 60, 50)
+        if (distToSegment(x, z, r * 0.9,   r * 0.436, 18, 18)     < PATH_WIDTH) return true; // → Windmill (OPTIMIZED from 25, 25)
+        if (distToSegment(x, z, -r * 0.707, -r * 0.707, -30, -30) < PATH_WIDTH) return true; // → Tesla Tower (OPTIMIZED from -50, -50)
+        if (distToSegment(x, z, r * 0.707, -r * 0.707, 25, -20)   < PATH_WIDTH) return true; // → Pyramid (OPTIMIZED from 35, -35)
         if (distToSegment(x, z, r * 0.5,   -r * 0.866, 20, -20)   < PATH_WIDTH) return true; // → Lake
 
         // Building exclusion zones
-        if (Math.sqrt((x - 25) ** 2 + (z - 25) ** 2)   < 8)  return true; // Windmill
-        if (Math.sqrt((x + 14) ** 2 + (z + 14) ** 2)   < 8)  return true; // Cabin
+        if (Math.sqrt((x - 18) ** 2 + (z - 18) ** 2)   < 8)  return true; // Windmill (OPTIMIZED from 25, 25)
+        if (Math.sqrt((x + 10) ** 2 + (z + 10) ** 2)   < 8)  return true; // Cabin (OPTIMIZED from 14, 14)
         if (Math.sqrt((x + 25) ** 2 + (z - 25) ** 2)   < 8)  return true; // Mine entrance
 
         // Landmark exclusion zones
-        if (Math.sqrt((x - 60) ** 2 + (z - 50) ** 2)   < 22) return true; // Stonehenge
-        if (Math.sqrt((x - 35) ** 2 + (z + 35) ** 2)   < 22) return true; // Pyramid
-        if (Math.sqrt((x + 50) ** 2 + (z + 50) ** 2)   < 27) return true; // Tesla Tower
+        if (Math.sqrt((x - 35) ** 2 + (z - 30) ** 2)   < 22) return true; // Stonehenge (OPTIMIZED from 60, 50)
+        if (Math.sqrt((x - 25) ** 2 + (z + 20) ** 2)   < 22) return true; // Pyramid (OPTIMIZED from 35, -35)
+        if (Math.sqrt((x + 30) ** 2 + (z + 30) ** 2)   < 27) return true; // Tesla Tower (OPTIMIZED from 50, 50)
         if (Math.sqrt((x + 50) ** 2 + (z - 90) ** 2)   < 20) return true; // Eiffel Tower
 
         return false;
@@ -1803,7 +1803,7 @@
       // Tree-specific placement validation: extends isPositionExcluded with extra landmark zones
       function isTreePlacementValid(x, z) {
         if (isPositionExcluded(x, z)) return false;
-        if (Math.sqrt((x + 18) ** 2 + (z - 18) ** 2) < 18) return false; // Colosseum
+        if (Math.sqrt((x + 13) ** 2 + (z - 13) ** 2) < 18) return false; // Colosseum (OPTIMIZED from 18, 18)
         // Extra lake buffer for trees (prevent clipping into water)
         if (Math.sqrt((x - 20) ** 2 + (z + 20) ** 2) < 24) return false; // Lake + buffer
         return true;
@@ -2903,7 +2903,7 @@
 
       // --- Tesla Tower Point Light (blue/white) ---
       const teslaLight = new THREE.PointLight(0x00CCFF, 3, 30);
-      teslaLight.position.set(-50, 18, -50);
+      teslaLight.position.set(-30, 18, -30); // OPTIMIZED: Moved from (-50, 18, -50) to match Tesla Tower position
       teslaLight.userData = { isTeslaLight: true, phase: 0 };
       scene.add(teslaLight);
       window.teslaPointLight = teslaLight;
