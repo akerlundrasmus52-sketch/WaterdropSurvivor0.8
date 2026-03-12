@@ -1931,7 +1931,9 @@
             progressTutorialQuest('quest7b_useWarehouse', true);
             saveSaveData();
           }
-          showInventoryScreen();
+          if (window.StatCards && typeof window.StatCards.open === 'function') {
+            window.StatCards.open();
+          }
         },
         tavern:              () => {
           overlay.remove();
