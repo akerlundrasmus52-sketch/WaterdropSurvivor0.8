@@ -1640,34 +1640,16 @@
                 projectiles.push(_spawnProjectile(player.mesh.position.x, player.mesh.position.z, _tmpSpreadTarget));
               }
               
-              // Muzzle flash light effect - smaller radius to keep lightning contained to barrel area
-              const isNight = dayNightCycle.timeOfDay < 0.2 || dayNightCycle.timeOfDay > 0.8;
-              const nightMultiplier = isNight ? 1.5 : 1.0;
-              
-              const flashVariation = i % 3;
-              let flashColor, flashIntensity, flashRadius;
-              if (flashVariation === 0) {
-                flashColor = 0xFFFFFF;
-                flashIntensity = 4 * nightMultiplier;
-                flashRadius = 8 * (isNight ? 1.3 : 1.0); // Reduced from 20
-              } else if (flashVariation === 1) {
-                flashColor = 0xFFCC00;
-                flashIntensity = 3.5 * nightMultiplier;
-                flashRadius = 7 * (isNight ? 1.3 : 1.0); // Reduced from 18
-              } else {
-                flashColor = 0xCCFFFF;
-                flashIntensity = 4.5 * nightMultiplier;
-                flashRadius = 9 * (isNight ? 1.3 : 1.0); // Reduced from 22
+              // Per-weapon muzzle flash system
+              if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+                const flashDir = new THREE.Vector3(
+                  Math.sin(player.mesh.rotation.y),
+                  0,
+                  Math.cos(player.mesh.rotation.y)
+                );
+                window.spawnWeaponMuzzleFlash('gun', player.mesh.position, flashDir, scene);
               }
-              
-              // Use pooled flash light to avoid shader recompilation per shot
-              _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
-              _acquireFlash(scene, flashColor, flashIntensity, flashRadius, _flashTempPos, 80);
-              if (isNight) {
-                _flashTempPos.copy(player.mesh.position); _flashTempPos.y = 0.1;
-                _acquireFlash(scene, flashColor, flashIntensity * 0.5, flashRadius * 0.7, _flashTempPos, 80);
-              }
-              
+
               // Gun kickback effect - snappy recoil via scale squish
               player.mesh.scale.set(1.15, 0.85, 1.15);
               if (playerRecoilTimeout) clearTimeout(playerRecoilTimeout);
@@ -1676,18 +1658,6 @@
                 playerRecoilTimeout = null;
               }, 80);
               activeTimeouts.push(playerRecoilTimeout);
-              
-              // Enhanced muzzle sparks: small directional sparks from barrel tip
-              const muzzlePos = player.mesh.position.clone();
-              muzzlePos.y += 0.5;
-              // Offset muzzle forward in player facing direction
-              muzzlePos.x += Math.sin(player.mesh.rotation.y) * 0.6;
-              muzzlePos.z += Math.cos(player.mesh.rotation.y) * 0.6;
-              spawnParticles(muzzlePos, 0xFFFF44, 4); // Yellow muzzle sparks
-              spawnParticles(muzzlePos, 0xFFFFFF, 2); // White hot flash
-              spawnParticles(muzzlePos, 0xFF8800, 2); // Orange embers
-              // Add realistic muzzle smoke
-              spawnMuzzleSmoke(muzzlePos, 3);
             }, i * 100);
           }
           weapons.gun.lastShot = time;
@@ -1710,13 +1680,16 @@
         }
         weapons.sword.lastShot = time;
         playSound('sword'); // Sword slash sound
-        
-        // ENHANCED - Add sword slash visual effects
-        spawnParticles(player.mesh.position, 0xC0C0C0, 8); // Silver slash particles
-        spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White sparkles
-        // Pooled flash light for sword slash (avoids shader recompilation)
-        _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
-        _acquireFlash(scene, 0xC0C0C0, 3, 8, _flashTempPos, 100);
+
+        // Per-weapon muzzle flash system
+        if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+          const flashDir = new THREE.Vector3(
+            Math.sin(angle),
+            0,
+            Math.cos(angle)
+          );
+          window.spawnWeaponMuzzleFlash('sword', player.mesh.position, flashDir, scene);
+        }
       }
 
       // 3. AURA — Spiritual force field, fast pulses, less damage per tick
@@ -1754,9 +1727,10 @@
             }
         });
         if (hit) {
-          // Yellow-white spiritual energy particles from player outward
-          spawnParticles(player.mesh.position, 0xFFEE88, 6); // Yellow spiritual glow
-          spawnParticles(player.mesh.position, 0xFFFFCC, 4); // White-yellow wisps
+          // Per-weapon muzzle flash system
+          if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+            window.spawnWeaponMuzzleFlash('aura', player.mesh.position, null, scene);
+          }
         }
         weapons.aura.lastShot = time;
       }
@@ -1780,6 +1754,17 @@
         } else {
           meteors.push(new Meteor(targetX, targetZ));
         }
+
+        // Per-weapon muzzle flash system (casting effect from player)
+        if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+          const dir = new THREE.Vector3(
+            targetX - player.mesh.position.x,
+            0,
+            targetZ - player.mesh.position.z
+          ).normalize();
+          window.spawnWeaponMuzzleFlash('meteor', player.mesh.position, dir, scene);
+        }
+
         weapons.meteor.lastShot = time;
       }
 
@@ -1816,11 +1801,17 @@
             projectile.life = 30; // Short lifetime = close-range rapid fire
             projectile.maxLife = 30;
             projectiles.push(projectile);
-            
-            // Tiny cyan muzzle flash from drone (pooled)
-            _flashTempPos.copy(drone.mesh.position); _flashTempPos.y += 0.2;
-            _acquireFlash(scene, 0x00FFFF, 1.5, 5, _flashTempPos, 40);
-            
+
+            // Per-weapon muzzle flash system
+            if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+              const dir = new THREE.Vector3(
+                nearestEnemy.mesh.position.x - drone.mesh.position.x,
+                0,
+                nearestEnemy.mesh.position.z - drone.mesh.position.z
+              ).normalize();
+              window.spawnWeaponMuzzleFlash('droneTurret', drone.mesh.position, dir, scene);
+            }
+
             playSound('shoot');
           }
         }
@@ -1879,19 +1870,17 @@
             playerRecoilTimeout = null;
           }, 100);
           activeTimeouts.push(playerRecoilTimeout);
-          
-          // Orange/yellow muzzle flash (shotgun characteristic) — pooled
-          _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
-          _acquireFlash(scene, 0xFFA500, 10, 22, _flashTempPos, 120);
-          
-          // Focused muzzle flash for shotgun blast (wider spread)
-          _flashTempPos.copy(player.mesh.position); _flashTempPos.y = 0.5;
-          spawnParticles(_flashTempPos, 0xFFA500, 4); // Orange muzzle
-          spawnParticles(_flashTempPos, 0xFFFF00, 3); // Yellow spark
-          spawnParticles(_flashTempPos, 0xFFFFFF, 2); // White flash
-          // Heavy muzzle smoke for shotgun
-          spawnMuzzleSmoke(player.mesh.position, 8);
-          
+
+          // Per-weapon muzzle flash system
+          if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+            const flashDir = new THREE.Vector3(
+              Math.sin(player.mesh.rotation.y),
+              0,
+              Math.cos(player.mesh.rotation.y)
+            );
+            window.spawnWeaponMuzzleFlash('doubleBarrel', player.mesh.position, flashDir, scene);
+          }
+
           weapons.doubleBarrel.lastShot = time;
           playSound('doublebarrel');
         }
@@ -1913,13 +1902,16 @@
             projectiles.push(new IceSpear(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
           }
 
-          // Ice flash effect (pooled)
-          _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
-          _acquireFlash(scene, 0x87CEEB, 3, 12, _flashTempPos, 80);
-          
-          spawnParticles(player.mesh.position, 0x87CEEB, 8); // Ice blue particles
-          spawnParticles(player.mesh.position, 0xFFFFFF, 5); // White particles
-          
+          // Per-weapon muzzle flash system
+          if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+            const dir = new THREE.Vector3(
+              nearest.mesh.position.x - player.mesh.position.x,
+              0,
+              nearest.mesh.position.z - player.mesh.position.z
+            ).normalize();
+            window.spawnWeaponMuzzleFlash('iceSpear', player.mesh.position, dir, scene);
+          }
+
           weapons.iceSpear.lastShot = time;
           playSound('shoot');
         }
@@ -1953,6 +1945,9 @@
             e.lastDamageType = 'fire';
             hit = true;
         });
+        if (hit && typeof window.spawnWeaponMuzzleFlash === 'function') {
+          window.spawnWeaponMuzzleFlash('fireRing', player.mesh.position, null, scene);
+        }
         weapons.fireRing.lastShot = time;
       }
 
@@ -2079,9 +2074,17 @@
             }
             current = nextStrikeTarget;
           }
-          // Lightning flash (pooled) — ground flash at impact
-          _flashTempPos.copy(nearest.mesh.position); _flashTempPos.y += 1;
-          _acquireFlash(scene, 0xFFFF00, 6, 14, _flashTempPos, 100);
+
+          // Per-weapon muzzle flash system
+          if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+            const dir = new THREE.Vector3(
+              nearest.mesh.position.x - player.mesh.position.x,
+              0,
+              nearest.mesh.position.z - player.mesh.position.z
+            ).normalize();
+            window.spawnWeaponMuzzleFlash('lightning', nearest.mesh.position, dir, scene);
+          }
+
           weapons.lightning.lastShot = time;
           playSound('hit');
         }
@@ -2096,9 +2099,10 @@
             spawnParticles(e.mesh.position, 0x00FF00, 4);
             spawnParticles(e.mesh.position, 0x44FF44, 3);
         });
-        // Poison cloud visual
-        spawnParticles(player.mesh.position, 0x00FF00, 8);
-        spawnParticles(player.mesh.position, 0x88FF44, 6);
+        // Per-weapon muzzle flash system
+        if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+          window.spawnWeaponMuzzleFlash('poisonCloud', player.mesh.position, null, scene);
+        }
         weapons.poison.lastShot = time;
       }
 
@@ -2245,6 +2249,17 @@
           } else {
             scene.remove(missileGroup);
           }
+
+          // Per-weapon muzzle flash system
+          if (typeof window.spawnWeaponMuzzleFlash === 'function') {
+            const dir = new THREE.Vector3(
+              nearest.mesh.position.x - player.mesh.position.x,
+              0,
+              nearest.mesh.position.z - player.mesh.position.z
+            ).normalize();
+            window.spawnWeaponMuzzleFlash('homingMissile', player.mesh.position, dir, scene);
+          }
+
           weapons.homingMissile.lastShot = time;
           playSound('shoot');
         }
