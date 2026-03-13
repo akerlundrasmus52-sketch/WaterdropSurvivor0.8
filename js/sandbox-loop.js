@@ -161,6 +161,7 @@
   let _slime    = null;           // { mesh, hp, maxHp, dead, respawnTimer, hpBar, hpBarBg }
   let _projPool = [];             // reusable projectile objects
   let _activeProjList = [];       // currently flying projectiles
+  let _animateErrorShown = false; // prevent spamming error display every frame
 
   // Joystick state (mobile)
   const _joy    = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0 };
@@ -172,6 +173,30 @@
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   function _lerp(a, b, t) { return a + (b - a) * t; }
   function _clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  // Display an error message on-screen so mobile users can see what went wrong.
+  function _showError(msg) {
+    console.error('[SandboxLoop]', msg);
+    // Try #status-message first, then #tutorial-text as fallback
+    const el = document.getElementById('status-message') || document.getElementById('tutorial-text');
+    if (el) {
+      el.style.display = 'block';
+      el.style.color   = '#FF4444';
+      el.style.background = 'rgba(0,0,0,0.85)';
+      el.style.padding = '8px 12px';
+      el.style.borderRadius = '8px';
+      el.style.zIndex = '99999';
+      el.style.position = 'fixed';
+      el.style.top = '50%';
+      el.style.left = '50%';
+      el.style.transform = 'translate(-50%,-50%)';
+      el.style.maxWidth = '90vw';
+      el.style.fontSize = '14px';
+      el.style.fontFamily = 'monospace';
+      el.style.wordBreak = 'break-word';
+      el.textContent = '⚠ Sandbox Error: ' + msg;
+    }
+  }
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────
   function _buildProjectilePool() {
@@ -305,6 +330,12 @@
       dead: false,
       respawnTimer: 0,
       flashTimer: 0,
+      // Properties expected by Player.prototype.update (auto-aim, collision checks)
+      id: 'dummy-slime-0',
+      type: 'slime',
+      radius: 0.7,
+      isBoss: false,
+      get isDead() { return this.dead; },
     };
   }
 
@@ -719,18 +750,22 @@
   // ─── Ground via Engine2Sandbox ────────────────────────────────────────────────
   function _initGround() {
     if (typeof Engine2Sandbox === 'function') {
-      const e2 = new Engine2Sandbox(scene, camera);
-      e2.init();
-      window._engine2Instance = e2;
-    } else {
-      // Fallback flat ground
-      const geo = new THREE.PlaneGeometry(200, 200);
-      const mat = new THREE.MeshStandardMaterial({ color: 0x2d5a1b, roughness: 0.8, metalness: 0.0 });
-      const ground = new THREE.Mesh(geo, mat);
-      ground.rotation.x = -Math.PI / 2;
-      ground.receiveShadow = true;
-      scene.add(ground);
+      try {
+        const e2 = new Engine2Sandbox(scene, camera);
+        e2.init();
+        window._engine2Instance = e2;
+        return;
+      } catch (e) {
+        console.warn('[SandboxLoop] Engine2Sandbox failed, falling back to basic ground:', e);
+      }
     }
+    // Fallback flat ground (also used when Engine2Sandbox is missing or throws)
+    const geo = new THREE.PlaneGeometry(200, 200);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2d5a1b, roughness: 0.8, metalness: 0.0 });
+    const ground = new THREE.Mesh(geo, mat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
   }
 
   // ─── Player init ──────────────────────────────────────────────────────────────
@@ -852,51 +887,66 @@
       'pointer-events:none',
       'text-align:center',
     ].join(';');
-    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Auto-aim Gun unlocked';
+    // Object pooling is active when the global GameObjectPool/ObjectPool system is available
+    // OR when our local projectile pool has been successfully pre-allocated.
+    const poolActive = !!(window.GameObjectPool || window.ObjectPool) || _projPool.length > 0;
+    const poolBadge = poolActive
+      ? '<span style="color:#00FF88">✔ Object Pooling Active</span>'
+      : '<span style="color:#FF4444">✘ Object Pooling Inactive</span>';
+    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Auto-aim Gun unlocked &nbsp;|&nbsp; ' + poolBadge;
     document.body.appendChild(el);
+    console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
   }
 
   // ─── Main animation loop ──────────────────────────────────────────────────────
   function _animate(nowMs) {
     _rafId = requestAnimationFrame(_animate);
 
-    const dt = Math.min((nowMs - _lastTime) / 1000, 0.05); // cap at 50 ms
-    _lastTime = nowMs;
+    try {
+      const dt = Math.min((nowMs - _lastTime) / 1000, 0.05); // cap at 50 ms
+      _lastTime = nowMs;
 
-    if (window.isPaused) {
+      if (window.isPaused) {
+        renderer.render(scene, camera);
+        return;
+      }
+
+      // Update dopamine time dilation
+      if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
+        window.DopamineSystem.TimeDilation.update(dt);
+      }
+
+      _movePlayer(dt);
+      _updateSlime(dt);
+      _tryFire(dt);
+      _updateProjectiles(dt);
+      _updateGems(dt);
+
+      // Player class built-in update (handles dash, invulnerability ticks, etc.)
+      if (player && typeof player.update === 'function') {
+        player.update(dt, _slime && !_slime.dead ? [_slime] : [], projectiles, expGems);
+      }
+
+      // Blood system tick
+      if (window.BloodSystem && typeof BloodSystem.update === 'function') {
+        BloodSystem.update();
+      }
+
+      // Damage numbers
+      if (window.DopamineSystem && window.DopamineSystem.DamageNumbers) {
+        window.DopamineSystem.DamageNumbers.update(dt);
+      }
+
+      _refreshHUD(dt);
+
       renderer.render(scene, camera);
-      return;
+    } catch (e) {
+      if (!_animateErrorShown) {
+        _animateErrorShown = true;
+        _showError('Animate error: ' + (e && e.message ? e.message : String(e)));
+        console.error('[SandboxLoop] _animate error:', e);
+      }
     }
-
-    // Update dopamine time dilation
-    if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
-      window.DopamineSystem.TimeDilation.update(dt);
-    }
-
-    _movePlayer(dt);
-    _updateSlime(dt);
-    _tryFire(dt);
-    _updateProjectiles(dt);
-    _updateGems(dt);
-
-    // Player class built-in update (handles dash, invulnerability ticks, etc.)
-    if (player && typeof player.update === 'function') {
-      player.update(dt, _slime && !_slime.dead ? [_slime] : [], projectiles, expGems);
-    }
-
-    // Blood system tick
-    if (window.BloodSystem && typeof BloodSystem.update === 'function') {
-      BloodSystem.update();
-    }
-
-    // Damage numbers
-    if (window.DopamineSystem && window.DopamineSystem.DamageNumbers) {
-      window.DopamineSystem.DamageNumbers.update(dt);
-    }
-
-    _refreshHUD(dt);
-
-    renderer.render(scene, camera);
   }
 
   // ─── Boot sequence ────────────────────────────────────────────────────────────
@@ -904,35 +954,40 @@
     if (_ready) return;
     _ready = true;
 
-    // Allow showUpgradeModal to run (main.js defaults isGameActive=false for menu).
-    // Assigning directly to the global lexical variable declared in main.js.
-    if (typeof isGameActive !== 'undefined') isGameActive = true;
-    if (typeof isGameOver   !== 'undefined') isGameOver   = false;
+    try {
+      // Allow showUpgradeModal to run (main.js defaults isGameActive=false for menu).
+      // Assigning directly to the global lexical variable declared in main.js.
+      if (typeof isGameActive !== 'undefined') isGameActive = true;
+      if (typeof isGameOver   !== 'undefined') isGameOver   = false;
 
-    // Hide loading screen
-    const ls = document.getElementById('loading-screen');
-    if (ls) { ls.style.opacity = '0'; setTimeout(function () { ls.style.display = 'none'; }, 400); }
+      // Hide loading screen
+      const ls = document.getElementById('loading-screen');
+      if (ls) { ls.style.opacity = '0'; setTimeout(function () { ls.style.display = 'none'; }, 400); }
 
-    // Show the ui-layer (HUD)
-    const uiLayer = document.getElementById('ui-layer');
-    if (uiLayer) uiLayer.style.display = 'block';
+      // Show the ui-layer (HUD)
+      const uiLayer = document.getElementById('ui-layer');
+      if (uiLayer) uiLayer.style.display = 'block';
 
-    // Init Three.js
-    _initScene();
-    _initGround();
-    _initBloodSystem();
-    _initPools();
-    _initPlayer();
-    _buildSlime();
-    _initInput();
-    _buildSandboxOverlay();
-    _refreshExpBar();
+      // Init Three.js
+      _initScene();
+      _initGround();
+      _initBloodSystem();
+      _initPools();
+      _initPlayer();
+      _buildSlime();
+      _initInput();
+      _buildSandboxOverlay();
+      _refreshExpBar();
 
-    // Start loop
-    _lastTime = performance.now();
-    _rafId = requestAnimationFrame(_animate);
+      // Start loop
+      _lastTime = performance.now();
+      _rafId = requestAnimationFrame(_animate);
 
-    console.log('[SandboxLoop] Engine 2.0 Sandbox ready. Pool-enforced game loop started.');
+      console.log('[SandboxLoop] Engine 2.0 Sandbox ready. Pool-enforced game loop started.');
+    } catch (e) {
+      _showError('Boot error: ' + (e && e.message ? e.message : String(e)));
+      console.error('[SandboxLoop] _boot error:', e);
+    }
   }
 
   // Boot when DOM is ready
