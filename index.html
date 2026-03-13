@@ -741,9 +741,6 @@
   <!-- Local copy (three.js r155 / v0.155.0, last version with UMD global build that sets window.THREE). -->
   <script src="js/three.min.js"></script>
 
-  <!-- Engine 2.0 Sandbox — PBR ground & spawn hole (loaded immediately after THREE) -->
-  <script src="js/engine2.js"></script>
-
   <!-- CDN Error Logging (Non-blocking) -->
   <script src="js/cdn-monitor.js"></script>
 
@@ -812,7 +809,6 @@
   <script src="js/progression-center.js"></script> <!-- Progression Center: permanent stat upgrades -->
   <script src="js/stat-cards.js"></script>        <!-- Stat Cards: Slot machine style stat upgrades -->
   <script src="js/quest-system.js"></script>      <!-- Quests, account, chat, companion, camp screen (~110 KB) -->
-  <script src="js/engine2.js"></script>           <!-- Engine 2.0: New sandbox arena with PBR ground & spawn hole -->
   <script src="js/world-gen.js"></script>         <!-- 3D world generation (createWorld) (~113 KB) -->
   <script src="js/weapon-building.js"></script>   <!-- Weapon building panel: arsenal, upgrades, loadout, spin wheel -->
   <script src="js/game-screens.js"></script>      <!-- init(), menus, wave spawning, effects (~136 KB) -->
@@ -824,6 +820,7 @@
   <script src="js/game-over-reset.js"></script>   <!-- Game over screen, reset game (~37 KB) -->
   <script src="js/input-system.js"></script>      <!-- Input handling (~13 KB) -->
   <script src="js/game-loop.js"></script>         <!-- Main animate() loop, starts game (~98 KB) -->
+  <script src="js/engine2.js"></script>           <!-- Engine 2.0: PBR ground & spawn hole — loaded last so it overrides old floor -->
 
   <!-- Farmer NPC Speech Bubble (comic-style, paged) -->
   <div id="farmer-speech-bubble" role="dialog" aria-label="Farmer dialogue">
