@@ -620,7 +620,7 @@
   }
 
   function _updateRageHUD() {
-    const fill = document.getElementById('rage-bar-fill');
+    const fill = document.getElementById('rage-unified-fill');
     if (fill) {
       fill.style.width = (_rageMeter / RAGE_MAX * 100) + '%';
       fill.style.background = _rageActive

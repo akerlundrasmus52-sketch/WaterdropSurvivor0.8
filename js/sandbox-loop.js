@@ -142,8 +142,12 @@
     resources: { magicEssence: 0 },
     // Rage combat system
     rageMeter: 0,
-    specialAttacksLoadout: ['knifeTakedown'], // Starting special attack
+    equippedSpecials: ['knifeTakedown'], // Currently equipped special attacks
+    specialAttacksLoadout: ['knifeTakedown'], // Starting special attack (legacy)
     specialAttackLevels: { knifeTakedown: 1 },
+    skillTree: {
+      specialKnifeTakedown: { level: 1 } // Starting attack is unlocked
+    },
     // Companion system
     hasCompanionEgg: false,
     companionEggHatched: false,
@@ -475,8 +479,8 @@
     playerStats.kills++;
 
     // Gain rage on kill
-    if (window.GameRageCombat && typeof GameRageCombat.gainRage === 'function') {
-      GameRageCombat.gainRage(8); // RAGE_PER_KILL = 8
+    if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
+      GameRageCombat.addRage(8); // RAGE_PER_KILL = 8
     }
 
     // Record kill in milestone system
