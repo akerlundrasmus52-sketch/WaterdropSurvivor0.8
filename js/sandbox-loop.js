@@ -193,11 +193,6 @@
   let _activeProjList = [];       // currently flying projectiles
   let _animateErrorShown = false; // prevent spamming error display every frame
 
-  // Three.js globals (also exposed as window.scene, window.renderer, window.camera)
-  let scene    = null;
-  let renderer = null;
-  let camera   = null;
-
   // Joystick state (mobile)
   const _joy    = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0 };
   const _aimJoy = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0, fired: false };
