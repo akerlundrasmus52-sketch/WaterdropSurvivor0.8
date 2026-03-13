@@ -403,7 +403,7 @@
       };
 
       // Update the companion skill buttons in HUD
-      static MAX_COMPANION_SKILLS = 3;
+      static MAX_COMPANION_SKILLS = 2;
 
       static updateCompanionSkillsUI(companionId) {
         var skills = Companion.COMPANION_SKILLS[companionId] || [];

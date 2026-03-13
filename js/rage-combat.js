@@ -16,7 +16,7 @@
   const RAGE_DAMAGE_MULT  = 2.5;
   const RAGE_SPEED_MULT   = 1.4;
 
-  const MAX_EQUIPPED_SPECIALS = 4; // Maximum special attacks player can equip at once
+  const MAX_EQUIPPED_SPECIALS = 2; // Maximum special attacks player can equip at once (displayed in HUD)
 
   // ── All available special attacks (unlocked via skill tree) ──
   const ALL_SPECIAL_ATTACKS = [
