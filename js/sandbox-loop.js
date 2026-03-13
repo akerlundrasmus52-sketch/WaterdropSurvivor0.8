@@ -189,6 +189,11 @@
   let _activeProjList = [];       // currently flying projectiles
   let _animateErrorShown = false; // prevent spamming error display every frame
 
+  // Three.js globals (also exposed as window.scene, window.renderer, window.camera)
+  let scene    = null;
+  let renderer = null;
+  let camera   = null;
+
   // Joystick state (mobile)
   const _joy    = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0 };
   const _aimJoy = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0, fired: false };
@@ -724,8 +729,8 @@
 
   // ─── Three.js scene init ──────────────────────────────────────────────────────
   function _initScene() {
-    // Renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // Renderer - expose as window global for gem-classes.js and other systems
+    window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -737,13 +742,13 @@
     if (container) container.appendChild(renderer.domElement);
     else           document.body.appendChild(renderer.domElement);
 
-    // Scene
-    scene = new THREE.Scene();
+    // Scene - expose as window global for gem-classes.js to add meshes
+    window.scene = scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
     scene.fog = new THREE.Fog(0x1a1a2e, 40, 120);
 
     // Camera (top-down, slightly angled — matching main game)
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);
+    window.camera = camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);
     camera.position.set(0, 18, 12);
     camera.lookAt(0, 0, 0);
 
