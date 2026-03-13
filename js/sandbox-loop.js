@@ -86,6 +86,30 @@
   if (typeof playSound === 'undefined') {
     window.playSound = function () {};
   }
+  // spawnWaterDroplet — called by player-class.js when HP < 25-30% (water bleed)
+  // or during the dash ability.  Falls back to a simple one-frame particle burst.
+  if (typeof spawnWaterDroplet === 'undefined') {
+    window.spawnWaterDroplet = function (pos) {
+      if (!pos) return;
+      if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === 'function') {
+        BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3, spreadY: 0.2 });
+      }
+    };
+  }
+  // gameOver — called by player-class.js when the player dies.  In the sandbox
+  // we simply reload the page so the user can test again without a full game-over
+  // screen from the main game (which requires systems not loaded here).
+  if (typeof gameOver === 'undefined') {
+    window.gameOver = function () {
+      const b = document.getElementById('you-died-banner');
+      if (b) {
+        b.style.display = 'block';
+        setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
+      } else {
+        location.reload();
+      }
+    };
+  }
 
   // ─── Minimal saveData stub (prevents null-checks in gem-classes / player) ───
   window.saveData = window.saveData || {
@@ -112,6 +136,7 @@
   };
 
   // ─── Constants ───────────────────────────────────────────────────────────────
+  const GAME_OVER_RELOAD_DELAY_MS = 2000;    // ms to show "YOU DIED" before page reload
   const SLIME_HP            = 80;
   const SLIME_SPEED         = 1.8;           // world units / second
   const SLIME_RESPAWN_DELAY = 3000;          // ms
