@@ -140,6 +140,16 @@
     tutorial: { completed: true, currentStep: 'completed' },
     upgrades: { goldEarned: 0 },
     resources: { magicEssence: 0 },
+    // Rage combat system
+    rageMeter: 0,
+    specialAttacksLoadout: ['knifeTakedown'], // Starting special attack
+    specialAttackLevels: { knifeTakedown: 1 },
+    // Companion system
+    hasCompanionEgg: false,
+    companionEggHatched: false,
+    companionEggHatchProgress: 0,
+    companionGrowthStage: 'newborn',
+    companionSkillPoints: 0,
   };
 
   window.gameSettings = window.gameSettings || {
@@ -421,6 +431,11 @@
     // Schedule respawn
     _slime.respawnTimer = SLIME_RESPAWN_DELAY;
     playerStats.kills++;
+
+    // Gain rage on kill
+    if (window.GameRageCombat && typeof GameRageCombat.gainRage === 'function') {
+      GameRageCombat.gainRage(8); // RAGE_PER_KILL = 8
+    }
 
     // Record kill in milestone system
     if (window.GameMilestones && typeof GameMilestones.recordKill === 'function') {
@@ -866,6 +881,22 @@
     }
   }
 
+  // ─── Rage combat system init ──────────────────────────────────────────────────
+  function _initRageCombat() {
+    if (window.GameRageCombat && typeof GameRageCombat.init === 'function') {
+      try {
+        GameRageCombat.init(scene, saveData, spawnParticles);
+        // Make combat HUD visible in sandbox
+        if (typeof GameRageCombat.setCombatHUDVisible === 'function') {
+          GameRageCombat.setCombatHUDVisible(true);
+        }
+        console.log('[SandboxLoop] Rage combat system initialized');
+      } catch (e) {
+        console.warn('[SandboxLoop] Failed to initialize rage combat:', e);
+      }
+    }
+  }
+
   // ─── Object pool init ─────────────────────────────────────────────────────────
   function _initPools() {
     // Initialize the GameObjectPool (trail pool) with the active scene
@@ -946,6 +977,11 @@
         BloodSystem.update();
       }
 
+      // Rage combat system tick
+      if (window.GameRageCombat && typeof GameRageCombat.update === 'function') {
+        GameRageCombat.update(dt);
+      }
+
       // Damage numbers
       if (window.DopamineSystem && window.DopamineSystem.DamageNumbers) {
         window.DopamineSystem.DamageNumbers.update(dt);
@@ -986,6 +1022,7 @@
       _initScene();
       _initGround();
       _initBloodSystem();
+      _initRageCombat();
       _initPools();
       _initPlayer();
       _buildSlime();
