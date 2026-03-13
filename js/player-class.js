@@ -1,6 +1,12 @@
 // js/player-class.js — Player class: water droplet character, movement, dash, recoil, shooting.
 // Depends on: THREE (CDN), variables from main.js (scene, camera, enemies, playerStats, etc.)
 
+    // ── Scene Helper (defensive access for both main game and sandbox) ────────
+    /** Safely get the scene global, supporting both main game and sandbox mode. */
+    function _getScene() {
+      return (typeof scene !== 'undefined' && scene) ? scene : (typeof window !== 'undefined' ? window.scene : null);
+    }
+
     // ── Evaporation helpers (Void/Alien gem mechanic) ────────────────────────
     /** Returns true if any equipped slot (weapon or companion) has a void gem. */
     function _playerHasVoidGem() {
@@ -104,7 +110,13 @@
         this.mesh.position.y = 0.5;
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
-        scene.add(this.mesh);
+        // Add to scene with defensive check for both global scene and window.scene (sandbox mode)
+        const targetScene = _getScene();
+        if (targetScene) {
+          targetScene.add(this.mesh);
+        } else {
+          console.error('[Player] Cannot add player mesh: scene is not defined. Ensure scene is initialized before creating Player.');
+        }
         
         // Add water shine effect (multiple layers for realistic water look)
         const shineGeo = new THREE.SphereGeometry(0.52, 16, 16);
@@ -380,7 +392,10 @@
         this.auraFogRing.rotation.x = -Math.PI / 2;
         this.auraFogRing.position.y = 0.15;
         this.auraFogRing.visible = false;
-        scene.add(this.auraFogRing);
+        const scn = _getScene();
+        if (scn) {
+          scn.add(this.auraFogRing);
+        }
         
         // Fire Ring Orbs (visible when fireRing weapon is active)
         this.fireRingOrbs = [];
@@ -1180,20 +1195,26 @@
           // Add orbs if needed
           while (this.fireRingOrbs.length < currentOrbCount) {
             const geo = new THREE.SphereGeometry(0.3, 8, 8);
-            const mat = new THREE.MeshBasicMaterial({ 
-              color: 0xFF4500, 
-              transparent: true, 
-              opacity: 0.8 
+            const mat = new THREE.MeshBasicMaterial({
+              color: 0xFF4500,
+              transparent: true,
+              opacity: 0.8
             });
             const orb = new THREE.Mesh(geo, mat);
-            scene.add(orb);
+            const targetScene = _getScene();
+            if (targetScene) {
+              targetScene.add(orb);
+            }
             this.fireRingOrbs.push(orb);
           }
-          
+
           // Remove extra orbs if downgraded (shouldn't happen but safety)
           while (this.fireRingOrbs.length > currentOrbCount) {
             const orb = this.fireRingOrbs.pop();
-            scene.remove(orb);
+            const targetScene = _getScene();
+            if (targetScene) {
+              targetScene.remove(orb);
+            }
             orb.geometry.dispose();
             orb.material.dispose();
           }
@@ -1538,24 +1559,30 @@
           
           // Create ground pool (flat circle that fades out)
           const poolGeo = new THREE.CircleGeometry(1.5, 16);
-          const poolMat = new THREE.MeshBasicMaterial({ 
-            color: COLORS.player, 
-            transparent: true, 
+          const poolMat = new THREE.MeshBasicMaterial({
+            color: COLORS.player,
+            transparent: true,
             opacity: 0.6,
             side: THREE.DoubleSide
           });
           const pool = new THREE.Mesh(poolGeo, poolMat);
           pool.rotation.x = -Math.PI / 2;
           pool.position.set(this.mesh.position.x, 0.05, this.mesh.position.z);
-          scene.add(pool);
-          
+          const targetScene = _getScene();
+          if (targetScene) {
+            targetScene.add(pool);
+          }
+
           // Fade out pool over time
           const fadePool = () => {
             poolMat.opacity -= 0.01;
             if (poolMat.opacity > 0) {
               setTimeout(fadePool, 50);
             } else {
-              scene.remove(pool);
+              const targetScene = _getScene();
+              if (targetScene) {
+                targetScene.remove(pool);
+              }
               poolGeo.dispose();
               poolMat.dispose();
             }
