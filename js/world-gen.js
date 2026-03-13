@@ -70,20 +70,25 @@
       groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
       groundTexture.repeat.set(20, 20); // Tile the texture for detail
 
-      // One ground plane with enhanced material - OPTIMIZED: Reduced from 200x200 to 120x120, now 80x80 for ultra-compact world
-      const mainGroundGeo = new THREE.PlaneGeometry(80, 80);
-      const mainGroundMat = new THREE.MeshStandardMaterial({
-        color: 0x4A8C2A,  // Light-medium grass green matching COLORS.ground
-        map: groundTexture,
-        roughness: 0.95,
-        metalness: 0.0,
-        normalScale: new THREE.Vector2(0.3, 0.3)
-      });
-      const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
-      mainGround.rotation.x = -Math.PI / 2;
-      mainGround.position.set(0, 0, 0);
-      mainGround.receiveShadow = true;
-      scene.add(mainGround);
+      // ENGINE 2.0: Skip old ground plane if Engine 2.0 Sandbox mode is active
+      if (!window._engine2SandboxMode) {
+        // One ground plane with enhanced material - OPTIMIZED: Reduced from 200x200 to 120x120, now 80x80 for ultra-compact world
+        const mainGroundGeo = new THREE.PlaneGeometry(80, 80);
+        const mainGroundMat = new THREE.MeshStandardMaterial({
+          color: 0x4A8C2A,  // Light-medium grass green matching COLORS.ground
+          map: groundTexture,
+          roughness: 0.95,
+          metalness: 0.0,
+          normalScale: new THREE.Vector2(0.3, 0.3)
+        });
+        const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
+        mainGround.rotation.x = -Math.PI / 2;
+        mainGround.position.set(0, 0, 0);
+        mainGround.receiveShadow = true;
+        scene.add(mainGround);
+      } else {
+        console.log('[Engine2] Skipping old ground plane - Engine 2.0 Sandbox mode active');
+      }
 
       // Decorative terrain hills/bumps for visual depth (low-profile so they don't block movement)
       // OPTIMIZED: Repositioned for ultra-compact world layout (80x80 map)
