@@ -956,9 +956,9 @@
 
     try {
       // Allow showUpgradeModal to run (main.js defaults isGameActive=false for menu).
-      // Assigning directly to the global lexical variable declared in main.js.
-      if (typeof isGameActive !== 'undefined') isGameActive = true;
-      if (typeof isGameOver   !== 'undefined') isGameOver   = false;
+      // Use setter functions to avoid readonly property crash on iOS/Safari.
+      if (typeof setGameActive === 'function') setGameActive(true);
+      if (typeof setGameOver === 'function') setGameOver(false);
 
       // Hide loading screen
       const ls = document.getElementById('loading-screen');
