@@ -601,6 +601,83 @@
       animation: bar-border-alive 3s ease-in-out infinite;
     }
 
+    /* Special Attacks Panel — left side, mirrors companion panel on right */
+    #special-attacks-panel {
+      position: absolute;
+      bottom: 10px;
+      left: 8px;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      align-items: center;
+      pointer-events: auto;
+      z-index: 115;
+    }
+    /* Rage button inside special attacks panel — inherits companion-skill-btn sizing */
+    #special-attacks-panel .rage-activate-btn {
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      font-size: 20px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0;
+      font-family: 'Bangers', cursive;
+      border: 2px solid #FF4400;
+      background: rgba(80,20,0,0.9);
+      color: #FF8800;
+    }
+    #special-attacks-panel .rage-activate-btn.rage-ready {
+      background: rgba(200,60,0,0.85);
+      color: #FFD700;
+      animation: rage-ready-pulse 0.8s ease-in-out infinite;
+    }
+    #special-attacks-panel .rage-activate-btn.rage-active {
+      background: rgba(220,80,0,0.95);
+      color: #FFF;
+      border-color: #FFD700;
+    }
+    /* Special attack slots inside the panel */
+    .sa-slot {
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    .sa-slot .sa-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+    .sa-slot .sa-name {
+      font-size: 7px;
+      color: #DDD;
+      letter-spacing: 0.5px;
+      text-align: center;
+      line-height: 1;
+      margin-top: 1px;
+    }
+    .sa-slot .sa-cooldown-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: rgba(0,0,0,0.65);
+      transition: height 0.1s linear;
+      pointer-events: none;
+    }
+    .sa-slot-locked {
+      filter: brightness(0.35) grayscale(1);
+      cursor: default !important;
+      pointer-events: none;
+    }
+    .sa-slot.sa-ready {
+      border-color: rgba(255,215,0,0.8) !important;
+      box-shadow: 0 0 8px rgba(255,215,0,0.4), 0 2px 8px rgba(0,0,0,0.6) !important;
+    }
+
     /* Companion skill buttons — unified style matching special attacks */
     #companion-skills-panel {
       position: absolute;

@@ -443,81 +443,80 @@
 
   // ── HUD helpers ───────────────────────────────────────────────
   function _buildHUD() {
-    if (document.getElementById('rage-hud')) {
-      _rebuildSpecialButtons();
-      return;
+    // Wire event listeners onto static HTML elements in #special-attacks-panel
+    const rageBtn = document.getElementById('rage-activate-btn');
+    if (rageBtn) {
+      // Clone to clear any previously attached listeners
+      const newBtn = rageBtn.cloneNode(true);
+      rageBtn.parentNode.replaceChild(newBtn, rageBtn);
+      newBtn.addEventListener('click', activateRage);
+      newBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); activateRage(); }, { passive: false });
     }
 
-    // Rage bar container
-    const container = document.createElement('div');
-    container.id = 'rage-hud';
-    container.className = 'rage-hud';
-    container.innerHTML = `
-      <div class="rage-label">⚡ RAGE</div>
-      <div class="rage-bar-bg">
-        <div class="rage-bar-fill" id="rage-bar-fill"></div>
-      </div>
-      <button id="rage-activate-btn" class="rage-activate-btn" title="Activate Rage Mode">RAGE!</button>
-    `;
-    document.body.appendChild(container);
+    const loadoutBtn = document.getElementById('sa-loadout-btn');
+    if (loadoutBtn) {
+      const newLoadout = loadoutBtn.cloneNode(true);
+      loadoutBtn.parentNode.replaceChild(newLoadout, loadoutBtn);
+      newLoadout.addEventListener('click', _toggleLoadoutPanel);
+      newLoadout.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); _toggleLoadoutPanel(); }, { passive: false });
+    }
 
-    const rageBtn = document.getElementById('rage-activate-btn');
-    rageBtn.addEventListener('click', activateRage);
-    rageBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); activateRage(); }, { passive: false });
-    _updateRageHUD();
+    // Delegated event listener on the SA panel so slots work without re-adding listeners
+    const saPanel = document.getElementById('special-attacks-panel');
+    if (saPanel) {
+      const newPanel = saPanel.cloneNode(false); // shallow clone clears listeners; children restored below
+      // Re-attach children manually to avoid losing them
+      while (saPanel.firstChild) newPanel.appendChild(saPanel.firstChild);
+      saPanel.parentNode.replaceChild(newPanel, saPanel);
 
-    // Special attack buttons container
-    const saContainer = document.createElement('div');
-    saContainer.id = 'special-attacks-hud';
-    saContainer.className = 'special-attacks-hud';
-    document.body.appendChild(saContainer);
+      newPanel.addEventListener('click', (e) => {
+        const slot = e.target.closest('.sa-slot[data-sa-id]');
+        if (slot && slot.dataset.saId) triggerSpecialAttack(slot.dataset.saId);
+      });
+      newPanel.addEventListener('touchstart', (e) => {
+        const slot = e.target.closest('.sa-slot[data-sa-id]');
+        if (slot && slot.dataset.saId) {
+          e.preventDefault();
+          e.stopPropagation();
+          triggerSpecialAttack(slot.dataset.saId);
+        }
+      }, { passive: false });
+    }
+
     _rebuildSpecialButtons();
-
-    // Loadout button (small edit icon on the rage HUD)
-    const loadoutBtn = document.createElement('button');
-    loadoutBtn.id = 'sa-loadout-btn';
-    loadoutBtn.title = 'Edit Special Attack Loadout';
-    loadoutBtn.style.cssText = 'background:none;border:none;color:#FFD700;font-size:14px;cursor:pointer;padding:2px 4px;';
-    loadoutBtn.textContent = '⚙️';
-    container.appendChild(loadoutBtn);
-    loadoutBtn.addEventListener('click', _toggleLoadoutPanel);
-    loadoutBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); _toggleLoadoutPanel(); }, { passive: false });
-
-    // Loadout panel
+    _updateRageHUD();
     _buildLoadoutPanel();
   }
 
   function _rebuildSpecialButtons() {
-    const saContainer = document.getElementById('special-attacks-hud');
-    if (!saContainer) return;
-    saContainer.innerHTML = '';
-
+    const slotsUnlocked = (_saveData && _saveData.specialSlotsUnlocked) || 1;
     const equipped = _getEquippedAttacks();
 
-    // Always show MAX_EQUIPPED_SPECIALS slots (filled or empty placeholder)
     for (let i = 0; i < MAX_EQUIPPED_SPECIALS; i++) {
+      const slotEl = document.getElementById(`sa-slot-${i + 1}`);
+      if (!slotEl) continue;
+
+      const slotActive = (i + 1) <= slotsUnlocked;
       const sa = equipped[i];
-      if (sa) {
+
+      if (!slotActive) {
+        // Slot not yet unlocked
+        slotEl.className = 'companion-skill-btn sa-slot sa-slot-locked';
+        slotEl.innerHTML = '🔒';
+        slotEl.title = `🔒 Unlock in Special Attacks building to enable slot ${i + 1}`;
+        delete slotEl.dataset.saId;
+      } else if (sa) {
         const unlocked = _isUnlocked(sa);
-        const btn = document.createElement('button');
-        btn.id = `sa-btn-${sa.id}`;
-        btn.className = 'special-attack-btn' + (unlocked ? '' : ' sa-locked');
-        btn.innerHTML = `<span class="sa-icon">${sa.icon}</span><span class="sa-name">${sa.name}</span><div class="sa-cooldown-overlay" id="sa-cd-${sa.id}"></div>`;
-        btn.title = unlocked ? sa.description : `🔒 Locked — unlock in Special Attacks building`;
-        btn.addEventListener('click', () => triggerSpecialAttack(sa.id));
-        btn.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          triggerSpecialAttack(sa.id);
-        }, { passive: false });
-        saContainer.appendChild(btn);
+        slotEl.className = 'companion-skill-btn sa-slot' + (unlocked ? '' : ' sa-slot-locked');
+        slotEl.innerHTML = `<span class="sa-icon">${sa.icon}</span><span class="sa-name">${sa.name}</span><div class="sa-cooldown-overlay" id="sa-cd-${sa.id}"></div>`;
+        slotEl.title = unlocked ? sa.description : `🔒 Unlock "${sa.name}" in Special Attacks building`;
+        slotEl.dataset.saId = sa.id;
       } else {
-        // Empty placeholder slot matching the equipped icon frame
-        const empty = document.createElement('div');
-        empty.className = 'special-attack-btn ability-empty';
-        empty.innerHTML = `<span class="sa-icon">⬡</span><span class="sa-name">Empty</span>`;
-        empty.title = 'Empty slot — equip a special attack';
-        saContainer.appendChild(empty);
+        // Unlocked but empty
+        slotEl.className = 'companion-skill-btn sa-slot comp-empty';
+        slotEl.innerHTML = '⬡';
+        slotEl.title = 'Empty special attack slot — equip from Special Attacks building';
+        delete slotEl.dataset.saId;
       }
     }
   }
@@ -631,26 +630,25 @@
     const btn = document.getElementById('rage-activate-btn');
     if (btn) {
       btn.disabled = _rageActive || _rageMeter < RAGE_MIN_TO_ACTIVATE;
-      btn.className = 'rage-activate-btn' + (_rageActive ? ' rage-active' : '') + (_rageMeter >= RAGE_MIN_TO_ACTIVATE && !_rageActive ? ' rage-ready' : '');
-      btn.textContent = _rageActive ? '🔥 RAGING!' : 'RAGE!';
+      btn.className = 'companion-skill-btn rage-activate-btn' + (_rageActive ? ' rage-active' : '') + (_rageMeter >= RAGE_MIN_TO_ACTIVATE && !_rageActive ? ' rage-ready' : '');
+      btn.textContent = _rageActive ? '🔥' : '⚡';
     }
 
-    // Update special attack cooldowns (only equipped)
+    // Update special attack cooldowns on sa-slot-N elements
     const now = Date.now();
     const equipped = _getEquippedAttacks();
-    equipped.forEach(sa => {
+    equipped.forEach((sa, i) => {
       const cdEl = document.getElementById(`sa-cd-${sa.id}`);
-      const saBtn = document.getElementById(`sa-btn-${sa.id}`);
-      if (!cdEl || !saBtn) return;
+      const slotEl = document.getElementById(`sa-slot-${i + 1}`);
+      if (!cdEl || !slotEl) return;
       const effectiveCd = _getEffectiveCooldown(sa);
       const elapsed = now - (_specialCooldowns[sa.id] || 0);
       const remaining = Math.max(0, effectiveCd - elapsed);
       const frac = remaining / effectiveCd;
       cdEl.style.height = (frac * 100) + '%';
       const unlocked = _isUnlocked(sa);
-      saBtn.disabled = !unlocked || remaining > 0;
-      saBtn.classList.toggle('sa-ready', unlocked && remaining <= 0);
-      saBtn.classList.toggle('sa-locked', !unlocked);
+      slotEl.classList.toggle('sa-ready', unlocked && remaining <= 0);
+      slotEl.classList.toggle('sa-slot-locked', !unlocked);
     });
   }
 
@@ -857,12 +855,10 @@
 
   // ── HUD visibility (hide outside active gameplay) ────────────
   function setCombatHUDVisible(active) {
-    const rageHud  = document.getElementById('rage-hud');
-    const saHud    = document.getElementById('special-attacks-hud');
-    const rageBar  = document.getElementById('rage-bar-container');
+    const saPanel = document.getElementById('special-attacks-panel');
+    const rageBar = document.getElementById('rage-bar-container');
     const dispVal  = active ? '' : 'none';
-    if (rageHud)  rageHud.style.display  = dispVal;
-    if (saHud)    saHud.style.display    = dispVal;
+    if (saPanel) saPanel.style.display = dispVal;
     if (rageBar)  rageBar.style.display  = dispVal;
     // Close loadout panel when hiding
     if (!active) {
