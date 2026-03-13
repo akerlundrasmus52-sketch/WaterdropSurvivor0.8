@@ -31,7 +31,7 @@
     }
     /* Hide UI elements not needed in sandbox */
     #main-menu, #camp-screen, #progression-shop, #achievements-screen,
-    #attributes-screen, #gear-screen, #credits-screen, #settings-modal,
+    #attributes-screen, #gear-screen, #credits-screen,
     #story-quest-modal, #comic-tutorial-modal, #options-menu,
     #gameover-screen, #stats-modal,
     #farmer-speech-bubble, #farmer-quest-indicator,
@@ -111,7 +111,7 @@
 
     <!-- Hidden stubs so game-hud.js lookups don't throw -->
     <button id="stats-btn"     class="btn-small" style="display:none;">STATS</button>
-    <button id="settings-btn"  class="btn-small" style="display:none;">⚙️</button>
+    <button id="settings-btn"  class="btn-small" style="position:absolute;top:16px;right:16px;z-index:150;">⚙️</button>
     <button id="equipment-btn" style="display:none;">⚔️</button>
     <div id="minimap-container"><div id="minimap"></div></div>
     <div id="companion-skills-panel" style="display:none;">
@@ -292,17 +292,17 @@
   <div id="progression-shop"      style="display:none;"><div id="shop-gold">GOLD: 0</div><div id="shop-grid"></div></div>
   <!-- Gear stubs -->
   <div id="gear-screen"           style="display:none;"><div id="gear-stats-content"></div><div id="gear-content"></div></div>
-  <!-- Settings stubs -->
-  <div id="settings-modal"        style="display:none;">
-    <input type="checkbox" id="sound-toggle" checked>
-    <input type="checkbox" id="music-toggle" checked>
-    <input type="checkbox" id="auto-aim-checkbox">
-    <select id="control-type-select"><option value="keyboard">Keyboard</option></select>
-    <select id="quality-select"><option value="medium">Medium</option></select>
-    <div id="fps-booster-status" style="display:none;"></div>
-    <button id="settings-reset-btn" style="display:none;"></button>
-    <button id="settings-close-btn" style="display:none;"></button>
-    <button id="ui-calibration-btn" style="display:none;"></button>
+  <!-- Settings modal (kept lightweight for sandbox) -->
+  <div id="settings-modal" class="settings-modal" style="display:none;">
+    <div class="settings-container">
+      <div class="settings-title">SANDBOX SETTINGS</div>
+      <div class="settings-item">
+        <div style="font-weight:700;">UI Customizer</div>
+        <div style="font-size:12px;color:#c9d1d9;margin-top:4px;">Drag and resize the HUD just like the main map.</div>
+        <button id="ui-calibration-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #1a6e9f, #155a82); margin-top: 10px;">🎛️ OPEN UI CUSTOMIZER</button>
+      </div>
+      <button id="settings-close-btn" class="settings-close-btn" style="margin-top:14px;">CLOSE</button>
+    </div>
   </div>
   <!-- Menu gold (referenced by addGold stub) -->
   <div id="menu-gold" style="display:none;">GOLD: 0</div>
@@ -408,6 +408,9 @@
 
   <!-- 22. Rage combat system (rage meter, special attacks, rage mode) -->
   <script src="js/rage-combat.js"></script>
+
+  <!-- 22.5 UI Calibration (HUD drag/resize) -->
+  <script src="js/ui-calibration.js"></script>
 
   <!-- 23. Quest & companion system (companion UI, skills, quest tracking) -->
   <script src="js/quest-system.js"></script>
