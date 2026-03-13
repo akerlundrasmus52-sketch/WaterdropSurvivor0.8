@@ -1963,6 +1963,13 @@
     function _renderCodexFull() {
       const screen = document.getElementById('codex-screen');
       if (!screen) return;
+
+      // Cleanup any active Three.js canvases before clearing
+      const canvas = screen.querySelector('#codex-3d-canvas');
+      if (canvas && typeof canvas._threeCleanup === 'function') {
+        canvas._threeCleanup();
+      }
+
       screen.innerHTML = '';
 
       // ── NEURAL CODEX: Liquid Gold & Dark Water - Annunaki Divine Operating System ──
@@ -2005,6 +2012,11 @@
 
       document.getElementById('codex-close-btn').onclick = () => {
         if (typeof playSound === 'function') playSound('mechanic-click');
+        // Cleanup any active Three.js canvases before closing
+        const canvas = screen.querySelector('#codex-3d-canvas');
+        if (canvas && typeof canvas._threeCleanup === 'function') {
+          canvas._threeCleanup();
+        }
         screen.style.display = 'none';
         const campScreen = document.getElementById('camp-screen');
         if (campScreen) campScreen.style.display = 'flex';
@@ -2198,7 +2210,14 @@
 
       // Remove existing detail view if any
       const existing = containerEl.querySelector('.molecule-detail-view');
-      if (existing) existing.remove();
+      if (existing) {
+        // Cleanup Three.js resources before removal
+        const canvas = existing.querySelector('#codex-3d-canvas');
+        if (canvas && typeof canvas._threeCleanup === 'function') {
+          canvas._threeCleanup();
+        }
+        existing.remove();
+      }
 
       // Create detail overlay
       const detailView = document.createElement('div');
@@ -2212,6 +2231,11 @@
       closeBtn.textContent = '✕';
       closeBtn.onclick = () => {
         if (typeof playSound === 'function') playSound('mechanic-click');
+        // Cleanup Three.js resources
+        const canvas = detailView.querySelector('#codex-3d-canvas');
+        if (canvas && typeof canvas._threeCleanup === 'function') {
+          canvas._threeCleanup();
+        }
         detailView.remove();
       };
       detailView.appendChild(closeBtn);
@@ -2389,9 +2413,10 @@
       const mesh = new THREE.Mesh(geometry, material);
       scene.add(mesh);
 
-      // Animation loop
+      // Animation loop with cancellation support
+      let animationId = null;
       function animate() {
-        requestAnimationFrame(animate);
+        animationId = requestAnimationFrame(animate);
         mesh.rotation.x += 0.005;
         mesh.rotation.y += 0.01;
         renderer.render(scene, camera);
@@ -2400,6 +2425,7 @@
 
       // Store cleanup reference
       canvas._threeCleanup = () => {
+        if (animationId) cancelAnimationFrame(animationId);
         renderer.dispose();
         geometry.dispose();
         material.dispose();
