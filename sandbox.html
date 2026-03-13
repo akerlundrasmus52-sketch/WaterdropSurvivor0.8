@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    ENGINE 2.0 SANDBOX
+    ==================
+    Clean testing environment for Engine 2.0 (engine2.js).
+    • Loads object pooling, instanced rendering, gem/blood/weapon systems.
+    • Does NOT load world-gen.js, spawn-sequence.js or old enemy swarming logic.
+    • Spawns: Player + single Slime dummy (respawns on death).
+    • Tests: Gun → blood → dynamic EXP gem drop physics → pickup → Level-Up modal.
+  -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="screen-orientation" content="portrait">
+  <title>Water Drop — Engine 2.0 Sandbox</title>
+
+  <!-- Same fonts as index.html -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Bangers&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+
+  <!-- Shared stylesheet — all CSS rules from main game apply here -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <style>
+    /* Sandbox-specific overrides */
+    body { overflow: hidden; background: #1a1a2e; }
+    #loading-screen {
+      transition: opacity 0.4s ease;
+    }
+    /* Hide UI elements not needed in sandbox */
+    #main-menu, #camp-screen, #progression-shop, #achievements-screen,
+    #attributes-screen, #gear-screen, #credits-screen, #settings-modal,
+    #story-quest-modal, #comic-tutorial-modal, #options-menu,
+    #gameover-screen, #stats-modal,
+    #farmer-speech-bubble, #farmer-quest-indicator,
+    #chat-reminder-bubble, #ai-chat-tab, #ai-chat-box,
+    #character-visuals-screen, #codex-screen,
+    #camp-interact-btn, #camp-building-name, #camp-interact-prompt,
+    #day-night-clock, #windmill-quest-ui, #montana-quest-ui, #eiffel-quest-ui,
+    #quest-tracker, #quest-arrow, #minimap-container, #region-display,
+    #companion-skills-panel, #combo-counter, #live-stat-display,
+    #stats-btn, #equipment-btn, #melee-takedown-btn,
+    #challenge-complete-board {
+      display: none !important;
+    }
+    /* Keep ui-layer visible once sandbox boots */
+    #ui-layer { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Loading Screen ─────────────────────────────────────────────────── -->
+  <div id="loading-screen">
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loading-bar"></div>
+    </div>
+  </div>
+
+  <!-- ── Three.js canvas target ─────────────────────────────────────────── -->
+  <div id="game-container"></div>
+
+  <!-- ── Visual FX overlays ─────────────────────────────────────────────── -->
+  <div id="low-hp-vignette"></div>
+  <div id="blood-splatter-overlay" aria-hidden="true"></div>
+  <div id="account-levelup-curtain" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- ── HUD Layer ──────────────────────────────────────────────────────── -->
+  <div id="ui-layer">
+    <div class="hud-top">
+      <!-- HP / EXP / RAGE bars -->
+      <div class="unified-bars-wrap">
+        <div class="bar-container" id="hp-bar-container">
+          <div class="bar-fill" id="hp-fill"></div>
+          <div class="bar-text" id="hp-text" style="color:#FFFFFF;">HP: 100/100</div>
+        </div>
+        <div class="bar-container" id="exp-bar-container">
+          <div class="bar-fill" id="exp-fill"></div>
+          <div class="bar-text" id="exp-text" style="color:#FFFFFF;">EXP: 0%</div>
+        </div>
+        <div class="bar-container" id="rage-bar-container">
+          <div class="bar-fill" id="rage-unified-fill"></div>
+          <div class="bar-text" id="rage-unified-text" style="color:#FF8800;">⚡ RAGE: 0%</div>
+        </div>
+      </div>
+      <div class="stat-text" id="status-message" style="display:none;"></div>
+      <div class="stat-text" id="quest-tracker"  style="display:none;"></div>
+      <div id="live-stat-display"></div>
+      <div id="quest-arrow" style="display:none;">❗➤</div>
+      <div class="stat-text" id="combo-timer"></div>
+      <!-- Quest UIs (hidden but present so scripts don't throw) -->
+      <div id="windmill-quest-ui"  style="display:none;"></div>
+      <div id="montana-quest-ui"   style="display:none;"></div>
+      <div id="eiffel-quest-ui"    style="display:none;"></div>
+    </div>
+
+    <!-- Pause / menu button -->
+    <button id="menu-btn" title="Menu" onclick="window.isPaused=!window.isPaused; this.textContent=window.isPaused?'▶':'☰';">☰</button>
+
+    <!-- Hidden stubs so game-hud.js lookups don't throw -->
+    <button id="stats-btn"     class="btn-small" style="display:none;">STATS</button>
+    <button id="settings-btn"  class="btn-small" style="display:none;">⚙️</button>
+    <button id="equipment-btn" style="display:none;">⚔️</button>
+    <div id="minimap-container"    style="display:none;"><div id="minimap"></div></div>
+    <div id="companion-skills-panel" style="display:none;">
+      <div class="companion-skill-btn comp-empty" id="comp-skill-1">⬡</div>
+      <div class="companion-skill-btn comp-empty" id="comp-skill-2">⬡</div>
+      <div class="companion-skill-btn comp-empty" id="comp-skill-3">⬡</div>
+    </div>
+    <div id="region-display"  style="display:none;"><div id="region-name">Sandbox</div></div>
+    <div id="combo-counter"   style="display:none;"><div id="combo-text"></div><div id="combo-multiplier"></div></div>
+    <div id="day-night-clock" style="display:none;">
+      <div id="day-night-icon">☀️</div>
+      <div id="day-night-time">00:00</div>
+    </div>
+    <button id="melee-takedown-btn" style="display:none;">
+      <span class="melee-icon">🔪</span>
+      <span class="melee-label">TAKEDOWN</span>
+      <div class="melee-cd-overlay" id="melee-cd-overlay"></div>
+    </button>
+
+    <!-- Bottom: Waterdrop level indicator + EXP bar -->
+    <div id="bottom-bars-container">
+      <div id="waterdrop-container">
+        <svg id="waterdrop-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <clipPath id="waterdrop-clip">
+              <path d="M 50 18 C 50 18, 22 52, 22 72 C 22 92, 34 110, 50 110 C 66 110, 78 92, 78 72 C 78 52, 50 18, 50 18 Z"/>
+            </clipPath>
+            <linearGradient id="exp-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%"   style="stop-color:#3498DB;stop-opacity:1"/>
+              <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1"/>
+            </linearGradient>
+            <filter id="water-turbulence" x="0%" y="0%" width="100%" height="100%">
+              <feTurbulence baseFrequency="0.02" numOctaves="3" seed="2">
+                <animate attributeName="baseFrequency" from="0.02" to="0.025" dur="3s" repeatCount="indefinite"/>
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" scale="3"/>
+            </filter>
+          </defs>
+          <path d="M 50 18 C 50 18, 22 52, 22 72 C 22 92, 34 110, 50 110 C 66 110, 78 92, 78 72 C 78 52, 50 18, 50 18 Z"
+                fill="rgba(58,58,58,0.8)" stroke="#000000" stroke-width="3"/>
+          <g clip-path="url(#waterdrop-clip)">
+            <rect id="waterdrop-exp-fill" x="0" y="110" width="100" height="0"
+                  fill="url(#exp-gradient)" filter="url(#water-turbulence)" opacity="0.9"/>
+          </g>
+          <text id="waterdrop-level-text" x="50" y="78"
+                text-anchor="middle" font-size="28" font-weight="bold"
+                fill="#FFD700" stroke="#000" stroke-width="2" paint-order="stroke">1</text>
+        </svg>
+      </div>
+      <div id="bottom-exp-bar">
+        <div id="bottom-exp-fill"></div>
+        <div id="bottom-exp-text">EXP: 0%</div>
+      </div>
+    </div>
+
+    <!-- Stat notifications -->
+    <div id="stat-notifications"></div>
+
+    <!-- Super Stat Bar (event log panel) -->
+    <div id="super-stat-bar">
+      <div id="ssb-header"   class="ssb-header"></div>
+      <div id="ssb-region"   class="ssb-row ssb-region-row"></div>
+      <div id="ssb-quest"    class="ssb-row ssb-quest-row"></div>
+      <div class="ssb-sep"></div>
+      <div id="ssb-prev2"    class="ssb-row ssb-event-row ssb-prev2"></div>
+      <div id="ssb-prev1"    class="ssb-row ssb-event-row ssb-prev1"></div>
+      <div id="ssb-current"  class="ssb-row ssb-event-row ssb-current"></div>
+      <div id="ssb-next"     class="ssb-row ssb-next-row"></div>
+      <div id="ssb-countdown" class="ssb-countdown" style="display:none;"></div>
+    </div>
+
+    <!-- Countdown / tutorial text overlay -->
+    <div id="tutorial-text-wrap" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:150;overflow:hidden;border-radius:14px;padding:8px 18px;">
+      <div id="tutorial-text" style="font-size:96px;font-weight:bold;color:#FFF;text-shadow:0 0 20px rgba(255,255,255,0.8),0 0 40px rgba(93,173,226,0.6);opacity:0;transition:opacity 0.3s;pointer-events:none;"></div>
+    </div>
+
+    <!-- Dual joystick zone (mobile) -->
+    <div id="joystick-zone">
+      <div class="joystick-outer" id="joystick-outer">
+        <div class="joystick-inner" id="joystick-inner"></div>
+      </div>
+      <div class="joystick-outer" id="joystick-outer-right">
+        <div class="joystick-inner" id="joystick-inner-right"></div>
+      </div>
+    </div>
+  </div>
+  <!-- /ui-layer -->
+
+  <!-- ── Level-Up Modal ─────────────────────────────────────────────────── -->
+  <div id="levelup-modal" style="display:none;">
+    <div class="modal-content">
+      <button class="overlay-close-x" id="levelup-x-btn">✕</button>
+      <h2>LEVEL UP!</h2>
+      <div id="upgrade-list"></div>
+      <button id="levelup-skip-btn"
+              style="margin-top:12px;padding:8px 24px;background:#333;color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;display:none;"
+              onclick="(function(){document.getElementById('levelup-modal').style.display='none';if(window.forceGameUnpause)window.forceGameUnpause();})()">CONTINUE →</button>
+    </div>
+  </div>
+
+  <!-- ── Stats Modal (stub — hidden) ───────────────────────────────────── -->
+  <div id="stats-modal"
+       style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:25;align-items:center;justify-content:center;pointer-events:auto;flex-direction:column;">
+    <div class="modal-content" style="max-height:80vh;overflow-y:auto;">
+      <h2>PLAYER STATS</h2>
+      <div id="stats-content" style="text-align:left;margin-bottom:20px;font-family:monospace;font-size:14px;line-height:1.8;color:#ecf0f1;"></div>
+      <button class="btn" id="close-stats-btn" onclick="document.getElementById('stats-modal').style.display='none';">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- ── Pause / Options Menu (minimal) ────────────────────────────────── -->
+  <div id="options-menu" style="display:none;">
+    <div class="options-content">
+      <h2 class="options-title">PAUSED</h2>
+      <div class="options-buttons">
+        <button class="btn-small" id="options-stats-btn"       style="display:none;">STATS</button>
+        <button class="btn-small" id="options-progression-btn" style="display:none;">PROGRESSION</button>
+        <button class="btn-small" id="options-attributes-btn"  style="display:none;">ATTRIBUTES</button>
+        <button class="btn-small" id="options-gear-btn"        style="display:none;">GEAR &amp; EQUIPMENT</button>
+        <button class="btn-small" id="options-achievements-btn" style="display:none;">ACHIEVEMENTS</button>
+        <button class="btn-small" id="options-settings-btn"    style="display:none;">⚙️ SETTINGS</button>
+        <button class="btn-small" id="options-credits-btn"     style="display:none;">CREDITS</button>
+        <button class="btn-small" id="options-camp-btn"        style="display:none;">⛺ GO TO CAMP</button>
+        <button class="btn-small" id="options-exit-btn"        style="display:none;">🚪 EXIT TO MENU</button>
+        <button class="btn-small" id="close-options-btn"
+                onclick="window.isPaused=false;document.getElementById('options-menu').style.display='none';">▶ RESUME</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Game-Over Screen (stub) ───────────────────────────────────────── -->
+  <div id="gameover-screen" style="display:none;">
+    <div class="gameover-box">
+      <h1 class="gameover-title">GAME OVER</h1>
+      <p id="final-score">⏱️ Survived: 0s</p>
+      <p id="final-kills">⚔️ Kills: 0</p>
+      <p id="final-level">📊 Final Level: 1</p>
+      <p id="gold-earned">💰 Gold Earned: 0</p>
+      <p id="total-gold">💵 Total Gold: 0</p>
+      <div id="loot-summary"><div id="loot-items"></div></div>
+      <button class="btn" id="restart-btn"
+              onclick="location.reload();">🔄 RESTART</button>
+    </div>
+  </div>
+
+  <!-- ── Challenge Complete Board (stub) ───────────────────────────────── -->
+  <div id="challenge-complete-board" role="status" aria-live="polite" style="display:none;">
+    <div class="ccb-header">🏆 Challenge Complete</div>
+    <div class="ccb-name" id="ccb-name-text">
+      <span id="ccb-name-label"></span>
+      <span class="ccb-strike" id="ccb-strike-bar"></span>
+    </div>
+    <div class="ccb-gold" id="ccb-gold-display">+0 Gold</div>
+  </div>
+
+  <!-- ── YOU DIED Banner ────────────────────────────────────────────────── -->
+  <div id="you-died-banner" style="display:none;">YOU DIED</div>
+
+  <!-- ── Misc stubs (required by JS but not visible in sandbox) ────────── -->
+  <div id="farmer-speech-bubble"  style="display:none;"><div id="farmer-speech-bubble-text"></div><div id="farmer-speech-bubble-prompt"></div></div>
+  <div id="farmer-quest-indicator" style="display:none;">?</div>
+  <div id="chat-reminder-bubble"  style="display:none;"></div>
+  <div id="ai-chat-tab"           style="display:none;">💬 AI</div>
+  <div id="ai-chat-box"           style="display:none;"></div>
+  <div id="character-visuals-screen" style="display:none;"></div>
+  <div id="codex-screen"          style="display:none;"></div>
+  <!-- Camp stubs -->
+  <div id="camp-interact-btn"     style="display:none;"></div>
+  <div id="camp-interact-prompt"  style="display:none;"></div>
+  <div id="camp-building-name"    style="display:none;"></div>
+  <div id="main-menu"             style="display:none;"></div>
+  <div id="camp-screen"           style="display:none;"></div>
+  <!-- Progression shop stubs -->
+  <div id="progression-shop"      style="display:none;"><div id="shop-gold">GOLD: 0</div><div id="shop-grid"></div></div>
+  <!-- Gear stubs -->
+  <div id="gear-screen"           style="display:none;"><div id="gear-stats-content"></div><div id="gear-content"></div></div>
+  <!-- Settings stubs -->
+  <div id="settings-modal"        style="display:none;">
+    <input type="checkbox" id="sound-toggle" checked>
+    <input type="checkbox" id="music-toggle" checked>
+    <input type="checkbox" id="auto-aim-checkbox">
+    <select id="control-type-select"><option value="keyboard">Keyboard</option></select>
+    <select id="quality-select"><option value="medium">Medium</option></select>
+    <div id="fps-booster-status" style="display:none;"></div>
+    <button id="settings-reset-btn" style="display:none;"></button>
+    <button id="settings-close-btn" style="display:none;"></button>
+    <button id="ui-calibration-btn" style="display:none;"></button>
+  </div>
+  <!-- Menu gold (referenced by addGold stub) -->
+  <div id="menu-gold" style="display:none;">GOLD: 0</div>
+  <!-- Achievements stub -->
+  <div id="achievements-screen"   style="display:none;"><div id="achievements-content"></div></div>
+  <!-- Attributes stub -->
+  <div id="attributes-screen"     style="display:none;"><div id="attributes-content"></div></div>
+  <!-- Credits stub -->
+  <div id="credits-screen"        style="display:none;"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SCRIPT LOADING — strictly ordered, enforcing pool-first architecture
+       ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- 1. Three.js (local copy, same version used by main game) -->
+  <script src="js/three.min.js"></script>
+
+  <!-- 2. Game state namespace + enemy instancing flag -->
+  <script src="js/state.js"></script>
+
+  <!-- 3. Pure utility helpers (getRarityColor, KILL_CAM_CONSTANTS) -->
+  <script src="js/utils.js"></script>
+
+  <!-- 4. Audio system (Web Audio noise synthesis) -->
+  <script src="js/audio.js"></script>
+
+  <!-- 5. World constants: COLORS, GAME_CONFIG, COMPANIONS, countdownMessages -->
+  <script src="js/world.js"></script>
+
+  <!-- 6. Weapon definitions: getDefaultWeapons(), WEAPON_LEVEL_BONUSES -->
+  <script src="js/weapons.js"></script>
+
+  <!-- 7. Spatial hash grid (O(1) proximity queries, used by combat.js) -->
+  <script src="js/spatial-hash.js"></script>
+
+  <!-- ── POOL / RENDERING CORE (must come before any gameplay class) ──── -->
+
+  <!-- 8. Instanced rendering — InstanceBatch wrapping THREE.InstancedMesh -->
+  <script src="js/instanced-renderer.js"></script>
+
+  <!-- 9. Global object pool (trail/chunk mesh reuse, zero-GC) -->
+  <script src="js/object-pool.js"></script>
+
+  <!-- ── VFX SYSTEMS ──────────────────────────────────────────────────── -->
+
+  <!-- 10. Dopamine system: time dilation, damage numbers, fever mode, LevelUpFX -->
+  <script src="js/dopamine-system.js"></script>
+
+  <!-- 11. Blood & physics: instanced blood drops, ground stains, wounds -->
+  <script src="js/blood-system.js"></script>
+
+  <!-- ── DOM UI HELPERS ──────────────────────────────────────────────── -->
+
+  <!-- 12. DOM helpers: showStatChange, showStatusMessage, stat notification queue -->
+  <script src="js/ui.js"></script>
+
+  <!-- ── GAME LOGIC ──────────────────────────────────────────────────── -->
+
+  <!-- 13. Player stats defaults: getDefaultPlayerStats() -->
+  <script src="js/player.js"></script>
+
+  <!-- 14. Combat math: calculateArmorReduction, findNearestEnemySH -->
+  <script src="js/combat.js"></script>
+
+  <!-- 15. Global game-state variables (scene, camera, renderer, enemies[], etc.)
+           IMPORTANT: This declares `let scene, camera, renderer, player,
+           enemies, projectiles, expGems, goldCoins, chests, particles,
+           damageNumbers, playerStats, weapons, saveData` etc. as lexical
+           globals shared with all subsequently-loaded scripts. -->
+  <script src="js/main.js"></script>
+
+  <!-- ── GAMEPLAY CLASSES ─────────────────────────────────────────────── -->
+
+  <!-- 16. Player class (water-droplet character, dash, recoil, shooting) -->
+  <script src="js/player-class.js"></script>
+
+  <!-- 17. Projectile, Companion, SwordSlash, Meteor, Particle classes -->
+  <script src="js/projectile-classes.js"></script>
+
+  <!-- 18. ExpGem, GoldCoin, GoldDrop, Chest pickup classes
+           CRITICAL: Dynamic drop physics — gems spin at different speeds/
+           directions based on hitForce & sourceWeapon, fly varying distances,
+           then physically land and rest on the ground. This logic is fully
+           preserved here and exercised by the sandbox gun kill. -->
+  <script src="js/gem-classes.js"></script>
+
+  <!-- 19. Prism Reliquary gem-slot system (rawGems, cutGems, gem bonuses) -->
+  <script src="js/gem-system.js"></script>
+
+  <!-- ── PROGRESSION UI ───────────────────────────────────────────────── -->
+
+  <!-- 20. Level-up upgrade modal (showUpgradeModal), rarity system, LightningBolt -->
+  <script src="js/level-up-system.js"></script>
+
+  <!-- 21. HUD update functions (updateHUD, updateMinimap, damage numbers) -->
+  <script src="js/game-hud.js"></script>
+
+  <!-- ── ENGINE 2.0 ───────────────────────────────────────────────────── -->
+
+  <!-- 22. Engine 2.0 Sandbox: PBR arena ground + center spawn hole -->
+  <script src="js/engine2.js"></script>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       SANDBOX GAME LOOP — minimal, fully pool-enforced
+       • Spawns player + one Slime dummy (respawns when killed)
+       • Gun auto-targets Slime; projectiles live in a pre-allocated pool
+       • Kill triggers BloodSystem burst + dynamic ExpGem drop physics
+       • ExpGem magnetism pulls gems to player → EXP gain → Level-Up modal
+       ═══════════════════════════════════════════════════════════════════════ -->
+  <script src="js/sandbox-loop.js"></script>
+
+</body>
+</html>
