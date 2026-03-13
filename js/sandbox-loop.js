@@ -140,6 +140,16 @@
     tutorial: { completed: true, currentStep: 'completed' },
     upgrades: { goldEarned: 0 },
     resources: { magicEssence: 0 },
+    // Rage combat system
+    rageMeter: 0,
+    specialAttacksLoadout: ['knifeTakedown'], // Starting special attack
+    specialAttackLevels: { knifeTakedown: 1 },
+    // Companion system
+    hasCompanionEgg: false,
+    companionEggHatched: false,
+    companionEggHatchProgress: 0,
+    companionGrowthStage: 'newborn',
+    companionSkillPoints: 0,
   };
 
   window.gameSettings = window.gameSettings || {
