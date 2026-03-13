@@ -851,12 +851,20 @@
 
       // Keep SSB countdown visible — it will transition to showing elapsed game time
       // via _ssbUpdateContext() which runs every frame. No need to hide it.
-      
+
       // Ensure game properly unpauses (use helper functions to sync window variables)
       setGamePaused(false);
       setGameActive(true);
       gameStartTime = Date.now();
       console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
+
+      // ENGINE 2.0: Enable sandbox mode and initialize new arena
+      window._engine2SandboxMode = true;
+      if (window.Engine2Sandbox && !window._engine2Instance) {
+        window._engine2Instance = new window.Engine2Sandbox(scene, camera);
+        window._engine2Instance.init();
+        console.log('[Engine2] Engine 2.0 Sandbox mode activated');
+      }
 
       // Apply Neural Matrix upgrades for this run
       if (window.NeuralMatrix) window.NeuralMatrix.applyToRun(playerStats);
