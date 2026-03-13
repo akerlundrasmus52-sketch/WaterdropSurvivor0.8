@@ -665,10 +665,10 @@
     let swipeStart = null;
     
     // Stats
-    const playerStats = getDefaultPlayerStats(GAME_CONFIG.baseExpReq);
+    let playerStats = getDefaultPlayerStats(GAME_CONFIG.baseExpReq);
 
     // Weapons State — initialised from GameWeapons definitions
-    const weapons = getDefaultWeapons();
+    let weapons = getDefaultWeapons();
 
     // Magnet range for XP collection
     let magnetRange = 2; // Base range for XP magnet
