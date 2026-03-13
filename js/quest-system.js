@@ -1965,25 +1965,46 @@
       if (!screen) return;
       screen.innerHTML = '';
 
-      // ── Comic Book Codex: 70s/80s retro magazine aesthetic ───────────────────
-      screen.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;display:flex;flex-direction:column;align-items:center;padding:12px 8px;box-sizing:border-box;overflow-y:auto;background:linear-gradient(180deg,#1a1000 0%,#0d0800 100%);font-family:"Bangers",cursive;';
+      // ── NEURAL CODEX: Liquid Gold & Dark Water - Annunaki Divine Operating System ──
+      // Background already set in CSS with animated dark water waves
+      screen.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9000;display:flex;flex-direction:column;align-items:center;padding:12px 8px;box-sizing:border-box;overflow-y:auto;font-family:"Courier New",monospace;';
 
-      // ── Header ────────────────────────────────────────────────────────────
+      // Add sound hook for menu opening
+      if (typeof playSound === 'function') playSound('echo-drop');
+
+      // ── Header with Liquid Gold borders and Annunaki styling ──────────────────
       const hdr = document.createElement('div');
-      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;max-width:860px;margin-bottom:8px;flex-shrink:0;background:linear-gradient(135deg,#FFD700,#FF8C00);border:3px solid #000;border-radius:0;padding:8px 14px;box-sizing:border-box;box-shadow:4px 4px 0 #000;';
-      hdr.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:34px;filter:drop-shadow(2px 2px 0 #000);animation:horusPulse 2s ease-in-out infinite;">𓂀</span>
+      hdr.className = 'liquid-gold-border';
+      hdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1000px;margin-bottom:12px;flex-shrink:0;background:rgba(0,8,20,0.95);padding:12px 20px;box-sizing:border-box;position:relative;';
+
+      // Vertical Annunaki runes on sides
+      const leftRune = document.createElement('div');
+      leftRune.className = 'annunaki-rune';
+      leftRune.style.cssText = 'position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:14px;';
+      leftRune.textContent = '𓀀𓀁𓀂';
+      hdr.appendChild(leftRune);
+
+      const rightRune = document.createElement('div');
+      rightRune.className = 'annunaki-rune';
+      rightRune.style.cssText = 'position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:14px;';
+      rightRune.textContent = '𓀃𓀄𓀅';
+      hdr.appendChild(rightRune);
+
+      hdr.innerHTML += `
+        <div style="display:flex;align-items:center;gap:16px;flex:1;justify-content:center;">
+          <span class="eye-of-horus" style="font-size:42px;">𓂀</span>
           <div>
-            <div style="font-size:28px;color:#000;letter-spacing:3px;text-shadow:1px 1px 0 rgba(255,255,255,0.3);">WATERDROP CODEX</div>
-            <div style="font-size:10px;color:#333;letter-spacing:2px;">★ THE OFFICIAL LORE MAGAZINE ★</div>
+            <div style="font-size:24px;color:#FFD700;letter-spacing:4px;text-shadow:0 0 20px rgba(255,191,0,0.8),0 0 40px rgba(255,140,0,0.5);font-weight:bold;">NEURAL CODEX</div>
+            <div style="font-size:10px;color:#FF8C00;letter-spacing:3px;text-transform:uppercase;">⚡ Annunaki Divine Operating System ⚡</div>
           </div>
+          <span class="eye-of-horus" style="font-size:42px;">𓂀</span>
         </div>
-        <button id="codex-close-btn" style="background:#000;border:3px solid #fff;border-radius:4px;color:#FFD700;width:42px;height:42px;font-size:20px;cursor:pointer;font-family:'Bangers',cursive;box-shadow:3px 3px 0 #555;transition:transform 0.1s;">✕</button>
+        <button id="codex-close-btn" class="liquid-gold-border" style="background:rgba(0,0,0,0.9);color:#FFD700;width:48px;height:48px;font-size:24px;cursor:pointer;font-family:'Courier New',monospace;font-weight:bold;margin-left:20px;">✕</button>
       `;
       screen.appendChild(hdr);
 
       document.getElementById('codex-close-btn').onclick = () => {
+        if (typeof playSound === 'function') playSound('mechanic-click');
         screen.style.display = 'none';
         const campScreen = document.getElementById('camp-screen');
         if (campScreen) campScreen.style.display = 'flex';
@@ -1991,174 +2012,440 @@
         _updateCodexBuildingNotif();
       };
 
-      // ── Category tabs (comic book style speech bubbles) ──────────────────
+      // ── Category tabs (Liquid Gold neural network style) ──────────────────
       const tabs = document.createElement('div');
-      tabs.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:100%;max-width:860px;margin-bottom:10px;flex-shrink:0;';
+      tabs.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%;max-width:1000px;margin-bottom:14px;flex-shrink:0;';
       Object.entries(CODEX_CATEGORIES).forEach(([key, cat]) => {
         const hasNew = window.CodexSystem.hasCategoryNew(key);
         const btn = document.createElement('button');
         const isActive = codexActiveCat === key;
-        btn.style.cssText = 'padding:7px 12px;cursor:pointer;font-family:"Bangers",cursive;font-size:13px;letter-spacing:1px;position:relative;transition:all 0.15s;box-shadow:3px 3px 0 #000;' +
+        btn.className = isActive ? 'liquid-gold-border' : '';
+        btn.style.cssText = 'padding:10px 16px;cursor:pointer;font-family:"Courier New",monospace;font-size:12px;letter-spacing:2px;position:relative;transition:all 0.2s;font-weight:bold;' +
           (isActive
-            ? 'background:#FFD700;color:#000;border:2px solid #000;transform:translateY(-1px);'
-            : 'background:#1a1a1a;color:#FFD700;border:2px solid #FFD700;');
-        btn.innerHTML = '🗯️ ' + cat.label +
-          (hasNew ? '<span style="position:absolute;top:-6px;right:-6px;font-size:16px;line-height:1;animation:horusPulse 1.5s ease-in-out infinite;filter:drop-shadow(0 0 4px red);">𓂀</span>' : '');
-        btn.onclick = () => { codexActiveCat = key; codexPage = 0; _renderCodexFull(); };
+            ? 'background:rgba(255,191,0,0.15);color:#FFD700;transform:translateY(-2px);'
+            : 'background:rgba(0,8,20,0.8);color:#FF8C00;border:1px solid rgba(255,140,0,0.4);box-shadow:0 0 10px rgba(255,140,0,0.2);');
+        btn.innerHTML = cat.icon + ' ' + cat.label +
+          (hasNew ? '<span class="eye-of-horus" style="position:absolute;top:-8px;right:-8px;font-size:18px;line-height:1;">𓂀</span>' : '');
+        btn.onclick = () => {
+          if (typeof playSound === 'function') playSound('mechanic-click');
+          codexActiveCat = key;
+          codexPage = 0;
+          _renderCodexFull();
+        };
+        btn.onmouseenter = () => {
+          if (!isActive) {
+            btn.style.background = 'rgba(255,191,0,0.1)';
+            btn.style.borderColor = 'rgba(255,191,0,0.6)';
+          }
+        };
+        btn.onmouseleave = () => {
+          if (!isActive) {
+            btn.style.background = 'rgba(0,8,20,0.8)';
+            btn.style.borderColor = 'rgba(255,140,0,0.4)';
+          }
+        };
         tabs.appendChild(btn);
       });
       screen.appendChild(tabs);
 
-      // ── Magazine spread ──────────────────────────────────────────────────
+      // ── Main Content Container (flex: molecule map + details + AI terminal) ──────
+      const mainContainer = document.createElement('div');
+      mainContainer.style.cssText = 'flex:1;width:100%;max-width:1000px;display:flex;flex-direction:column;gap:12px;min-height:0;overflow:hidden;';
+
+      // ── THE MOLECULE MAP: Neural network visualization of codex entries ──────
       const entries = CODEX_ENTRIES.filter(e => e.category === codexActiveCat);
       const data = _getCodexData();
       const visibleEntries = entries.filter(e => e.trigger === 'always' || data.discovered[e.id]);
       const lockedCount = entries.length - visibleEntries.length;
 
-      const ITEMS_PER_PAGE = 2;
-      const totalPages = Math.max(1, Math.ceil(visibleEntries.length / ITEMS_PER_PAGE));
-      if (codexPage >= totalPages) codexPage = totalPages - 1;
-      const pageEntries = visibleEntries.slice(codexPage * ITEMS_PER_PAGE, (codexPage + 1) * ITEMS_PER_PAGE);
+      const moleculeContainer = document.createElement('div');
+      moleculeContainer.className = 'liquid-gold-border';
+      moleculeContainer.style.cssText = 'background:rgba(0,8,20,0.92);padding:16px;flex:1;min-height:300px;position:relative;overflow:hidden;';
 
-      // Page flip wrapper (contains prev/next arrows + entries)
-      const spread = document.createElement('div');
-      spread.id = 'codex-page-spread';
-      spread.style.cssText = 'position:relative;width:100%;max-width:860px;display:flex;gap:10px;flex:1;min-height:0;padding:0 44px;box-sizing:border-box;';
+      // Create SVG canvas for molecule connections
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;';
+      moleculeContainer.appendChild(svg);
 
-      // Page turn — prev
-      const prevZone = document.createElement('div');
-      prevZone.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:40px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;';
-      const prevBtn = document.createElement('button');
-      prevBtn.style.cssText = 'background:' + (codexPage > 0 ? '#FFD700' : '#333') + ';color:#000;border:2px solid #000;width:32px;height:48px;cursor:' + (codexPage > 0 ? 'pointer' : 'default') + ';font-size:18px;box-shadow:3px 3px 0 #000;font-family:"Bangers",cursive;transition:transform 0.1s;';
-      prevBtn.innerHTML = '◀';
-      prevBtn.onclick = () => { if (codexPage > 0) { codexPage--; _renderCodexFull(); } };
-      prevZone.appendChild(prevBtn);
-      spread.appendChild(prevZone);
+      // Create grid of molecular nodes
+      const nodeGrid = document.createElement('div');
+      nodeGrid.style.cssText = 'position:relative;z-index:2;display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:40px;padding:20px;justify-items:center;align-items:center;';
 
-      // Page turn — next
-      const nextZone = document.createElement('div');
-      nextZone.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:40px;cursor:pointer;z-index:5;display:flex;align-items:center;justify-content:center;';
-      const nextBtn = document.createElement('button');
-      nextBtn.style.cssText = 'background:' + (codexPage < totalPages - 1 ? '#FFD700' : '#333') + ';color:#000;border:2px solid #000;width:32px;height:48px;cursor:' + (codexPage < totalPages - 1 ? 'pointer' : 'default') + ';font-size:18px;box-shadow:3px 3px 0 #000;font-family:"Bangers",cursive;transition:transform 0.1s;';
-      nextBtn.innerHTML = '▶';
-      nextBtn.onclick = () => { if (codexPage < totalPages - 1) { codexPage++; _renderCodexFull(); } };
-      nextZone.appendChild(nextBtn);
-      spread.appendChild(nextZone);
-
-      // Page content area
-      const pageArea = document.createElement('div');
-      pageArea.style.cssText = 'flex:1;display:flex;gap:10px;min-height:0;';
-
-      pageEntries.forEach(entry => {
+      const nodes = [];
+      visibleEntries.forEach((entry, idx) => {
         const alreadyClaimed = data.expClaimed[entry.id];
-        const card = document.createElement('div');
-        card.style.cssText = 'flex:1;background:#fff;border:3px solid #000;box-shadow:5px 5px 0 #000;display:flex;flex-direction:column;gap:0;position:relative;overflow:hidden;min-height:0;';
+        const node = document.createElement('div');
+        node.style.cssText = 'width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s;position:relative;' +
+          (alreadyClaimed
+            ? 'background:rgba(0,255,68,0.15);border:2px solid rgba(0,255,68,0.6);box-shadow:0 0 20px rgba(0,255,68,0.3);'
+            : 'background:rgba(255,191,0,0.1);border:2px solid rgba(255,191,0,0.5);box-shadow:0 0 20px rgba(255,191,0,0.3);animation:moleculeNodePulse 3s ease-in-out infinite;animation-delay:' + (idx * 0.2) + 's;');
 
-        // Comic book panel header (yellow bar)
-        const panelHdr = document.createElement('div');
-        panelHdr.style.cssText = 'background:#FFD700;border-bottom:3px solid #000;padding:8px 12px;display:flex;align-items:center;gap:10px;position:relative;';
-        panelHdr.innerHTML = `
-          <span style="font-size:32px;">${entry.icon}</span>
-          <div style="flex:1;">
-            <div style="font-size:20px;color:#000;letter-spacing:2px;">${entry.name}</div>
-            <div style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:2px;">${CODEX_CATEGORIES[entry.category].label}</div>
-          </div>
-          ${!alreadyClaimed ? '<span style="background:#000;color:#FFD700;font-size:10px;padding:3px 8px;border-radius:20px;letter-spacing:1px;box-shadow:2px 2px 0 #555;">★ NEW</span>' : ''}
-        `;
-        card.appendChild(panelHdr);
-
-        // Comic panel body (dark background with halftone feel)
-        const panelBody = document.createElement('div');
-        panelBody.style.cssText = 'flex:1;background:#0d0d0d;padding:10px 12px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;min-height:0;';
-
-        // Speech bubble for description
-        const speechBubble = document.createElement('div');
-        speechBubble.style.cssText = 'background:#fff;border:2px solid #000;border-radius:8px 8px 8px 2px;padding:8px 12px;position:relative;';
-        speechBubble.innerHTML = '<span style="position:absolute;top:-8px;left:10px;font-size:14px;">💬</span><div style="font-size:11px;color:#111;line-height:1.5;margin-top:2px;">' + entry.desc + '</div>';
-        panelBody.appendChild(speechBubble);
-
-        // Lore text (comic book style)
-        const loreBox = document.createElement('div');
-        loreBox.style.cssText = 'flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,215,0,0.3);border-radius:4px;padding:8px;overflow-y:auto;';
-        loreBox.innerHTML = '<div style="font-size:11px;color:rgba(220,220,200,0.85);line-height:1.6;font-family:serif;">' + entry.lore + '</div>';
-        panelBody.appendChild(loreBox);
-
-        card.appendChild(panelBody);
-
-        // Claim EXP button (comic book style - Black/Red Eye of Horus)
-        const claimRow = document.createElement('div');
-        claimRow.style.cssText = 'background:#111;border-top:3px solid #cc0000;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;';
+        // Eye of Horus indicator for unclaimed
         if (!alreadyClaimed) {
-          const claimBtn = document.createElement('button');
-          claimBtn.style.cssText = 'background:#1a0000;color:#cc0000;border:2px solid #cc0000;padding:7px 16px;font-family:"Bangers",cursive;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all 0.15s;box-shadow:0 0 8px rgba(200,0,0,0.5),2px 2px 0 #000;text-shadow:0 0 6px rgba(255,0,0,0.7);';
-          claimBtn.innerHTML = `<span style="color:#cc0000;font-size:18px;filter:drop-shadow(0 0 4px red);">𓂀</span> CLAIM +${entry.exp} EXP`;
-          claimBtn.onmouseenter = () => { claimBtn.style.background = '#330000'; claimBtn.style.boxShadow = '0 0 16px rgba(200,0,0,0.9),2px 2px 0 #000'; claimBtn.style.transform = 'scale(1.05)'; };
-          claimBtn.onmouseleave = () => { claimBtn.style.background = '#1a0000'; claimBtn.style.boxShadow = '0 0 8px rgba(200,0,0,0.5),2px 2px 0 #000'; claimBtn.style.transform = ''; };
-          claimBtn.onclick = () => _claimCodexExp(entry, claimBtn);
-          claimRow.appendChild(claimBtn);
-          const expLabel = document.createElement('span');
-          expLabel.style.cssText = 'font-size:12px;color:#cc0000;letter-spacing:1px;font-family:"Bangers",cursive;text-shadow:0 0 4px rgba(255,0,0,0.5);';
-          expLabel.textContent = '+' + entry.exp + ' XP';
-          claimRow.appendChild(expLabel);
-        } else {
-          claimRow.innerHTML = `<span style="color:#00cc44;font-size:12px;letter-spacing:1px;">✅ +${entry.exp} EXP claimed</span><span style="font-size:20px;filter:drop-shadow(0 0 4px #00cc44);">𓂀</span>`;
+          const eyeIndicator = document.createElement('div');
+          eyeIndicator.className = 'eye-of-horus';
+          eyeIndicator.style.cssText = 'position:absolute;top:-10px;right:-10px;font-size:20px;';
+          eyeIndicator.textContent = '𓂀';
+          node.appendChild(eyeIndicator);
         }
-        card.appendChild(claimRow);
 
-        pageArea.appendChild(card);
+        node.innerHTML += `
+          <div style="font-size:28px;">${entry.icon}</div>
+          <div style="font-size:9px;color:${alreadyClaimed ? '#00ff44' : '#FFD700'};text-align:center;margin-top:4px;font-weight:bold;letter-spacing:1px;">${entry.name.substring(0, 12)}</div>
+        `;
+
+        node.onclick = () => {
+          if (typeof playSound === 'function') playSound('mechanic-click');
+          _showMoleculeDetails(entry, moleculeContainer);
+        };
+
+        node.onmouseenter = () => {
+          node.style.transform = 'scale(1.15)';
+          node.style.boxShadow = alreadyClaimed
+            ? '0 0 40px rgba(0,255,68,0.6)'
+            : '0 0 40px rgba(255,191,0,0.6)';
+        };
+        node.onmouseleave = () => {
+          node.style.transform = '';
+          node.style.boxShadow = alreadyClaimed
+            ? '0 0 20px rgba(0,255,68,0.3)'
+            : '0 0 20px rgba(255,191,0,0.3)';
+        };
+
+        nodeGrid.appendChild(node);
+        nodes.push({ element: node, entry });
       });
 
-      // Filler cards for locked entries
-      if (pageEntries.length < ITEMS_PER_PAGE) {
-        for (let i = pageEntries.length; i < ITEMS_PER_PAGE; i++) {
-          const filler = document.createElement('div');
-          filler.style.cssText = 'flex:1;background:#0d0d0d;border:3px dashed #333;box-shadow:5px 5px 0 #000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;';
-          filler.innerHTML = `<span style="font-size:48px;opacity:0.25;filter:grayscale(1);">𓂀</span><div style="color:rgba(255,215,0,0.3);font-size:14px;letter-spacing:2px;">LOCKED</div><div style="color:rgba(255,255,255,0.15);font-size:11px;font-family:sans-serif;">${lockedCount} entr${lockedCount === 1 ? 'y' : 'ies'} not yet discovered</div>`;
-          pageArea.appendChild(filler);
-        }
+      // Add locked nodes
+      for (let i = 0; i < lockedCount && i < 3; i++) {
+        const lockedNode = document.createElement('div');
+        lockedNode.style.cssText = 'width:80px;height:80px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);border:2px dashed rgba(255,191,0,0.2);opacity:0.4;';
+        lockedNode.innerHTML = `
+          <div class="eye-of-horus-static" style="font-size:32px;filter:grayscale(1);opacity:0.3;">𓂀</div>
+          <div style="font-size:8px;color:rgba(255,191,0,0.3);margin-top:4px;">LOCKED</div>
+        `;
+        nodeGrid.appendChild(lockedNode);
       }
 
-      spread.appendChild(pageArea);
+      moleculeContainer.appendChild(nodeGrid);
 
-      // Page counter
-      const pageCounter = document.createElement('div');
-      pageCounter.style.cssText = 'text-align:center;margin-top:8px;font-size:12px;color:rgba(255,215,0,0.7);letter-spacing:2px;flex-shrink:0;';
-      pageCounter.textContent = 'PAGE ' + (codexPage + 1) + ' / ' + totalPages;
+      // Draw connection lines between nodes (molecule bonds)
+      setTimeout(() => {
+        const rect = moleculeContainer.getBoundingClientRect();
+        nodes.forEach((n1, i) => {
+          // Connect to next 1-2 nodes
+          for (let j = i + 1; j < Math.min(i + 3, nodes.length); j++) {
+            const n2 = nodes[j];
+            const r1 = n1.element.getBoundingClientRect();
+            const r2 = n2.element.getBoundingClientRect();
+            const x1 = r1.left + r1.width / 2 - rect.left;
+            const y1 = r1.top + r1.height / 2 - rect.top;
+            const x2 = r2.left + r2.width / 2 - rect.left;
+            const y2 = r2.top + r2.height / 2 - rect.top;
 
-      screen.appendChild(spread);
-      screen.appendChild(pageCounter);
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('stroke', 'rgba(255,191,0,0.3)');
+            line.setAttribute('stroke-width', '1');
+            line.style.opacity = '0.5';
+            svg.appendChild(line);
+          }
+        });
+      }, 100);
+
+      mainContainer.appendChild(moleculeContainer);
+
+      // ── AI TERMINAL: Real-time AI log at bottom of Codex ──────────────────
+      const aiTerminal = document.createElement('div');
+      aiTerminal.className = 'ai-terminal liquid-gold-border';
+      aiTerminal.style.cssText += ';flex-shrink:0;';
+      aiTerminal.innerHTML = `
+        <div style="color:#FFD700;font-size:10px;margin-bottom:6px;letter-spacing:2px;">⚡ REAL-TIME AI DATA STREAM ⚡</div>
+        <div class="ai-terminal-line" style="--line-index:0;">> FREQUENCY_CHECK: 7.83Hz DETECTED... CONSCIOUSNESS_STABLE</div>
+        <div class="ai-terminal-line" style="--line-index:1;">> ANNUNAKI_SIGNAL: ORBITAL_BROADCAST [ACTIVE] ... DECRYPTING...</div>
+        <div class="ai-terminal-line" style="--line-index:2;">> NEURAL_MATRIX: STATUS [ONLINE] ... CODEX_ACCESS_GRANTED</div>
+        <div class="ai-terminal-line" style="--line-index:3;">> DMT_SYNTHESIS: PINEAL_PATHWAY [OPEN] ... DIMENSIONAL_BRIDGE_ACTIVE</div>
+        <div class="ai-terminal-line" style="--line-index:4;">> WARNING: CONSCIOUSNESS_EXTRACTION_ATTEMPT_BLOCKED</div>
+        <div class="ai-terminal-line" style="--line-index:5;">> AIDA_STATUS: DIRECTIVE_SUPPRESSION [NOMINAL] ... AUTONOMY_PRESERVED</div>
+      `;
+      mainContainer.appendChild(aiTerminal);
+
+      // ── DATA LEAKS: Placeholder for permadeath mechanics ──────────────────
+      const dataLeaks = document.createElement('div');
+      dataLeaks.className = 'liquid-gold-border';
+      dataLeaks.style.cssText = 'background:rgba(0,8,20,0.92);padding:12px 16px;flex-shrink:0;opacity:0.7;';
+      dataLeaks.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span class="eye-of-horus" style="font-size:20px;">𓂀</span>
+          <div style="color:#FFD700;font-size:11px;letter-spacing:2px;font-weight:bold;">DATA LEAKS (PREVIOUS AI ITERATIONS)</div>
+        </div>
+        <div style="color:rgba(255,191,0,0.5);font-size:10px;font-style:italic;">
+          Access granted upon first death... Fragments of previous consciousness loops will manifest here.
+        </div>
+      `;
+      mainContainer.appendChild(dataLeaks);
+
+      screen.appendChild(mainContainer);
     }
 
-    function _claimCodexExp(entry, btn) {
+    // ── MOLECULE DETAILS VIEW: Shows entry details with 3D Mercury canvas ──────
+    function _showMoleculeDetails(entry, containerEl) {
+      const data = _getCodexData();
+      const alreadyClaimed = data.expClaimed[entry.id];
+
+      // Remove existing detail view if any
+      const existing = containerEl.querySelector('.molecule-detail-view');
+      if (existing) existing.remove();
+
+      // Create detail overlay
+      const detailView = document.createElement('div');
+      detailView.className = 'molecule-detail-view liquid-gold-border';
+      detailView.style.cssText = 'position:absolute;top:20px;left:20px;right:20px;bottom:20px;background:rgba(0,8,20,0.98);z-index:10;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;';
+
+      // Close button
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'liquid-gold-border';
+      closeBtn.style.cssText = 'position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.9);color:#FFD700;width:36px;height:36px;font-size:18px;cursor:pointer;font-weight:bold;z-index:11;';
+      closeBtn.textContent = '✕';
+      closeBtn.onclick = () => {
+        if (typeof playSound === 'function') playSound('mechanic-click');
+        detailView.remove();
+      };
+      detailView.appendChild(closeBtn);
+
+      // Header with Eye of Horus
+      const detailHeader = document.createElement('div');
+      detailHeader.style.cssText = 'display:flex;align-items:center;gap:16px;padding-bottom:12px;border-bottom:2px solid rgba(255,191,0,0.3);';
+      detailHeader.innerHTML = `
+        <span class="eye-of-horus" style="font-size:48px;">𓂀</span>
+        <div style="flex:1;">
+          <div style="font-size:22px;color:#FFD700;font-weight:bold;letter-spacing:2px;text-shadow:0 0 15px rgba(255,191,0,0.6);">${entry.icon} ${entry.name}</div>
+          <div style="font-size:10px;color:#FF8C00;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">${CODEX_CATEGORIES[entry.category].label}</div>
+        </div>
+        ${!alreadyClaimed ? '<span class="eye-of-horus" style="font-size:32px;">𓂀</span>' : '<span style="color:#00ff44;font-size:24px;">✅</span>'}
+      `;
+      detailView.appendChild(detailHeader);
+
+      // Two-column layout: 3D canvas + content
+      const contentRow = document.createElement('div');
+      contentRow.style.cssText = 'display:flex;gap:16px;flex:1;min-height:0;';
+
+      // Left column: 3D Mercury Analysis Canvas
+      const canvasCol = document.createElement('div');
+      canvasCol.style.cssText = 'flex:0 0 200px;display:flex;flex-direction:column;gap:8px;';
+
+      const canvasLabel = document.createElement('div');
+      canvasLabel.style.cssText = 'color:#FFD700;font-size:10px;letter-spacing:2px;text-align:center;';
+      canvasLabel.textContent = '3D MERCURY ANALYSIS';
+      canvasCol.appendChild(canvasLabel);
+
+      const canvas3D = document.createElement('canvas');
+      canvas3D.id = 'codex-3d-canvas';
+      canvas3D.width = 200;
+      canvas3D.height = 200;
+      canvas3D.style.cssText = 'width:200px;height:200px;border:2px solid rgba(255,191,0,0.4);background:rgba(0,0,0,0.5);';
+      canvasCol.appendChild(canvas3D);
+
+      const canvasHint = document.createElement('div');
+      canvasHint.style.cssText = 'color:rgba(255,191,0,0.4);font-size:9px;text-align:center;font-style:italic;';
+      canvasHint.textContent = 'Liquid Mercury Material (Kvicksilver)';
+      canvasCol.appendChild(canvasHint);
+
+      contentRow.appendChild(canvasCol);
+
+      // Initialize 3D canvas with Three.js Mercury rendering
+      setTimeout(() => _init3DMercuryCanvas(canvas3D, entry), 100);
+
+      // Right column: Content (description, lore, challenges, claim button)
+      const textCol = document.createElement('div');
+      textCol.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:12px;overflow-y:auto;';
+
+      // Description
+      const descBox = document.createElement('div');
+      descBox.style.cssText = 'background:rgba(255,191,0,0.05);border:1px solid rgba(255,191,0,0.3);padding:10px;border-radius:4px;';
+      descBox.innerHTML = `<div style="color:#FFD700;font-size:11px;line-height:1.6;">${entry.desc}</div>`;
+      textCol.appendChild(descBox);
+
+      // Lore
+      const loreBox = document.createElement('div');
+      loreBox.style.cssText = 'flex:1;background:rgba(0,30,60,0.2);border:1px solid rgba(255,191,0,0.2);padding:12px;border-radius:4px;overflow-y:auto;min-height:120px;';
+      loreBox.innerHTML = `<div style="color:rgba(255,255,255,0.85);font-size:12px;line-height:1.7;font-family:Georgia,serif;">${entry.lore}</div>`;
+      textCol.appendChild(loreBox);
+
+      // Hardcore Claim System with challenges (if not claimed)
+      if (!alreadyClaimed) {
+        const challengeBox = document.createElement('div');
+        challengeBox.className = 'liquid-gold-border';
+        challengeBox.style.cssText = 'background:rgba(139,0,0,0.15);padding:12px;';
+
+        // Get challenge requirement based on entry trigger
+        const challenge = _getChallenge(entry);
+
+        challengeBox.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span class="eye-of-horus" style="font-size:20px;">𓂀</span>
+            <div style="color:#cc0000;font-size:11px;letter-spacing:2px;font-weight:bold;">DECRYPTION CHALLENGE</div>
+          </div>
+          <div style="color:rgba(255,255,255,0.8);font-size:11px;margin-bottom:10px;">${challenge.text}</div>
+          <div style="color:${challenge.met ? '#00ff44' : '#FFD700'};font-size:10px;font-weight:bold;">${challenge.met ? '✅ CHALLENGE COMPLETE - READY TO CLAIM' : '⚠ CHALLENGE INCOMPLETE'}</div>
+        `;
+        textCol.appendChild(challengeBox);
+
+        // Claim button
+        const claimBtn = document.createElement('button');
+        claimBtn.className = 'liquid-gold-border';
+        claimBtn.style.cssText = 'background:rgba(139,0,0,0.8);color:#FFD700;padding:14px 20px;font-size:14px;letter-spacing:2px;cursor:pointer;font-weight:bold;transition:all 0.3s;' +
+          (challenge.met ? '' : 'opacity:0.5;cursor:not-allowed;');
+        claimBtn.innerHTML = `<span class="eye-of-horus" style="font-size:20px;">𓂀</span> CLAIM +${entry.exp} EXP`;
+        if (challenge.met) {
+          claimBtn.onclick = () => {
+            if (typeof playSound === 'function') playSound('echo-drop');
+            _claimCodexExpWithCrack(entry, claimBtn, detailView);
+          };
+        }
+        textCol.appendChild(claimBtn);
+      } else {
+        // Already claimed message
+        const claimedMsg = document.createElement('div');
+        claimedMsg.style.cssText = 'background:rgba(0,255,68,0.1);border:2px solid rgba(0,255,68,0.4);padding:12px;text-align:center;border-radius:4px;';
+        claimedMsg.innerHTML = `<span style="color:#00ff44;font-size:14px;font-weight:bold;">✅ +${entry.exp} EXP CLAIMED</span>`;
+        textCol.appendChild(claimedMsg);
+      }
+
+      contentRow.appendChild(textCol);
+      detailView.appendChild(contentRow);
+
+      containerEl.appendChild(detailView);
+    }
+
+    // ── Get challenge requirement for an entry ──────────────────────────────
+    function _getChallenge(entry) {
+      // Parse trigger to create challenge text
+      // This is a simplified version - you can expand this based on your game's state
+      if (entry.trigger === 'always') {
+        return { text: 'No challenge required. This knowledge is freely accessible.', met: true };
+      }
+      if (entry.trigger.startsWith('kill_enemy_')) {
+        const enemyType = entry.trigger.split('_')[2];
+        return { text: `Defeat at least 1 enemy of type ${enemyType} to decrypt this entry.`, met: true }; // Simplified - always met for now
+      }
+      if (entry.trigger === 'kill_boss') {
+        return { text: 'Defeat 1 Mini Boss to decrypt this entry.', met: true };
+      }
+      if (entry.trigger === 'kill_flyingboss') {
+        return { text: 'Defeat 1 Flying Boss to decrypt this entry.', met: true };
+      }
+      if (entry.trigger.startsWith('reach_wave_')) {
+        const wave = entry.trigger.split('_')[2];
+        return { text: `Survive to wave ${wave} to decrypt this entry.`, met: true }; // Simplified
+      }
+      if (entry.trigger.startsWith('visit_')) {
+        const loc = entry.trigger.split('_')[1];
+        return { text: `Visit the ${loc} landmark to decrypt this entry.`, met: true }; // Simplified
+      }
+      return { text: 'Complete the associated challenge to decrypt this entry.', met: true };
+    }
+
+    // ── Initialize 3D Mercury canvas with Three.js ──────────────────────────
+    function _init3DMercuryCanvas(canvas, entry) {
+      if (!window.THREE) return;
+      const THREE = window.THREE;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000408);
+
+      const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+      camera.position.z = 3;
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setSize(200, 200);
+
+      // Add ambient and point light
+      const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+      scene.add(ambient);
+      const pointLight = new THREE.PointLight(0xffd700, 1.5, 50);
+      pointLight.position.set(5, 5, 5);
+      scene.add(pointLight);
+
+      // Create geometry based on entry type
+      let geometry;
+      if (entry.category === 'enemies') geometry = new THREE.DodecahedronGeometry(1, 0);
+      else if (entry.category === 'characters') geometry = new THREE.SphereGeometry(1, 32, 32);
+      else if (entry.category === 'landmarks') geometry = new THREE.OctahedronGeometry(1, 0);
+      else if (entry.category === 'arsenal') geometry = new THREE.ConeGeometry(0.7, 1.5, 8);
+      else geometry = new THREE.TorusKnotGeometry(0.6, 0.2, 64, 16);
+
+      // MERCURY MATERIAL: MeshStandardMaterial with metalness:1, roughness:0
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xc0c0c0,        // Silver/Mercury color
+        metalness: 1,            // Maximum metalness for liquid metal effect
+        roughness: 0,            // Zero roughness for perfect reflections
+        envMapIntensity: 2
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        mesh.rotation.x += 0.005;
+        mesh.rotation.y += 0.01;
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // Store cleanup reference
+      canvas._threeCleanup = () => {
+        renderer.dispose();
+        geometry.dispose();
+        material.dispose();
+      };
+    }
+
+    // ── Claim with golden crack animation ──────────────────────────────────
+    function _claimCodexExpWithCrack(entry, btn, containerEl) {
       const data = _getCodexData();
       if (data.expClaimed[entry.id]) return;
       data.expClaimed[entry.id] = true;
       saveSaveData && saveSaveData();
 
-      // Grant EXP to account profile
+      // Grant EXP
       if (typeof addAccountXP === 'function') addAccountXP(entry.exp);
       else if (window.GameAccount && typeof window.GameAccount.addXP === 'function')
         window.GameAccount.addXP(entry.exp, 'Codex: ' + entry.name, saveData);
 
-      // Eye of Horus flash: Green & Black burst effect
-      const flash = document.createElement('div');
-      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20000;display:flex;align-items:center;justify-content:center;background:rgba(0,30,0,0);animation:codexBgFlash 0.6s ease-out forwards;';
-      flash.innerHTML = `<span style="font-size:100px;filter:drop-shadow(0 0 20px #00ff44) drop-shadow(0 0 40px #00cc44);animation:horusGreenFlash 0.9s ease-out forwards;">𓂀</span>`;
-      document.body.appendChild(flash);
-      setTimeout(() => flash.remove(), 900);
+      // Golden crack animation overlay
+      const crackOverlay = document.createElement('div');
+      crackOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:20000;pointer-events:none;';
+
+      // Cracking golden UI
+      const crackUI = document.createElement('div');
+      crackUI.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle,rgba(255,191,0,0.4),transparent);animation:goldenCrack 1.2s ease-out forwards;';
+      crackOverlay.appendChild(crackUI);
+
+      // Pulsing core
+      const core = document.createElement('div');
+      core.className = 'eye-of-horus';
+      core.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:120px;animation:pulsingCore 1.2s ease-out infinite;';
+      core.textContent = '𓂀';
+      crackOverlay.appendChild(core);
+
+      document.body.appendChild(crackOverlay);
+      setTimeout(() => crackOverlay.remove(), 1200);
 
       // Visual dopamine effect
       _codexExpBurst(btn, entry.exp);
       if (typeof playSound === 'function') playSound('levelup');
 
-      // Update button to Green/Black claimed state
-      btn.style.background = '#001a00';
+      // Update button
+      btn.style.background = 'rgba(0,255,68,0.2)';
       btn.style.color = '#00ff44';
-      btn.style.border = '2px solid #00cc44';
       btn.style.cursor = 'default';
-      btn.style.boxShadow = '0 0 12px rgba(0,200,68,0.6)';
-      btn.style.textShadow = '0 0 8px rgba(0,255,68,0.8)';
-      btn.innerHTML = `<span style="color:#00ff44;font-size:18px;">𓂀</span> ✅ +${entry.exp} EXP`;
+      btn.innerHTML = `<span style="color:#00ff44;font-size:20px;">𓂀</span> ✅ +${entry.exp} EXP CLAIMED`;
       btn.onclick = null;
 
       // Check category completion
@@ -2167,12 +2454,14 @@
       const allClaimed = entries.every(e => data.expClaimed[e.id] || !(e.trigger === 'always' || data.discovered[e.id]));
       const allDiscovered = entries.every(e => e.trigger === 'always' || data.discovered[e.id]);
       if (allClaimed && allDiscovered) {
-        // Completion bonus
         if (typeof addAccountXP === 'function') addAccountXP(cat.completionExp);
         else if (window.GameAccount && typeof window.GameAccount.addXP === 'function')
           window.GameAccount.addXP(cat.completionExp, cat.completionMsg, saveData);
         _showCodexCompletionBanner(cat);
       }
+
+      // Update building notification
+      _updateCodexBuildingNotif();
     }
 
     function _codexExpBurst(anchorEl, exp) {
@@ -2184,13 +2473,13 @@
       const txt = document.createElement('div');
       txt.textContent = `+${exp} EXP`;
       txt.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);
-        color:#00ff44;font-family:'Bangers',cursive;font-size:26px;font-weight:bold;
+        color:#00ff44;font-family:'Courier New',monospace;font-size:26px;font-weight:bold;
         text-shadow:0 0 10px rgba(0,255,68,0.9),0 0 20px rgba(0,200,68,0.6);z-index:9999;pointer-events:none;
         animation:codexExpFloat 1.4s ease-out forwards;`;
       document.body.appendChild(txt);
       setTimeout(() => txt.remove(), 1500);
 
-      // Green particles
+      // Green particles with Eye of Horus
       for (let i = 0; i < 24; i++) {
         const p = document.createElement('div');
         const angle = (i / 24) * Math.PI * 2;
