@@ -121,6 +121,13 @@
   const POOL_SIZE_PROJECTILES = 60;
   const PROJECTILE_SPEED    = 22;            // units/second
   const PROJECTILE_RANGE_SQ = 14 * 14;      // squared range (14 units)
+  // Fallback enemy type index (BALANCED=2) used when enemies.js is not loaded
+  const DEFAULT_ENEMY_TYPE  = 2;
+  // Converts walkSpeed display units → Three.js world units per frame
+  // walkSpeed is a display value (25 = normal speed); factor tuned to match main game
+  const MOVEMENT_TIME_SCALE  = 0.0042;
+  // Half-width of the Slime HP bar plane (full width = 1.4, half = 0.7)
+  const SLIME_HP_BAR_HALF_WIDTH = 0.7;
 
   // ─── Module state ────────────────────────────────────────────────────────────
   let _ready    = false;
@@ -333,7 +340,7 @@
     for (let i = 0; i < gemCount; i++) {
       // Pass hitForce and weapon name so gem-classes.js applies the dynamic
       // spin speed / fly distance logic based on how hard the enemy was killed.
-      expGems.push(new ExpGem(x, z, 'gun', hitForce, ENEMY_TYPES ? ENEMY_TYPES.BALANCED : 2));
+      expGems.push(new ExpGem(x, z, 'gun', hitForce, ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE));
     }
 
     createFloatingText('SLIME DEFEATED!', new THREE.Vector3(x, 1.8, z), '#AAFFAA');
@@ -370,7 +377,7 @@
     const frac = Math.max(0, _slime.hp / _slime.maxHp);
     // Scale x from full width (1.4) to 0, keeping left edge fixed
     _slime.hpFill.scale.x = Math.max(0.001, frac);
-    _slime.hpFill.position.x = (frac - 1) * 0.7; // offset to anchor left
+    _slime.hpFill.position.x = (frac - 1) * SLIME_HP_BAR_HALF_WIDTH; // offset to anchor left
     _slime.hpFill.material.color.setHex(
       frac > 0.5 ? 0x44FF44 : frac > 0.25 ? 0xFFAA00 : 0xFF3300
     );
@@ -740,7 +747,7 @@
   function _movePlayer(dt) {
     if (!player) return;
     const dir   = _getMoveDir();
-    const speed = (playerStats ? playerStats.walkSpeed : 25) * 0.0042;
+    const speed = (playerStats ? playerStats.walkSpeed : 25) * MOVEMENT_TIME_SCALE;
 
     if (dir.dx !== 0 || dir.dz !== 0) {
       player.mesh.position.x = _clamp(player.mesh.position.x + dir.dx * speed, -ARENA_RADIUS, ARENA_RADIUS);
