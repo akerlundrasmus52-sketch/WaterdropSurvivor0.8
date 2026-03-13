@@ -5051,13 +5051,47 @@
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(180deg, #1a1000 0%, #0d0800 100%);
+      /* LIQUID GOLD & DARK WATER: Deep abyssal black/dark-blue with animated wave effect */
+      background:
+        radial-gradient(ellipse at 20% 80%, rgba(0, 30, 60, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(0, 20, 50, 0.25) 0%, transparent 50%),
+        linear-gradient(180deg, #000814 0%, #001020 50%, #000408 100%);
       z-index: 9000;
       flex-direction: column;
       align-items: center;
       overflow-y: auto;
       padding: 12px 8px;
       box-sizing: border-box;
+      /* Add animated wave overlay via pseudo-element */
+      position: relative;
+    }
+
+    /* Dark water wave animation overlay */
+    #codex-screen::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(ellipse 800px 400px at var(--wave-x, 50%) var(--wave-y, 50%),
+          rgba(10, 40, 80, 0.15) 0%,
+          transparent 70%);
+      animation: darkWaterRipple 8s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes darkWaterRipple {
+      0%   { --wave-x: 30%; --wave-y: 20%; opacity: 0.3; }
+      25%  { --wave-x: 70%; --wave-y: 40%; opacity: 0.5; }
+      50%  { --wave-x: 40%; --wave-y: 70%; opacity: 0.4; }
+      75%  { --wave-x: 60%; --wave-y: 30%; opacity: 0.6; }
+      100% { --wave-x: 30%; --wave-y: 20%; opacity: 0.3; }
+    }
+
+    /* Ensure content appears above wave overlay */
+    #codex-screen > * {
+      position: relative;
+      z-index: 1;
     }
 
     /* Legacy classes kept for backwards compat */
@@ -8199,7 +8233,8 @@
 
 /* ─── Camp interact button hidden while menu open ────────── */
 .camp-menu-open #camp-interact-btn,
-.camp-menu-open #camp-interact-prompt {
+.camp-menu-open #camp-interact-prompt,
+.camp-menu-open #camp-building-name {
   display: none !important;
 }
 
@@ -8652,3 +8687,160 @@
 
 /* ─── Building construction complete notification ─────── */
 /* buildCompleteSlide uses the same animation as slideInRight above */
+
+/* ═══════════════════════════════════════════════════════════
+   LIQUID GOLD & DARK WATER NEURAL CODEX STYLING
+   Annunaki divine underwater operating system aesthetic
+   ═══════════════════════════════════════════════════════════ */
+
+/* Liquid Gold border pulse animation */
+@keyframes liquidGoldPulse {
+  0%   { box-shadow: 0 0 20px rgba(255, 191, 0, 0.4), 0 0 40px rgba(255, 140, 0, 0.2), inset 0 0 20px rgba(255, 191, 0, 0.1); }
+  50%  { box-shadow: 0 0 40px rgba(255, 191, 0, 0.7), 0 0 80px rgba(255, 140, 0, 0.4), inset 0 0 30px rgba(255, 191, 0, 0.2); }
+  100% { box-shadow: 0 0 20px rgba(255, 191, 0, 0.4), 0 0 40px rgba(255, 140, 0, 0.2), inset 0 0 20px rgba(255, 191, 0, 0.1); }
+}
+
+/* Liquid Gold gradient shift */
+@keyframes liquidGoldShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Golden UI crack animation - revealing pulsing core */
+@keyframes goldenCrack {
+  0%   { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+  20%  { clip-path: polygon(10% 0, 90% 0, 95% 50%, 90% 100%, 10% 100%, 5% 50%); }
+  40%  { clip-path: polygon(20% 10%, 80% 10%, 85% 50%, 80% 90%, 20% 90%, 15% 50%); }
+  60%  { clip-path: polygon(30% 20%, 70% 20%, 75% 50%, 70% 80%, 30% 80%, 25% 50%); }
+  100% { clip-path: polygon(45% 45%, 55% 45%, 55% 55%, 45% 55%); opacity: 0; }
+}
+
+/* Pulsing core reveal */
+@keyframes pulsingCore {
+  0%   { transform: scale(0); opacity: 0; box-shadow: 0 0 0 rgba(255, 191, 0, 0); }
+  30%  { transform: scale(1.2); opacity: 1; box-shadow: 0 0 60px rgba(255, 191, 0, 0.9), 0 0 120px rgba(255, 140, 0, 0.6); }
+  60%  { transform: scale(1); box-shadow: 0 0 40px rgba(255, 191, 0, 0.7), 0 0 80px rgba(255, 140, 0, 0.4); }
+  100% { transform: scale(1.1); box-shadow: 0 0 50px rgba(255, 191, 0, 0.8), 0 0 100px rgba(255, 140, 0, 0.5); }
+}
+
+/* Molecule network pulse */
+@keyframes moleculeNodePulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50%      { transform: scale(1.15); opacity: 1; }
+}
+
+/* AI terminal text glitch */
+@keyframes aiTerminalGlitch {
+  0%   { opacity: 1; transform: translateX(0); }
+  2%   { opacity: 0.8; transform: translateX(-2px); }
+  4%   { opacity: 1; transform: translateX(2px); }
+  6%   { opacity: 0.9; transform: translateX(0); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Vertical rune glow */
+@keyframes verticalRuneGlow {
+  0%   { text-shadow: 0 0 10px rgba(255, 191, 0, 0.5), 0 0 20px rgba(255, 140, 0, 0.3); opacity: 0.7; }
+  50%  { text-shadow: 0 0 25px rgba(255, 191, 0, 0.8), 0 0 50px rgba(255, 140, 0, 0.5), 0 0 75px rgba(255, 100, 0, 0.3); opacity: 1; }
+  100% { text-shadow: 0 0 10px rgba(255, 191, 0, 0.5), 0 0 20px rgba(255, 140, 0, 0.3); opacity: 0.7; }
+}
+
+/* Eye of Horus divine pulse (Black, Red, Gold) */
+@keyframes eyeOfHorusDivinePulse {
+  0%   {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 10px rgba(204, 0, 0, 0.6)) drop-shadow(0 0 20px rgba(255, 191, 0, 0.4));
+    opacity: 0.9;
+  }
+  25%  {
+    transform: scale(1.1) rotate(5deg);
+    filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8)) drop-shadow(0 0 40px rgba(255, 191, 0, 0.6)) drop-shadow(0 0 60px rgba(0, 0, 0, 0.8));
+    opacity: 1;
+  }
+  50%  {
+    transform: scale(1.2) rotate(0deg);
+    filter: drop-shadow(0 0 30px rgba(255, 191, 0, 1)) drop-shadow(0 0 60px rgba(255, 140, 0, 0.8)) drop-shadow(0 0 90px rgba(0, 0, 0, 1));
+    opacity: 1;
+  }
+  75%  {
+    transform: scale(1.1) rotate(-5deg);
+    filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8)) drop-shadow(0 0 40px rgba(255, 191, 0, 0.6)) drop-shadow(0 0 60px rgba(0, 0, 0, 0.8));
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 10px rgba(204, 0, 0, 0.6)) drop-shadow(0 0 20px rgba(255, 191, 0, 0.4));
+    opacity: 0.9;
+  }
+}
+
+/* Underwater echo sound wave */
+@keyframes underwaterEcho {
+  0%   { transform: scale(1); opacity: 0.7; }
+  50%  { transform: scale(1.5); opacity: 0.3; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Utility classes for Liquid Gold styling */
+.liquid-gold-border {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#000814, #000814) padding-box,
+    linear-gradient(135deg, #FFD700, #FF8C00, #FFD700, #FFA500) border-box;
+  background-size: 200% 200%;
+  animation: liquidGoldShift 3s ease infinite, liquidGoldPulse 2s ease-in-out infinite;
+}
+
+.liquid-gold-border:hover {
+  animation: liquidGoldShift 1.5s ease infinite, liquidGoldPulse 1s ease-in-out infinite;
+  box-shadow: 0 0 60px rgba(255, 191, 0, 0.8), 0 0 120px rgba(255, 140, 0, 0.5), inset 0 0 40px rgba(255, 191, 0, 0.3);
+}
+
+.liquid-gold-border:active {
+  box-shadow: 0 0 80px rgba(255, 191, 0, 1), 0 0 160px rgba(255, 140, 0, 0.7), inset 0 0 60px rgba(255, 191, 0, 0.5);
+}
+
+/* Vertical Annunaki rune text */
+.annunaki-rune {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  color: #FFD700;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  animation: verticalRuneGlow 3s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(255, 191, 0, 0.5), 0 0 20px rgba(255, 140, 0, 0.3);
+}
+
+/* AI Terminal styling */
+.ai-terminal {
+  background: rgba(0, 8, 20, 0.95);
+  border: 1px solid rgba(255, 191, 0, 0.3);
+  color: #00ff00;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 8px;
+  overflow-y: auto;
+  max-height: 120px;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.2), inset 0 0 20px rgba(0, 8, 20, 0.9);
+}
+
+.ai-terminal-line {
+  animation: aiTerminalGlitch 8s infinite;
+  animation-delay: calc(var(--line-index, 0) * 0.5s);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Eye of Horus universal icon */
+.eye-of-horus {
+  display: inline-block;
+  font-size: inherit;
+  animation: eyeOfHorusDivinePulse 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(204, 0, 0, 0.6)) drop-shadow(0 0 20px rgba(255, 191, 0, 0.4));
+}
+
+.eye-of-horus-static {
+  filter: drop-shadow(0 0 8px rgba(204, 0, 0, 0.5)) drop-shadow(0 0 16px rgba(255, 191, 0, 0.3));
+}

@@ -1098,22 +1098,162 @@
     }
   }
 
+  // Draw map background based on current level
+  function drawMapBackground(ctx) {
+    const map = gameState.currentMap;
+
+    // Map theme mapping: different backgrounds for different map ranges
+    // Maps 1-20: Space (default stars)
+    // Maps 21-40: Stonehenge (ancient stones)
+    // Maps 41-60: Pyramids (Egyptian desert)
+    // Maps 61-75: UFO Crash Site (alien landscape)
+    // Maps 76-90: Annunaki (divine golden atmosphere)
+    // Maps 91-100: AI Matrix (digital grid)
+
+    if (map <= 20) {
+      // Space theme - dark blue with stars
+      ctx.fillStyle = '#001a33';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      for (let i = 0; i < 50; i++) {
+        const x = (i * 37) % CANVAS_WIDTH;
+        const y = ((i * 53 + gameState.scrollOffset) % CANVAS_HEIGHT);
+        ctx.fillRect(x, y, 2, 2);
+      }
+    } else if (map <= 40) {
+      // Stonehenge theme - dark green sky with stone silhouettes
+      ctx.fillStyle = '#0a1f0a';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Draw stone pillars scrolling
+      ctx.fillStyle = 'rgba(80,70,60,0.6)';
+      for (let i = 0; i < 5; i++) {
+        const x = (i * 100 + gameState.scrollOffset * 0.3) % CANVAS_WIDTH;
+        const y = CANVAS_HEIGHT - 150;
+        ctx.fillRect(x - 20, y, 40, 150);
+        ctx.fillRect(x + 50, y, 40, 150);
+        // Lintel on top
+        ctx.fillRect(x - 25, y - 20, 115, 25);
+      }
+      // Stars
+      ctx.fillStyle = 'rgba(200,200,180,0.4)';
+      for (let i = 0; i < 30; i++) {
+        const x = (i * 43) % CANVAS_WIDTH;
+        const y = ((i * 61 + gameState.scrollOffset * 0.5) % (CANVAS_HEIGHT - 200));
+        ctx.fillRect(x, y, 2, 2);
+      }
+    } else if (map <= 60) {
+      // Pyramids theme - sandy desert sky
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Draw pyramid silhouettes
+      ctx.fillStyle = 'rgba(180,140,80,0.5)';
+      for (let i = 0; i < 3; i++) {
+        const x = (i * 150 + gameState.scrollOffset * 0.2) % (CANVAS_WIDTH + 100);
+        const y = CANVAS_HEIGHT - 100;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 60, y + 100);
+        ctx.lineTo(x + 60, y + 100);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Sand particles
+      ctx.fillStyle = 'rgba(210,180,140,0.3)';
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 39) % CANVAS_WIDTH;
+        const y = ((i * 67 + gameState.scrollOffset * 0.8) % CANVAS_HEIGHT);
+        ctx.fillRect(x, y, 1, 1);
+      }
+    } else if (map <= 75) {
+      // UFO Crash Site theme - alien purple/green atmosphere
+      ctx.fillStyle = '#0d0a1a';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Alien atmosphere glow
+      const gradient = ctx.createRadialGradient(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 50, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 300);
+      gradient.addColorStop(0, 'rgba(100,0,180,0.2)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // UFO debris floating
+      ctx.fillStyle = 'rgba(150,150,200,0.5)';
+      for (let i = 0; i < 8; i++) {
+        const x = (i * 60 + gameState.scrollOffset * 0.4) % CANVAS_WIDTH;
+        const y = ((i * 71 + gameState.scrollOffset * 0.6) % CANVAS_HEIGHT);
+        ctx.fillRect(x - 3, y - 3, 6, 6);
+      }
+      // Strange lights
+      ctx.fillStyle = 'rgba(0,255,100,0.4)';
+      for (let i = 0; i < 20; i++) {
+        const x = (i * 47) % CANVAS_WIDTH;
+        const y = ((i * 83 + gameState.scrollOffset * 0.7) % CANVAS_HEIGHT);
+        ctx.fillRect(x, y, 2, 2);
+      }
+    } else if (map <= 90) {
+      // Annunaki theme - golden divine atmosphere
+      ctx.fillStyle = '#1a1408';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Golden divine light rays
+      ctx.globalAlpha = 0.15;
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2 + gameState.scrollOffset * 0.001;
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 30;
+        ctx.beginPath();
+        ctx.moveTo(CANVAS_WIDTH / 2, -100);
+        ctx.lineTo(CANVAS_WIDTH / 2 + Math.sin(angle) * 300, CANVAS_HEIGHT + 100);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      // Ancient symbols floating
+      ctx.fillStyle = 'rgba(255,191,0,0.6)';
+      ctx.font = 'bold 20px Arial';
+      const symbols = ['𓀀', '𓀁', '𓀂', '𓂀'];
+      for (let i = 0; i < symbols.length; i++) {
+        const x = (i * 100 + gameState.scrollOffset * 0.3) % CANVAS_WIDTH;
+        const y = ((i * 97 + gameState.scrollOffset * 0.5) % CANVAS_HEIGHT);
+        ctx.fillText(symbols[i], x, y);
+      }
+    } else {
+      // AI Matrix theme - digital grid (maps 91-100)
+      ctx.fillStyle = '#050510';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      // Digital grid lines
+      ctx.strokeStyle = 'rgba(0,255,255,0.2)';
+      ctx.lineWidth = 1;
+      const gridSize = 30;
+      const offsetY = gameState.scrollOffset % gridSize;
+      for (let i = 0; i < CANVAS_HEIGHT / gridSize + 1; i++) {
+        const y = i * gridSize - offsetY;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(CANVAS_WIDTH, y);
+        ctx.stroke();
+      }
+      for (let i = 0; i < CANVAS_WIDTH / gridSize; i++) {
+        const x = i * gridSize;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, CANVAS_HEIGHT);
+        ctx.stroke();
+      }
+      // Digital particles (binary code)
+      ctx.fillStyle = 'rgba(0,255,255,0.5)';
+      ctx.font = '12px monospace';
+      for (let i = 0; i < 30; i++) {
+        const x = (i * 43) % CANVAS_WIDTH;
+        const y = ((i * 71 + gameState.scrollOffset) % CANVAS_HEIGHT);
+        ctx.fillText(Math.random() > 0.5 ? '1' : '0', x, y);
+      }
+    }
+  }
+
   // Render game
   function render() {
     const ctx = gameState.ctx;
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.fillStyle = '#001a33';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    // Draw scrolling background stars
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    for (let i = 0; i < 50; i++) {
-      const x = (i * 37) % CANVAS_WIDTH;
-      const y = ((i * 53 + gameState.scrollOffset) % CANVAS_HEIGHT);
-      ctx.fillRect(x, y, 2, 2);
-    }
+    // Draw background based on current map
+    drawMapBackground(ctx);
 
     if (gameState.mode === 'playing') {
       // Draw player
