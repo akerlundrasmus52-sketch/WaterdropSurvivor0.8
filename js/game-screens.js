@@ -1858,6 +1858,57 @@
 
       overlay.appendChild(panel);
       document.body.appendChild(overlay);
+
+      // ── SLOT UPGRADES section (added below the attack tree) ─────
+      function renderSlotUpgrades() {
+        const slotsUnlocked = saveData.specialSlotsUnlocked || 1;
+        const SLOT_COSTS = [0, 3, 6, 10]; // SAP cost per slot: slot 1 (free), slot 2 (3 SAP), slot 3 (6 SAP), slot 4 (10 SAP)
+        const section = document.createElement('div');
+        section.style.cssText = 'margin-top:18px;border-top:2px solid rgba(255,68,0,0.3);padding-top:14px;';
+        const secLabel = document.createElement('div');
+        secLabel.style.cssText = 'font-size:13px;color:#FF8844;letter-spacing:2px;margin-bottom:10px;';
+        secLabel.textContent = '🔓 SLOT UPGRADES';
+        section.appendChild(secLabel);
+        const secHint = document.createElement('div');
+        secHint.style.cssText = 'font-size:10px;color:#888;font-family:"M PLUS Rounded 1c",sans-serif;margin-bottom:10px;';
+        secHint.textContent = 'Unlock additional special attack slots using SAP. You start with 1 slot; unlock up to 4.';
+        section.appendChild(secHint);
+        const slotsRow = document.createElement('div');
+        slotsRow.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;';
+        for (let i = 0; i < 4; i++) {
+          const cost = SLOT_COSTS[i];
+          const isUnlockedSlot = i < slotsUnlocked;
+          const canAfford = (saveData.specialAtkPoints || 0) >= cost;
+          const canUnlock = !isUnlockedSlot && i === slotsUnlocked && canAfford;
+          const slotCard = document.createElement('div');
+          slotCard.style.cssText = `background:rgba(255,255,255,0.04);border:2px solid ${isUnlockedSlot ? '#FF4400' : (canUnlock ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)')};border-radius:10px;padding:10px 8px;text-align:center;width:90px;opacity:${isUnlockedSlot || canUnlock ? '1' : '0.4'};`;
+          slotCard.innerHTML = `
+            <div style="font-size:22px;margin-bottom:4px;">${isUnlockedSlot ? '✅' : '🔒'}</div>
+            <div style="font-size:11px;letter-spacing:1px;color:${isUnlockedSlot ? '#FF8844' : '#DDD'};">Slot ${i + 1}</div>
+            <div style="font-size:9px;color:#888;font-family:Arial,sans-serif;margin-top:2px;">${isUnlockedSlot ? 'Unlocked' : (cost === 0 ? 'Free' : cost + ' SAP')}</div>
+          `;
+          if (!isUnlockedSlot && i === slotsUnlocked) {
+            const unlockBtn = document.createElement('button');
+            unlockBtn.textContent = cost === 0 ? '🔓 Free' : `🔓 Unlock (${cost} SAP)`;
+            unlockBtn.style.cssText = `margin-top:6px;width:100%;padding:4px;background:linear-gradient(135deg,${canAfford ? '#FF4400,#FF8800' : '#333,#555'});border:none;color:#fff;border-radius:6px;cursor:${canAfford ? 'pointer' : 'default'};font-family:"Bangers",cursive;font-size:10px;opacity:${canAfford ? '1' : '0.5'};`;
+            if (canAfford) {
+              unlockBtn.addEventListener('click', () => {
+                saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) - cost;
+                saveData.specialSlotsUnlocked = i + 1;
+                saveSaveData();
+                if (window.GameRageCombat) window.GameRageCombat.refreshLoadout(saveData);
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                showSpecialAttacksPanel();
+              });
+            }
+            slotCard.appendChild(unlockBtn);
+          }
+          slotsRow.appendChild(slotCard);
+        }
+        section.appendChild(slotsRow);
+        return section;
+      }
+      panel.appendChild(renderSlotUpgrades());
     }
 
     // ============================================================

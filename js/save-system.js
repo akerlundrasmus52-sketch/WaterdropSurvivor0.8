@@ -221,6 +221,7 @@
       equippedSpecials: [],
       specialAtkPoints: 0, // Points earned to unlock/upgrade special attacks
       specialBranch: null, // 'upper' | 'lower' — chosen after knife is unlocked
+      specialSlotsUnlocked: 1, // Number of active SA slots (1–4, unlocked via Special Attacks building)
       skillPoints: 0, // Start with 0 skill points - earn through quests
       // Account Level System - Persistent across all runs
       accountLevel: 1, // Persistent character level
@@ -428,6 +429,8 @@
           saveData.specialAtkPoints = saveData.specialAtkPoints || 0;
           // Special branch choice (new field)
           if (saveData.specialBranch === undefined) saveData.specialBranch = null;
+          // Special attack slots unlock progression (new field)
+          if (saveData.specialSlotsUnlocked === undefined) saveData.specialSlotsUnlocked = 1;
           // Weapon building permanent upgrades
           saveData.weaponUpgrades = saveData.weaponUpgrades || {};
           // New buildings migration
