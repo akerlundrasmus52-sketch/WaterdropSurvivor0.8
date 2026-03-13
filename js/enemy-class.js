@@ -3553,10 +3553,10 @@
         // Fall down animation: enemy falls dynamically, lies on ground, explodes into blood
         // LINGER_FRAMES extended to keep corpse visible for ~10 seconds total (at 60fps):
         //   FALL(40) + LINGER(500) + EXPLODE(20) + FADE(40) = 600 frames ≈ 10 s
-        const FALL_FRAMES = wasFlying ? 55 : 40;
-        const LINGER_FRAMES = 500; // Corpse lingers on ground for ~8 seconds
-        const EXPLODE_FRAMES = 20; // Blood explosion phase
-        const FADE_FRAMES = 40;    // Smooth 0.67-second fade out
+        const FALL_FRAMES = wasFlying ? 70 : 55;  // INCREASED: Slower, more dramatic fall
+        const LINGER_FRAMES = 720; // INCREASED: Corpse lingers longer for better blood pooling (~12 seconds)
+        const EXPLODE_FRAMES = 30; // INCREASED: Longer blood explosion phase
+        const FADE_FRAMES = 60;    // INCREASED: Slower fade out (1 second)
         let fallFrame = 0;
         // Guard against NaN scale from prior squish operations
         const startScaleY = isNaN(dyingMesh.scale.y) ? 1.0 : dyingMesh.scale.y;

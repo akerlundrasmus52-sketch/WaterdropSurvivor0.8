@@ -109,7 +109,7 @@ class Engine2Sandbox {
 
     // Create material with PBR textures for better visuals
     const materialOptions = {
-      color: 0x4a4a4a, // Medium grey fallback color
+      color: 0xFFFFFF, // White base color - allows texture to show natural colors
       roughness: 0.75,
       metalness: 0.05,
       envMapIntensity: 0.5
@@ -118,9 +118,13 @@ class Engine2Sandbox {
     // Apply textures if loaded successfully
     if (this.textures.diffuse) {
       materialOptions.map = this.textures.diffuse;
+      // Ensure texture colors are visible
+      materialOptions.map.encoding = THREE.sRGBEncoding;
       console.log('[Engine2] Using ground color texture');
     } else {
-      console.log('[Engine2] Using fallback grey color');
+      // Fallback to green grass color if texture fails
+      materialOptions.color = 0x4A8C2A;
+      console.log('[Engine2] Using fallback grass color');
     }
 
     if (this.textures.roughness) {
