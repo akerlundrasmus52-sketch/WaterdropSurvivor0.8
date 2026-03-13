@@ -36,12 +36,12 @@ class Engine2Sandbox {
   }
 
   /**
-   * Load Mossy Brick PBR textures with fallback
+   * Load ground PBR textures with fallback to color.jpg
    */
   _loadTextures(callback) {
     const loader = new THREE.TextureLoader();
     let loadedCount = 0;
-    const totalTextures = 2; // diffuse and roughness (skipping normal for now as it's in .exr format)
+    const totalTextures = 1; // Just diffuse for now
 
     const checkComplete = () => {
       loadedCount++;
@@ -50,37 +50,20 @@ class Engine2Sandbox {
       }
     };
 
-    // Load diffuse texture (4k available)
+    // Load diffuse texture from assets/textures/ground/color.jpg
     loader.load(
-      'mossy_brick_diff_4k.jpg',
+      'assets/textures/ground/color.jpg',
       (texture) => {
-        console.log('[Engine2] Loaded diffuse texture');
+        console.log('[Engine2] Loaded ground color texture');
         this.textures.diffuse = texture;
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(40, 40); // Tile across 200x200 ground
+        texture.repeat.set(20, 20); // Tile across 200x200 ground
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy(); // Better texture quality
         checkComplete();
       },
       undefined,
       (error) => {
-        console.warn('[Engine2] Failed to load diffuse texture, using fallback:', error);
-        checkComplete();
-      }
-    );
-
-    // Load roughness texture (4k available, but it's .exr format which may not load directly)
-    // Try loading it, but expect it might fail
-    loader.load(
-      'mossy_brick_rough_4k.exr',
-      (texture) => {
-        console.log('[Engine2] Loaded roughness texture');
-        this.textures.roughness = texture;
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(40, 40);
-        checkComplete();
-      },
-      undefined,
-      (error) => {
-        console.warn('[Engine2] Failed to load roughness texture (expected for .exr), continuing without it:', error);
+        console.warn('[Engine2] Failed to load ground texture, using fallback:', error);
         checkComplete();
       }
     );
@@ -111,24 +94,25 @@ class Engine2Sandbox {
     // Create geometry from shape
     const groundGeometry = new THREE.ShapeGeometry(shape, 64); // 64 segments for smooth hole
 
-    // Create material with PBR textures
+    // Create material with PBR textures for better visuals
     const materialOptions = {
-      color: 0x3a3a3a, // Dark grey fallback color
-      roughness: 0.85,
-      metalness: 0.1
+      color: 0x4a4a4a, // Medium grey fallback color
+      roughness: 0.75,
+      metalness: 0.05,
+      envMapIntensity: 0.5
     };
 
     // Apply textures if loaded successfully
     if (this.textures.diffuse) {
       materialOptions.map = this.textures.diffuse;
-      console.log('[Engine2] Using mossy brick diffuse texture');
+      console.log('[Engine2] Using ground color texture');
     } else {
-      console.log('[Engine2] Using fallback dark metallic grey color');
+      console.log('[Engine2] Using fallback grey color');
     }
 
     if (this.textures.roughness) {
       materialOptions.roughnessMap = this.textures.roughness;
-      console.log('[Engine2] Using mossy brick roughness texture');
+      console.log('[Engine2] Using roughness texture');
     }
 
     const groundMaterial = new THREE.MeshStandardMaterial(materialOptions);
