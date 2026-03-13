@@ -589,15 +589,21 @@
     _gunCooldown = cooldown;
 
     const px = player.mesh.position.x, pz = player.mesh.position.z;
-    // Target: slime if alive; otherwise mouse aim
+    // Target: default to slime position, override with joystick/mouse
     let tx = _slime.mesh.position.x, tz = _slime.mesh.position.z;
 
-    // Allow manual aim via mouse (overrides auto-aim when mouse moved)
-    if (!window.gameSettings.controlType || window.gameSettings.controlType === 'keyboard') {
-      // Use mouse world position if available and slime is dead
+    if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
+      tx = px + _aimJoy.dx * 10;
+      tz = pz + _aimJoy.dz * 10;
+    } else if (window.gameSettings && window.gameSettings.controlType === 'keyboard' && _mouse) {
+      tx = _mouse.worldX;
+      tz = _mouse.worldZ;
     }
 
     _fireProjectile(px, pz, tx, tz);
+
+    // Rotate player mesh to face the aim target
+    player.mesh.rotation.y = Math.atan2(tx - px, tz - pz);
   }
 
   // ─── Input ────────────────────────────────────────────────────────────────────
@@ -752,8 +758,8 @@
   function _initGround() {
     if (typeof Engine2Sandbox === 'function') {
       try {
-        const e2 = new Engine2Sandbox(scene, camera);
-        e2.init();
+        const e2 = new Engine2Sandbox();
+        e2.init(scene);
         window._engine2Instance = e2;
         return;
       } catch (e) {
