@@ -1178,6 +1178,43 @@
     });
   }
 
+  // ─── Settings modal + UI Calibration entry (sandbox) ─────────────────────────
+  function _initSandboxSettings() {
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeBtn = document.getElementById('settings-close-btn');
+    const uiCalBtn = document.getElementById('ui-calibration-btn');
+
+    if (!settingsBtn || !settingsModal || !closeBtn || !uiCalBtn) return;
+
+    settingsBtn.style.display = 'block';
+    settingsBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'flex';
+    });
+
+    closeBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+    });
+
+    uiCalBtn.addEventListener('click', () => {
+      settingsModal.style.display = 'none';
+      if (window.UICalibration && typeof window.UICalibration.enter === 'function') {
+        // Pause while editing layout, resume afterwards
+        if (typeof setGamePaused === 'function') setGamePaused(true);
+        window.UICalibration.enter(() => {
+          if (typeof setGamePaused === 'function') setGamePaused(false);
+        });
+      } else {
+        console.warn('[SandboxLoop] UI Calibration unavailable — script missing?');
+      }
+    });
+
+    // Apply saved HUD layout on boot if available
+    if (window.UICalibration && typeof window.UICalibration.applyLayout === 'function') {
+      window.UICalibration.applyLayout();
+    }
+  }
+
   // ─── Ground via Engine2Sandbox ────────────────────────────────────────────────
   function _initGround() {
     if (typeof Engine2Sandbox === 'function') {
@@ -1420,6 +1457,7 @@
       const uiLayer = document.getElementById('ui-layer');
       if (uiLayer) uiLayer.style.display = 'block';
 
+      _initSandboxSettings();
       // Init Three.js
       _initScene();
       _initGround();

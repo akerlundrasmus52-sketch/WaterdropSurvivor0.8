@@ -572,7 +572,7 @@
     /* Round Minimap - Bottom Right Corner - 25% BIGGER */
     #minimap-container {
       position: absolute;
-      bottom: 170px;
+      bottom: 210px;
       right: 8px;
       width: 130px;
       height: 132px;
