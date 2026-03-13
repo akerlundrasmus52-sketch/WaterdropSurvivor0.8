@@ -401,6 +401,231 @@
           console.log('[Init] Projectile pool created OK');
         } catch (e) { console.warn('[Init] Projectile pool skipped:', e.message); }
       }
+
+      // SwordSlash pool — eliminates `new SwordSlash()` allocations for melee weapons
+      if (window.GamePerformance && window.GamePerformance.EnhancedObjectPool) {
+        try {
+          window._swordSlashPool = new window.GamePerformance.EnhancedObjectPool(
+            () => ({
+              mesh: null,
+              life: 0,
+              maxLife: 12,
+              _isPooled: true,
+              init() {
+                if (!this.mesh) {
+                  const geometry = new THREE.RingGeometry(1.8, 2.2, 12, 1, -Math.PI/4, Math.PI/2);
+                  const material = new THREE.MeshBasicMaterial({ color: 0xCCDDFF, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+                  this.mesh = new THREE.Mesh(geometry, material);
+                  this.mesh.rotation.x = -Math.PI / 2;
+                }
+                return this;
+              },
+              reinit(x, z, angle) {
+                if (!this.mesh) this.init();
+                this.mesh.rotation.z = angle - Math.PI/4;
+                this.mesh.position.set(x, 0.6, z);
+                this.mesh.visible = true;
+                this.mesh.scale.set(1, 1, 1);
+                this.mesh.material.opacity = 0.9;
+                scene.add(this.mesh);
+                this.life = 12;
+                // Deal damage immediately
+                const dmg = weapons.sword.damage * playerStats.strength * playerStats.damage;
+                enemies.forEach(e => {
+                  const dx = e.mesh.position.x - x;
+                  const dz = e.mesh.position.z - z;
+                  const dist = Math.sqrt(dx*dx + dz*dz);
+                  if (dist < 3.5) {
+                    const eAngle = Math.atan2(dz, dx);
+                    let diff = eAngle - angle;
+                    while (diff < -Math.PI) diff += Math.PI*2;
+                    while (diff > Math.PI) diff -= Math.PI*2;
+                    if (Math.abs(diff) < Math.PI/3) e.takeDamage(dmg, false, 'sword');
+                  }
+                });
+                return this;
+              },
+              update() {
+                this.life--;
+                const progress = 1 - (this.life / this.maxLife);
+                this.mesh.material.opacity = 0.9 * Math.pow(this.life / this.maxLife, 1.5);
+                this.mesh.scale.set(1 + progress * 0.15, 1 + progress * 0.15, 1);
+                if (this.life <= 0) {
+                  this.mesh.visible = false;
+                  scene.remove(this.mesh);
+                  return false;
+                }
+                return true;
+              }
+            }),
+            (s) => {
+              if (s.mesh) {
+                s.mesh.visible = false;
+                s.mesh.position.set(0, -9999, 0);
+              }
+              s.life = 0;
+            },
+            15
+          );
+          console.log('[Init] SwordSlash pool created OK');
+        } catch (e) { console.warn('[Init] SwordSlash pool skipped:', e.message); }
+      }
+
+      // IceSpear pool — eliminates `new IceSpear()` allocations
+      if (window.GamePerformance && window.GamePerformance.EnhancedObjectPool) {
+        try {
+          window._iceSpearPool = new window.GamePerformance.EnhancedObjectPool(
+            () => ({
+              mesh: null, active: false, life: 0, speed: 0, vx: 0, vy: 0, vz: 0,
+              hitRadius: 0.3, particleTimer: 0, _isPooled: true,
+              init() {
+                if (!this.mesh) {
+                  const geometry = new THREE.ConeGeometry(0.12, 0.7, 4);
+                  const material = new THREE.MeshPhongMaterial({
+                    color: 0xAEEEFF, emissive: 0x005577, emissiveIntensity: 0.8,
+                    shininess: 100, transparent: true, opacity: 0.95
+                  });
+                  this.mesh = new THREE.Mesh(geometry, material);
+                  this.mesh.scale.set(1, 3, 1);
+                  this.mesh.castShadow = false;
+                  this.mesh.receiveShadow = false;
+                }
+                return this;
+              },
+              reinit(x, z, target) {
+                if (!this.mesh) this.init();
+                this.mesh.position.set(x, 0.5, z);
+                this.mesh.visible = true;
+                scene.add(this.mesh);
+                this.speed = 0.42 * (window._projSpeedMultiplier || 1.0);
+                this.active = true;
+                this.life = 70;
+                this.particleTimer = 0;
+                const dx = target.x - x, dz = target.z - z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                this.vx = (dx / dist) * this.speed;
+                this.vy = 0;
+                this.vz = (dz / dist) * this.speed;
+                this.mesh.rotation.z = -Math.atan2(dz, dx) + Math.PI/2;
+                this.mesh.rotation.x = Math.PI/2;
+                spawnParticles(this.mesh.position, 0xCCEEFF, 4);
+                spawnParticles(this.mesh.position, 0xFFFFFF, 2);
+                return this;
+              },
+              update() { return true; }, // Full logic stays in IceSpear class
+              destroy() {
+                this.active = false;
+                this.mesh.visible = false;
+                scene.remove(this.mesh);
+              }
+            }),
+            (ice) => {
+              ice.active = false;
+              if (ice.mesh) {
+                ice.mesh.visible = false;
+                ice.mesh.position.set(0, -9999, 0);
+              }
+              ice.life = 0;
+              ice.vx = ice.vy = ice.vz = 0;
+            },
+            20
+          );
+          console.log('[Init] IceSpear pool created OK');
+        } catch (e) { console.warn('[Init] IceSpear pool skipped:', e.message); }
+      }
+
+      // Meteor pool — eliminates `new Meteor()` allocations
+      if (window.GamePerformance && window.GamePerformance.EnhancedObjectPool) {
+        try {
+          window._meteorPool = new window.GamePerformance.EnhancedObjectPool(
+            () => ({
+              mesh: null, shadow: null, target: null, speed: 0, active: false, _isPooled: true,
+              init() {
+                if (!this.mesh) {
+                  const geo = new THREE.DodecahedronGeometry(1.5);
+                  const mat = new THREE.MeshToonMaterial({ color: 0xFF4500, emissive: 0x8B0000 });
+                  this.mesh = new THREE.Mesh(geo, mat);
+                }
+                if (!this.shadow) {
+                  const shadowGeo = new THREE.CircleGeometry(2.5, 16);
+                  const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, opacity: 0.3, transparent: true });
+                  this.shadow = new THREE.Mesh(shadowGeo, shadowMat);
+                  this.shadow.rotation.x = -Math.PI/2;
+                }
+                return this;
+              },
+              reinit(targetX, targetZ) {
+                if (!this.mesh) this.init();
+                this.target = new THREE.Vector3(targetX, 0, targetZ);
+                this.mesh.position.set(targetX, 20, targetZ);
+                this.mesh.visible = true;
+                scene.add(this.mesh);
+                this.shadow.position.set(targetX, 0.1, targetZ);
+                this.shadow.visible = true;
+                scene.add(this.shadow);
+                this.speed = 0.5;
+                this.active = true;
+                return this;
+              },
+              update() {
+                if (!this.active) return false;
+                this.mesh.position.y -= this.speed;
+                this.speed += 0.05;
+                if (this.mesh.position.y <= 0) {
+                  this.explode();
+                  return false;
+                }
+                return true;
+              },
+              explode() {
+                this.active = false;
+                this.mesh.visible = false;
+                this.shadow.visible = false;
+                scene.remove(this.mesh);
+                scene.remove(this.shadow);
+                const range = weapons.meteor.area;
+                const dmg = weapons.meteor.damage * playerStats.strength;
+                enemies.forEach(e => {
+                  if (e.isDead || !e.mesh) return;
+                  const d = e.mesh.position.distanceTo(this.target);
+                  if (d < range) {
+                    e.takeDamage(dmg, false, 'fire');
+                    const knockbackDir = new THREE.Vector3(
+                      e.mesh.position.x - this.target.x, 0, e.mesh.position.z - this.target.z
+                    ).normalize();
+                    const knockbackStrength = (1 - d / range) * GAME_CONFIG.meteorKnockbackMultiplier;
+                    e.mesh.position.x += knockbackDir.x * knockbackStrength;
+                    e.mesh.position.z += knockbackDir.z * knockbackStrength;
+                    const originalY = e.mesh.position.y;
+                    e.mesh.position.y = originalY + 0.5 * (1 - d / range);
+                    setTimeout(() => { e.mesh.position.y = originalY; }, 200);
+                  }
+                });
+                spawnParticles(this.target, 0xFF4500, 8);
+                spawnParticles(this.target, 0xFFFF00, 4);
+                spawnParticles(this.target, 0xFF8C00, 6);
+                if (typeof spawnMuzzleSmoke === 'function') spawnMuzzleSmoke(this.target, 10);
+                if (typeof playSound === 'function') playSound('meteor');
+              }
+            }),
+            (m) => {
+              m.active = false;
+              if (m.mesh) {
+                m.mesh.visible = false;
+                m.mesh.position.set(0, -9999, 0);
+              }
+              if (m.shadow) {
+                m.shadow.visible = false;
+                m.shadow.position.set(0, -9999, 0);
+              }
+              m.speed = 0;
+            },
+            10
+          );
+          console.log('[Init] Meteor pool created OK');
+        } catch (e) { console.warn('[Init] Meteor pool skipped:', e.message); }
+      }
+
       // GC guard — pre-allocate temp vectors
       if (window.PerfManager && window.PerfManager.GCGuard) {
         window.PerfManager.GCGuard.init();

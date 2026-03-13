@@ -1701,7 +1701,13 @@
         // If moving, slash forward. If idle, slash nearest?
         // Let's slash in player rotation direction
         const angle = player.mesh.rotation.y;
-        projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, angle));
+        // Use pool if available, otherwise create new
+        if (window._swordSlashPool) {
+          const slash = window._swordSlashPool.get().reinit(player.mesh.position.x, player.mesh.position.z, angle);
+          projectiles.push(slash);
+        } else {
+          projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, angle));
+        }
         weapons.sword.lastShot = time;
         playSound('sword'); // Sword slash sound
         
@@ -1766,8 +1772,14 @@
           targetX = e.mesh.position.x;
           targetZ = e.mesh.position.z;
         }
-        
-        meteors.push(new Meteor(targetX, targetZ));
+
+        // Use pool if available, otherwise create new
+        if (window._meteorPool) {
+          const meteor = window._meteorPool.get().reinit(targetX, targetZ);
+          meteors.push(meteor);
+        } else {
+          meteors.push(new Meteor(targetX, targetZ));
+        }
         weapons.meteor.lastShot = time;
       }
 
@@ -1893,8 +1905,14 @@
         let nearest = _isResult.enemy;
 
         if (nearest) {
-          projectiles.push(new IceSpear(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
-          
+          // Use pool if available, otherwise create new
+          if (window._iceSpearPool) {
+            const iceSpear = window._iceSpearPool.get().reinit(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position);
+            projectiles.push(iceSpear);
+          } else {
+            projectiles.push(new IceSpear(player.mesh.position.x, player.mesh.position.z, nearest.mesh.position));
+          }
+
           // Ice flash effect (pooled)
           _flashTempPos.copy(player.mesh.position); _flashTempPos.y += 1;
           _acquireFlash(scene, 0x87CEEB, 3, 12, _flashTempPos, 80);
@@ -2238,7 +2256,13 @@
           (enemies[0] && !enemies[0].isDead ? enemies[0].mesh.position.z : 0) - player.mesh.position.z,
           (enemies[0] && !enemies[0].isDead ? enemies[0].mesh.position.x : 1) - player.mesh.position.x
         );
-        projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, slashAngle));
+        // Use pool if available, otherwise create new
+        if (window._swordSlashPool) {
+          const slash = window._swordSlashPool.get().reinit(player.mesh.position.x, player.mesh.position.z, slashAngle);
+          projectiles.push(slash);
+        } else {
+          projectiles.push(new SwordSlash(player.mesh.position.x, player.mesh.position.z, slashAngle));
+        }
         weapons.samuraiSword.lastShot = time;
         playSound('shoot');
       }
@@ -2628,7 +2652,16 @@
                             (p.lifetime !== undefined && p.lifetime <= 0);
             if (expired) {
               if (typeof p.destroy === 'function') p.destroy();
-              if (p._isPooled && window._projectilePool) window._projectilePool.release(p);
+              // Return to appropriate pool
+              if (p._isPooled) {
+                if (window._projectilePool && p.vx !== undefined && p.mesh && !p.mesh.geometry.type.includes('Ring') && !p.mesh.geometry.type.includes('Cone')) {
+                  window._projectilePool.release(p);
+                } else if (window._swordSlashPool && p.mesh && p.mesh.geometry.type && p.mesh.geometry.type.includes('Ring')) {
+                  window._swordSlashPool.release(p);
+                } else if (window._iceSpearPool && p.mesh && p.mesh.geometry.type && p.mesh.geometry.type.includes('Cone')) {
+                  window._iceSpearPool.release(p);
+                }
+              }
               // Drop from array (don't push to _j)
             } else {
               projectiles[_j++] = p;
@@ -2636,8 +2669,17 @@
             continue;
           }
           const alive = p.update() !== false;
-          if (!alive && p._isPooled && window._projectilePool) {
-            window._projectilePool.release(p);
+          if (!alive) {
+            // Return to appropriate pool based on object type
+            if (p._isPooled) {
+              if (window._projectilePool && p.vx !== undefined && p.mesh && !p.mesh.geometry.type.includes('Ring') && !p.mesh.geometry.type.includes('Cone')) {
+                window._projectilePool.release(p);
+              } else if (window._swordSlashPool && p.mesh && p.mesh.geometry.type && p.mesh.geometry.type.includes('Ring')) {
+                window._swordSlashPool.release(p);
+              } else if (window._iceSpearPool && p.mesh && p.mesh.geometry.type && p.mesh.geometry.type.includes('Cone')) {
+                window._iceSpearPool.release(p);
+              }
+            }
           }
           if (alive) projectiles[_j++] = p;
         }
@@ -2647,7 +2689,11 @@
       {
         let _j = 0;
         for (let _i = 0; _i < meteors.length; _i++) {
-          if (meteors[_i].update() !== false) meteors[_j++] = meteors[_i];
+          const alive = meteors[_i].update() !== false;
+          if (!alive && meteors[_i]._isPooled && window._meteorPool) {
+            window._meteorPool.release(meteors[_i]);
+          }
+          if (alive) meteors[_j++] = meteors[_i];
         }
         meteors.length = _j;
       }
