@@ -344,8 +344,8 @@ class Engine2Sandbox {
     };
 
     loadTex('map',          'assets/textures/ground/color.jpg');
-    loadTex('normalMap',    'assets/textures/ground/normal.jpg');
-    loadTex('roughnessMap', 'assets/textures/ground/roughness.jpg');
+    loadTex('normalMap',    'assets/textures/ground/color.jpg'); // Use same texture as fallback for normal
+    loadTex('roughnessMap', 'assets/textures/ground/color.jpg'); // Use same texture as fallback for roughness
 
     return material;
   }

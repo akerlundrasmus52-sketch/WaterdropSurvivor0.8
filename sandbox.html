@@ -40,12 +40,21 @@
     #camp-interact-btn, #camp-building-name, #camp-interact-prompt,
     #day-night-clock, #windmill-quest-ui, #montana-quest-ui, #eiffel-quest-ui,
     #quest-tracker, #quest-arrow, #region-display,
-    #companion-skills-panel, #combo-counter,
+    #combo-counter,
     #stats-btn, #equipment-btn, #melee-takedown-btn,
     #challenge-complete-board,
-    #rage-bar-container, #rage-meter-container, #companion-ui,
     #special-attack-btn, #dash-btn {
       display: none !important;
+    }
+    /* Show rage bar, special attacks panel, and companion skills in sandbox */
+    #rage-bar-container {
+      display: block !important;
+    }
+    #special-attacks-panel {
+      display: flex !important;
+    }
+    #companion-skills-panel {
+      display: flex !important;
     }
     /* Keep ui-layer visible once sandbox boots */
     #ui-layer { display: none; }
@@ -399,9 +408,17 @@
   <!-- 21. HUD update functions (updateHUD, updateMinimap, damage numbers) -->
   <script src="js/game-hud.js"></script>
 
+  <!-- ── ADVANCED UI SYSTEMS ──────────────────────────────────────────── -->
+
+  <!-- 22. Rage combat system (rage meter, special attacks, rage mode) -->
+  <script src="js/rage-combat.js"></script>
+
+  <!-- 23. Quest & companion system (companion UI, skills, quest tracking) -->
+  <script src="js/quest-system.js"></script>
+
   <!-- ── ENGINE 2.0 ───────────────────────────────────────────────────── -->
 
-  <!-- 22. Engine 2.0 Sandbox: PBR arena ground + center spawn hole -->
+  <!-- 24. Engine 2.0 Sandbox: PBR arena ground + center spawn hole -->
   <script src="js/engine2.js"></script>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
