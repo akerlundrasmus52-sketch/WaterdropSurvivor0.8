@@ -231,6 +231,26 @@ window.enemyPool = (function () {
                       torso: { hp: 100, attached: true },
                       base:  { hp: 100, attached: true } };
 
+    // ── Per-type AI state timers ──────────────────────────────────────────────
+    // These must be reset here because die() does not clear them, so a recycled
+    // enemy would carry stale AI state from its previous life into the next run.
+    enemy._deathThroeState      = false;  // prevents immediate death-throe VFX/audio
+    enemy._deathThroeAudioTimer = 0;      // prevents instant scraping-audio trigger
+    enemy._rangedShotTimer      = 0;      // prevents instant ranged fire on spawn
+    enemy._annunakiTeleportTimer = 0;
+    enemy._annunakiLaserTimer   = 0;
+    enemy._annunakiLaserActive  = false;
+    enemy._annunakiWarning      = false;
+    enemy._rearingPhase         = 0;      // Daddy Longlegs rearing cycle
+    enemy._rearingTimer         = 0;
+    enemy._glitchTP             = 0;      // Source Glitch teleport accumulator
+    enemy._gutsFrame            = 0;      // blood-drip frame counter
+    // Clear any leaked freeze-shake interval (interval ref stored by die())
+    if (enemy._shakeInterval) {
+      clearInterval(enemy._shakeInterval);
+      enemy._shakeInterval = null;
+    }
+
     // Re-apply HP / speed / damage stats for the new player level
     const GE = window.GameEnemies;
     const GW = window.GameWorld;
@@ -239,6 +259,9 @@ window.enemyPool = (function () {
       const stats = GE.getEnemyBaseStats(type, ls, GW.GAME_CONFIG.enemySpeedBase, level);
       Object.assign(enemy, stats);
     }
+    // Sync originalSpeed to the freshly assigned stat speed so any previous
+    // life's slow (e.g. death-throe halving) doesn't bleed into this one.
+    enemy.originalSpeed = enemy.speed;
 
     // ── Restore mesh visibility and position ─────────────────────────────────
     const yPos = (type === 5 || type === 14 || type === 16 || type === 17) ? 2
@@ -491,6 +514,30 @@ window.enemyPool = (function () {
     if (!_freeList[type]) _freeList[type] = [];
     if (_freeList[type].length < POOL_MAX_PER_TYPE) {
       _freeList[type].push(enemy);
+    } else {
+      // Pool is full — remove and dispose this enemy's scene objects so they
+      // don't accumulate as invisible hidden meshes in the Three.js scene graph.
+      // Shared geometry and materials are flagged with _isShared and must NOT
+      // be disposed (other living enemies still reference them).
+      if (enemy.mesh.parent) enemy.mesh.parent.remove(enemy.mesh);
+      if (enemy.mesh.geometry && !enemy.mesh.geometry._isShared) {
+        enemy.mesh.geometry.dispose();
+      }
+      if (enemy.mesh.material) {
+        const mats = Array.isArray(enemy.mesh.material) ? enemy.mesh.material : [enemy.mesh.material];
+        // Skip _isShared (shared color-cache material) and _isSpiderHitbox (transparent
+        // hitbox material created specifically for type 15 — not stored in the shared
+        // cache, so the normal _isShared flag is absent, but it is safe to leak rather
+        // than risk double-dispose since the enemy object itself is being dropped).
+        mats.forEach(m => { if (m && !m._isShared && !m._isSpiderHitbox) m.dispose(); });
+      }
+      // Dispose blob shadow (always unique — never shared)
+      if (enemy.groundShadow) {
+        if (enemy.groundShadow.parent) enemy.groundShadow.parent.remove(enemy.groundShadow);
+        if (enemy.groundShadow.geometry) enemy.groundShadow.geometry.dispose();
+        if (enemy.groundShadow.material) enemy.groundShadow.material.dispose();
+        enemy.groundShadow = null;
+      }
     }
   }
 

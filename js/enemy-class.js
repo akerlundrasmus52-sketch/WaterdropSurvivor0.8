@@ -1128,15 +1128,19 @@
             let shakeCount = 0;
             const origX = this.mesh.position.x;
             const origZ = this.mesh.position.z;
-            const shakeInterval = setInterval(() => {
+            // Store interval ID on instance so die() can cancel it to prevent a
+            // leaked interval firing against a pooled/recycled enemy in the next run.
+            if (this._shakeInterval) clearInterval(this._shakeInterval);
+            this._shakeInterval = setInterval(() => {
               shakeCount++;
-              if (!this.mesh || this.isDead) { clearInterval(shakeInterval); return; }
+              if (!this.mesh || this.isDead) { clearInterval(this._shakeInterval); this._shakeInterval = null; return; }
               if (this.mesh) {
                 this.mesh.position.x = origX + (Math.random() - 0.5) * 0.12;
                 this.mesh.position.z = origZ + (Math.random() - 0.5) * 0.12;
               }
               if (shakeCount >= 8) {
-                clearInterval(shakeInterval);
+                clearInterval(this._shakeInterval);
+                this._shakeInterval = null;
                 if (this.mesh) { this.mesh.position.x = origX; this.mesh.position.z = origZ; }
               }
             }, 40);
@@ -3043,6 +3047,12 @@
         if (this._droneShakeTimer) {
           clearInterval(this._droneShakeTimer);
           this._droneShakeTimer = null;
+        }
+        // Cancel freeze-thaw shake interval so it cannot fire against a pooled
+        // enemy after die() has been called.
+        if (this._shakeInterval) {
+          clearInterval(this._shakeInterval);
+          this._shakeInterval = null;
         }
         // Cancel shotgun slide and clear velocity to prevent movement on dead enemy
         this._shotgunSlide = null;

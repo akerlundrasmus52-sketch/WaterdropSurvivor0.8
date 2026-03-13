@@ -1152,7 +1152,7 @@
       // by ~60% when 150+ enemies are on screen.
       const _playerPos = player.mesh.position;
       const _useThrottle = window.GamePerformance && window.GamePerformance.AnimationThrottle;
-      enemies.forEach((e) => {
+      enemies.forEach((e, _eIdx) => {
         if (!e || !e.mesh || e.isDead) return;
 
         // Calculate squared distance for throttle check (avoids expensive sqrt)
@@ -1161,7 +1161,9 @@
           const _edx = e.mesh.position.x - _playerPos.x;
           const _edz = e.mesh.position.z - _playerPos.z;
           const _eDistSq = _edx * _edx + _edz * _edz;
-          _shouldUpdate = _useThrottle.shouldUpdate(_eDistSq, window._frameCount);
+          // Use staggered update to spread distant-enemy processing evenly across
+          // frames — prevents burst-frame stutters when all far enemies tick together.
+          _shouldUpdate = _useThrottle.shouldUpdateStaggered(_eDistSq, window._frameCount, _eIdx);
         }
 
         if (_shouldUpdate) {

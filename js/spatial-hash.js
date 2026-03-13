@@ -188,6 +188,22 @@ const AnimationThrottle = {
    */
   shouldUpdate(distSq, frameCount) {
     return (frameCount % this.getTickDivisor(distSq)) === 0;
+  },
+
+  /**
+   * Staggered variant: uses a per-entity offset to spread updates evenly
+   * across frames within each LOD band, preventing burst-frame processing
+   * that occurs when all distant enemies update on the same frame.
+   * @param {number} distSq     - Squared distance from camera/player.
+   * @param {number} frameCount - Monotonically increasing frame counter.
+   * @param {number} offset     - Per-entity integer offset (e.g. entity array index).
+   *   The offset is used directly as `(frameCount + offset) % divisor`, so the
+   *   caller does not need to pre-apply a modulo — any integer works.
+   * @returns {boolean}
+   */
+  shouldUpdateStaggered(distSq, frameCount, offset) {
+    const div = this.getTickDivisor(distSq);
+    return ((frameCount + (offset | 0)) % div) === 0;
   }
 };
 
