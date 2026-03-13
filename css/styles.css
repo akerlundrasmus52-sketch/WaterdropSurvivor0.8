@@ -603,9 +603,10 @@
 
     /* Special Attacks Panel — left side, mirrors companion panel on right */
     #special-attacks-panel {
-      position: absolute;
-      bottom: 10px;
-      left: 8px;
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-220px); /* Position left of waterdrop: moves panel left from center */
       display: flex;
       flex-wrap: nowrap;
       gap: 6px;
@@ -680,9 +681,10 @@
 
     /* Companion skill buttons — unified style matching special attacks */
     #companion-skills-panel {
-      position: absolute;
-      bottom: 10px;
-      right: 8px;
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(70px); /* Position right of waterdrop: moves panel right from center */
       display: flex;
       flex-wrap: nowrap;
       gap: 6px;

@@ -559,21 +559,17 @@
       <div id="minimap"></div>
     </div>
 
-    <!-- Special Attacks Panel — left side, mirrors companion panel on right -->
+    <!-- Special Attacks Panel — left of centered waterdrop -->
     <div id="special-attacks-panel">
       <button id="rage-activate-btn" class="companion-skill-btn rage-activate-btn" title="Activate Rage (⚡ fill bar first)">⚡</button>
       <div class="companion-skill-btn sa-slot comp-empty" id="sa-slot-1" title="Empty special attack slot">⬡</div>
       <div class="companion-skill-btn sa-slot comp-empty" id="sa-slot-2" title="Empty special attack slot">⬡</div>
-      <div class="companion-skill-btn sa-slot sa-slot-locked" id="sa-slot-3" title="🔒 Unlock in Special Attacks building">🔒</div>
-      <div class="companion-skill-btn sa-slot sa-slot-locked" id="sa-slot-4" title="🔒 Unlock in Special Attacks building">🔒</div>
-      <button id="sa-loadout-btn" class="companion-skill-btn comp-empty" title="Manage Special Attacks">⚙️</button>
     </div>
 
-    <!-- Companion Skills Panel — unified style matching special attacks -->
+    <!-- Companion Skills Panel — right of centered waterdrop -->
     <div id="companion-skills-panel">
       <div class="companion-skill-btn comp-empty" id="comp-skill-1" title="Empty companion slot">⬡</div>
       <div class="companion-skill-btn comp-empty" id="comp-skill-2" title="Empty companion slot">⬡</div>
-      <div class="companion-skill-btn comp-empty" id="comp-skill-3" title="Empty companion slot">⬡</div>
     </div>
     
     <!-- REGION DISPLAY INDICATOR (above minimap, slides in from right) -->
@@ -821,6 +817,7 @@
   <script src="js/quest-system.js"></script>      <!-- Quests, account, chat, companion, camp screen (~110 KB) -->
   <script src="js/world-gen.js"></script>         <!-- 3D world generation (createWorld) (~113 KB) -->
   <script src="js/weapon-building.js"></script>   <!-- Weapon building panel: arsenal, upgrades, loadout, spin wheel -->
+  <script src="js/muzzle-flash-system.js"></script> <!-- Per-weapon muzzle flash particle effects -->
   <script src="js/game-screens.js"></script>      <!-- init(), menus, wave spawning, effects (~136 KB) -->
   <script src="js/astral-dive.js"></script>       <!-- Astral Dive minigame — tube shooter inside the Astral Gateway -->
   <script src="js/neural-matrix.js"></script>     <!-- Neural Matrix: synapse-constellation upgrade UI -->

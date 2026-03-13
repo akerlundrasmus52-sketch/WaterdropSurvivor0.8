@@ -79,6 +79,7 @@
         case 19: geo = new THREE.OctahedronGeometry(1.0, 1);         break; // Annunaki Orb
         case 20: geo = new THREE.DodecahedronGeometry(0.9, 0);       break; // Source Glitch
         case 21: geo = new THREE.IcosahedronGeometry(0.75, 1);       break; // Water Organism — watery angular creature
+        case 22: geo = new THREE.SphereGeometry(0.8, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6); break; // Yellow Jellyfish — dome bell
         default: return SHARED_GEO.sphere; // Types 0,2,11 share generic sphere
       }
       SHARED_GEO_TYPE[type] = geo;
@@ -110,7 +111,8 @@
       0x556633,  // 18: Reptilian Shifter — camo green
       0xFFD700,  // 19: Annunaki Orb — gold
       0xFF00FF,  // 20: Source Glitch — magenta
-      0x4FC3F7   // 21: Water Organism — cyan blue (matching player water color)
+      0x4FC3F7,  // 21: Water Organism — cyan blue (matching player water color)
+      0xFFFF00   // 22: Yellow Jellyfish — bright yellow
     ];
     // Fallback color for any type not listed in _ENEMY_COLORS
     const DEFAULT_ENEMY_COLOR = _ENEMY_COLORS[0]; // green (same as Tank/index-0)
@@ -872,6 +874,43 @@
             _leg.rotation.x = Math.sin(_angle) * _legTiltAmt;
             this.mesh.add(_leg);
             this._legs.push(_leg);
+          }
+        }
+
+        // ── TENTACLES — jellyfish type 22 gets flowing tentacles ────────────────────
+        this._tentacles = null;
+        if (type === 22 && !this._usesInstancing) {
+          const _tentacleCount = 8;
+          const _tentacleGeo = new THREE.CylinderGeometry(0.04, 0.02, 1.2, 4);
+          // Tentacles use a slightly darker and more translucent yellow
+          const _tentR = Math.max(0, ((_colorHex >> 16) & 0xFF) - 30);
+          const _tentG = Math.max(0, ((_colorHex >> 8) & 0xFF) - 30);
+          const _tentB = Math.max(0, (_colorHex & 0xFF) - 30);
+          const _tentColorHex = (_tentR << 16) | (_tentG << 8) | _tentB;
+          const _tentMat = new THREE.MeshPhongMaterial({
+            color: _tentColorHex,
+            transparent: true,
+            opacity: 0.7,
+            shininess: 40
+          });
+          this._tentacles = [];
+          const _tentRadius = 0.5;
+          for (let _ti = 0; _ti < _tentacleCount; _ti++) {
+            const _angle = (_ti / _tentacleCount) * Math.PI * 2;
+            const _tent = new THREE.Mesh(_tentacleGeo, _tentMat);
+            _tent.position.set(
+              Math.cos(_angle) * _tentRadius,
+              -0.6, // Hang below the bell
+              Math.sin(_angle) * _tentRadius
+            );
+            // Rotation to make tentacles hang downward
+            _tent.rotation.z = Math.cos(_angle) * 0.2;
+            _tent.rotation.x = Math.sin(_angle) * 0.2;
+            // Store base angle for wave animation
+            _tent._baseAngle = _angle;
+            _tent._wavePhase = Math.random() * Math.PI * 2; // Random starting phase
+            this.mesh.add(_tent);
+            this._tentacles.push(_tent);
           }
         }
 

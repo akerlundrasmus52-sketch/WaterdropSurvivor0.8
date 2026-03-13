@@ -142,8 +142,12 @@
     resources: { magicEssence: 0 },
     // Rage combat system
     rageMeter: 0,
-    specialAttacksLoadout: ['knifeTakedown'], // Starting special attack
+    equippedSpecials: ['knifeTakedown'], // Currently equipped special attacks
+    specialAttacksLoadout: ['knifeTakedown'], // Starting special attack (legacy)
     specialAttackLevels: { knifeTakedown: 1 },
+    skillTree: {
+      specialKnifeTakedown: { level: 1 } // Starting attack is unlocked
+    },
     // Companion system
     hasCompanionEgg: false,
     companionEggHatched: false,
@@ -318,12 +322,14 @@
       color: 0x55EE44,
       emissive: 0x113300,
       emissiveIntensity: 0.2,
-      shininess: 60,
+      shininess: 80, // More reflective
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.92, // Slightly more visible
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(6, 0.45, 0);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     scene.add(mesh);
 
     // Simple eye pair
@@ -361,6 +367,11 @@
       dead: false,
       respawnTimer: 0,
       flashTimer: 0,
+      // Animation properties
+      wobbleTime: 0,
+      squishTime: 0,
+      knockbackVx: 0,
+      knockbackVz: 0,
       // Properties expected by Player.prototype.update (auto-aim, collision checks)
       id: 'dummy-slime-0',
       type: 'slime',
@@ -385,6 +396,16 @@
 
     _slime.hp -= actualDmg;
     _slime.flashTimer = 0.1;
+
+    // Apply knockback force
+    const knockbackStrength = 0.15 * hitForce;
+    if (projectile && projectile.vx !== undefined && projectile.vz !== undefined) {
+      _slime.knockbackVx = projectile.vx * knockbackStrength;
+      _slime.knockbackVz = projectile.vz * knockbackStrength;
+    }
+
+    // Squish animation on hit
+    _slime.squishTime = 0.3;
 
     // Floating damage number
     createFloatingText(
@@ -475,8 +496,8 @@
     playerStats.kills++;
 
     // Gain rage on kill
-    if (window.GameRageCombat && typeof GameRageCombat.gainRage === 'function') {
-      GameRageCombat.gainRage(8); // RAGE_PER_KILL = 8
+    if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
+      GameRageCombat.addRage(8); // RAGE_PER_KILL = 8
     }
 
     // Record kill in milestone system
@@ -834,26 +855,63 @@
       _slime.mesh.material.color.setHex(colors[_slime.damageStage] || 0x55EE44);
     }
 
+    // Wobble animation - idle breathing/jiggle
+    _slime.wobbleTime += dt * 3.5;
+    const wobble = Math.sin(_slime.wobbleTime) * 0.05;
+
+    // Squish animation on hit
+    let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
+    if (_slime.squishTime > 0) {
+      _slime.squishTime -= dt;
+      const squishProgress = 1 - (_slime.squishTime / 0.3);
+      const squishAmount = Math.sin(squishProgress * Math.PI) * 0.3;
+      squishX = 1 + squishAmount;
+      squishZ = 1 + squishAmount;
+      squishY = 1 - squishAmount * 0.5;
+    }
+
+    // Apply combined scale (wobble + squish + damage stage shrink)
+    const damageScale = _slime.damageStage >= 3 ? 0.92 : (_slime.damageStage >= 4 ? 0.85 : 1.0);
+    _slime.mesh.scale.set(
+      damageScale * squishX * (1 + wobble),
+      damageScale * squishY * (1 - wobble * 0.5),
+      damageScale * squishZ * (1 + wobble)
+    );
+
+    // Apply knockback physics
+    if (Math.abs(_slime.knockbackVx) > 0.01 || Math.abs(_slime.knockbackVz) > 0.01) {
+      _slime.mesh.position.x += _slime.knockbackVx * dt * 10;
+      _slime.mesh.position.z += _slime.knockbackVz * dt * 10;
+      // Friction
+      _slime.knockbackVx *= Math.pow(0.01, dt);
+      _slime.knockbackVz *= Math.pow(0.01, dt);
+    }
+
     // Move toward player
     if (!player) return;
     const px = player.mesh.position.x, pz = player.mesh.position.z;
     const sx = _slime.mesh.position.x, sz = _slime.mesh.position.z;
     const dx = px - sx, dz = pz - sz;
     const dist = Math.sqrt(dx * dx + dz * dz);
-    if (dist > 1.2) {
+
+    // Only move if not being knocked back
+    if (dist > 1.2 && Math.abs(_slime.knockbackVx) < 0.05 && Math.abs(_slime.knockbackVz) < 0.05) {
       _slime.mesh.position.x += (dx / dist) * SLIME_SPEED * dt;
       _slime.mesh.position.z += (dz / dist) * SLIME_SPEED * dt;
       // Face movement direction
       _slime.mesh.rotation.y = Math.atan2(dx, dz);
     }
 
-    // Deal damage to player on contact
+    // Deal damage to player on contact (but with slight cooldown to avoid jitter)
     if (dist < 1.1 && player && !player.invulnerable) {
-      if (typeof player.takeDamage === 'function') {
-        player.takeDamage(8, 'slime', _slime.mesh.position);
-      } else {
-        playerStats.hp = Math.max(0, playerStats.hp - 8);
-        if (playerStats.hp <= 0) showYouDiedBanner();
+      if (!_slime.lastDamageTime || Date.now() - _slime.lastDamageTime > 500) {
+        _slime.lastDamageTime = Date.now();
+        if (typeof player.takeDamage === 'function') {
+          player.takeDamage(8, 'slime', _slime.mesh.position);
+        } else {
+          playerStats.hp = Math.max(0, playerStats.hp - 8);
+          if (playerStats.hp <= 0) showYouDiedBanner();
+        }
       }
     }
   }
