@@ -475,16 +475,42 @@
     // Spawn 8-12 large flesh chunks flying in all directions (death explosion)
     _spawnFleshChunks(8 + Math.floor(Math.random() * 5), true);
 
-    // ── Dynamic EXP gem drop ──────────────────────────────────────────────────
-    // Just drop 1 gem for testing
-    const gemCount = 1;
-    for (let i = 0; i < gemCount; i++) {
+    // ── Dynamic EXP gem drop with varied quantities ──────────────────────────────
+    // Drop multiple gems based on enemy type/HP - more realistic drop system
+    // Base drops: 2-4 gems for normal kills, with chance for bonus drops
+    const baseGemCount = 2 + Math.floor(Math.random() * 3); // 2-4 base gems
+
+    // Bonus gems based on kill conditions (25% chance for 1-2 extra gems)
+    const bonusChance = Math.random();
+    const bonusGems = (bonusChance < 0.25) ? 1 + Math.floor(Math.random() * 2) : 0;
+
+    // Critical hit bonus (if hitForce is high, drop even more)
+    const critBonus = (hitForce > 1.5) ? 1 : 0;
+
+    const totalGemCount = baseGemCount + bonusGems + critBonus;
+
+    // Drop gems in a spread pattern around death position
+    for (let i = 0; i < totalGemCount; i++) {
+      // Vary the enemy type for gem tier variety (some common, some rare)
+      let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
+
+      // 70% common (tier 0), 20% uncommon (tier 1), 10% rare (tier 2)
+      const tierRoll = Math.random();
+      if (tierRoll > 0.9) {
+        gemEnemyType = 5; // Flying/Hard variants (tier 2 - blue)
+      } else if (tierRoll > 0.7) {
+        gemEnemyType = 3; // Slowing/Ranged (tier 1 - green)
+      }
+      // else keep default (tier 0 - common grey)
+
       // Pass hitForce and weapon name so gem-classes.js applies the dynamic
       // spin speed / fly distance logic based on how hard the enemy was killed.
-      expGems.push(new ExpGem(x, z, 'gun', hitForce, ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE));
+      expGems.push(new ExpGem(x, z, 'gun', hitForce, gemEnemyType));
     }
 
-    createFloatingText('SLIME DEFEATED!', new THREE.Vector3(x, 1.8, z), '#AAFFAA');
+    // Show floating text with gem count
+    const gemText = totalGemCount > 1 ? `SLIME DEFEATED! +${totalGemCount} GEMS` : 'SLIME DEFEATED!';
+    createFloatingText(gemText, new THREE.Vector3(x, 1.8, z), '#AAFFAA');
 
     // Schedule respawn
     _slime.respawnTimer = SLIME_RESPAWN_DELAY;
@@ -607,7 +633,7 @@
     // Spawn 2-3 flying flesh chunks
     _spawnFleshChunks(2 + Math.floor(Math.random() * 2));
 
-    // Heavy blood spray
+    // Heavy blood spray with pulsating effect
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
         { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
@@ -619,6 +645,14 @@
         BloodSystem.emitGuts(
           { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
           6
+        );
+      }
+      // Add pulsating blood effect (arterial spray)
+      if (typeof BloodSystem.emitPulse === 'function') {
+        BloodSystem.emitPulse(
+          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+          3, // 3 pulses
+          300 // 300 drops per pulse
         );
       }
     }
@@ -654,7 +688,7 @@
     // Spawn 3-5 flesh chunks flying off
     _spawnFleshChunks(3 + Math.floor(Math.random() * 3));
 
-    // Massive blood spray
+    // Massive blood spray with multiple effects
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
         { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
@@ -665,6 +699,22 @@
         BloodSystem.emitGuts(
           { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
           12
+        );
+      }
+      // Add continuous arterial spurts (pulsating blood jets)
+      if (typeof BloodSystem.emitPulse === 'function') {
+        BloodSystem.emitPulse(
+          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+          5, // 5 pulses (more intense)
+          400 // 400 drops per pulse
+        );
+      }
+      // Add exit wound effect for dramatic spray
+      if (typeof BloodSystem.emitExitWound === 'function') {
+        const angle = Math.random() * Math.PI * 2;
+        BloodSystem.emitExitWound(
+          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
+          { x: Math.cos(angle) * 0.3, y: 0.1, z: Math.sin(angle) * 0.3 }
         );
       }
     }
@@ -701,7 +751,7 @@
     // Spawn 4-6 large flesh chunks
     _spawnFleshChunks(4 + Math.floor(Math.random() * 3), true); // larger chunks
 
-    // Extreme blood spray
+    // Extreme blood spray with all effects combined
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
         { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
@@ -713,6 +763,24 @@
           { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
           18
         );
+      }
+      // Extreme pulsating arterial spray (near-death hemorrhaging)
+      if (typeof BloodSystem.emitPulse === 'function') {
+        BloodSystem.emitPulse(
+          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+          6, // 6 pulses (maximum intensity)
+          500 // 500 drops per pulse
+        );
+      }
+      // Add multiple exit wounds for dramatic effect
+      if (typeof BloodSystem.emitExitWound === 'function') {
+        for (let i = 0; i < 2; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          BloodSystem.emitExitWound(
+            { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
+            { x: Math.cos(angle) * 0.4, y: 0.15, z: Math.sin(angle) * 0.4 }
+          );
+        }
       }
     }
 
@@ -883,7 +951,7 @@
     }
 
     // Move toward player
-    if (!player) return;
+    if (!player || !player.mesh) return;
     const px = player.mesh.position.x, pz = player.mesh.position.z;
     const sx = _slime.mesh.position.x, sz = _slime.mesh.position.z;
     const dx = px - sx, dz = pz - sz;
@@ -1268,7 +1336,7 @@
 
   // ─── Player movement ──────────────────────────────────────────────────────────
   function _movePlayer(dt) {
-    if (!player) return;
+    if (!player || !player.mesh) return;
     const dir   = _getMoveDir();
     const speed = (playerStats ? playerStats.walkSpeed : 25) * MOVEMENT_TIME_SCALE;
 
