@@ -336,6 +336,7 @@
       radius: 0.7,
       isBoss: false,
       get isDead() { return this.dead; },
+      set isDead(value) { this.dead = value; },
     };
   }
 
