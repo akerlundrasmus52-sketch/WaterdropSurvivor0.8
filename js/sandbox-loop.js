@@ -86,6 +86,20 @@
   if (typeof playSound === 'undefined') {
     window.playSound = function () {};
   }
+  // addExp — called by gem-classes.js ExpGem.collect() when a gem is picked up.
+  // Handles EXP gain, HUD refresh, and level-up trigger.
+  if (typeof window.addExp === 'undefined') {
+    window.addExp = function (amount) {
+      playerStats.exp += amount;
+      _refreshExpBar();
+      if (playerStats.exp >= playerStats.expReq) {
+        playerStats.exp -= playerStats.expReq;
+        playerStats.lvl++;
+        playerStats.expReq = Math.floor(playerStats.expReq * 1.25);
+        _onLevelUp();
+      }
+    };
+  }
   // spawnWaterDroplet — called by player-class.js when HP < 25-30% (water bleed)
   // or during the dash ability.  Falls back to a simple one-frame particle burst.
   if (typeof spawnWaterDroplet === 'undefined') {
@@ -148,6 +162,8 @@
   const PROJECTILE_RANGE_SQ = 14 * 14;      // squared range (14 units)
   // Fallback enemy type index (BALANCED=2) used when enemies.js is not loaded
   const DEFAULT_ENEMY_TYPE  = 2;
+  // Use ENEMY_TYPES from enemies.js if available, otherwise fall back to minimal stub
+  const ENEMY_TYPES = window.ENEMY_TYPES || { BALANCED: DEFAULT_ENEMY_TYPE };
   // Converts walkSpeed display units → Three.js world units per frame
   // walkSpeed is a display value (25 = normal speed); factor tuned to match main game
   const MOVEMENT_TIME_SCALE  = 0.0042;
@@ -392,8 +408,8 @@
     }
 
     // ── Dynamic EXP gem drop ──────────────────────────────────────────────────
-    // Number of gems scales with hit force (criticals drop more)
-    const gemCount = hitForce > 1.5 ? 4 : 3;
+    // Just drop 1 gem for testing
+    const gemCount = 1;
     for (let i = 0; i < gemCount; i++) {
       // Pass hitForce and weapon name so gem-classes.js applies the dynamic
       // spin speed / fly distance logic based on how hard the enemy was killed.
@@ -517,30 +533,21 @@
   }
 
   function _collectGem(gem, idx) {
+    const expGain = gem.value || (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 15);
+    const gemPos  = gem.mesh ? gem.mesh.position.clone() : new THREE.Vector3();
+
     if (typeof gem.collect === 'function') {
+      // gem.collect() removes the mesh and calls addExp() internally
       gem.collect();
     } else {
       gem.active = false;
-      scene.remove(gem.mesh);
+      if (gem.mesh) scene.remove(gem.mesh);
+      // addExp handles EXP gain, bar refresh and level-up check
+      addExp(expGain);
+      playSound('exp_pickup');
     }
 
-    // Add EXP and check level-up
-    const expGain = gem.value || (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 15);
-    playerStats.exp += expGain;
-
-    createFloatingText('+' + expGain + ' EXP', gem.mesh.position, '#5DADE2');
-    playSound('exp_pickup');
-
-    // Update the HUD exp bar
-    _refreshExpBar();
-
-    // Level-up check
-    if (playerStats.exp >= playerStats.expReq) {
-      playerStats.exp -= playerStats.expReq;
-      playerStats.lvl++;
-      playerStats.expReq = Math.floor(playerStats.expReq * 1.25);
-      _onLevelUp();
-    }
+    createFloatingText('+' + expGain + ' EXP', gemPos, '#5DADE2');
 
     if (idx !== undefined) expGems.splice(idx, 1);
   }

@@ -39,10 +39,12 @@
     #character-visuals-screen, #codex-screen,
     #camp-interact-btn, #camp-building-name, #camp-interact-prompt,
     #day-night-clock, #windmill-quest-ui, #montana-quest-ui, #eiffel-quest-ui,
-    #quest-tracker, #quest-arrow, #minimap-container, #region-display,
-    #companion-skills-panel, #combo-counter, #live-stat-display,
+    #quest-tracker, #quest-arrow, #region-display,
+    #companion-skills-panel, #combo-counter,
     #stats-btn, #equipment-btn, #melee-takedown-btn,
-    #challenge-complete-board {
+    #challenge-complete-board,
+    #rage-bar-container, #rage-meter-container, #companion-ui,
+    #special-attack-btn, #dash-btn {
       display: none !important;
     }
     /* Keep ui-layer visible once sandbox boots */
@@ -102,7 +104,7 @@
     <button id="stats-btn"     class="btn-small" style="display:none;">STATS</button>
     <button id="settings-btn"  class="btn-small" style="display:none;">⚙️</button>
     <button id="equipment-btn" style="display:none;">⚔️</button>
-    <div id="minimap-container"    style="display:none;"><div id="minimap"></div></div>
+    <div id="minimap-container"><div id="minimap"></div></div>
     <div id="companion-skills-panel" style="display:none;">
       <div class="companion-skill-btn comp-empty" id="comp-skill-1">⬡</div>
       <div class="companion-skill-btn comp-empty" id="comp-skill-2">⬡</div>
@@ -325,8 +327,9 @@
   <!-- 5. World constants: COLORS, GAME_CONFIG, COMPANIONS, countdownMessages -->
   <script src="js/world.js"></script>
 
-  <!-- 6a. Enemy type definitions: ENEMY_TYPES, getDefaultEnemyStats() -->
-  <script src="js/enemies.js"></script>
+  <!-- 6a. Enemy type definitions: ENEMY_TYPES, getDefaultEnemyStats()
+       NOTE: enemies.js is intentionally NOT loaded in the sandbox — no wave
+       spawning. ENEMY_TYPES is stubbed in sandbox-loop.js constants. -->
 
   <!-- 6. Weapon definitions: getDefaultWeapons(), WEAPON_LEVEL_BONUSES -->
   <script src="js/weapons.js"></script>
