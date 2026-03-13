@@ -4512,30 +4512,31 @@
       
       // Scale spawn count with player level for increased difficulty
       // Progressive spawning: starts manageable then ramps up aggressively
+      // INCREASED: More enemies per wave for better object pool usage
       let baseCount, levelBonus, cap;
-      
+
       if (playerStats.lvl <= 30) {
-        // Early game: Progressive spawns (4-14 per wave)
-        baseCount = 4 + Math.floor(waveCount / 2);
+        // Early game: Progressive spawns (6-18 per wave) - INCREASED from 4-14
+        baseCount = 6 + Math.floor(waveCount / 2);
         levelBonus = Math.floor(playerStats.lvl / 2);
-        cap = 14;
-      } else if (playerStats.lvl <= 75) {
-        // Mid-game: Aggressive spawns (6-18 enemies per wave)
-        baseCount = 6 + Math.floor(waveCount / 2);
-        levelBonus = Math.floor(playerStats.lvl / 3);
         cap = 18;
-      } else if (playerStats.lvl <= 120) {
-        // Late-game: Very challenging (6-16 enemies per wave)
-        baseCount = 6 + Math.floor(waveCount / 2);
-        levelBonus = Math.floor(playerStats.lvl / 3);
-        cap = 16;
-      } else {
-        // End-game: Maximum challenge (8-20 enemies per wave)
+      } else if (playerStats.lvl <= 75) {
+        // Mid-game: Aggressive spawns (8-24 enemies per wave) - INCREASED from 6-18
         baseCount = 8 + Math.floor(waveCount / 2);
         levelBonus = Math.floor(playerStats.lvl / 3);
-        cap = 20;
+        cap = 24;
+      } else if (playerStats.lvl <= 120) {
+        // Late-game: Very challenging (10-26 enemies per wave) - INCREASED from 6-16
+        baseCount = 10 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
+        cap = 26;
+      } else {
+        // End-game: Maximum challenge (12-30 enemies per wave) - INCREASED from 8-20
+        baseCount = 12 + Math.floor(waveCount / 2);
+        levelBonus = Math.floor(playerStats.lvl / 3);
+        cap = 30;
       }
-      
+
       const count = Math.min(baseCount + levelBonus, cap);
       
       for(let i=0; i<count; i++) {
