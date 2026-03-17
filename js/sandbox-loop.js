@@ -215,8 +215,8 @@
   // EXP gem object pool — pre-allocated so no new THREE.Mesh during gameplay
   const POOL_SIZE_GEMS      = 40;
   // Slime separation: minimum distance before soft push-apart force is applied
-  const SLIME_SEPARATION_DIST  = 1.6;      // world units
-  const SLIME_SEPARATION_FORCE = 1.0;      // push strength (units/sec)
+  const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
+  const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
 
   // ─── Module state ────────────────────────────────────────────────────────────
   let _ready    = false;
@@ -602,9 +602,40 @@
     );
 
     // Blood splatter on hit — spawn from center of slime body
+    // ENHANCED: Match old map's realistic blood behavior with higher particle counts
     const _bloodPos = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(_bloodPos, 12, { spreadXZ: 1.2, spreadY: 0.4 });
+    if (window.BloodSystem) {
+      // Increased from 12 to 30 particles to match old map realism
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst(_bloodPos, 30, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
+      }
+
+      // Add blood drop meshes for physical realism (8-10 individual falling drops)
+      if (typeof BloodSystem.emitDrop === 'function' && hpPercent < 0.75) {
+        const dropCount = 6 + Math.floor(Math.random() * 4); // 6-9 drops
+        for (let d = 0; d < dropCount; d++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 0.2 + Math.random() * 0.3;
+          const dx = Math.cos(angle) * dist;
+          const dz = Math.sin(angle) * dist;
+          BloodSystem.emitDrop(
+            _bloodPos.x + dx * 0.05,
+            _bloodPos.y + 0.3,
+            _bloodPos.z + dz * 0.05,
+            dx * 0.15, // velocity X
+            0.15 + Math.random() * 0.10, // velocity Y (upward)
+            dz * 0.15, // velocity Z
+            0.03 + Math.random() * 0.05 // size
+          );
+        }
+      }
+
+      // Register wound for heartbeat spurts (like old map at 75% HP)
+      if (hpPercent <= 0.75 && typeof BloodSystem.addWound === 'function') {
+        const wDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
+        const wLife = hpPercent < 0.25 ? 480 : (hpPercent < 0.5 ? 300 : 180);
+        BloodSystem.addWound(_bloodPos, wDir, 'gun', { life: wLife });
+      }
     }
 
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
@@ -636,17 +667,59 @@
     const y = slot.mesh.position.y + 0.4; // center of body
     const z = slot.mesh.position.z;
 
-    // ── DEATH EXPLOSION WITH MASSIVE GORE ─────────────────────────────────────
+    // ── DEATH EXPLOSION WITH MASSIVE GORE (MATCH OLD MAP: 600 PARTICLES) ─────
     if (window.BloodSystem) {
+      // OLD MAP: 350-600 particle burst for death - we match with 500
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 60, { spreadXZ: 3.0, spreadY: 1.2 });
+        BloodSystem.emitBurst({ x, y, z }, 500, {
+          spreadXZ: 3.0,
+          spreadY: 1.2,
+          minLife: 50,
+          maxLife: 120,
+          minSize: 0.02,
+          maxSize: 0.12
+        });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x, y, z }, 25);
+        BloodSystem.emitGuts({ x, y, z }, 30); // Increased from 25 to 30
       }
       // Final death throes: heartbeat gushing before going still
+      // OLD MAP: 6-10 pulses × 280-500 particles, 180ms interval
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound({ x, y, z }, { pulses: 6, perPulse: 250, interval: 200, woundHeight: 1.4, pressure: 1.5 });
+        BloodSystem.emitHeartbeatWound({ x, y, z }, {
+          pulses: 10, // Increased from 6 to 10 like old map miniboss
+          perPulse: 280, // Increased from 250 to 280
+          interval: 180, // Reduced from 200 to 180 to match old map
+          woundHeight: 1.4,
+          pressure: 1.5
+        });
+      }
+      // OLD MAP: Blood pulse emissions
+      if (typeof BloodSystem.emitPulse === 'function') {
+        BloodSystem.emitPulse({ x, y, z }, {
+          pulses: 6,
+          perPulse: 400,
+          interval: 180,
+          spreadXZ: 1.5
+        });
+      }
+      // ADD: Physical blood drop meshes like old map (18 individual spheres)
+      if (typeof BloodSystem.emitDrop === 'function') {
+        for (let d = 0; d < 18; d++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 0.5 + Math.random() * 1.5;
+          const dx = Math.cos(angle) * dist;
+          const dz = Math.sin(angle) * dist;
+          BloodSystem.emitDrop(
+            x + dx * 0.1,
+            y + 0.5,
+            z + dz * 0.1,
+            dx * 0.3, // velocity X
+            0.25 + Math.random() * 0.20, // velocity Y (upward arc)
+            dz * 0.3, // velocity Z
+            0.04 + Math.random() * 0.08 // size (larger drops)
+          );
+        }
       }
     }
 
@@ -716,12 +789,24 @@
 
     const _bPos1 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
     if (window.BloodSystem) {
+      // Increased from 8 to 30 to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos1, 8, { spreadXZ: 0.8, spreadY: 0.3 });
+        BloodSystem.emitBurst(_bPos1, 30, { spreadXZ: 0.8, spreadY: 0.4, minLife: 50, maxLife: 100 });
       }
       // Start pulsing heartbeat bleed (arterial spurts from wound)
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
         BloodSystem.emitHeartbeatWound(_bPos1, { pulses: 4, perPulse: 80, interval: 400, woundHeight: 0.6 });
+      }
+      // ADD: Arterial spurt effect like old map (narrow jet, high pressure)
+      if (typeof BloodSystem.emitArterialSpurt === 'function') {
+        const facingDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
+        BloodSystem.emitArterialSpurt(_bPos1, facingDir, {
+          pulses: 5,
+          perPulse: 50,
+          interval: 180,
+          intensity: 0.7,
+          coneAngle: 0.3
+        });
       }
     }
     createFloatingText('WOUNDED!', new THREE.Vector3(slot.mesh.position.x, 1.6, slot.mesh.position.z), '#FF8800');
@@ -744,17 +829,19 @@
 
     const _bPos2 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
     if (window.BloodSystem) {
+      // Increased from 18 to 60 to match old map impact
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos2, 18, { spreadXZ: 1.5, spreadY: 0.6 });
+        BloodSystem.emitBurst(_bPos2, 60, { spreadXZ: 1.5, spreadY: 0.6, minLife: 50, maxLife: 100 });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos2, 6);
       }
+      // Reduced pulse intervals from 300ms to 200ms to match old map's 180ms speed
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos2, { pulses: 3, perPulse: 300, interval: 300 });
+        BloodSystem.emitPulse(_bPos2, { pulses: 3, perPulse: 300, interval: 200 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 5, perPulse: 120, interval: 350, woundHeight: 0.8 });
+        BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 5, perPulse: 120, interval: 200, woundHeight: 0.8 });
       }
     }
     createFloatingText('HEAVY DAMAGE!', new THREE.Vector3(slot.mesh.position.x, 1.7, slot.mesh.position.z), '#FF4400');
@@ -779,21 +866,32 @@
 
     const _bPos3 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
     if (window.BloodSystem) {
+      // Increased from 30 to 100 to match old map's sniper hit intensity
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos3, 30, { spreadXZ: 2.0, spreadY: 0.8 });
+        BloodSystem.emitBurst(_bPos3, 100, { spreadXZ: 2.0, spreadY: 0.8, minLife: 50, maxLife: 100 });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos3, 12);
       }
+      // Speed up to 180ms interval like old map
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos3, { pulses: 5, perPulse: 400, interval: 400 });
+        BloodSystem.emitPulse(_bPos3, { pulses: 5, perPulse: 400, interval: 180 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 7, perPulse: 180, interval: 300, woundHeight: 1.0 });
+        BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 7, perPulse: 180, interval: 180, woundHeight: 1.0 });
       }
       if (typeof BloodSystem.emitExitWound === 'function') {
         const a = Math.random() * Math.PI * 2;
         BloodSystem.emitExitWound(_bPos3, { x: Math.cos(a) * 0.3, y: 0.1, z: Math.sin(a) * 0.3 });
+      }
+      // ADD: Throat spray effect (fan spray like old map)
+      if (typeof BloodSystem.emitThroatSpray === 'function') {
+        const facingDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
+        BloodSystem.emitThroatSpray(_bPos3, facingDir, {
+          pulses: 6,
+          perPulse: 50,
+          interval: 180
+        });
       }
     }
     createFloatingText('CRITICAL!', new THREE.Vector3(slot.mesh.position.x, 1.8, slot.mesh.position.z), '#FF0000');
