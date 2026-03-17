@@ -1214,8 +1214,11 @@
           if (typeof player.takeDamage === 'function') {
             player.takeDamage(8, 'slime', s.mesh.position);
           } else {
-            playerStats.hp = Math.max(0, playerStats.hp - 8);
-            if (playerStats.hp <= 0) showYouDiedBanner();
+            playerStats.hp -= 8;
+            if (playerStats.hp <= 0) {
+              playerStats.hp = 0;
+              gameOver();
+            }
           }
         }
       }
@@ -1737,6 +1740,8 @@
     _buildProjectilePool();
     // Build pre-allocated flesh chunk pool (avoids new THREE.Mesh during gameplay)
     _buildFleshPool();
+    // Build pre-allocated EXP gem pool (critical for XP drops to work)
+    _buildExpGemPool();
   }
 
   // ─── Sandbox status overlay ───────────────────────────────────────────────────

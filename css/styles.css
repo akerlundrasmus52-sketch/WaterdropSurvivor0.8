@@ -569,10 +569,10 @@
       display: none;
     }
     
-    /* Round Minimap - Bottom Right Corner - 25% BIGGER */
+    /* Round Minimap - Bottom Right Corner - 25% BIGGER - RAISED HIGHER */
     #minimap-container {
       position: absolute;
-      bottom: 210px;
+      bottom: 250px; /* Raised from 210px to 250px for better visibility */
       right: 8px;
       width: 130px;
       height: 132px;
@@ -606,7 +606,7 @@
       position: fixed;
       bottom: 25px;
       left: 50%;
-      transform: translateX(-220px); /* Position left of waterdrop: moves panel left from center */
+      transform: translateX(-190px); /* Adjusted from -220px to -190px for better visibility */
       display: flex;
       flex-wrap: nowrap;
       gap: 6px;
