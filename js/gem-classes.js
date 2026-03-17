@@ -259,6 +259,7 @@
       }
 
       collect() {
+        if (!this.active) return; // guard against double-collect (important for pooled gems)
         this.active = false;
         
         // SPLASH EFFECT: particles match the gem's rarity colour
@@ -273,15 +274,90 @@
         flash.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(${_pr},${_pg},${_pb},0.18);pointer-events:none;z-index:500`;
         document.body.appendChild(flash);
         setTimeout(() => flash.remove(), 100);
-        
-        if (!this._usesInstancing) scene.remove(this.mesh);
-        // Geometry is shared across all ExpGem instances - do not dispose it
-        this.mesh.material.dispose(); // Only dispose the per-instance cloned material
-        if (this._outlineMat) this._outlineMat.dispose(); // Dispose per-instance outline material
-        if (this._glowRingMat) this._glowRingMat.dispose(); // Dispose per-instance glow ring material
-        
+
         addExp(this.value);
         playSound('collect');
+
+        if (this._pooled) {
+          // Pooled: hide without disposing — mesh/materials are reused
+          this.deactivate();
+          if (typeof this._returnToPool === 'function') this._returnToPool(this);
+        } else {
+          if (!this._usesInstancing) scene.remove(this.mesh);
+          // Geometry is shared across all ExpGem instances - do not dispose it
+          this.mesh.material.dispose(); // Only dispose the per-instance cloned material
+          if (this._outlineMat) this._outlineMat.dispose(); // Dispose per-instance outline material
+          if (this._glowRingMat) this._glowRingMat.dispose(); // Dispose per-instance glow ring material
+        }
+      }
+
+      /**
+       * Hide the gem without removing from scene (for object-pool reuse).
+       * Parks the mesh at y=-9999 so it is off-screen.
+       */
+      deactivate() {
+        this.active = false;
+        if (this.mesh) {
+          this.mesh.visible = false;
+          this.mesh.position.set(0, -9999, 0);
+        }
+      }
+
+      /**
+       * Reset gem state for re-use from an object pool.
+       * Repositions, re-colours for the given enemy tier, and restarts physics.
+       * Does NOT create new meshes or materials.
+       */
+      reset(x, z, sourceWeapon, hitForce, enemyType) {
+        if (!this.mesh) return;
+
+        // Re-compute tier / rarity colours
+        const tier = _gemTierForType(enemyType != null ? enemyType : -1);
+        const gemBaseValue = (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 1)
+          * (GEM_TIER_XP_MULT[tier] || 1);
+        const rarCol = _gemRarityColorForValue(gemBaseValue);
+
+        this.mesh.material.color.setHex(rarCol.color);
+        this.mesh.material.emissive.setHex(rarCol.emissive);
+        this._rarityParticleColor = rarCol.particle;
+        this._isMythic = rarCol.mythic;
+        this.value = gemBaseValue;
+
+        // Reposition with pop
+        const popAngle = Math.random() * Math.PI * 2;
+        const popDist  = 0.3 + Math.random() * 0.5;
+        this.mesh.position.set(
+          x + Math.cos(popAngle) * popDist,
+          0.6 + Math.random() * 0.8,
+          z + Math.sin(popAngle) * popDist
+        );
+        this.mesh.scale.set(0.01, 0.01, 0.01);
+        this.mesh.visible = true;
+
+        // Reset grow
+        this._growTimer = 0;
+        this._grown = false;
+
+        // Reset spin based on weapon force
+        const force = hitForce || 1.0;
+        const isCritical  = force > 1.5;
+        const isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
+        const spinMult = isCritical ? 2.0 : isExplosive ? 2.5 : 1.0;
+        this.rotSpeedX = (Math.random() * 0.12 + 0.04) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.15 + 0.10) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.10 + 0.03) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+
+        // Reset physics
+        const popSpeed = (0.02 + Math.random() * 0.025) * force;
+        this.vx = Math.cos(popAngle) * popSpeed;
+        this.vy = 0.04 + Math.random() * 0.02 * force;
+        this.vz = Math.sin(popAngle) * popSpeed;
+        this.gravity      = -0.039;
+        this.onGround     = false;
+        this.groundFriction = 0.55;
+        this.bobPhase     = Math.random() * Math.PI * 2;
+        this.sparklePhase = Math.random() * Math.PI * 2;
+        this.active       = true;
       }
     }
     // Different gold drop types based on amount
