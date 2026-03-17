@@ -212,6 +212,11 @@
   // Enemy object pool
   const MAX_SLIMES          = 50;            // pre-allocated pool size
   const ESCALATION_INTERVAL = 30;           // seconds between difficulty increases
+  // EXP gem object pool — pre-allocated so no new THREE.Mesh during gameplay
+  const POOL_SIZE_GEMS      = 40;
+  // Slime separation: minimum distance before soft push-apart force is applied
+  const SLIME_SEPARATION_DIST  = 1.6;      // world units
+  const SLIME_SEPARATION_FORCE = 1.0;      // push strength (units/sec)
 
   // ─── Module state ────────────────────────────────────────────────────────────
   let _ready    = false;
@@ -229,6 +234,11 @@
   let _projPool = [];              // reusable projectile objects
   let _activeProjList = [];        // currently flying projectiles
   let _animateErrorShown = false;  // prevent spamming error display every frame
+  // EXP gem object pool (pre-allocated ExpGem instances, no new THREE.Mesh during gameplay)
+  let _expGemPool     = [];        // all pre-allocated gem slots
+  let _expGemFreeList = [];        // slots available for reuse
+  // Sword melee cooldown (sandbox double-barrel / sword fire timer)
+  let _swordCooldown = 0;
 
   // Joystick state (mobile)
   const _joy    = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0 };
@@ -651,7 +661,9 @@
     let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
     if (hitForce > 2.0)      gemEnemyType = 5; // rare (gold)
     else if (hitForce > 1.5) gemEnemyType = 3; // uncommon (blue)
-    expGems.push(new ExpGem(x, z, 'gun', hitForce, gemEnemyType));
+    // Use the pre-allocated pool — no new THREE.Mesh during gameplay
+    const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
+    if (_droppedGem) expGems.push(_droppedGem);
 
     createFloatingText('SLIME DEFEATED!', new THREE.Vector3(x, 1.8, z), '#AAFFAA');
 
@@ -911,7 +923,39 @@
     }
   }
 
-  // Update all flying flesh chunks — returns inactive ones to pool (no dispose calls)
+  // ─── EXP Gem Object Pool ──────────────────────────────────────────────────────
+  // Pre-allocates POOL_SIZE_GEMS ExpGem instances once at boot so no new THREE.Mesh
+  // is created during gameplay when enemies are killed.
+  function _buildExpGemPool() {
+    if (typeof ExpGem === 'undefined') return; // gem-classes.js not loaded
+    for (let i = 0; i < POOL_SIZE_GEMS; i++) {
+      const gem = new ExpGem(0, 0, 'gun', 1.0, 0);
+      gem._pooled = true;
+      gem._returnToPool = function (g) { _expGemFreeList.push(g); };
+      gem.deactivate(); // park off-screen
+      _expGemPool.push(gem);
+      _expGemFreeList.push(gem);
+    }
+    console.log('[SandboxLoop] EXP gem pool built: ' + POOL_SIZE_GEMS + ' slots');
+  }
+
+  /** Acquire a pooled gem, reset it to position (x, z), and return it.
+   *  Falls back to creating a new ExpGem if the pool is exhausted. */
+  function _acquireExpGem(x, z, sourceWeapon, hitForce, enemyType) {
+    if (_expGemFreeList.length > 0) {
+      const gem = _expGemFreeList.pop();
+      gem.reset(x, z, sourceWeapon, hitForce, enemyType);
+      return gem;
+    }
+    // Pool exhausted (shouldn't happen with 40 slots in a single-player sandbox)
+    if (typeof ExpGem !== 'undefined') {
+      const gem = new ExpGem(x, z, sourceWeapon, hitForce, enemyType);
+      gem._pooled = false; // not pooled — will be disposed normally on collect
+      return gem;
+    }
+    return null;
+  }
+
   function _updateFleshChunks(dt) {
     for (let i = _allFleshChunks.length - 1; i >= 0; i--) {
       const chunk = _allFleshChunks[i];
@@ -1075,6 +1119,28 @@
             playerStats.hp = Math.max(0, playerStats.hp - 8);
             if (playerStats.hp <= 0) showYouDiedBanner();
           }
+        }
+      }
+    }
+
+    // ── Soft separation: prevent slimes from overlapping each other ──────────
+    // O(n²) but capped at MAX_SLIMES=50 → at most 1225 checks per frame, negligible cost.
+    for (let ai = 0; ai < _activeSlimes.length; ai++) {
+      const a = _activeSlimes[ai];
+      const ax = a.mesh.position.x, az = a.mesh.position.z;
+      for (let bi = ai + 1; bi < _activeSlimes.length; bi++) {
+        const b = _activeSlimes[bi];
+        const bx = b.mesh.position.x, bz = b.mesh.position.z;
+        const dx = ax - bx, dz = az - bz;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < SLIME_SEPARATION_DIST * SLIME_SEPARATION_DIST && distSq > 0.0001) {
+          const dist2 = Math.sqrt(distSq);
+          const push = (SLIME_SEPARATION_DIST - dist2) / SLIME_SEPARATION_DIST * SLIME_SEPARATION_FORCE * dt;
+          const nx = dx / dist2, nz = dz / dist2;
+          a.mesh.position.x = _clamp(ax + nx * push, -ARENA_RADIUS, ARENA_RADIUS);
+          a.mesh.position.z = _clamp(az + nz * push, -ARENA_RADIUS, ARENA_RADIUS);
+          b.mesh.position.x = _clamp(bx - nx * push, -ARENA_RADIUS, ARENA_RADIUS);
+          b.mesh.position.z = _clamp(bz - nz * push, -ARENA_RADIUS, ARENA_RADIUS);
         }
       }
     }
