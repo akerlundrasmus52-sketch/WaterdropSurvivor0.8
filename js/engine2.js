@@ -70,11 +70,12 @@ class Engine2Sandbox {
           ? renderer.capabilities.getMaxAnisotropy()
           : 1;
         texture.anisotropy = maxAniso;
-        // Set encoding to sRGB for proper color display (support both old and new THREE.js APIs)
-        if (texture.encoding !== undefined) {
-          texture.encoding = THREE.sRGBEncoding;
-        } else if (texture.colorSpace !== undefined) {
+        // Set encoding to sRGB for proper color display.
+        // Check colorSpace first (THREE r152+); fall back to encoding for older builds.
+        if (typeof THREE.SRGBColorSpace !== 'undefined') {
           texture.colorSpace = THREE.SRGBColorSpace;
+        } else {
+          texture.encoding = THREE.sRGBEncoding;
         }
         texture.needsUpdate = true;
         checkComplete();
