@@ -62,9 +62,14 @@
   if (typeof setGamePaused === 'undefined') {
     window.setGamePaused = function (p) { window.isPaused = !!p; };
   }
-  if (typeof forceGameUnpause === 'undefined') {
-    window.forceGameUnpause = function () { window.isPaused = false; };
-  }
+  // Always override forceGameUnpause in sandbox: game-screens.js is not loaded here,
+  // so we provide a reliable version that resets window.isPaused directly.
+  window.forceGameUnpause = function () {
+    window.isPaused = false;
+    // Also reset main.js overlay counter (accessible as global let in same page scope)
+    try { pauseOverlayCount = 0; window.pauseOverlayCount = 0; } catch (_) {}
+    if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
+  };
   if (typeof updateGoldDisplays === 'undefined') {
     window.updateGoldDisplays = function () {};
   }
@@ -193,9 +198,10 @@
   // Enemy pool (replaces single _slime)
   let _enemyPool    = [];          // pre-allocated pool of MAX_SLIMES slime objects
   let _activeSlimes = [];          // live list of currently active pool slots (fast iteration)
-  let _maxActive    = 1;           // current max simultaneous active slimes
-  let _spawnTimer   = 2.0;         // seconds until next spawn attempt
-  let _spawnInterval = 3.0;        // seconds between spawn attempts
+  let _maxActive    = 5;           // current max simultaneous active slimes
+  let _waveSize     = 3;           // number of slimes to spawn per wave (Survivor-style)
+  let _spawnTimer   = 1.5;         // seconds until next wave spawn
+  let _spawnInterval = 4.0;        // seconds between wave spawns (decreases over time)
   let _escalationTimer = ESCALATION_INTERVAL; // seconds until next difficulty escalation
   let _allFleshChunks = [];        // global flying flesh chunk list (from all pool slots)
   let _projPool = [];              // reusable projectile objects
@@ -333,11 +339,15 @@
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
 
     for (let i = 0; i < MAX_SLIMES; i++) {
-      const mat = new THREE.MeshPhongMaterial({
+      // MeshPhysicalMaterial: wet, slimy, glossy look with clearcoat
+      const mat = new THREE.MeshPhysicalMaterial({
         color: 0x55EE44,
         emissive: 0x113300,
         emissiveIntensity: 0.2,
-        shininess: 80,
+        roughness: 0.12,        // very smooth/glossy
+        metalness: 0.0,
+        clearcoat: 1.0,         // wet-surface clearcoat layer
+        clearcoatRoughness: 0.08,
         transparent: true,
         opacity: 0.92,
       });
@@ -386,6 +396,11 @@
         lastDamageTime: 0,
         damageStage: 0,
         wounds: [],
+        // Attack lunge animation state
+        attackTimer: 0,       // cooldown until next lunge
+        lungeTime: 0,         // active lunge duration (0 = idle)
+        lungeDirX: 0,
+        lungeDirZ: 0,
         // Properties expected by Player.prototype.update (auto-aim, collision checks)
         id: 'pool-slime-' + i,
         type: 'slime',
@@ -409,6 +424,10 @@
     slot.lastDamageTime = 0;
     slot.damageStage = 0;
     slot.wounds = [];
+    slot.attackTimer = 1.5 + Math.random() * 1.5; // stagger first attack
+    slot.lungeTime = 0;
+    slot.lungeDirX = 0;
+    slot.lungeDirZ = 0;
     slot.mesh.position.set(x, 0.45, z);
     slot.mesh.material.color.setHex(0x55EE44);
     slot.mesh.material.opacity = 0.92;
@@ -440,10 +459,10 @@
     if (idx !== -1) _activeSlimes.splice(idx, 1);
   }
 
+  /** Spawn a single slime from the pool at a random position around the player. */
   function _spawnSlime() {
     if (!player || !player.mesh) return;
     if (_activeSlimes.length >= _maxActive) return;
-    // Find first inactive slot
     for (let i = 0; i < _enemyPool.length; i++) {
       if (!_enemyPool[i].active) {
         const angle = Math.random() * Math.PI * 2;
@@ -454,6 +473,32 @@
         const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
         _activateSlime(_enemyPool[i], rx, rz);
         return;
+      }
+    }
+  }
+
+  /**
+   * Survivor-style wave spawn: spawn up to _waveSize slimes at once.
+   * Slimes are spread in a ring around the player for dramatic effect.
+   */
+  function _spawnWave() {
+    if (!player || !player.mesh) return;
+    const available = _maxActive - _activeSlimes.length;
+    if (available <= 0) return;
+    const count = Math.min(_waveSize, available);
+    const px = player.mesh.position.x;
+    const pz = player.mesh.position.z;
+    for (let n = 0; n < count; n++) {
+      // Spread evenly around the ring with random jitter
+      const angle = (n / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
+      const dist  = 9 + Math.random() * 5;
+      const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+      const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+      for (let i = 0; i < _enemyPool.length; i++) {
+        if (!_enemyPool[i].active) {
+          _activateSlime(_enemyPool[i], rx, rz);
+          break;
+        }
       }
     }
   }
@@ -501,13 +546,10 @@
       '#FF4444'
     );
 
-    // Blood splatter on hit — use BloodSystem.emitBurst (the real API)
+    // Blood splatter on hit — spawn from center of slime body
+    const _bloodPos = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(
-        { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z },
-        12,
-        { spreadXZ: 1.2, spreadY: 0.4 }
-      );
+      BloodSystem.emitBurst(_bloodPos, 12, { spreadXZ: 1.2, spreadY: 0.4 });
     }
 
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
@@ -536,17 +578,20 @@
 
   function _killSlime(slot, hitForce, killVX, killVZ) {
     const x = slot.mesh.position.x;
+    const y = slot.mesh.position.y + 0.4; // center of body
     const z = slot.mesh.position.z;
 
     // ── DEATH EXPLOSION WITH MASSIVE GORE ─────────────────────────────────────
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(
-        { x: x, y: 0.5, z: z },
-        60,
-        { spreadXZ: 3.0, spreadY: 1.2 }
-      );
+    if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst({ x, y, z }, 60, { spreadXZ: 3.0, spreadY: 1.2 });
+      }
       if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x: x, y: 0.5, z: z }, 25);
+        BloodSystem.emitGuts({ x, y, z }, 25);
+      }
+      // Final death throes: heartbeat gushing before going still
+      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
+        BloodSystem.emitHeartbeatWound({ x, y, z }, { pulses: 6, perPulse: 250, interval: 200, woundHeight: 1.4, pressure: 1.5 });
       }
     }
 
@@ -594,7 +639,7 @@
   }
 
   // ─── 5-PART GORE SYSTEM ───────────────────────────────────────────────────────
-  // Stage 1: 75% HP - Darken appearance, add first wounds
+  // Stage 1: 75% HP - Darken appearance, add first wounds, start arterial bleeding
   function _applyDamageStage1(slot) {
     slot.mesh.material.color.setHex(0x44CC33);
     slot.mesh.material.emissiveIntensity = 0.15;
@@ -610,11 +655,15 @@
       slot.wounds.push(wound);
     }
 
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(
-        { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z },
-        8, { spreadXZ: 0.8, spreadY: 0.3 }
-      );
+    const _bPos1 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst(_bPos1, 8, { spreadXZ: 0.8, spreadY: 0.3 });
+      }
+      // Start pulsing heartbeat bleed (arterial spurts from wound)
+      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
+        BloodSystem.emitHeartbeatWound(_bPos1, { pulses: 4, perPulse: 80, interval: 400, woundHeight: 0.6 });
+      }
     }
     createFloatingText('WOUNDED!', new THREE.Vector3(slot.mesh.position.x, 1.6, slot.mesh.position.z), '#FF8800');
   }
@@ -636,16 +685,19 @@
 
     _spawnFleshChunks(slot, 2 + Math.floor(Math.random() * 2));
 
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(
-        { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z },
-        18, { spreadXZ: 1.5, spreadY: 0.6 }
-      );
+    const _bPos2 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst(_bPos2, 18, { spreadXZ: 1.5, spreadY: 0.6 });
+      }
       if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z }, 6);
+        BloodSystem.emitGuts(_bPos2, 6);
       }
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse({ x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z }, 3, 300);
+        BloodSystem.emitPulse(_bPos2, { pulses: 3, perPulse: 300, interval: 300 });
+      }
+      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
+        BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 5, perPulse: 120, interval: 350, woundHeight: 0.8 });
       }
     }
     createFloatingText('HEAVY DAMAGE!', new THREE.Vector3(slot.mesh.position.x, 1.7, slot.mesh.position.z), '#FF4400');
@@ -670,23 +722,23 @@
 
     _spawnFleshChunks(slot, 3 + Math.floor(Math.random() * 3));
 
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(
-        { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z },
-        30, { spreadXZ: 2.0, spreadY: 0.8 }
-      );
+    const _bPos3 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst(_bPos3, 30, { spreadXZ: 2.0, spreadY: 0.8 });
+      }
       if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z }, 12);
+        BloodSystem.emitGuts(_bPos3, 12);
       }
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse({ x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z }, 5, 400);
+        BloodSystem.emitPulse(_bPos3, { pulses: 5, perPulse: 400, interval: 400 });
+      }
+      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
+        BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 7, perPulse: 180, interval: 300, woundHeight: 1.0 });
       }
       if (typeof BloodSystem.emitExitWound === 'function') {
         const a = Math.random() * Math.PI * 2;
-        BloodSystem.emitExitWound(
-          { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z },
-          { x: Math.cos(a) * 0.3, y: 0.1, z: Math.sin(a) * 0.3 }
-        );
+        BloodSystem.emitExitWound(_bPos3, { x: Math.cos(a) * 0.3, y: 0.1, z: Math.sin(a) * 0.3 });
       }
     }
     createFloatingText('CRITICAL!', new THREE.Vector3(slot.mesh.position.x, 1.8, slot.mesh.position.z), '#FF0000');
@@ -712,24 +764,24 @@
 
     _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 3), true);
 
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(
-        { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z },
-        45, { spreadXZ: 2.5, spreadY: 1.0 }
-      );
+    const _bPos4 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst(_bPos4, 45, { spreadXZ: 2.5, spreadY: 1.0 });
+      }
       if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z }, 18);
+        BloodSystem.emitGuts(_bPos4, 18);
       }
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse({ x: slot.mesh.position.x, y: slot.mesh.position.y + 0.5, z: slot.mesh.position.z }, 6, 500);
+        BloodSystem.emitPulse(_bPos4, { pulses: 6, perPulse: 500, interval: 500 });
+      }
+      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
+        BloodSystem.emitHeartbeatWound(_bPos4, { pulses: 8, perPulse: 220, interval: 260, woundHeight: 1.2, pressure: 1.3 });
       }
       if (typeof BloodSystem.emitExitWound === 'function') {
         for (let i = 0; i < 2; i++) {
           const a = Math.random() * Math.PI * 2;
-          BloodSystem.emitExitWound(
-            { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z },
-            { x: Math.cos(a) * 0.4, y: 0.15, z: Math.sin(a) * 0.4 }
-          );
+          BloodSystem.emitExitWound(_bPos4, { x: Math.cos(a) * 0.4, y: 0.15, z: Math.sin(a) * 0.4 });
         }
       }
     }
@@ -847,27 +899,56 @@
         s.mesh.material.color.setHex(colors[s.damageStage] || 0x55EE44);
       }
 
-      // Wobble animation
+      // Attack timer cooldown
+      if (s.attackTimer > 0) s.attackTimer -= dt;
+
+      // Wobble animation — more pronounced (0.12 amplitude) for slimy jelly feel
       s.wobbleTime += dt * 3.5;
-      const wobble = Math.sin(s.wobbleTime) * 0.05;
+      const wobble   = Math.sin(s.wobbleTime) * 0.12;
+      const wobbleY  = Math.sin(s.wobbleTime * 2.0) * 0.06; // secondary vertical bob
 
       // Squish animation on hit
       let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
       if (s.squishTime > 0) {
         s.squishTime -= dt;
         const squishProgress = 1 - (s.squishTime / 0.3);
-        const squishAmount = Math.sin(squishProgress * Math.PI) * 0.3;
+        const squishAmount = Math.sin(squishProgress * Math.PI) * 0.35;
         squishX = 1 + squishAmount;
         squishZ = 1 + squishAmount;
         squishY = 1 - squishAmount * 0.5;
       }
 
-      // Combined scale: wobble + squish + damage stage shrink
+      // Lunge attack animation: flatten then extend forward
+      let lungeScaleX = 1.0, lungeScaleY = 1.0, lungeScaleZ = 1.0;
+      let lungeMoveX = 0, lungeMoveZ = 0;
+      if (s.lungeTime > 0) {
+        s.lungeTime -= dt;
+        const lungeT = 1 - Math.max(0, s.lungeTime) / 0.4; // 0→1 over 0.4s
+        // Flatten body (squish down) then shoot forward
+        if (lungeT < 0.4) {
+          // Compress phase
+          const compress = lungeT / 0.4;
+          lungeScaleY = 1 - compress * 0.4;
+          lungeScaleX = 1 + compress * 0.3;
+          lungeScaleZ = 1 + compress * 0.3;
+        } else {
+          // Extend/shoot phase
+          const extend = (lungeT - 0.4) / 0.6;
+          lungeScaleY = 0.6 + extend * 0.6;
+          lungeScaleX = 1.3 - extend * 0.5;
+          lungeScaleZ = 1.3 - extend * 0.5;
+          // Move forward during extension
+          lungeMoveX = s.lungeDirX * extend * SLIME_SPEED * 3.5 * dt;
+          lungeMoveZ = s.lungeDirZ * extend * SLIME_SPEED * 3.5 * dt;
+        }
+      }
+
+      // Combined scale: wobble + squish + lunge + damage stage shrink
       const damageScale = s.damageStage >= 4 ? 0.85 : (s.damageStage >= 3 ? 0.92 : 1.0);
       s.mesh.scale.set(
-        damageScale * squishX * (1 + wobble),
-        damageScale * squishY * (1 - wobble * 0.5),
-        damageScale * squishZ * (1 + wobble)
+        damageScale * squishX * lungeScaleX * (1 + wobble),
+        damageScale * squishY * lungeScaleY * (1 - wobbleY),
+        damageScale * squishZ * lungeScaleZ * (1 + wobble)
       );
 
       // Knockback physics
@@ -883,10 +964,24 @@
       const ddx = px - sx, ddz = pz - sz;
       const dist = Math.sqrt(ddx * ddx + ddz * ddz);
 
-      if (dist > 1.2 && Math.abs(s.knockbackVx) < 0.05 && Math.abs(s.knockbackVz) < 0.05) {
+      if (lungeMoveX !== 0 || lungeMoveZ !== 0) {
+        // Apply lunge movement
+        s.mesh.position.x = _clamp(s.mesh.position.x + lungeMoveX, -ARENA_RADIUS, ARENA_RADIUS);
+        s.mesh.position.z = _clamp(s.mesh.position.z + lungeMoveZ, -ARENA_RADIUS, ARENA_RADIUS);
+      } else if (dist > 1.2 && Math.abs(s.knockbackVx) < 0.05 && Math.abs(s.knockbackVz) < 0.05) {
         s.mesh.position.x += (ddx / dist) * SLIME_SPEED * dt;
         s.mesh.position.z += (ddz / dist) * SLIME_SPEED * dt;
         s.mesh.rotation.y = Math.atan2(ddx, ddz);
+      }
+
+      // Trigger attack lunge when close enough and cooldown elapsed
+      if (dist < 2.8 && s.attackTimer <= 0 && s.lungeTime <= 0) {
+        s.attackTimer = 2.0 + Math.random() * 1.5; // next lunge cooldown
+        s.lungeTime   = 0.4; // lunge animation duration
+        if (dist > 0.01) {
+          s.lungeDirX = ddx / dist;
+          s.lungeDirZ = ddz / dist;
+        }
       }
 
       // Contact damage to player
@@ -986,8 +1081,18 @@
     createFloatingText('LEVEL UP!', player ? player.mesh.position : new THREE.Vector3(), '#FFD700');
     // Trigger the level-up upgrade modal if available
     if (typeof showUpgradeModal === 'function') {
-      setGamePaused(true);
+      // Use direct window.isPaused assignment in sandbox to bypass main.js overlay counter,
+      // which prevents "player freeze" when forceGameUnpause only resets window.isPaused.
+      window.isPaused = true;
       showUpgradeModal(false, null);
+      // Failsafe: if showUpgradeModal returned without showing the modal
+      // (e.g., isGameActive guard bailed early), unpause immediately.
+      setTimeout(function () {
+        const modal = document.getElementById('levelup-modal');
+        if (window.isPaused && (!modal || modal.style.display !== 'flex')) {
+          window.isPaused = false;
+        }
+      }, 80);
     }
   }
 
@@ -1402,24 +1507,21 @@
       _updateProjectiles(dt);
       _updateGems(dt);
 
-      // Progressive spawn timer (only attempt when below max)
-      if (_activeSlimes.length < _maxActive) {
-        _spawnTimer -= dt;
-        if (_spawnTimer <= 0) {
-          _spawnTimer = _spawnInterval;
-          _spawnSlime();
-        }
-      } else {
-        _spawnTimer = _spawnInterval; // reset so it fires immediately when a slot opens
+      // Survivor-style wave spawn timer: always count down and fire a wave
+      _spawnTimer -= dt;
+      if (_spawnTimer <= 0) {
+        _spawnTimer = _spawnInterval;
+        _spawnWave();
       }
 
-      // Escalation: increase max active slimes every ESCALATION_INTERVAL seconds
+      // Escalation: increase wave size and max cap every ESCALATION_INTERVAL seconds
       _escalationTimer -= dt;
       if (_escalationTimer <= 0) {
         _escalationTimer = ESCALATION_INTERVAL;
-        _maxActive = Math.min(_maxActive + 1, MAX_SLIMES);
-        _spawnInterval = Math.max(0.8, _spawnInterval * 0.9);
-        console.log('[SandboxLoop] Escalation! maxActive=' + _maxActive + ' spawnInterval=' + _spawnInterval.toFixed(2) + 's');
+        _waveSize     = Math.min(_waveSize + 2, 20);          // grow wave by 2 each escalation
+        _maxActive    = Math.min(_maxActive + 5, MAX_SLIMES);  // raise cap by 5
+        _spawnInterval = Math.max(1.5, _spawnInterval * 0.85); // shorten interval (min 1.5s)
+        console.log('[SandboxLoop] Escalation! waveSize=' + _waveSize + ' maxActive=' + _maxActive + ' interval=' + _spawnInterval.toFixed(2) + 's');
       }
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
@@ -1482,10 +1584,20 @@
       _initPools();
       _initPlayer();
       _buildSlimePool();     // Pre-allocate enemy pool (50 slots)
-      _spawnSlime();         // Spawn first slime immediately
+      _spawnWave();          // Spawn first wave immediately
       _initInput();
       _buildSandboxOverlay();
       _refreshExpBar();
+
+      // Attach X button handler for levelup-modal (game-screens.js not loaded in sandbox)
+      const xBtn = document.getElementById('levelup-x-btn');
+      if (xBtn) {
+        xBtn.addEventListener('click', function () {
+          const modal = document.getElementById('levelup-modal');
+          if (modal) modal.style.display = 'none';
+          window.isPaused = false;
+        });
+      }
 
       // Start loop
       _lastTime = performance.now();
