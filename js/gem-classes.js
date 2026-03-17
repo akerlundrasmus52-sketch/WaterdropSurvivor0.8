@@ -45,11 +45,11 @@
 
     class ExpGem {
       constructor(x, z, sourceWeapon, hitForce, enemyType) {
-        // Use shared star geometry (created once) — 10% larger than previous size
+        // Use shared star geometry (created once) — 15% larger than previous size
         if (!_expGemStarGeometry) {
           const starPoints = 5;
-          const outerR = 0.28 * 0.385; // 10% larger (0.35 * 1.1 = 0.385)
-          const innerR = 0.12 * 0.385;
+          const outerR = 0.28 * 0.4025; // 15% larger (0.35 * 1.15 = 0.4025)
+          const innerR = 0.12 * 0.4025;
           const starShape = new THREE.Shape();
           for (let i = 0; i < starPoints * 2; i++) {
             const angle = (i / (starPoints * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -58,7 +58,7 @@
             else starShape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
           }
           starShape.closePath();
-          const extrudeSettings = { depth: 0.0385, bevelEnabled: true, bevelSize: 0.011, bevelThickness: 0.011, bevelSegments: 2 };
+          const extrudeSettings = { depth: 0.04025, bevelEnabled: true, bevelSize: 0.01265, bevelThickness: 0.01265, bevelSegments: 2 };
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
@@ -104,7 +104,7 @@
         // Outline geometry is shared across all ExpGem instances (created once)
         if (!_expGemOutlineGeometry) {
           const s = new THREE.Shape();
-          const pts = 5, outerO = 0.33 * 0.385, innerO = 0.14 * 0.385;
+          const pts = 5, outerO = 0.33 * 0.4025, innerO = 0.14 * 0.4025;
           for (let i = 0; i < pts * 2; i++) {
             const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
             const r = i % 2 === 0 ? outerO : innerO;
@@ -112,7 +112,7 @@
             else s.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
           }
           s.closePath();
-          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.0308, bevelEnabled: false });
+          _expGemOutlineGeometry = new THREE.ExtrudeGeometry(s, { depth: 0.0322, bevelEnabled: false });
           _expGemOutlineGeometry.center();
         }
         const outlineMat = new THREE.MeshBasicMaterial({ color: 0x000000 });

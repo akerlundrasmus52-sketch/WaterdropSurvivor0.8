@@ -215,8 +215,8 @@
   // EXP gem object pool — pre-allocated so no new THREE.Mesh during gameplay
   const POOL_SIZE_GEMS      = 40;
   // Slime separation: minimum distance before soft push-apart force is applied
-  const SLIME_SEPARATION_DIST  = 1.6;      // world units
-  const SLIME_SEPARATION_FORCE = 1.0;      // push strength (units/sec)
+  const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
+  const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
 
   // ─── Module state ────────────────────────────────────────────────────────────
   let _ready    = false;
