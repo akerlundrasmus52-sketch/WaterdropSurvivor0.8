@@ -167,7 +167,6 @@
   const GAME_OVER_RELOAD_DELAY_MS = 2000;    // ms to show "YOU DIED" before page reload
   const SLIME_HP            = 80;
   const SLIME_SPEED         = 1.8;           // world units / second
-  const SLIME_RESPAWN_DELAY = 3000;          // ms
   const PICKUP_RANGE        = 3.5;           // world units — magnetism pull starts here
   const MAGNETISM_SPEED     = 6.0;           // units/sec toward player while in range
   const ARENA_RADIUS        = 80;            // half of 200×200 arena
@@ -183,12 +182,23 @@
   const MOVEMENT_TIME_SCALE  = 0.0042;
   // Half-width of the Slime HP bar plane (full width = 1.4, half = 0.7)
   const SLIME_HP_BAR_HALF_WIDTH = 0.7;
+  // Object pool constants
+  const MAX_SLIMES          = 50;            // max pre-allocated slime pool slots
+  const SPAWN_INTERVAL_INIT = 3.0;           // initial seconds between slime spawns
+  const SPAWN_INTERVAL_MIN  = 0.8;           // minimum spawn interval (max difficulty)
+  const MAX_ACTIVE_SLIMES   = 20;            // hard cap on simultaneous active slimes
 
   // ─── Module state ────────────────────────────────────────────────────────────
   let _ready    = false;
   let _lastTime = 0;
   let _rafId    = null;
-  let _slime    = null;           // { mesh, hp, maxHp, dead, respawnTimer, hpBar, hpBarBg }
+  // Enemy pool (replaces single _slime)
+  let _enemyPool      = [];       // pre-allocated slime objects (MAX_SLIMES slots)
+  let _allFleshChunks = [];       // global flesh chunk array (independent of pool slots)
+  let _spawnTimer     = 0;        // countdown to next spawn
+  let _spawnInterval  = SPAWN_INTERVAL_INIT; // current spawn interval (decreases over time)
+  let _gameTime       = 0;        // total elapsed seconds
+  let _curMaxActive   = 1;        // current max simultaneous slimes (increases over time)
   let _projPool = [];             // reusable projectile objects
   let _activeProjList = [];       // currently flying projectiles
   let _animateErrorShown = false; // prevent spamming error display every frame
@@ -280,16 +290,22 @@
         continue;
       }
 
-      // Collision with slime
-      if (_slime && !_slime.dead) {
-        const sx = _slime.mesh.position.x, sz = _slime.mesh.position.z;
+      // Collision with active slimes in pool
+      let hitAny = false;
+      for (let si = 0; si < _enemyPool.length; si++) {
+        const slime = _enemyPool[si];
+        if (!slime.poolActive || slime.dead) continue;
+        const sx = slime.mesh.position.x, sz = slime.mesh.position.z;
         const ex = p.mesh.position.x - sx;
         const ez = p.mesh.position.z - sz;
         if (ex * ex + ez * ez < 1.2) {
-          _hitSlime(p);
+          _hitSlime(slime, p);
           _releaseProjectile(p, i);
+          hitAny = true;
+          break;
         }
       }
+      if (hitAny) continue;
     }
   }
 
@@ -299,8 +315,9 @@
     if (idx !== undefined) _activeProjList.splice(idx, 1);
   }
 
-  // ─── Slime ───────────────────────────────────────────────────────────────────
-  function _buildSlime() {
+  // ─── Enemy Pool (Slimes) ─────────────────────────────────────────────────────
+  // Creates one slime mesh+data object and adds it to the scene (hidden).
+  function _createSlimeObject(id) {
     const geo = new THREE.SphereGeometry(0.7, 12, 10);
     // Deform into a slime shape: flatten bottom, widen body
     const pos = geo.attributes.position;
@@ -317,17 +334,17 @@
       color: 0x55EE44,
       emissive: 0x113300,
       emissiveIntensity: 0.2,
-      shininess: 80, // More reflective
+      shininess: 80,
       transparent: true,
-      opacity: 0.92, // Slightly more visible
+      opacity: 0.92,
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(6, 0.45, 0);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    mesh.visible = false;
     scene.add(mesh);
 
-    // Simple eye pair
+    // Eye pair
     const eyeGeo = new THREE.SphereGeometry(0.1, 6, 6);
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
@@ -353,66 +370,158 @@
     hpBg.add(hpFill);
     mesh.add(hpBg);
 
-    _slime = {
+    return {
       mesh,
       hpFill,
       hpFillGeo,
       hp: SLIME_HP,
       maxHp: SLIME_HP,
       dead: false,
-      respawnTimer: 0,
+      poolActive: false,   // true = currently spawned in world
       flashTimer: 0,
-      // Animation properties
       wobbleTime: 0,
       squishTime: 0,
       knockbackVx: 0,
       knockbackVz: 0,
-      // Properties expected by Player.prototype.update (auto-aim, collision checks)
-      id: 'dummy-slime-0',
+      lastDamageTime: 0,
+      id: 'pool-slime-' + id,
       type: 'slime',
       radius: 0.7,
       isBoss: false,
       get isDead() { return this.dead; },
       set isDead(value) { this.dead = value; },
-      // 5-part damage system tracking
-      damageStage: 0, // 0=intact, 1-4=progressive damage stages
-      wounds: [],     // array of wound meshes
-      fleshChunks: [], // array of flying flesh chunk objects
+      damageStage: 0,
+      wounds: [],
     };
   }
 
-  function _hitSlime(projectile) {
-    if (!_slime || _slime.dead) return;
+  // Pre-allocate all pool slots (called once during boot)
+  function _buildSlimePool() {
+    for (let i = 0; i < MAX_SLIMES; i++) {
+      _enemyPool.push(_createSlimeObject(i));
+    }
+    console.log('[SandboxLoop] Slime pool built: ' + MAX_SLIMES + ' slots');
+  }
+
+  // Clean up wound meshes attached to a slime
+  function _cleanSlimeWounds(slime) {
+    if (!slime.wounds || slime.wounds.length === 0) return;
+    for (let i = 0; i < slime.wounds.length; i++) {
+      const w = slime.wounds[i];
+      slime.mesh.remove(w);
+      w.geometry.dispose();
+      w.material.dispose();
+    }
+    slime.wounds = [];
+  }
+
+  // Reset and show a pool slot at a random spawn position around the player
+  function _activateSlime(slime) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = 8 + Math.random() * 4;
+    const px    = player ? player.mesh.position.x : 0;
+    const pz    = player ? player.mesh.position.z : 0;
+    const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+
+    slime.mesh.position.set(rx, 0.45, rz);
+    slime.hp              = SLIME_HP;
+    slime.dead            = false;
+    slime.poolActive      = true;
+    slime.flashTimer      = 0;
+    slime.wobbleTime      = 0;
+    slime.squishTime      = 0;
+    slime.knockbackVx     = 0;
+    slime.knockbackVz     = 0;
+    slime.lastDamageTime  = 0;
+    slime.damageStage     = 0;
+    slime.mesh.material.color.setHex(0x55EE44);
+    slime.mesh.material.opacity = 0.92;
+    slime.mesh.material.emissiveIntensity = 0.2;
+    slime.mesh.scale.set(1, 1, 1);
+    _cleanSlimeWounds(slime);
+    slime.mesh.visible = true;
+    _updateSlimeHPBar(slime);
+  }
+
+  // Hide and mark a slot as free for reuse
+  function _deactivateSlime(slime) {
+    slime.poolActive   = false;
+    slime.dead         = true;
+    slime.mesh.visible = false;
+    _cleanSlimeWounds(slime);
+  }
+
+  // Spawn one slime from the pool (if cap not exceeded)
+  function _spawnSlime() {
+    // Count currently active (alive) slimes
+    let activeCount = 0;
+    for (let i = 0; i < _enemyPool.length; i++) {
+      if (_enemyPool[i].poolActive && !_enemyPool[i].dead) activeCount++;
+    }
+    if (activeCount >= _curMaxActive) return;
+
+    // Find a free slot (not poolActive, or dead)
+    for (let i = 0; i < _enemyPool.length; i++) {
+      if (!_enemyPool[i].poolActive) {
+        _activateSlime(_enemyPool[i]);
+        return;
+      }
+    }
+    // Recycle a dead slot if all slots are taken
+    for (let i = 0; i < _enemyPool.length; i++) {
+      if (_enemyPool[i].dead) {
+        _activateSlime(_enemyPool[i]);
+        return;
+      }
+    }
+  }
+
+  // Return the closest active, alive slime to (x, z), or null
+  function _getClosestActiveSlime(x, z) {
+    let closest = null, closestDistSq = Infinity;
+    for (let i = 0; i < _enemyPool.length; i++) {
+      const s = _enemyPool[i];
+      if (!s.poolActive || s.dead) continue;
+      const dx = s.mesh.position.x - x, dz = s.mesh.position.z - z;
+      const distSq = dx * dx + dz * dz;
+      if (distSq < closestDistSq) { closestDistSq = distSq; closest = s; }
+    }
+    return closest;
+  }
+
+  function _hitSlime(slime, projectile) {
+    if (!slime || slime.dead) return;
 
     // Determine hit force from weapon (gun = 1.0)
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
     const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
     const actualDmg = Math.round(damage * hitForce);
 
-    _slime.hp -= actualDmg;
-    _slime.flashTimer = 0.1;
+    slime.hp -= actualDmg;
+    slime.flashTimer = 0.1;
 
     // Apply knockback force
     const knockbackStrength = 0.15 * hitForce;
     if (projectile && projectile.vx !== undefined && projectile.vz !== undefined) {
-      _slime.knockbackVx = projectile.vx * knockbackStrength;
-      _slime.knockbackVz = projectile.vz * knockbackStrength;
+      slime.knockbackVx = projectile.vx * knockbackStrength;
+      slime.knockbackVz = projectile.vz * knockbackStrength;
     }
 
     // Squish animation on hit
-    _slime.squishTime = 0.3;
+    slime.squishTime = 0.3;
 
     // Floating damage number
     createFloatingText(
       '-' + actualDmg,
-      new THREE.Vector3(_slime.mesh.position.x, 1.5, _slime.mesh.position.z),
+      new THREE.Vector3(slime.mesh.position.x, 1.5, slime.mesh.position.z),
       '#FF4444'
     );
 
     // Blood splatter on hit — use BloodSystem.emitBurst (the real API)
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
-        { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+        { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.5, z: slime.mesh.position.z },
         12,
         { spreadXZ: 1.2, spreadY: 0.4 }
       );
@@ -420,139 +529,94 @@
 
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
     // Trigger damage stages based on HP percentage
-    const hpPercent = _slime.hp / _slime.maxHp;
+    const hpPercent = slime.hp / slime.maxHp;
 
     // Stage 1: 75% HP - First wounds (darkened appearance)
-    if (hpPercent <= 0.75 && _slime.damageStage === 0) {
-      _slime.damageStage = 1;
-      _applyDamageStage1();
+    if (hpPercent <= 0.75 && slime.damageStage === 0) {
+      slime.damageStage = 1;
+      _applyDamageStage1(slime);
     }
     // Stage 2: 50% HP - More wounds, flesh chunks start flying
-    else if (hpPercent <= 0.50 && _slime.damageStage === 1) {
-      _slime.damageStage = 2;
-      _applyDamageStage2();
+    else if (hpPercent <= 0.50 && slime.damageStage === 1) {
+      slime.damageStage = 2;
+      _applyDamageStage2(slime);
     }
     // Stage 3: 35% HP - Heavy bleeding, body parts breaking off
-    else if (hpPercent <= 0.35 && _slime.damageStage === 2) {
-      _slime.damageStage = 3;
-      _applyDamageStage3();
+    else if (hpPercent <= 0.35 && slime.damageStage === 2) {
+      slime.damageStage = 3;
+      _applyDamageStage3(slime);
     }
     // Stage 4: 20% HP - Critical damage, chunks flying everywhere
-    else if (hpPercent <= 0.20 && _slime.damageStage === 3) {
-      _slime.damageStage = 4;
-      _applyDamageStage4();
+    else if (hpPercent <= 0.20 && slime.damageStage === 3) {
+      slime.damageStage = 4;
+      _applyDamageStage4(slime);
     }
 
-    if (_slime.hp <= 0) {
-      _killSlime(hitForce, projectile.vx || 0, projectile.vz || 0);
+    if (slime.hp <= 0) {
+      _killSlime(slime, hitForce, projectile.vx || 0, projectile.vz || 0);
     } else {
-      _updateSlimeHPBar();
+      _updateSlimeHPBar(slime);
     }
   }
 
-  function _killSlime(hitForce, killVX, killVZ) {
-    _slime.dead = true;
-    _slime.hp = 0;
-    _slime.mesh.visible = false;
+  function _killSlime(slime, hitForce, killVX, killVZ) {
+    slime.dead = true;
+    slime.hp   = 0;
+    slime.mesh.visible = false;
 
-    const x = _slime.mesh.position.x;
-    const z = _slime.mesh.position.z;
+    const x = slime.mesh.position.x;
+    const z = slime.mesh.position.z;
 
     // ── DEATH EXPLOSION WITH MASSIVE GORE ─────────────────────────────────────
-    // Massive blood death burst
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
         { x: x, y: 0.5, z: z },
-        60, // increased from 35
+        60,
         { spreadXZ: 3.0, spreadY: 1.2 }
       );
-      // Add guts explosion
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts({ x: x, y: 0.5, z: z }, 25);
       }
     }
 
     // Spawn 8-12 large flesh chunks flying in all directions (death explosion)
-    _spawnFleshChunks(8 + Math.floor(Math.random() * 5), true);
+    _spawnFleshChunks(slime, 8 + Math.floor(Math.random() * 5), true);
 
     // ── Dynamic EXP gem drop ──────────────────────────────────────────────────
-    // Just drop 1 gem for testing
-    const gemCount = 1;
-    for (let i = 0; i < gemCount; i++) {
-      // Pass hitForce and weapon name so gem-classes.js applies the dynamic
-      // spin speed / fly distance logic based on how hard the enemy was killed.
-      expGems.push(new ExpGem(x, z, 'gun', hitForce, ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE));
-    }
+    expGems.push(new ExpGem(x, z, 'gun', hitForce, ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE));
 
     createFloatingText('SLIME DEFEATED!', new THREE.Vector3(x, 1.8, z), '#AAFFAA');
 
-    // Schedule respawn
-    _slime.respawnTimer = SLIME_RESPAWN_DELAY;
     playerStats.kills++;
 
     // Gain rage on kill
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
-      GameRageCombat.addRage(8); // RAGE_PER_KILL = 8
+      GameRageCombat.addRage(8);
     }
 
     // Record kill in milestone system
     if (window.GameMilestones && typeof GameMilestones.recordKill === 'function') {
       GameMilestones.recordKill();
     }
+
+    // Return pool slot after a short delay (let death FX play first)
+    setTimeout(function () { _deactivateSlime(slime); }, 200);
   }
 
-  function _respawnSlime() {
-    // Clean up all wound meshes from previous life
-    if (_slime.wounds && _slime.wounds.length > 0) {
-      for (let i = 0; i < _slime.wounds.length; i++) {
-        const wound = _slime.wounds[i];
-        _slime.mesh.remove(wound);
-        wound.geometry.dispose();
-        wound.material.dispose();
-      }
-      _slime.wounds = [];
-    }
-
-    // Respawn at a random edge position around the player, 8-12 units away
-    const angle  = Math.random() * Math.PI * 2;
-    const dist   = 8 + Math.random() * 4;
-    const px     = player ? player.mesh.position.x : 0;
-    const pz     = player ? player.mesh.position.z : 0;
-    const rx     = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
-    const rz     = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
-
-    _slime.mesh.position.set(rx, 0.45, rz);
-    _slime.hp         = SLIME_HP;
-    _slime.dead       = false;
-    _slime.flashTimer = 0;
-    _slime.mesh.visible = true;
-
-    // Reset all damage-related properties
-    _slime.damageStage = 0;
-    _slime.mesh.material.color.setHex(0x55EE44);
-    _slime.mesh.material.opacity = 0.9;
-    _slime.mesh.material.emissiveIntensity = 0.2;
-    _slime.mesh.scale.set(1, 1, 1); // reset scale
-
-    _updateSlimeHPBar();
-  }
-
-  function _updateSlimeHPBar() {
-    const frac = Math.max(0, _slime.hp / _slime.maxHp);
-    // Scale x from full width (1.4) to 0, keeping left edge fixed
-    _slime.hpFill.scale.x = Math.max(0.001, frac);
-    _slime.hpFill.position.x = (frac - 1) * SLIME_HP_BAR_HALF_WIDTH; // offset to anchor left
-    _slime.hpFill.material.color.setHex(
+  function _updateSlimeHPBar(slime) {
+    const frac = Math.max(0, slime.hp / slime.maxHp);
+    slime.hpFill.scale.x = Math.max(0.001, frac);
+    slime.hpFill.position.x = (frac - 1) * SLIME_HP_BAR_HALF_WIDTH;
+    slime.hpFill.material.color.setHex(
       frac > 0.5 ? 0x44FF44 : frac > 0.25 ? 0xFFAA00 : 0xFF3300
     );
   }
 
   // ─── 5-PART GORE SYSTEM ───────────────────────────────────────────────────────
   // Stage 1: 75% HP - Darken appearance, add first wounds
-  function _applyDamageStage1() {
-    // Darken the slime's color to show damage
-    _slime.mesh.material.color.setHex(0x44CC33);
-    _slime.mesh.material.emissiveIntensity = 0.15;
+  function _applyDamageStage1(slime) {
+    slime.mesh.material.color.setHex(0x44CC33);
+    slime.mesh.material.emissiveIntensity = 0.15;
 
     // Add 2 small wound meshes (dark red spots)
     for (let i = 0; i < 2; i++) {
@@ -567,26 +631,25 @@
         height,
         Math.sin(angle) * 0.5
       );
-      _slime.mesh.add(wound);
-      _slime.wounds.push(wound);
+      slime.mesh.add(wound);
+      slime.wounds.push(wound);
     }
 
     // Blood spray effect
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
-        { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
+        { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.4, z: slime.mesh.position.z },
         8,
         { spreadXZ: 0.8, spreadY: 0.3 }
       );
     }
 
-    createFloatingText('WOUNDED!', new THREE.Vector3(_slime.mesh.position.x, 1.6, _slime.mesh.position.z), '#FF8800');
+    createFloatingText('WOUNDED!', new THREE.Vector3(slime.mesh.position.x, 1.6, slime.mesh.position.z), '#FF8800');
   }
 
   // Stage 2: 50% HP - More wounds, spawn first flying flesh chunks
-  function _applyDamageStage2() {
-    // Further darken
-    _slime.mesh.material.color.setHex(0x33AA22);
+  function _applyDamageStage2(slime) {
+    slime.mesh.material.color.setHex(0x33AA22);
 
     // Add 2 more wound meshes
     for (let i = 0; i < 2; i++) {
@@ -600,40 +663,36 @@
         height,
         Math.sin(angle) * 0.5
       );
-      _slime.mesh.add(wound);
-      _slime.wounds.push(wound);
+      slime.mesh.add(wound);
+      slime.wounds.push(wound);
     }
 
     // Spawn 2-3 flying flesh chunks
-    _spawnFleshChunks(2 + Math.floor(Math.random() * 2));
+    _spawnFleshChunks(slime, 2 + Math.floor(Math.random() * 2));
 
     // Heavy blood spray
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
-        { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+        { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.5, z: slime.mesh.position.z },
         18,
         { spreadXZ: 1.5, spreadY: 0.6 }
       );
-      // Add guts effect
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(
-          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
+          { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.4, z: slime.mesh.position.z },
           6
         );
       }
     }
 
-    createFloatingText('HEAVY DAMAGE!', new THREE.Vector3(_slime.mesh.position.x, 1.7, _slime.mesh.position.z), '#FF4400');
+    createFloatingText('HEAVY DAMAGE!', new THREE.Vector3(slime.mesh.position.x, 1.7, slime.mesh.position.z), '#FF4400');
   }
 
   // Stage 3: 35% HP - Body parts breaking off, heavy bleeding
-  function _applyDamageStage3() {
-    // Critical darkening, reduce opacity slightly
-    _slime.mesh.material.color.setHex(0x228811);
-    _slime.mesh.material.opacity = 0.85;
-
-    // Scale down slightly to show damage
-    _slime.mesh.scale.set(0.92, 0.92, 0.92);
+  function _applyDamageStage3(slime) {
+    slime.mesh.material.color.setHex(0x228811);
+    slime.mesh.material.opacity = 0.85;
+    slime.mesh.scale.set(0.92, 0.92, 0.92);
 
     // Add large wound holes
     for (let i = 0; i < 3; i++) {
@@ -647,40 +706,37 @@
         height,
         Math.sin(angle) * 0.45
       );
-      _slime.mesh.add(wound);
-      _slime.wounds.push(wound);
+      slime.mesh.add(wound);
+      slime.wounds.push(wound);
     }
 
     // Spawn 3-5 flesh chunks flying off
-    _spawnFleshChunks(3 + Math.floor(Math.random() * 3));
+    _spawnFleshChunks(slime, 3 + Math.floor(Math.random() * 3));
 
     // Massive blood spray
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
-        { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+        { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.5, z: slime.mesh.position.z },
         30,
         { spreadXZ: 2.0, spreadY: 0.8 }
       );
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(
-          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
+          { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.4, z: slime.mesh.position.z },
           12
         );
       }
     }
 
-    createFloatingText('CRITICAL!', new THREE.Vector3(_slime.mesh.position.x, 1.8, _slime.mesh.position.z), '#FF0000');
+    createFloatingText('CRITICAL!', new THREE.Vector3(slime.mesh.position.x, 1.8, slime.mesh.position.z), '#FF0000');
   }
 
   // Stage 4: 20% HP - Near death, chunks flying everywhere
-  function _applyDamageStage4() {
-    // Almost dead appearance
-    _slime.mesh.material.color.setHex(0x116600);
-    _slime.mesh.material.opacity = 0.75;
-    _slime.mesh.material.emissiveIntensity = 0.05;
-
-    // Scale down more
-    _slime.mesh.scale.set(0.85, 0.85, 0.85);
+  function _applyDamageStage4(slime) {
+    slime.mesh.material.color.setHex(0x116600);
+    slime.mesh.material.opacity = 0.75;
+    slime.mesh.material.emissiveIntensity = 0.05;
+    slime.mesh.scale.set(0.85, 0.85, 0.85);
 
     // Add massive wound holes
     for (let i = 0; i < 4; i++) {
@@ -694,40 +750,38 @@
         height,
         Math.sin(angle) * 0.4
       );
-      _slime.mesh.add(wound);
-      _slime.wounds.push(wound);
+      slime.mesh.add(wound);
+      slime.wounds.push(wound);
     }
 
     // Spawn 4-6 large flesh chunks
-    _spawnFleshChunks(4 + Math.floor(Math.random() * 3), true); // larger chunks
+    _spawnFleshChunks(slime, 4 + Math.floor(Math.random() * 3), true);
 
     // Extreme blood spray
     if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst(
-        { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.5, z: _slime.mesh.position.z },
+        { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.5, z: slime.mesh.position.z },
         45,
         { spreadXZ: 2.5, spreadY: 1.0 }
       );
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(
-          { x: _slime.mesh.position.x, y: _slime.mesh.position.y + 0.4, z: _slime.mesh.position.z },
+          { x: slime.mesh.position.x, y: slime.mesh.position.y + 0.4, z: slime.mesh.position.z },
           18
         );
       }
     }
 
-    createFloatingText('NEAR DEATH!', new THREE.Vector3(_slime.mesh.position.x, 1.9, _slime.mesh.position.z), '#DD0000');
+    createFloatingText('NEAR DEATH!', new THREE.Vector3(slime.mesh.position.x, 1.9, slime.mesh.position.z), '#DD0000');
   }
 
-  // Spawn flying flesh chunks with physics
-  function _spawnFleshChunks(count, large) {
-    const pos = _slime.mesh.position;
+  // Spawn flying flesh chunks with physics — adds to global _allFleshChunks
+  function _spawnFleshChunks(slime, count, large) {
+    const pos = slime.mesh.position;
 
     for (let i = 0; i < count; i++) {
-      // Create flesh chunk geometry (irregular shapes)
       const size = large ? (0.15 + Math.random() * 0.15) : (0.08 + Math.random() * 0.12);
       const geo = new THREE.BoxGeometry(size, size * 0.8, size * 1.2);
-      // Vary flesh colors (green slime flesh)
       const colors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
       const mat = new THREE.MeshPhongMaterial({
         color: colors[Math.floor(Math.random() * colors.length)],
@@ -735,7 +789,6 @@
       });
       const mesh = new THREE.Mesh(geo, mat);
 
-      // Spawn at slime position with random offset
       const angle = Math.random() * Math.PI * 2;
       mesh.position.set(
         pos.x + Math.cos(angle) * 0.3,
@@ -743,7 +796,6 @@
         pos.z + Math.sin(angle) * 0.3
       );
 
-      // Random rotation
       mesh.rotation.set(
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2,
@@ -765,25 +817,21 @@
         onGround: false
       };
 
-      _slime.fleshChunks.push(chunk);
+      _allFleshChunks.push(chunk);
     }
   }
 
-  // Update flying flesh chunks (called in _updateSlime)
+  // Update all global flesh chunks (independent of individual slime pool slots)
   function _updateFleshChunks(dt) {
-    if (!_slime || !_slime.fleshChunks) return;
+    for (let i = _allFleshChunks.length - 1; i >= 0; i--) {
+      const chunk = _allFleshChunks[i];
 
-    for (let i = _slime.fleshChunks.length - 1; i >= 0; i--) {
-      const chunk = _slime.fleshChunks[i];
-
-      // Update life timer
       chunk.life -= dt;
       if (chunk.life <= 0) {
-        // Despawn chunk
         scene.remove(chunk.mesh);
         chunk.mesh.geometry.dispose();
         chunk.mesh.material.dispose();
-        _slime.fleshChunks.splice(i, 1);
+        _allFleshChunks.splice(i, 1);
         continue;
       }
 
@@ -794,29 +842,24 @@
         chunk.mesh.position.y += chunk.vy;
         chunk.mesh.position.z += chunk.vz;
 
-        // Check ground collision
         if (chunk.mesh.position.y <= 0.05) {
           chunk.mesh.position.y = 0.05;
           chunk.onGround = true;
           chunk.vy = 0;
-          // Bounce slightly
           chunk.vx *= 0.3;
           chunk.vz *= 0.3;
         }
       } else {
-        // On ground, apply friction
         chunk.vx *= 0.92;
         chunk.vz *= 0.92;
         chunk.mesh.position.x += chunk.vx;
         chunk.mesh.position.z += chunk.vz;
       }
 
-      // Rotate chunks
       chunk.mesh.rotation.x += chunk.rotSpeedX * dt;
       chunk.mesh.rotation.y += chunk.rotSpeedY * dt;
       chunk.mesh.rotation.z += chunk.rotSpeedZ * dt;
 
-      // Fade out in last 0.5 seconds
       if (chunk.life < 0.5 && chunk.mesh.material.opacity > 0) {
         chunk.mesh.material.transparent = true;
         chunk.mesh.material.opacity = chunk.life / 0.5;
@@ -825,87 +868,84 @@
   }
 
   function _updateSlime(dt) {
-    if (!_slime) return;
-    if (_slime.dead) {
-      _slime.respawnTimer -= dt * 1000;
-      if (_slime.respawnTimer <= 0) _respawnSlime();
-      // Keep updating flesh chunks even when slime is dead
-      _updateFleshChunks(dt);
-      return;
-    }
-
-    // Update flying flesh chunks
+    // Update global flesh chunks (independent of pool state)
     _updateFleshChunks(dt);
 
-    // Billboard HP bar toward camera
-    if (camera) _slime.mesh.children[2] && (_slime.mesh.children[2].quaternion.copy(camera.quaternion));
-
-    // Flash on hit
-    if (_slime.flashTimer > 0) {
-      _slime.flashTimer -= dt;
-      _slime.mesh.material.color.setHex(0xFFFFFF);
-    } else {
-      // Restore color based on damage stage
-      const colors = [0x55EE44, 0x44CC33, 0x33AA22, 0x228811, 0x116600];
-      _slime.mesh.material.color.setHex(colors[_slime.damageStage] || 0x55EE44);
-    }
-
-    // Wobble animation - idle breathing/jiggle
-    _slime.wobbleTime += dt * 3.5;
-    const wobble = Math.sin(_slime.wobbleTime) * 0.05;
-
-    // Squish animation on hit
-    let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
-    if (_slime.squishTime > 0) {
-      _slime.squishTime -= dt;
-      const squishProgress = 1 - (_slime.squishTime / 0.3);
-      const squishAmount = Math.sin(squishProgress * Math.PI) * 0.3;
-      squishX = 1 + squishAmount;
-      squishZ = 1 + squishAmount;
-      squishY = 1 - squishAmount * 0.5;
-    }
-
-    // Apply combined scale (wobble + squish + damage stage shrink)
-    const damageScale = _slime.damageStage >= 3 ? 0.92 : (_slime.damageStage >= 4 ? 0.85 : 1.0);
-    _slime.mesh.scale.set(
-      damageScale * squishX * (1 + wobble),
-      damageScale * squishY * (1 - wobble * 0.5),
-      damageScale * squishZ * (1 + wobble)
-    );
-
-    // Apply knockback physics
-    if (Math.abs(_slime.knockbackVx) > 0.01 || Math.abs(_slime.knockbackVz) > 0.01) {
-      _slime.mesh.position.x += _slime.knockbackVx * dt * 10;
-      _slime.mesh.position.z += _slime.knockbackVz * dt * 10;
-      // Friction
-      _slime.knockbackVx *= Math.pow(0.01, dt);
-      _slime.knockbackVz *= Math.pow(0.01, dt);
-    }
-
-    // Move toward player
     if (!player) return;
     const px = player.mesh.position.x, pz = player.mesh.position.z;
-    const sx = _slime.mesh.position.x, sz = _slime.mesh.position.z;
-    const dx = px - sx, dz = pz - sz;
-    const dist = Math.sqrt(dx * dx + dz * dz);
 
-    // Only move if not being knocked back
-    if (dist > 1.2 && Math.abs(_slime.knockbackVx) < 0.05 && Math.abs(_slime.knockbackVz) < 0.05) {
-      _slime.mesh.position.x += (dx / dist) * SLIME_SPEED * dt;
-      _slime.mesh.position.z += (dz / dist) * SLIME_SPEED * dt;
-      // Face movement direction
-      _slime.mesh.rotation.y = Math.atan2(dx, dz);
-    }
+    for (let si = 0; si < _enemyPool.length; si++) {
+      const slime = _enemyPool[si];
+      if (!slime.poolActive) continue;
+      if (slime.dead) continue;
 
-    // Deal damage to player on contact (but with slight cooldown to avoid jitter)
-    if (dist < 1.1 && player && !player.invulnerable) {
-      if (!_slime.lastDamageTime || Date.now() - _slime.lastDamageTime > 500) {
-        _slime.lastDamageTime = Date.now();
-        if (typeof player.takeDamage === 'function') {
-          player.takeDamage(8, 'slime', _slime.mesh.position);
-        } else {
-          playerStats.hp = Math.max(0, playerStats.hp - 8);
-          if (playerStats.hp <= 0) showYouDiedBanner();
+      // Billboard HP bar toward camera
+      if (camera) {
+        const hpBarNode = slime.mesh.children[2];
+        if (hpBarNode) hpBarNode.quaternion.copy(camera.quaternion);
+      }
+
+      // Flash on hit
+      if (slime.flashTimer > 0) {
+        slime.flashTimer -= dt;
+        slime.mesh.material.color.setHex(0xFFFFFF);
+      } else {
+        const colors = [0x55EE44, 0x44CC33, 0x33AA22, 0x228811, 0x116600];
+        slime.mesh.material.color.setHex(colors[slime.damageStage] || 0x55EE44);
+      }
+
+      // Wobble animation - idle breathing/jiggle
+      slime.wobbleTime += dt * 3.5;
+      const wobble = Math.sin(slime.wobbleTime) * 0.05;
+
+      // Squish animation on hit
+      let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
+      if (slime.squishTime > 0) {
+        slime.squishTime -= dt;
+        const squishProgress = 1 - (slime.squishTime / 0.3);
+        const squishAmount = Math.sin(squishProgress * Math.PI) * 0.3;
+        squishX = 1 + squishAmount;
+        squishZ = 1 + squishAmount;
+        squishY = 1 - squishAmount * 0.5;
+      }
+
+      // Apply combined scale (wobble + squish + damage stage shrink)
+      const damageScale = slime.damageStage >= 4 ? 0.85 : (slime.damageStage >= 3 ? 0.92 : 1.0);
+      slime.mesh.scale.set(
+        damageScale * squishX * (1 + wobble),
+        damageScale * squishY * (1 - wobble * 0.5),
+        damageScale * squishZ * (1 + wobble)
+      );
+
+      // Apply knockback physics
+      if (Math.abs(slime.knockbackVx) > 0.01 || Math.abs(slime.knockbackVz) > 0.01) {
+        slime.mesh.position.x += slime.knockbackVx * dt * 10;
+        slime.mesh.position.z += slime.knockbackVz * dt * 10;
+        slime.knockbackVx *= Math.pow(0.01, dt);
+        slime.knockbackVz *= Math.pow(0.01, dt);
+      }
+
+      // Move toward player
+      const sx = slime.mesh.position.x, sz = slime.mesh.position.z;
+      const dx = px - sx, dz = pz - sz;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist > 1.2 && Math.abs(slime.knockbackVx) < 0.05 && Math.abs(slime.knockbackVz) < 0.05) {
+        slime.mesh.position.x += (dx / dist) * SLIME_SPEED * dt;
+        slime.mesh.position.z += (dz / dist) * SLIME_SPEED * dt;
+        slime.mesh.rotation.y = Math.atan2(dx, dz);
+      }
+
+      // Deal damage to player on contact
+      if (dist < 1.1 && !player.invulnerable) {
+        if (!slime.lastDamageTime || Date.now() - slime.lastDamageTime > 500) {
+          slime.lastDamageTime = Date.now();
+          if (typeof player.takeDamage === 'function') {
+            player.takeDamage(8, 'slime', slime.mesh.position);
+          } else {
+            playerStats.hp = Math.max(0, playerStats.hp - 8);
+            if (playerStats.hp <= 0) showYouDiedBanner();
+          }
         }
       }
     }
@@ -1001,22 +1041,28 @@
   let _gunCooldown = 0;
 
   function _tryFire(dt) {
-    if (!player || !_slime || _slime.dead) return;
+    if (!player) return;
     _gunCooldown -= dt * 1000;
     if (_gunCooldown > 0) return;
+
     const cooldown = weapons && weapons.gun ? weapons.gun.cooldown : 1000;
     _gunCooldown = cooldown;
 
     const px = player.mesh.position.x, pz = player.mesh.position.z;
-    // Target: default to slime position, override with joystick/mouse
-    let tx = _slime.mesh.position.x, tz = _slime.mesh.position.z;
 
+    // Default: auto-aim at closest active slime; override with joystick/mouse
+    let tx = px, tz = pz + 1; // fallback straight ahead
     if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
       tx = px + _aimJoy.dx * 10;
       tz = pz + _aimJoy.dz * 10;
     } else if (window.gameSettings && window.gameSettings.controlType === 'keyboard' && _mouse) {
       tx = _mouse.worldX;
       tz = _mouse.worldZ;
+    } else {
+      // Auto-aim: target closest alive slime
+      const target = _getClosestActiveSlime(px, pz);
+      if (target) { tx = target.mesh.position.x; tz = target.mesh.position.z; }
+      else return; // no target, don't fire
     }
 
     _fireProjectile(px, pz, tx, tz);
@@ -1129,6 +1175,12 @@
     renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
     renderer.toneMapping       = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.4;
+    // Three.js r152+ uses outputColorSpace; older versions use outputEncoding
+    if (typeof THREE.SRGBColorSpace !== 'undefined') {
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+    } else if (typeof THREE.sRGBEncoding !== 'undefined') {
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    }
 
     const container = document.getElementById('game-container');
     if (container) container.appendChild(renderer.domElement);
@@ -1366,13 +1418,12 @@
       'pointer-events:none',
       'text-align:center',
     ].join(';');
-    // Object pooling is active when the global GameObjectPool/ObjectPool system is available
-    // OR when our local projectile pool has been successfully pre-allocated.
-    const poolActive = !!(window.GameObjectPool || window.ObjectPool) || _projPool.length > 0;
+    // Pooling badge: slime pool + projectile pool are always active after boot
+    const poolActive = _enemyPool.length > 0 || _projPool.length > 0 || !!(window.GameObjectPool || window.ObjectPool);
     const poolBadge = poolActive
-      ? '<span style="color:#00FF88">✔ Object Pooling Active</span>'
+      ? '<span style="color:#00FF88">✔ Object Pooling Active (' + MAX_SLIMES + ' slime slots)</span>'
       : '<span style="color:#FF4444">✘ Object Pooling Inactive</span>';
-    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Auto-aim Gun unlocked &nbsp;|&nbsp; ' + poolBadge;
+    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Slime Spawn Loop &nbsp;|&nbsp; ' + poolBadge;
     document.body.appendChild(el);
     console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
   }
@@ -1390,6 +1441,23 @@
         return;
       }
 
+      // Track total game time
+      _gameTime += dt;
+
+      // ── Slime spawn loop ────────────────────────────────────────────────────
+      // Increase max active slimes by 1 every 30 seconds (capped at MAX_ACTIVE_SLIMES)
+      _curMaxActive = Math.min(MAX_ACTIVE_SLIMES, 1 + Math.floor(_gameTime / 30));
+
+      _spawnTimer -= dt;
+      if (_spawnTimer <= 0) {
+        // Try to spawn up to _curMaxActive slimes; spawn one per timer tick
+        _spawnSlime();
+        // Gradually tighten the interval (more pressure over time)
+        _spawnInterval = Math.max(SPAWN_INTERVAL_MIN, _spawnInterval * 0.992);
+        _spawnTimer = _spawnInterval;
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       // Update dopamine time dilation
       if (window.DopamineSystem && window.DopamineSystem.TimeDilation) {
         window.DopamineSystem.TimeDilation.update(dt);
@@ -1403,7 +1471,8 @@
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
-        player.update(dt, _slime && !_slime.dead ? [_slime] : [], projectiles, expGems);
+        const activeSlimes = _enemyPool.filter(function (s) { return s.poolActive && !s.dead; });
+        player.update(dt, activeSlimes, projectiles, expGems);
       }
 
       // Blood system tick
@@ -1460,7 +1529,9 @@
       _initRageCombat();
       _initPools();
       _initPlayer();
-      _buildSlime();
+      // Build the pre-allocated slime pool and spawn the first slime
+      _buildSlimePool();
+      _spawnSlime();
       _initInput();
       _buildSandboxOverlay();
       _refreshExpBar();
