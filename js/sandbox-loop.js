@@ -599,8 +599,8 @@
       GameMilestones.recordKill();
     }
 
-    // Return pool slot after a short delay (let death FX play first)
-    setTimeout(function () { _deactivateSlime(slime); }, 200);
+    // Return pool slot immediately — mesh is already hidden, wounds cleaned up
+    _deactivateSlime(slime);
   }
 
   function _updateSlimeHPBar(slime) {
@@ -1453,6 +1453,7 @@
         // Try to spawn up to _curMaxActive slimes; spawn one per timer tick
         _spawnSlime();
         // Gradually tighten the interval (more pressure over time)
+        // ~0.8% decay per spawn tick — interval halves roughly every 85 kills
         _spawnInterval = Math.max(SPAWN_INTERVAL_MIN, _spawnInterval * 0.992);
         _spawnTimer = _spawnInterval;
       }
