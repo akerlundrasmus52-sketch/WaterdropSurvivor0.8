@@ -70,6 +70,28 @@
     try { pauseOverlayCount = 0; window.pauseOverlayCount = 0; } catch (_) {}
     if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
   };
+  // ── Quest & companion stubs (quest system loads but quests aren't used yet) ──
+  if (typeof progressTutorialQuest === 'undefined') {
+    window.progressTutorialQuest = function () {}; // no-op: quests not active yet
+  }
+  if (typeof droneTurrets === 'undefined') {
+    window.droneTurrets = [];
+  }
+  if (typeof startDroneHum === 'undefined') {
+    window.startDroneHum = function () {};
+  }
+  if (typeof DroneTurret === 'undefined') {
+    window.DroneTurret = function () { this.update = function(){}; };
+  }
+  if (typeof saveSaveData === 'undefined') {
+    window.saveSaveData = function () {}; // no-op: no save system in sandbox
+  }
+  if (typeof loadSaveData === 'undefined') {
+    window.loadSaveData = function () {};
+  }
+  if (typeof showUpgradeModal === 'undefined') {
+    window.showUpgradeModal = function () {}; // fallback if level-up-system didn't load
+  }
   if (typeof updateGoldDisplays === 'undefined') {
     window.updateGoldDisplays = function () {};
   }
@@ -319,6 +341,9 @@
   // ─── Slime Pool ──────────────────────────────────────────────────────────────
   // Shared geometry for all pool slots (avoids duplicating vertex data)
   let _slimeBaseGeo = null;
+  // Shared wound geometries by stage (pooled per slime slot)
+  const WOUNDS_PER_STAGE = [0, 2, 2, 3, 4]; // wounds added per stage
+  const MAX_WOUNDS_PER_SLIME = 11; // max total wounds across all 4 stages
 
   function _buildSlimePool() {
     // Build shared geometry once
@@ -380,10 +405,29 @@
       hpBg.add(hpFill);
       mesh.add(hpBg);
 
+      // Pre-allocate wound meshes (pooled — no new THREE.Mesh during gameplay)
+      const woundPool = [];
+      const woundGeos = [
+        new THREE.SphereGeometry(0.12, 6, 6), // stage 1 size
+        new THREE.SphereGeometry(0.15, 6, 6), // stage 2 size
+        new THREE.SphereGeometry(0.18, 6, 6), // stage 3 size
+        new THREE.SphereGeometry(0.22, 6, 6), // stage 4 size
+      ];
+      for (let w = 0; w < MAX_WOUNDS_PER_SLIME; w++) {
+        const wGeo  = woundGeos[Math.min(Math.floor(w / 3), 3)]; // get geo by wound index
+        const wMat  = new THREE.MeshBasicMaterial({ color: 0x660000 });
+        const wound = new THREE.Mesh(wGeo, wMat);
+        wound.visible = false;
+        mesh.add(wound);
+        woundPool.push(wound);
+      }
+
       _enemyPool.push({
         mesh,
         hpFill,
         hpFillGeo,
+        woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
+        woundCount: 0, // number of currently active wound meshes
         hp: SLIME_HP,
         maxHp: SLIME_HP,
         active: false,
@@ -395,7 +439,6 @@
         knockbackVz: 0,
         lastDamageTime: 0,
         damageStage: 0,
-        wounds: [],
         // Attack lunge animation state
         attackTimer: 0,       // cooldown until next lunge
         lungeTime: 0,         // active lunge duration (0 = idle)
@@ -423,11 +466,15 @@
     slot.knockbackVz = 0;
     slot.lastDamageTime = 0;
     slot.damageStage = 0;
-    slot.wounds = [];
+    slot.woundCount = 0; // number of active wound meshes (from pre-allocated pool)
     slot.attackTimer = 1.5 + Math.random() * 1.5; // stagger first attack
     slot.lungeTime = 0;
     slot.lungeDirX = 0;
     slot.lungeDirZ = 0;
+    // Hide all pre-allocated wounds
+    if (slot.woundPool) {
+      for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
+    }
     slot.mesh.position.set(x, 0.45, z);
     slot.mesh.material.color.setHex(0x55EE44);
     slot.mesh.material.opacity = 0.92;
@@ -442,13 +489,11 @@
     slot.active = false;
     slot.dead = true;
     slot.mesh.visible = false;
-    // Clean up wound meshes
-    for (let i = 0; i < slot.wounds.length; i++) {
-      slot.mesh.remove(slot.wounds[i]);
-      slot.wounds[i].geometry.dispose();
-      slot.wounds[i].material.dispose();
+    // Hide all wound meshes (return to pool — no dispose calls needed)
+    if (slot.woundPool) {
+      for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
     }
-    slot.wounds = [];
+    slot.woundCount = 0;
     // Reset material for reuse
     slot.mesh.material.color.setHex(0x55EE44);
     slot.mesh.material.opacity = 0.92;
@@ -529,8 +574,8 @@
     slot.hp -= actualDmg;
     slot.flashTimer = 0.1;
 
-    // Apply knockback force
-    const knockbackStrength = 0.15 * hitForce;
+    // Apply knockback force — reduced to 1/4 of original to prevent stutter
+    const knockbackStrength = 0.04 * hitForce;
     if (projectile && projectile.vx !== undefined && projectile.vz !== undefined) {
       slot.knockbackVx = projectile.vx * knockbackStrength;
       slot.knockbackVz = projectile.vz * knockbackStrength;
@@ -601,22 +646,14 @@
     // Deactivate the slot (returns it to the pool)
     _deactivateSlime(slot);
 
-    // ── Dynamic EXP gem drop ────────────────────────────────────────────────
-    const baseGemCount = 2 + Math.floor(Math.random() * 3);
-    const bonusGems    = Math.random() < 0.25 ? 1 + Math.floor(Math.random() * 2) : 0;
-    const critBonus    = hitForce > 1.5 ? 1 : 0;
-    const totalGemCount = baseGemCount + bonusGems + critBonus;
+    // ── EXP star drop: exactly 1 star per kill, physics from hit force/weapon ──
+    // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
+    let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
+    if (hitForce > 2.0)      gemEnemyType = 5; // rare (gold)
+    else if (hitForce > 1.5) gemEnemyType = 3; // uncommon (blue)
+    expGems.push(new ExpGem(x, z, 'gun', hitForce, gemEnemyType));
 
-    for (let i = 0; i < totalGemCount; i++) {
-      let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
-      const tierRoll = Math.random();
-      if (tierRoll > 0.9)      gemEnemyType = 5;
-      else if (tierRoll > 0.7) gemEnemyType = 3;
-      expGems.push(new ExpGem(x, z, 'gun', hitForce, gemEnemyType));
-    }
-
-    const gemText = totalGemCount > 1 ? 'SLIME DEFEATED! +' + totalGemCount + ' GEMS' : 'SLIME DEFEATED!';
-    createFloatingText(gemText, new THREE.Vector3(x, 1.8, z), '#AAFFAA');
+    createFloatingText('SLIME DEFEATED!', new THREE.Vector3(x, 1.8, z), '#AAFFAA');
 
     playerStats.kills++;
 
@@ -639,20 +676,30 @@
   }
 
   // ─── 5-PART GORE SYSTEM ───────────────────────────────────────────────────────
+  /**
+   * Acquire the next available pre-allocated wound mesh from the slot's pool.
+   * Returns null if the pool is exhausted (won't happen within 11 wounds).
+   */
+  function _acquireWound(slot, woundColor) {
+    if (!slot.woundPool || slot.woundCount >= slot.woundPool.length) return null;
+    const wound = slot.woundPool[slot.woundCount++];
+    wound.material.color.setHex(woundColor || 0x660000);
+    wound.visible = true;
+    return wound;
+  }
+
   // Stage 1: 75% HP - Darken appearance, add first wounds, start arterial bleeding
   function _applyDamageStage1(slot) {
     slot.mesh.material.color.setHex(0x44CC33);
     slot.mesh.material.emissiveIntensity = 0.15;
 
     for (let i = 0; i < 2; i++) {
-      const woundGeo = new THREE.SphereGeometry(0.12, 6, 6);
-      const woundMat = new THREE.MeshBasicMaterial({ color: 0x660000 });
-      const wound = new THREE.Mesh(woundGeo, woundMat);
-      const angle = Math.random() * Math.PI * 2;
-      const height = -0.2 + Math.random() * 0.6;
-      wound.position.set(Math.cos(angle) * 0.5, height, Math.sin(angle) * 0.5);
-      slot.mesh.add(wound);
-      slot.wounds.push(wound);
+      const wound = _acquireWound(slot, 0x660000);
+      if (wound) {
+        const angle = Math.random() * Math.PI * 2;
+        const height = -0.2 + Math.random() * 0.6;
+        wound.position.set(Math.cos(angle) * 0.5, height, Math.sin(angle) * 0.5);
+      }
     }
 
     const _bPos1 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
@@ -673,14 +720,12 @@
     slot.mesh.material.color.setHex(0x33AA22);
 
     for (let i = 0; i < 2; i++) {
-      const woundGeo = new THREE.SphereGeometry(0.15, 6, 6);
-      const woundMat = new THREE.MeshBasicMaterial({ color: 0x550000 });
-      const wound = new THREE.Mesh(woundGeo, woundMat);
-      const angle = Math.random() * Math.PI * 2;
-      const height = -0.2 + Math.random() * 0.6;
-      wound.position.set(Math.cos(angle) * 0.5, height, Math.sin(angle) * 0.5);
-      slot.mesh.add(wound);
-      slot.wounds.push(wound);
+      const wound = _acquireWound(slot, 0x550000);
+      if (wound) {
+        const angle = Math.random() * Math.PI * 2;
+        const height = -0.2 + Math.random() * 0.6;
+        wound.position.set(Math.cos(angle) * 0.5, height, Math.sin(angle) * 0.5);
+      }
     }
 
     _spawnFleshChunks(slot, 2 + Math.floor(Math.random() * 2));
@@ -710,14 +755,12 @@
     slot.mesh.scale.set(0.92, 0.92, 0.92);
 
     for (let i = 0; i < 3; i++) {
-      const woundGeo = new THREE.SphereGeometry(0.18, 6, 6);
-      const woundMat = new THREE.MeshBasicMaterial({ color: 0x440000 });
-      const wound = new THREE.Mesh(woundGeo, woundMat);
-      const angle = Math.random() * Math.PI * 2;
-      const height = -0.2 + Math.random() * 0.6;
-      wound.position.set(Math.cos(angle) * 0.45, height, Math.sin(angle) * 0.45);
-      slot.mesh.add(wound);
-      slot.wounds.push(wound);
+      const wound = _acquireWound(slot, 0x440000);
+      if (wound) {
+        const angle = Math.random() * Math.PI * 2;
+        const height = -0.2 + Math.random() * 0.6;
+        wound.position.set(Math.cos(angle) * 0.45, height, Math.sin(angle) * 0.45);
+      }
     }
 
     _spawnFleshChunks(slot, 3 + Math.floor(Math.random() * 3));
@@ -752,14 +795,12 @@
     slot.mesh.scale.set(0.85, 0.85, 0.85);
 
     for (let i = 0; i < 4; i++) {
-      const woundGeo = new THREE.SphereGeometry(0.22, 6, 6);
-      const woundMat = new THREE.MeshBasicMaterial({ color: 0x330000 });
-      const wound = new THREE.Mesh(woundGeo, woundMat);
-      const angle = Math.random() * Math.PI * 2;
-      const height = -0.2 + Math.random() * 0.6;
-      wound.position.set(Math.cos(angle) * 0.4, height, Math.sin(angle) * 0.4);
-      slot.mesh.add(wound);
-      slot.wounds.push(wound);
+      const wound = _acquireWound(slot, 0x330000);
+      if (wound) {
+        const angle = Math.random() * Math.PI * 2;
+        const height = -0.2 + Math.random() * 0.6;
+        wound.position.set(Math.cos(angle) * 0.4, height, Math.sin(angle) * 0.4);
+      }
     }
 
     _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 3), true);
@@ -788,57 +829,96 @@
     createFloatingText('NEAR DEATH!', new THREE.Vector3(slot.mesh.position.x, 1.9, slot.mesh.position.z), '#DD0000');
   }
 
-  // Spawn flying flesh chunks with physics (global _allFleshChunks list)
-  function _spawnFleshChunks(slot, count, large) {
-    const pos = slot.mesh.position;
+  // ─── Flesh chunk object pool ──────────────────────────────────────────────────
+  // Pre-allocated pool prevents new THREE.Mesh calls during gameplay
+  const FLESH_POOL_SIZE = 80;
+  let _fleshPool = [];
 
-    for (let i = 0; i < count; i++) {
-      const size = large ? (0.15 + Math.random() * 0.15) : (0.08 + Math.random() * 0.12);
-      const geo = new THREE.BoxGeometry(size, size * 0.8, size * 1.2);
-      const colors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
+  function _buildFleshPool() {
+    const colors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
+    // Pre-create multiple geometries of different sizes to reuse
+    const geoSmall = new THREE.BoxGeometry(0.1, 0.08, 0.12);
+    const geoMed   = new THREE.BoxGeometry(0.18, 0.14, 0.22);
+    const geoLarge = new THREE.BoxGeometry(0.25, 0.20, 0.30);
+    for (let i = 0; i < FLESH_POOL_SIZE; i++) {
+      const geo = i % 3 === 0 ? geoLarge : i % 3 === 1 ? geoMed : geoSmall;
       const mat = new THREE.MeshPhongMaterial({
-        color: colors[Math.floor(Math.random() * colors.length)],
+        color: colors[i % colors.length],
         shininess: 20
       });
       const mesh = new THREE.Mesh(geo, mat);
-
-      const angle = Math.random() * Math.PI * 2;
-      mesh.position.set(
-        pos.x + Math.cos(angle) * 0.3,
-        pos.y + 0.3 + Math.random() * 0.3,
-        pos.z + Math.sin(angle) * 0.3
-      );
-      mesh.rotation.set(
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2,
-        Math.random() * Math.PI * 2
-      );
+      mesh.castShadow = true;
+      mesh.visible = false;
       scene.add(mesh);
-
-      _allFleshChunks.push({
+      _fleshPool.push({
         mesh,
-        vx: (Math.random() - 0.5) * 0.12,
-        vy: 0.08 + Math.random() * 0.12,
-        vz: (Math.random() - 0.5) * 0.12,
-        rotSpeedX: (Math.random() - 0.5) * 0.3,
-        rotSpeedY: (Math.random() - 0.5) * 0.3,
-        rotSpeedZ: (Math.random() - 0.5) * 0.3,
-        life: 2.0 + Math.random() * 1.0,
-        onGround: false
+        vx: 0, vy: 0, vz: 0,
+        rotSpeedX: 0, rotSpeedY: 0, rotSpeedZ: 0,
+        life: 0,
+        onGround: false,
+        active: false,
+        isLarge: (i % 3 === 0)
       });
     }
   }
 
-  // Update all flying flesh chunks from the global list
+  function _acquireFleshChunk() {
+    for (let i = 0; i < _fleshPool.length; i++) {
+      if (!_fleshPool[i].active) return _fleshPool[i];
+    }
+    return null; // pool exhausted (won't happen with 80 slots in practice)
+  }
+
+  function _releaseFleshChunk(chunk) {
+    chunk.active = false;
+    chunk.mesh.visible = false;
+    chunk.mesh.material.transparent = false;
+    chunk.mesh.material.opacity = 1;
+  }
+
+  // Spawn flying flesh chunks using pre-allocated pool (no new THREE.Mesh during gameplay)
+  function _spawnFleshChunks(slot, count, large) {
+    const pos = slot.mesh.position;
+
+    for (let i = 0; i < count; i++) {
+      const chunk = _acquireFleshChunk();
+      if (!chunk) break; // pool exhausted — skip excess chunks
+
+      const angle = Math.random() * Math.PI * 2;
+      chunk.mesh.position.set(
+        pos.x + Math.cos(angle) * 0.3,
+        pos.y + 0.3 + Math.random() * 0.3,
+        pos.z + Math.sin(angle) * 0.3
+      );
+      chunk.mesh.rotation.set(
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2,
+        Math.random() * Math.PI * 2
+      );
+      chunk.vx = (Math.random() - 0.5) * 0.12;
+      chunk.vy = 0.08 + Math.random() * 0.12;
+      chunk.vz = (Math.random() - 0.5) * 0.12;
+      chunk.rotSpeedX = (Math.random() - 0.5) * 0.3;
+      chunk.rotSpeedY = (Math.random() - 0.5) * 0.3;
+      chunk.rotSpeedZ = (Math.random() - 0.5) * 0.3;
+      chunk.life = 2.0 + Math.random() * 1.0;
+      chunk.onGround = false;
+      chunk.active = true;
+      chunk.mesh.material.transparent = false;
+      chunk.mesh.material.opacity = 1;
+      chunk.mesh.visible = true;
+      _allFleshChunks.push(chunk);
+    }
+  }
+
+  // Update all flying flesh chunks — returns inactive ones to pool (no dispose calls)
   function _updateFleshChunks(dt) {
     for (let i = _allFleshChunks.length - 1; i >= 0; i--) {
       const chunk = _allFleshChunks[i];
 
       chunk.life -= dt;
       if (chunk.life <= 0) {
-        scene.remove(chunk.mesh);
-        chunk.mesh.geometry.dispose();
-        chunk.mesh.material.dispose();
+        _releaseFleshChunk(chunk);
         _allFleshChunks.splice(i, 1);
         continue;
       }
@@ -951,12 +1031,12 @@
         damageScale * squishZ * lungeScaleZ * (1 + wobble)
       );
 
-      // Knockback physics
-      if (Math.abs(s.knockbackVx) > 0.01 || Math.abs(s.knockbackVz) > 0.01) {
-        s.mesh.position.x += s.knockbackVx * dt * 10;
-        s.mesh.position.z += s.knockbackVz * dt * 10;
-        s.knockbackVx *= Math.pow(0.01, dt);
-        s.knockbackVz *= Math.pow(0.01, dt);
+      // Knockback physics — gentle decay to prevent stutter
+      if (Math.abs(s.knockbackVx) > 0.005 || Math.abs(s.knockbackVz) > 0.005) {
+        s.mesh.position.x += s.knockbackVx * dt * 4;
+        s.mesh.position.z += s.knockbackVz * dt * 4;
+        s.knockbackVx *= Math.pow(0.05, dt);
+        s.knockbackVz *= Math.pow(0.05, dt);
       }
 
       // Move toward player
@@ -1096,27 +1176,28 @@
     }
   }
 
-  // ─── Auto-aim & auto-fire ─────────────────────────────────────────────────────
+  // ─── Manual aim only — no auto-aim lock ─────────────────────────────────────
   let _gunCooldown = 0;
 
   function _tryFire(dt) {
-    const target = _getClosestActiveSlime();
-    if (!player || !target) return;
+    if (!player) return;
     _gunCooldown -= dt * 1000;
     if (_gunCooldown > 0) return;
     const cooldown = weapons && weapons.gun ? weapons.gun.cooldown : 1000;
     _gunCooldown = cooldown;
 
     const px = player.mesh.position.x, pz = player.mesh.position.z;
-    // Default to closest slime position; override with joystick/mouse
-    let tx = target.mesh.position.x, tz = target.mesh.position.z;
 
+    // Manual aim: joystick takes priority, then mouse. No auto-aim fallback.
+    let tx, tz;
     if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
       tx = px + _aimJoy.dx * 10;
       tz = pz + _aimJoy.dz * 10;
-    } else if (window.gameSettings && window.gameSettings.controlType === 'keyboard' && _mouse) {
+    } else if (_mouse && (_mouse.worldX !== 0 || _mouse.worldZ !== 0)) {
       tx = _mouse.worldX;
       tz = _mouse.worldZ;
+    } else {
+      return; // no aim input — don't fire
     }
 
     _fireProjectile(px, pz, tx, tz);
@@ -1127,22 +1208,28 @@
 
   // ─── Input ────────────────────────────────────────────────────────────────────
   const _keysDown = {};
+  // Pre-allocated objects for mouse raycasting (avoids GC pressure on every mousemove)
+  const _mouseRay   = new THREE.Raycaster();
+  const _mouseNDC   = new THREE.Vector2();
+  const _mousePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const _mousePt    = new THREE.Vector3();
+  // Pre-allocated camera follow target (avoids new Vector3 every frame)
+  const _camTarget  = new THREE.Vector3();
+
   function _initInput() {
     document.addEventListener('keydown', function (e) { _keysDown[e.code] = true; });
     document.addEventListener('keyup',   function (e) { _keysDown[e.code] = false; });
 
-    // Mouse: project onto ground plane (y=0)
+    // Mouse: project onto ground plane (y=0) — uses pre-allocated objects (no GC)
     document.addEventListener('mousemove', function (e) {
       if (!camera || !renderer) return;
       const rect = renderer.domElement.getBoundingClientRect();
-      const nx   = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const ny   = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-      const ray  = new THREE.Raycaster();
-      ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
-      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      const pt    = new THREE.Vector3();
-      ray.ray.intersectPlane(plane, pt);
-      if (pt) { _mouse.worldX = pt.x; _mouse.worldZ = pt.z; }
+      _mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      _mouseNDC.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+      _mouseRay.setFromCamera(_mouseNDC, camera);
+      _mouseRay.ray.intersectPlane(_mousePlane, _mousePt);
+      _mouse.worldX = _mousePt.x;
+      _mouse.worldZ = _mousePt.z;
     });
 
     // Joystick: left = move, right = aim/shoot
@@ -1250,26 +1337,33 @@
     camera.position.set(0, 18, 12);
     camera.lookAt(0, 0, 0);
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.65);
+    // Lighting — enhanced for better real-time shadows and atmosphere
+    const ambient = new THREE.AmbientLight(0xffffff, 0.45); // slightly reduced ambient for contrast
     scene.add(ambient);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 0.9);
+    const sun = new THREE.DirectionalLight(0xFFF5E0, 1.1); // warm daylight tone
     sun.position.set(20, 40, 20);
     sun.castShadow = true;
     sun.shadow.mapSize.width  = 2048;
     sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near    = 1;
     sun.shadow.camera.far     = 200;
-    sun.shadow.camera.left    = -60;
-    sun.shadow.camera.right   =  60;
-    sun.shadow.camera.top     =  60;
-    sun.shadow.camera.bottom  = -60;
+    sun.shadow.camera.left    = -80;
+    sun.shadow.camera.right   =  80;
+    sun.shadow.camera.top     =  80;
+    sun.shadow.camera.bottom  = -80;
+    sun.shadow.bias           = -0.001; // reduce shadow acne
+    sun.shadow.normalBias     = 0.02;
     scene.add(sun);
 
-    const fill = new THREE.DirectionalLight(0x8888ff, 0.4);
+    // Soft fill light from opposite side for rim lighting
+    const fill = new THREE.DirectionalLight(0x8899ff, 0.35);
     fill.position.set(-10, 20, -10);
     scene.add(fill);
+
+    // Ground bounce — subtle warm light from below
+    const bounce = new THREE.HemisphereLight(0x88BBAA, 0x445544, 0.3);
+    scene.add(bounce);
 
     // Resize handler
     window.addEventListener('resize', function () {
@@ -1337,7 +1431,11 @@
     scene.add(ground);
   }
 
-  // ─── Player init ──────────────────────────────────────────────────────────────
+  // ─── Player init & spawn intro ───────────────────────────────────────────────
+  let _spawnIntroTimer = 0;          // seconds into spawn animation
+  const SPAWN_INTRO_DURATION = 1.8;  // seconds to rise from ground
+  let _spawnIntroActive = false;
+
   function _initPlayer() {
     // Set up playerStats from game's built-in function
     if (typeof getDefaultPlayerStats === 'function') {
@@ -1359,16 +1457,40 @@
     // Create player using the existing Player class
     if (typeof Player === 'function') {
       player = new Player();
-      player.mesh.position.set(0, 0.5, 0);
+      // Start below ground for spawn intro (center hole is at y=0, radius 3)
+      player.mesh.position.set(0, -1.5, 0);
     } else {
       // Ultra-minimal fallback player
       const geo = new THREE.SphereGeometry(0.5, 12, 12);
       const mat = new THREE.MeshPhongMaterial({ color: 0x3A9FD8, emissive: 0x0A3D5C, emissiveIntensity: 0.35 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(0, 0.5, 0);
+      mesh.position.set(0, -1.5, 0);
       mesh.castShadow = true;
       scene.add(mesh);
       player = { mesh, invulnerable: false };
+    }
+
+    // Mark player invulnerable during intro
+    player.invulnerable = true;
+    _spawnIntroActive = true;
+    _spawnIntroTimer = 0;
+  }
+
+  /** Animate the spawn intro: player rises from center hole over SPAWN_INTRO_DURATION seconds. */
+  function _updateSpawnIntro(dt) {
+    if (!_spawnIntroActive || !player || !player.mesh) return;
+    _spawnIntroTimer += dt;
+    const t = Math.min(1, _spawnIntroTimer / SPAWN_INTRO_DURATION);
+    // Smooth ease-out rise from y=-1.5 to y=0.5
+    const easedT = 1 - Math.pow(1 - t, 3);
+    player.mesh.position.y = -1.5 + easedT * 2.0;
+
+    // Brief scale-up pop on arrival
+    if (t >= 1) {
+      player.mesh.position.y = 0.5;
+      _spawnIntroActive = false;
+      player.invulnerable = false;
+      createFloatingText('READY!', new THREE.Vector3(0, 2, 0), '#FFD700');
     }
   }
 
@@ -1389,10 +1511,10 @@
       player.mesh.rotation.x = _lerp(player.mesh.rotation.x, 0, 0.08);
     }
 
-    // Camera follow
+    // Camera follow — reuse _camTarget to avoid per-frame Vector3 allocation
     if (camera) {
-      const target = new THREE.Vector3(player.mesh.position.x, 18, player.mesh.position.z + 12);
-      camera.position.lerp(target, 0.06);
+      _camTarget.set(player.mesh.position.x, 18, player.mesh.position.z + 12);
+      camera.position.lerp(_camTarget, 0.06);
       camera.lookAt(player.mesh.position);
     }
   }
@@ -1449,6 +1571,8 @@
     }
     // Build our local projectile pool
     _buildProjectilePool();
+    // Build pre-allocated flesh chunk pool (avoids new THREE.Mesh during gameplay)
+    _buildFleshPool();
   }
 
   // ─── Sandbox status overlay ───────────────────────────────────────────────────
@@ -1478,7 +1602,7 @@
     const poolBadge = poolActive
       ? '<span style="color:#00FF88">✔ Object Pooling Active</span>'
       : '<span style="color:#FF4444">✘ Object Pooling Inactive</span>';
-    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Auto-aim Gun unlocked &nbsp;|&nbsp; ' + poolBadge;
+    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Mouse/Right-Joystick to aim &nbsp;|&nbsp; ' + poolBadge;
     document.body.appendChild(el);
     console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
   }
@@ -1502,6 +1626,7 @@
       }
 
       _movePlayer(dt);
+      if (_spawnIntroActive) _updateSpawnIntro(dt);
       _updateSlime(dt);
       _tryFire(dt);
       _updateProjectiles(dt);
