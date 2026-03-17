@@ -188,17 +188,24 @@
           this.mesh.position.y += this.vy;
           this.mesh.position.z += this.vz;
 
-          // Hit ground
+          // Hit ground — bounce with damping for a lively drop effect
           if (this.mesh.position.y <= 0.08) {
             this.mesh.position.y = 0.08;
-            this.vy = 0;
+            // Bounce: invert vertical velocity with damping coefficient
+            this.vy = -this.vy * 0.48;
             this.vx *= this.groundFriction;
             this.vz *= this.groundFriction;
-            this.onGround = true;
-            // Dampen spin when resting on ground
-            this.rotSpeedX *= 0.3;
-            this.rotSpeedZ *= 0.3;
-            this.rotSpeedY *= 0.5;
+            // Stop bouncing when velocity is negligible
+            if (Math.abs(this.vy) < 0.006) {
+              this.vy = 0;
+              this.vx = 0;
+              this.vz = 0;
+              this.onGround = true;
+              // Dampen spin when finally resting on ground
+              this.rotSpeedX *= 0.25;
+              this.rotSpeedZ *= 0.25;
+              this.rotSpeedY *= 0.4;
+            }
           }
         } else {
           // On ground: gentle idle spin (Y only), lying flat
@@ -221,18 +228,24 @@
           this.mesh.material.emissiveIntensity = 0.4 + _mp * 0.8;
         }
 
-        // Magnet
+        // Magnet: smoothly accelerate toward player, lift off ground, fly in arc
         const dx = playerPos.x - this.mesh.position.x;
         const dz = playerPos.z - this.mesh.position.z;
         const dist = Math.sqrt(dx*dx + dz*dz);
         
         if (dist < magnetRange) { // Use magnetRange variable
           this.onGround = false; // lift off ground when pulled
-          this.mesh.position.x += (dx / dist) * 0.3;
-          this.mesh.position.z += (dz / dist) * 0.3;
-          // Lift toward player height
-          var dy = 0.5 - this.mesh.position.y;
-          this.mesh.position.y += dy * 0.1;
+          // Speed increases as gem gets closer (makes it feel snappy)
+          var pullSpeed = 0.25 + (1 - Math.min(1, dist / magnetRange)) * 0.45;
+          this.mesh.position.x += (dx / dist) * pullSpeed;
+          this.mesh.position.z += (dz / dist) * pullSpeed;
+          // Arc upward smoothly toward player pickup height
+          var targetY = 0.4 + Math.min(1, dist / 3) * 0.4;
+          var dy = targetY - this.mesh.position.y;
+          this.mesh.position.y += dy * 0.18;
+          // Clear ground-stall velocity so gem flies freely
+          this.vx = 0;
+          this.vz = 0;
           
           // Visual Trail when pulled — use gem's own rarity colour
           if (Math.random() < 0.3) {

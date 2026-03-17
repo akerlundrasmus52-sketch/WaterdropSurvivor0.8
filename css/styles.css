@@ -1900,8 +1900,8 @@
       border: 2px solid rgba(255, 215, 0, 0.4);
       outline: 2px solid rgba(255, 255, 255, 0.06);
       outline-offset: 2px;
-      width: 90%;
-      max-width: 600px;
+      width: 95%;
+      max-width: 900px;
       max-height: 90vh;
       overflow-y: auto;
       text-align: center;
@@ -2030,13 +2030,13 @@
     }
 
     .upgrade-card {
-      width: clamp(80px, 20vw, 120px) !important; /* Slightly smaller so 4 cards fit within any viewport */
-      height: clamp(130px, 30vw, 185px) !important;
+      width: clamp(150px, 26vw, 210px) !important; /* Larger cards that fill screen better */
+      height: clamp(200px, 38vw, 260px) !important;
       background: linear-gradient(180deg, #1a1a2e, #0d1020);
       margin: 0;
-      padding: 8px !important;
-      font-size: clamp(9px, 1.8vw, 12px); /* Shrinks text */
-      border-radius: 12px;
+      padding: 14px !important;
+      font-size: clamp(11px, 2.2vw, 15px); /* Larger readable text */
+      border-radius: 14px;
       border: 2px solid #888888;
       outline: none;
       cursor: pointer;
