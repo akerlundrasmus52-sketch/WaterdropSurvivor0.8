@@ -108,6 +108,12 @@
     }
     
     function showQuestPopup(title, message, buttonText = 'Continue', onClose = null) {
+      // Suppress quest popups in sandbox mode
+      if (window.location.pathname.includes('sandbox.html')) {
+        console.log('[Quest] Popup suppressed in sandbox mode:', title);
+        if (onClose) onClose();
+        return;
+      }
       // Pause game when popup is shown
       const wasGameActive = isGameActive && !isGameOver;
       if (wasGameActive) setGamePaused(true);

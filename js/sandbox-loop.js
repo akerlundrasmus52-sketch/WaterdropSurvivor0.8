@@ -481,6 +481,7 @@
     slot.lungeTime = 0;
     slot.lungeDirX = 0;
     slot.lungeDirZ = 0;
+    slot.speedMultiplier = 0.85 + Math.random() * 0.3; // Individual speed variation (0.85-1.15x)
     // Hide all pre-allocated wounds
     if (slot.woundPool) {
       for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
@@ -534,7 +535,7 @@
 
   /**
    * Survivor-style wave spawn: spawn up to _waveSize slimes at once.
-   * Slimes are spread in a ring around the player for dramatic effect.
+   * Slimes are spread around the player with randomized positioning for varied approach patterns.
    */
   function _spawnWave() {
     if (!player || !player.mesh) return;
@@ -544,9 +545,9 @@
     const px = player.mesh.position.x;
     const pz = player.mesh.position.z;
     for (let n = 0; n < count; n++) {
-      // Spread evenly around the ring with random jitter
-      const angle = (n / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
-      const dist  = 9 + Math.random() * 5;
+      // More random spawn pattern - not evenly distributed
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = 8 + Math.random() * 7; // Increased distance variation (8-15 units)
       const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
       const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
       for (let i = 0; i < _enemyPool.length; i++) {
@@ -1191,8 +1192,10 @@
         s.mesh.position.x = _clamp(s.mesh.position.x + lungeMoveX, -ARENA_RADIUS, ARENA_RADIUS);
         s.mesh.position.z = _clamp(s.mesh.position.z + lungeMoveZ, -ARENA_RADIUS, ARENA_RADIUS);
       } else if (dist > 1.2 && Math.abs(s.knockbackVx) < 0.05 && Math.abs(s.knockbackVz) < 0.05) {
-        s.mesh.position.x += (ddx / dist) * SLIME_SPEED * dt;
-        s.mesh.position.z += (ddz / dist) * SLIME_SPEED * dt;
+        // Apply individual speed variation for more natural movement
+        const speed = SLIME_SPEED * (s.speedMultiplier || 1.0);
+        s.mesh.position.x += (ddx / dist) * speed * dt;
+        s.mesh.position.z += (ddz / dist) * speed * dt;
         s.mesh.rotation.y = Math.atan2(ddx, ddz);
       }
 
@@ -1718,6 +1721,32 @@
         // Make combat HUD visible in sandbox
         if (typeof GameRageCombat.setCombatHUDVisible === 'function') {
           GameRageCombat.setCombatHUDVisible(true);
+        }
+        // Register special attack callback to handle damage to slimes
+        if (typeof GameRageCombat.onSpecialAttack === 'function') {
+          GameRageCombat.onSpecialAttack((sa) => {
+            if (!player || !player.mesh) return;
+            const pPos = player.mesh.position;
+            const radSq = sa.damageRadius * sa.damageRadius;
+            // Check each active slime and deal damage if in range
+            for (let i = 0; i < _activeSlimes.length; i++) {
+              const s = _activeSlimes[i];
+              if (!s || !s.active || s.dead) continue;
+              const dx = s.mesh.position.x - pPos.x;
+              const dz = s.mesh.position.z - pPos.z;
+              if (dx*dx + dz*dz <= radSq) {
+                s.hp -= sa.damage;
+                if (s.hp <= 0) {
+                  _killSlime(s, 1.0, 0, 0);
+                } else {
+                  // Visual feedback for hit
+                  s.flashTimer = 0.15;
+                  s.squishTime = 0.3;
+                  _updateSlimeHPBar(s);
+                }
+              }
+            }
+          });
         }
         console.log('[SandboxLoop] Rage combat system initialized');
       } catch (e) {
