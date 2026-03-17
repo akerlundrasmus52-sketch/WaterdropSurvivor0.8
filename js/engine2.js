@@ -70,6 +70,13 @@ class Engine2Sandbox {
           ? renderer.capabilities.getMaxAnisotropy()
           : 1;
         texture.anisotropy = maxAniso;
+        // Set encoding to sRGB for proper color display (support both old and new THREE.js APIs)
+        if (texture.encoding !== undefined) {
+          texture.encoding = THREE.sRGBEncoding;
+        } else if (texture.colorSpace !== undefined) {
+          texture.colorSpace = THREE.SRGBColorSpace;
+        }
+        texture.needsUpdate = true;
         checkComplete();
       },
       undefined,
@@ -118,8 +125,7 @@ class Engine2Sandbox {
     // Apply textures if loaded successfully
     if (this.textures.diffuse) {
       materialOptions.map = this.textures.diffuse;
-      // Ensure texture colors are visible
-      materialOptions.map.encoding = THREE.sRGBEncoding;
+      // Texture encoding already set during load (sRGB for proper color display)
       console.log('[Engine2] Using ground color texture');
     } else {
       // Fallback to green grass color if texture fails
