@@ -46,7 +46,8 @@
           (tex) => { _buildGroundMesh(_applyGroundTexture(tex)); },
           undefined,
           () => {
-            // Attempt 2: UUID-named PNG in the root directory
+            // Attempt 2: UUID-named PNG bundled in the root directory (mossy ground tile)
+            // The UUID filename is from the original asset import — do not rename without updating the file
             _wgLoader.load(
               '654811F9-1760-4A74-B977-73ECB1A92913.png',
               (tex) => { _buildGroundMesh(_applyGroundTexture(tex)); },

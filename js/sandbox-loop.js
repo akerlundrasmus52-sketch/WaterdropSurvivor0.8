@@ -192,7 +192,8 @@
         playerStats.exp -= playerStats.expReq;
         playerStats.lvl++;
         // Slower leveling curve: power-law formula so max level ~75 coincides with final boss.
-        // Exponent 1.75 gives a smooth Jotun-Slayer-style progression.
+        // Base 40 is chosen so Level 1→2 costs 40 XP (fast) and Level 74→75 costs ~31 000 XP
+        // (requires sustained late-game combat). Exponent 1.75 gives Jotun-Slayer-style pacing.
         playerStats.expReq = Math.floor(40 * Math.pow(playerStats.lvl, 1.75));
         _onLevelUp();
       }
@@ -288,6 +289,8 @@
   // Slime separation: minimum distance before soft push-apart force is applied
   const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
   const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
+  // XP gem drop rate bonus — probability of spawning an extra star on every enemy kill
+  const BONUS_XP_DROP_RATE = 0.15; // 15% chance for a bonus star per kill
 
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
@@ -1073,7 +1076,7 @@
     const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
     if (_droppedGem) expGems.push(_droppedGem);
     // +15% drop rate bonus: 15% chance for an extra star on every kill
-    if (Math.random() < 0.15) {
+    if (Math.random() < BONUS_XP_DROP_RATE) {
       const _bonusGem = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemEnemyType);
       if (_bonusGem) expGems.push(_bonusGem);
     }

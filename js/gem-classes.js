@@ -150,7 +150,8 @@
         this.rotSpeedZ = (Math.random() * 0.16 + 0.06) * spinMult * (Math.random() < 0.5 ? 1 : -1);
 
         // Physics: explosive casino-coin pop — outward 3D velocity, hard gravity, bouncing
-        var popSpeed = (0.06 + Math.random() * 0.07) * force; // 3× more explosive than before
+        // Previous values: popSpeed ~0.02-0.045 (slow hover). Now 0.06-0.13 (3× more explosive).
+        var popSpeed = (0.06 + Math.random() * 0.07) * force; // was 0.02 + rand*0.025
         this.vx = Math.cos(popAngle) * popSpeed;
         this.vy = 0.10 + Math.random() * 0.08 * force; // strong upward arc
         this.vz = Math.sin(popAngle) * popSpeed;
