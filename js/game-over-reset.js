@@ -31,18 +31,19 @@
       // Capture active landmark-quest state BEFORE resetting it so the day/night
       // starting time can be set correctly after the reset loop below.
       // Writes to the module-level _landmarkQuestWasActive so resetGame() can read it.
-      _landmarkQuestWasActive = (montanaQuest && montanaQuest.active) ||
-                                (eiffelQuest  && eiffelQuest.active);
+      // ── QUEST NULL ERROR FIX: Use optional chaining ──
+      _landmarkQuestWasActive = (window.montanaQuest?.active) ||
+                                (window.eiffelQuest?.active);
 
       // Also update quest state so active quests are properly cleaned up
-      if (windmillQuest && windmillQuest.active) {
+      if (window.windmillQuest?.active) {
         windmillQuest.active = false;
         windmillQuest.failed = true;
       }
-      if (montanaQuest && montanaQuest.active) {
+      if (window.montanaQuest?.active) {
         montanaQuest.active = false;
       }
-      if (eiffelQuest && eiffelQuest.active) {
+      if (window.eiffelQuest?.active) {
         eiffelQuest.active = false;
       }
       // Reset pause counter
@@ -52,7 +53,7 @@
       if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
       levelUpPending = false;
       // Close farmer dialogue if open when game ends to prevent UI malfunction
-      if (windmillQuest.dialogueOpen) {
+      if (window.windmillQuest?.dialogueOpen) {
         hideFarmerDialogue();
       }
       
