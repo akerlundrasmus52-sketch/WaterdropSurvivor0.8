@@ -1373,6 +1373,10 @@
 
         playerStats.hp -= reduced;
         if (window.GameMilestones) window.GameMilestones.recordDamageTaken(reduced);
+        // Add rage when taking damage (rage builds from combat)
+        if (window.GameRageCombat && typeof window.GameRageCombat.addRage === 'function') {
+          window.GameRageCombat.addRage(Math.ceil(reduced * 0.5)); // 50% of damage taken as rage
+        }
         updateHUD();
         playSound('hit');
         
