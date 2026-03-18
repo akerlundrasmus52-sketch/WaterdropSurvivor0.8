@@ -301,7 +301,17 @@
     }
 
     // Create a small dark red/black plane as wound decal
-    const size = weaponType === 'shotgun' || weaponType === 'doubleBarrel' ? 0.15 : 0.08;
+    let size = 0.08; // Default size
+    if (weaponType === 'shotgun' || weaponType === 'doubleBarrel') {
+      size = 0.15; // Large shotgun pellet wound
+    } else if (weaponType === 'bullethole') {
+      size = 0.06; // Small circular bullet hole
+    } else if (weaponType === 'exitwound') {
+      size = 0.12; // Larger exit wound
+    } else if (weaponType === 'slash') {
+      size = 0.20; // Long slash wound
+    }
+
     const geo = new THREE.PlaneGeometry(size, size);
     const mat = new THREE.MeshBasicMaterial({
       color: 0x2A0000,

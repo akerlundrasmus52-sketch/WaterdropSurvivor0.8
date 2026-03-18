@@ -3062,6 +3062,48 @@
           const SHOTGUN_TYPES = ['shotgun', 'doubleBarrel', 'pumpShotgun', 'autoShotgun'];
           const SWORD_TYPES = ['sword', 'samuraiSword', 'teslaSaber', 'whip'];
           const BOW_TYPES = ['bow', 'iceSpear'];
+          const GUN_TYPES = ['gun', 'physical', 'uzi', 'minigun', 'sniperRifle', 'drone'];
+
+          // ── GUN/TURRET: Bullet holes, exit wounds, pierce-through ──────────────────
+          if (GUN_TYPES.includes(damageType)) {
+            // Add small circular bullet hole wound decal
+            TraumaSystem.addWoundDecal(this, hitPoint, 'bullethole');
+
+            // High-level weapons (10+): Exit wound on opposite side
+            if (weaponLevel >= 10 && hitDir) {
+              const exitPos = hitPoint.clone();
+              // Calculate exit wound position on opposite side of enemy
+              const enemyRadius = 0.4; // Approximate enemy radius
+              exitPos.x += (hitDir.vx || 0) * enemyRadius * 2;
+              exitPos.y += (hitDir.vy || 0) * enemyRadius * 2;
+              exitPos.z += (hitDir.vz || 0) * enemyRadius * 2;
+              // Larger wound for exit
+              TraumaSystem.addWoundDecal(this, exitPos, 'exitwound');
+
+              // Blood spray from exit wound
+              if (window.BloodSystem && window.BloodSystem.emitBurst) {
+                window.BloodSystem.emitBurst(exitPos, 20, {
+                  spreadXZ: 0.8,
+                  spreadY: 0.4,
+                  direction: { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 }
+                });
+              }
+            }
+
+            // Very high-level weapons (20+): Pierce through multiple enemies
+            // (This will be handled in the weapon projectile logic, not here)
+            if (weaponLevel >= 20) {
+              // Flag this hit for pierce-through (weapon system will use this)
+              this._lastHitCanPierce = true;
+            }
+
+            // Track bullet hole locations for corpse blood pump
+            if (!this._bulletHoles) this._bulletHoles = [];
+            this._bulletHoles.push({
+              pos: hitPoint.clone(),
+              dir: hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : { x: 0, y: 0, z: 1 }
+            });
+          }
 
           // Shotgun: Multiple scattered wounds
           if (SHOTGUN_TYPES.includes(damageType)) {
@@ -3287,6 +3329,9 @@
         } else if (_isGlideSpinCandidate && (damageType === 'gun' || damageType === 'physical' || damageType === 'uzi' || damageType === 'minigun' || damageType === 'sniperRifle' || damageType === 'drone' || damageType === 'shotgun' || damageType === 'doubleBarrel') && Math.random() < 0.55) {
           // Fast-moving enemy killed by ballistic/gun weapon — Glide & Spin death
           this.dieByGlideSpin(enemyColor, _mvX / (_moveSpeed || 1), _mvZ / (_moveSpeed || 1), _moveSpeed);
+        } else if (damageType === 'gun' || damageType === 'physical' || damageType === 'uzi' || damageType === 'minigun' || damageType === 'sniperRifle' || damageType === 'drone') {
+          // Gun/Turret death: stumble backward, blood pump from bullet holes
+          this.dieByGunshot(enemyColor);
         } else if (damageType === 'fire') {
           // Fire death: Char and ash
           this.dieByFire(enemyColor);
@@ -4963,6 +5008,21 @@
             z: backwardDir.z * 0.2
           };
           TraumaSystem.spawnBones(deathPos, boneCount, boneVelocity);
+
+          // Register corpse for heartbeat blood pump system
+          // Collect existing wounds from this enemy for pumping
+          const bulletHoles = [];
+          if (this._traumaWounds) {
+            this._traumaWounds.forEach(wound => {
+              if (wound.position) {
+                bulletHoles.push({
+                  pos: wound.position.clone(),
+                  dir: backwardDir
+                });
+              }
+            });
+          }
+          TraumaSystem.registerCorpse(deathPos, 'shotgun', bulletHoles);
         }
 
         // ── Blast Head segment 15 units backwards ────────────────────────────────
@@ -5976,7 +6036,179 @@
           }
         }
       }
-      
+
+      dieByGunshot(enemyColor) {
+        // GUN/TURRET DEATH: Stumble backward from bullet impact, collapse, blood pumps from bullet holes
+        const deathPos = this.mesh.position.clone();
+
+        // Calculate backward direction from last hit
+        const bulletVX = this._lastHitVX || 0;
+        const bulletVZ = this._lastHitVZ || 1;
+        const bulletLen = Math.sqrt(bulletVX * bulletVX + bulletVZ * bulletVZ) || 1;
+        const backwardDir = {
+          x: -bulletVX / bulletLen,
+          y: 0,
+          z: -bulletVZ / bulletLen
+        };
+
+        // Initial blood spray from impact
+        spawnParticles(deathPos, 0x8B0000, 25);
+        spawnParticles(deathPos, 0xCC0000, 15);
+        if (window.BloodSystem) {
+          window.BloodSystem.emitBurst(deathPos, 120, { spreadXZ: 1.0, spreadY: 0.3 });
+        }
+
+        // Register corpse with bullet holes for heartbeat blood pump
+        if (window.TraumaSystem) {
+          const bulletHoles = this._bulletHoles || [];
+          TraumaSystem.registerCorpse(deathPos, 'gun', bulletHoles);
+        }
+
+        // Create stumbling body
+        const bodyGeo = new THREE.SphereGeometry(0.42, 8, 8);
+        const bodyMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 1 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.copy(deathPos);
+        scene.add(body);
+
+        // Stumble backward physics
+        let stumbleVX = backwardDir.x * 0.15;
+        let stumbleVZ = backwardDir.z * 0.15;
+        let stumbleVY = 0;
+        let stumbleLife = 120; // ~2 seconds
+        let stumblePhase = 0; // 0=stumbling backward, 1=collapsed on ground
+        let pumpTimer = 0;
+
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            stumbleLife--;
+            pumpTimer++;
+
+            if (stumblePhase === 0) {
+              // Phase 0: Stumble backward
+              body.position.x += stumbleVX;
+              body.position.z += stumbleVZ;
+              stumbleVX *= 0.92; // Friction
+              stumbleVZ *= 0.92;
+
+              // Tilt backward from impact
+              body.rotation.x -= 0.04;
+              body.rotation.z += stumbleVX * 0.5;
+
+              // Fall to ground after short stumble
+              if (stumbleLife < 90) {
+                stumbleVY -= 0.02;
+                body.position.y += stumbleVY;
+                if (body.position.y <= 0.2) {
+                  body.position.y = 0.2;
+                  stumblePhase = 1; // Transition to collapsed
+                }
+              }
+
+              // Blood trail while stumbling
+              if (pumpTimer % 3 === 0 && window.BloodSystem) {
+                window.BloodSystem.emitBurst(body.position, 8, { spreadXZ: 0.3, spreadY: 0.1 });
+              }
+              if (pumpTimer % 5 === 0) {
+                spawnBloodDecal(body.position);
+              }
+            } else {
+              // Phase 1: Collapsed on ground, blood pumping from wounds slows
+              body.position.y = 0.2;
+
+              // Blood pumps from bullet holes (slowing over time)
+              const pumpStrength = Math.max(0, 1.0 - (120 - stumbleLife) / 50);
+              if (pumpTimer % 8 === 0 && pumpStrength > 0.2 && window.BloodSystem) {
+                const particleCount = Math.floor(30 * pumpStrength);
+                window.BloodSystem.emitBurst(body.position, particleCount, {
+                  spreadXZ: 0.5 * pumpStrength,
+                  spreadY: 0.3 * pumpStrength
+                });
+              }
+
+              // Occasional spurt from specific bullet holes
+              if (pumpTimer % 12 === 0 && this._bulletHoles && this._bulletHoles.length > 0) {
+                const randomHole = this._bulletHoles[Math.floor(Math.random() * this._bulletHoles.length)];
+                if (randomHole && randomHole.pos && window.BloodSystem) {
+                  const worldHolePos = body.position.clone();
+                  worldHolePos.y += 0.3;
+                  window.BloodSystem.emitBurst(worldHolePos, Math.floor(15 * pumpStrength), {
+                    spreadXZ: 0.3,
+                    spreadY: 0.4,
+                    direction: randomHole.dir
+                  });
+                }
+              }
+            }
+
+            // Fade out at end
+            if (stumbleLife < 30) {
+              bodyMat.opacity = (stumbleLife / 30);
+            }
+
+            if (stumbleLife <= 0) {
+              scene.remove(body);
+              bodyGeo.dispose();
+              bodyMat.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(body);
+            bodyGeo.dispose();
+            bodyMat.dispose();
+          }});
+        } else {
+          scene.remove(body);
+          bodyGeo.dispose();
+          bodyMat.dispose();
+        }
+
+        // Blood pool at death location
+        const poolGeo = new THREE.CircleGeometry(0.8, 16);
+        const poolMat = new THREE.MeshBasicMaterial({
+          color: 0x8B0000,
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const pool = new THREE.Mesh(poolGeo, poolMat);
+        pool.position.copy(deathPos);
+        pool.position.y = 0.05;
+        pool.rotation.x = -Math.PI / 2;
+        scene.add(pool);
+
+        let poolLife = 140;
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({ update(_dt) {
+            poolLife--;
+            // Pool grows slightly
+            if (poolLife > 80) {
+              pool.scale.set(1 + (140 - poolLife) * 0.01, 1 + (140 - poolLife) * 0.01, 1);
+            }
+            // Fade out
+            if (poolLife < 40) {
+              poolMat.opacity = (poolLife / 40) * 0.6;
+            }
+            if (poolLife <= 0) {
+              scene.remove(pool);
+              poolGeo.dispose();
+              poolMat.dispose();
+              return false;
+            }
+            return true;
+          }, cleanup() {
+            scene.remove(pool);
+            poolGeo.dispose();
+            poolMat.dispose();
+          }});
+        } else {
+          scene.remove(pool);
+          poolGeo.dispose();
+          poolMat.dispose();
+        }
+      }
+
       dieGeyserRollover(enemyColor) {
         // GEYSER ROLLOVER DEATH: Enemy snaps backward on impact, head flies off, torso
         // bursts — then rolls onto its back with a "heartbeat bleed-out" for 3 s,
