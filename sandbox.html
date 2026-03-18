@@ -58,6 +58,43 @@
     }
     /* Keep ui-layer visible once sandbox boots */
     #ui-layer { display: none; }
+
+    /* ── Sandbox: Level-Up modal enhancements ───────────────────────────────
+       Make upgrade cards larger and ensure the grid fits all screen sizes.
+       Uses viewport-relative sizing with sensible min/max bounds.
+       ─────────────────────────────────────────────────────────────────────── */
+    #levelup-modal .modal-content {
+      width: min(98vw, 1100px);
+      max-width: min(98vw, 1100px);
+      padding: 20px 16px 24px;
+    }
+
+    /* Larger cards: fill more of the screen width, cap at 270px */
+    .upgrade-card {
+      width:  clamp(160px, 28vw, 270px) !important;
+      height: clamp(210px, 40vw, 290px) !important;
+      font-size: clamp(12px, 2.4vw, 16px) !important;
+      padding: 16px 14px !important;
+    }
+
+    /* Card title text — bigger for readability */
+    .upgrade-card .card-title,
+    .upgrade-card strong,
+    .upgrade-card b {
+      font-size: clamp(14px, 2.8vw, 19px) !important;
+    }
+
+    /* On very narrow screens (< 480px portrait phone) — stack 2 cards per row */
+    @media (max-width: 479px) {
+      #upgrade-list, #level-up-choices {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+      }
+      .upgrade-card {
+        width:  clamp(140px, 44vw, 200px) !important;
+        height: clamp(180px, 52vw, 240px) !important;
+      }
+    }
   </style>
 </head>
 <body>
