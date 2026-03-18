@@ -1321,7 +1321,9 @@
 
       takeDamage(amount) {
         // Safety: do not process damage when game is not active or already over
-        if (!isGameActive || isGameOver) return;
+        const gameActive = isGameActive || window.isGameActive;
+        const gameOver   = isGameOver   || window.isGameOver;
+        if (!gameActive || gameOver) return;
         // Prevent stray hits during boss kill-cam cinematics
         if (killCamActive) return;
         // Check invulnerability frames (hit-stun + dash invulnerability)

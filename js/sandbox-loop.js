@@ -417,14 +417,15 @@
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────
   function _buildProjectilePool() {
-    const geo = new THREE.SphereGeometry(0.12, 6, 6);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xFFFF55 });
+    const geo = new THREE.SphereGeometry(0.065, 5, 5); // smaller, bullet-like
     for (let i = 0; i < POOL_SIZE_PROJECTILES; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xFFFFAA });
       const m = new THREE.Mesh(geo, mat);
       m.visible = false;
       scene.add(m);
       _projPool.push({
         mesh: m,
+        mat: mat, // store reference for color update
         active: false,
         vx: 0,
         vz: 0,
@@ -462,6 +463,22 @@
       const ddx = p.mesh.position.x - p.ox;
       const ddz = p.mesh.position.z - p.oz;
       p.distSq = ddx * ddx + ddz * ddz;
+
+      // Bullet color: bright yellow/white near muzzle (< 1 unit), copper-red farther
+      if (p.mat) {
+        const dist = Math.sqrt(p.distSq);
+        if (dist < 1.0) {
+          const t = dist;
+          const r = 255, g = Math.round(255 * (1 - t * 0.2)), b = Math.round(200 * (1 - t));
+          p.mat.color.setRGB(r/255, g/255, b/255);
+        } else {
+          const t = Math.min(1, (dist - 1.0) / 5.0);
+          const r = Math.round(0xFF * (1 - t * 0.4));
+          const g = Math.round(0xAA * (1 - t * 0.8));
+          const b = Math.round(0x22 * (1 - t));
+          p.mat.color.setRGB(r/255, g/255, b/255);
+        }
+      }
       if (p.distSq > PROJECTILE_RANGE_SQ) {
         _releaseProjectile(p, i);
         continue;
@@ -740,7 +757,12 @@
     // Determine hit force from weapon (gun = 1.0)
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
     const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
-    const actualDmg = Math.round(damage * hitForce);
+
+    // Critical hit chance — playerStats.critChance is the total chance (0.0–1.0)
+    const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
+    const isCrit = Math.random() < critChance;
+    const critMultiplier = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
+    const actualDmg = Math.round(damage * hitForce * critMultiplier);
 
     slot.hp -= actualDmg;
     slot.flashTimer = 0.1;
@@ -755,6 +777,9 @@
     // Squish animation on hit
     slot.squishTime = 0.3;
 
+    // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ── (hpPercent declared first, used below too)
+    const hpPercent = slot.hp / slot.maxHp;
+
     // Screen shake — scales with damage: light hit = micro-shake, heavy = harder shake
     const shakeIntensity = hpPercent < SHAKE_HEAVY_HP_THRESHOLD ? SHAKE_HEAVY_INTENSITY
                          : hpPercent < SHAKE_MID_HP_THRESHOLD   ? SHAKE_MID_INTENSITY
@@ -762,11 +787,13 @@
     _triggerShake(shakeIntensity);
 
     // Floating damage number — reuse pre-allocated _tmpV3 (no new THREE.Vector3 per hit)
-    _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
-    createFloatingText('-' + actualDmg, _tmpV3, '#FF4444');
-
-    // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ── (hpPercent declared first, used below too)
-    const hpPercent = slot.hp / slot.maxHp;
+    if (isCrit) {
+      _tmpV3.set(slot.mesh.position.x, 2.0, slot.mesh.position.z);
+      createFloatingText('⚡' + actualDmg + '!', _tmpV3, '#FFD700');
+    } else {
+      _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
+      createFloatingText('-' + actualDmg, _tmpV3, '#FF4444');
+    }
 
     // Blood splatter on hit — reuse _reusableBloodPos (no new {} per hit)
     _reusableBloodPos.x = slot.mesh.position.x;
@@ -913,7 +940,6 @@
     if (_droppedGem) expGems.push(_droppedGem);
 
     _tmpV3.set(x, 1.8, z);
-    createFloatingText('SLIME DEFEATED!', _tmpV3, '#AAFFAA');
 
     playerStats.kills++;
 
@@ -1697,11 +1723,60 @@
   // ─── Manual aim only — no auto-aim lock ─────────────────────────────────────
   let _gunCooldown = 0;
 
+  // ─── Revolver ammo / reload state ────────────────────────────────────────────
+  const REVOLVER_MAX_AMMO = 5;
+  const REVOLVER_RELOAD_TIME = 1.8;        // seconds for full reload
+  const REVOLVER_FIRE_RATE_MULT = 0.85;    // 15% faster than base gun cooldown (snappier feel)
+  let _revolverAmmo = REVOLVER_MAX_AMMO;
+  let _isReloading = false;
+  let _reloadTimer = 0;
+  let _reloadAnimFrame = 0; // 0 to REVOLVER_MAX_AMMO, how many bullets loaded so far
+
+  // ─── Gun model state ─────────────────────────────────────────────────────────
+  let _gunModel = null;
+  let _gunDrum  = null; // direct reference to drum mesh for spin animation
+  const _gunOffset = { x: 0.35, y: -0.1, z: 0 };
+  let _gunRecoilTime = 0;
+
+  // ─── Player bounce/animation state ───────────────────────────────────────────
+  let _playerBounceTime = 0;
+  let _playerBounceActive = false;
+  let _playerIdleTime = 0;
+
   function _tryFire(dt) {
     if (!player) return;
+
+    // Handle reload state
+    if (_isReloading) {
+      _reloadTimer -= dt;
+      const progress = 1 - Math.max(0, _reloadTimer / REVOLVER_RELOAD_TIME);
+      _reloadAnimFrame = Math.floor(progress * REVOLVER_MAX_AMMO);
+      _updateRevolverUI();
+      if (_reloadTimer <= 0) {
+        _isReloading = false;
+        _revolverAmmo = REVOLVER_MAX_AMMO;
+        _reloadAnimFrame = REVOLVER_MAX_AMMO;
+        _updateRevolverUI();
+      }
+      return; // can't fire while reloading
+    }
+
+    // Out of ammo — start reload
+    if (_revolverAmmo <= 0) {
+      _isReloading = true;
+      _reloadTimer = REVOLVER_RELOAD_TIME;
+      _reloadAnimFrame = 0;
+      _updateRevolverUI();
+      return;
+    }
+
+    // _gunCooldown is tracked in milliseconds (matching weapons.gun.cooldown units).
+    // dt is in seconds, so dt*1000 converts to ms per frame.
     _gunCooldown -= dt * 1000;
     if (_gunCooldown > 0) return;
-    const cooldown = weapons && weapons.gun ? weapons.gun.cooldown : 1000;
+
+    // Slightly faster fire rate than original (REVOLVER_FIRE_RATE_MULT = 0.85 = 15% faster)
+    const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * REVOLVER_FIRE_RATE_MULT) : 850;
     _gunCooldown = cooldown;
 
     const px = player.mesh.position.x, pz = player.mesh.position.z;
@@ -1718,6 +1793,8 @@
       return; // no aim input — don't fire
     }
 
+    _revolverAmmo--;
+    _updateRevolverUI();
     _fireProjectile(px, pz, tx, tz);
 
     // Muzzle flash: illuminate environment on every shot
@@ -1729,13 +1806,91 @@
       _tmpV3b.set(fdx / flen, 0, fdz / flen);
       window.spawnWeaponMuzzleFlash(weaponName, _tmpV3, _tmpV3b, scene);
     } else if (window._acquireFlash) {
-      // Minimal flash if full muzzle-flash-system.js was not loaded
       _tmpV3.set(px, 1.0, pz);
       window._acquireFlash(scene, DEFAULT_FLASH_COLOR, DEFAULT_FLASH_INTENSITY, DEFAULT_FLASH_RADIUS, _tmpV3, DEFAULT_FLASH_DURATION_MS);
     }
 
-    // Rotate player mesh to face the aim target
+    // Rotate player mesh to face the aim target + apply recoil
     player.mesh.rotation.y = Math.atan2(tx - px, tz - pz);
+
+    // Update gun model position/rotation (if attached)
+    _updateGunModel(tx, tz);
+
+    // Gun recoil animation
+    if (_gunModel) {
+      _gunModel.position.x = _gunOffset.x - 0.06;
+      _gunModel.position.z = _gunOffset.z + 0.04;
+      _gunRecoilTime = 0.08;
+    }
+  }
+
+  function _updateRevolverUI() {
+    const ui = document.getElementById('revolver-ui');
+    if (!ui) return;
+    const bullets = ui.querySelectorAll('.revolver-bullet');
+    bullets.forEach(function(b, i) {
+      if (_isReloading) {
+        b.className = 'revolver-bullet' + (i < _reloadAnimFrame ? ' loaded' : ' empty');
+      } else {
+        b.className = 'revolver-bullet' + (i < _revolverAmmo ? ' loaded' : ' empty');
+      }
+    });
+    const label = ui.querySelector('.revolver-label');
+    if (label) {
+      label.textContent = _isReloading ? 'RELOADING...' : (_revolverAmmo + '/' + REVOLVER_MAX_AMMO);
+      label.style.color = _isReloading ? '#FF8800' : (_revolverAmmo <= 1 ? '#FF4444' : '#FFD700');
+    }
+  }
+
+  // ─── Gun model (revolver) ─────────────────────────────────────────────────────
+  function _buildGunModel() {
+    if (!player || !player.mesh) return;
+    const gunGroup = new THREE.Group();
+
+    // Barrel (long thin cylinder)
+    const barrelGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8);
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x555566, roughness: 0.4, metalness: 0.8 });
+    const barrel = new THREE.Mesh(barrelGeo, metalMat);
+    barrel.rotation.z = Math.PI / 2;
+    barrel.position.set(0.22, 0, 0);
+    gunGroup.add(barrel);
+
+    // Cylinder (revolver drum)
+    const drumGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.15, 12);
+    const drumMat = new THREE.MeshStandardMaterial({ color: 0x887766, roughness: 0.5, metalness: 0.7 });
+    const drum = new THREE.Mesh(drumGeo, drumMat);
+    drum.rotation.z = Math.PI / 2;
+    drum.position.set(0.05, -0.02, 0);
+    gunGroup.add(drum);
+
+    // Grip/Handle
+    const gripGeo = new THREE.BoxGeometry(0.08, 0.22, 0.06);
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0x4A2E1A, roughness: 0.9, metalness: 0.0 });
+    const grip = new THREE.Mesh(gripGeo, gripMat);
+    grip.position.set(-0.06, -0.14, 0);
+    grip.rotation.z = -0.15;
+    gunGroup.add(grip);
+
+    gunGroup.position.set(_gunOffset.x, _gunOffset.y, _gunOffset.z);
+    gunGroup.castShadow = true;
+
+    player.mesh.add(gunGroup);
+    _gunModel = gunGroup;
+    _gunDrum = drum;
+  }
+
+  function _updateGunModel(targetX, targetZ) {
+    if (!_gunModel || !player || !player.mesh) return;
+    // Spin drum slightly on each shot
+    if (_gunDrum) _gunDrum.rotation.x += 0.4;
+  }
+
+  function _updateGunRecoil(dt) {
+    if (_gunRecoilTime <= 0 || !_gunModel) return;
+    _gunRecoilTime = Math.max(0, _gunRecoilTime - dt);
+    const t = 1 - _gunRecoilTime / 0.08;
+    _gunModel.position.x = (_gunOffset.x - 0.06) + t * 0.06;
+    _gunModel.position.z = (_gunOffset.z + 0.04) - t * 0.04;
   }
 
   // ─── Input ────────────────────────────────────────────────────────────────────
@@ -2008,6 +2163,7 @@
 
     // Mark player invulnerable during intro
     player.invulnerable = true;
+    _buildGunModel();
     _spawnIntroActive = true;
     _spawnIntroTimer = 0;
   }
@@ -2034,18 +2190,49 @@
   // ─── Player movement ──────────────────────────────────────────────────────────
   function _movePlayer(dt) {
     if (!player || !player.mesh) return;
-    const dir   = _getMoveDir();
+    const dir = _getMoveDir();
     const speed = (playerStats ? playerStats.walkSpeed : 25) * MOVEMENT_TIME_SCALE;
 
-    if (dir.dx !== 0 || dir.dz !== 0) {
+    const isMoving = dir.dx !== 0 || dir.dz !== 0;
+
+    if (isMoving) {
       player.mesh.position.x = _clamp(player.mesh.position.x + dir.dx * speed, -ARENA_RADIUS, ARENA_RADIUS);
       player.mesh.position.z = _clamp(player.mesh.position.z + dir.dz * speed, -ARENA_RADIUS, ARENA_RADIUS);
-      // Gentle lean in movement direction
-      player.mesh.rotation.z = _lerp(player.mesh.rotation.z, -dir.dx * 0.18, 0.12);
-      player.mesh.rotation.x = _lerp(player.mesh.rotation.x, -dir.dz * 0.12, 0.12);
+
+      // Lean into movement direction
+      player.mesh.rotation.z = _lerp(player.mesh.rotation.z, -dir.dx * 0.22, 0.14);
+      player.mesh.rotation.x = _lerp(player.mesh.rotation.x, -dir.dz * 0.18, 0.14);
+
+      // Bounce/wiggle: squish and stretch
+      if (!_playerBounceActive) {
+        _playerBounceTime = 0;
+        _playerBounceActive = true;
+      }
+      _playerBounceTime += dt * 8.5;
+      const bounceY = Math.abs(Math.sin(_playerBounceTime)) * 0.12;
+      const squishX = 1 + Math.abs(Math.sin(_playerBounceTime)) * 0.08;
+      player.mesh.position.y = 0.5 + bounceY;
+      if (!player.currentScaleXZ) {
+        player.mesh.scale.x = squishX;
+        player.mesh.scale.z = squishX;
+        // Halve the squish on Y to prevent extreme vertical shrink: volume-preserving approx.
+        player.mesh.scale.y = 1 / (squishX * 0.5 + 0.5);
+      }
     } else {
-      player.mesh.rotation.z = _lerp(player.mesh.rotation.z, 0, 0.08);
-      player.mesh.rotation.x = _lerp(player.mesh.rotation.x, 0, 0.08);
+      _playerBounceActive = false;
+      // Smooth return to upright
+      player.mesh.rotation.z = _lerp(player.mesh.rotation.z, 0, 0.09);
+      player.mesh.rotation.x = _lerp(player.mesh.rotation.x, 0, 0.09);
+      player.mesh.position.y = _lerp(player.mesh.position.y, 0.5, 0.1);
+      // Idle gentle wobble
+      _playerIdleTime += dt;
+      const idleWobble = Math.sin(_playerIdleTime * 2.2) * 0.025;
+      if (!player.currentScaleXZ) {
+        player.mesh.scale.x = 1 + idleWobble;
+        player.mesh.scale.z = 1 + idleWobble;
+        // Y-axis uses half the wobble to keep vertical proportions natural during breathing
+        player.mesh.scale.y = 1 - idleWobble * 0.5;
+      }
     }
 
     // Camera follow — reuse _camTarget to avoid per-frame Vector3 allocation
@@ -2244,6 +2431,7 @@
 
       _movePlayer(dt);
       if (_spawnIntroActive) _updateSpawnIntro(dt);
+      _updateGunRecoil(dt);
 
       // Rebuild spatial hash once per frame so _updateProjectiles uses fresh data
       _rebuildSpatialHash();
@@ -2303,6 +2491,8 @@
       // Use setter functions to avoid readonly property crash on iOS/Safari.
       if (typeof setGameActive === 'function') setGameActive(true);
       if (typeof setGameOver === 'function') setGameOver(false);
+      window.isGameActive = true;
+      window.isGameOver = false;
 
       // Hide loading screen
       const ls = document.getElementById('loading-screen');
