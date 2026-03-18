@@ -3159,6 +3159,17 @@
                                     : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
             TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
           }
+
+          // ── 180 SPIN DEATH: 15% chance on high-impact hits ─────────────────────────
+          // High-impact hits trigger a dramatic 180° spin with blood arc
+          const HIGH_IMPACT_TYPES = [...SHOTGUN_TYPES, ...GUN_TYPES, 'drone', 'meteor', 'missile'];
+          const isHighImpact = HIGH_IMPACT_TYPES.includes(damageType) && weaponLevel >= 5;
+
+          if (isHighImpact && Math.random() < 0.15 && this.hp - finalAmount <= 0) {
+            // Flag this enemy for 180 spin death animation
+            this._spinDeathTriggered = true;
+            this._spinDeathDirection = hitDir ? { x: hitDir.vx || 0, y: 0, z: hitDir.vz || 0 } : null;
+          }
         }
         // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3359,7 +3370,10 @@
           damageType !== 'headshot' && damageType !== 'aura' && damageType !== 'poison' &&
           !this.isMiniBoss && !this.isFlyingBoss;
 
-        if (isYellowEnemy && damageType !== 'ice' && damageType !== 'fire' && damageType !== 'headshot') {
+        // ─── TRAUMA SYSTEM: 180 SPIN DEATH (15% chance on high-impact kills) ───────
+        if (this._spinDeathTriggered) {
+          this.dieBySpinDeath(enemyColor);
+        } else if (isYellowEnemy && damageType !== 'ice' && damageType !== 'fire' && damageType !== 'headshot') {
           // Yellow enemies: 180-degree spin death with continuous neck blood arc
           this.dieBySpinDeath(enemyColor);
         } else if (_isGlideSpinCandidate && (damageType === 'gun' || damageType === 'physical' || damageType === 'uzi' || damageType === 'minigun' || damageType === 'sniperRifle' || damageType === 'drone' || damageType === 'shotgun' || damageType === 'doubleBarrel') && Math.random() < 0.55) {
