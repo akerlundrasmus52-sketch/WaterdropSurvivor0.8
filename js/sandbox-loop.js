@@ -245,6 +245,26 @@
   const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
   const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
 
+  // ─── Game-feel tuning constants ──────────────────────────────────────────────
+  const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
+  const SHAKE_DURATION_SCALE       = 0.2;  // intensity × this = shake duration in seconds
+  const SHAKE_FADE_RATE            = 6;    // amplitude fade multiplier (higher = faster fade)
+  const SHAKE_HEAVY_HP_THRESHOLD   = 0.25; // hp fraction below which hits count as "heavy"
+  const SHAKE_MID_HP_THRESHOLD     = 0.5;  // hp fraction for mid-tier shake
+  const SHAKE_HEAVY_INTENSITY      = 0.28; // world-unit shake radius for heavy hits
+  const SHAKE_MID_INTENSITY        = 0.18; // world-unit shake radius for mid hits
+  const SHAKE_LIGHT_INTENSITY      = 0.10; // world-unit shake radius for light hits
+  const SHAKE_KILL_BASE            = 0.35; // base shake radius on kill
+  const SHAKE_KILL_SCALE           = 0.15; // per-unit-of-hitForce extra shake on kill
+  const SHAKE_KILL_CAP             = 0.25; // max extra shake added from hitForce
+  const COLLISION_QUERY_RADIUS     = 2.0;  // spatial hash query radius (world units)
+  const COLLISION_THRESHOLD_SQ     = 1.2;  // squared distance for projectile→slime hit
+  const MIN_FLASH_DURATION_SEC     = 0.001; // clamp floor for flash timer (avoids div/0)
+  const DEFAULT_FLASH_COLOR        = 0xFFFF88; // fallback muzzle flash colour
+  const DEFAULT_FLASH_INTENSITY    = 4.0;      // fallback PointLight intensity
+  const DEFAULT_FLASH_RADIUS       = 8;        // fallback PointLight range (world units)
+  const DEFAULT_FLASH_DURATION_MS  = 80;       // fallback flash duration in ms
+
   // ─── Module state ────────────────────────────────────────────────────────────
   let _ready    = false;
   let _lastTime = 0;
@@ -279,6 +299,28 @@
   // Reusable world-space position object for blood emission (avoids new {} per hit)
   const _reusableBloodPos = { x: 0, y: 0, z: 0 };
 
+  // ─── Spatial Hashing ─────────────────────────────────────────────────────────
+  // SpatialHash instance for O(1) projectile→enemy collision queries.
+  // Replaces the O(n²) inner loop in _updateProjectiles when available.
+  let _enemySpatialHash = null;
+
+  // ─── Hit-Stop (Time Freeze) ───────────────────────────────────────────────────
+  // When >0, the simulation is frozen for this many milliseconds.
+  // The renderer still draws so the visual "freeze frame" is visible.
+  let _hitStopRemaining = 0;
+
+  // ─── Screen Shake ─────────────────────────────────────────────────────────────
+  let _shakeTimer         = 0;    // seconds remaining in current shake
+  let _shakePeakIntensity = 0;    // peak shake radius (world units)
+  const _shakeOffset = { x: 0, z: 0 }; // applied to camera each frame
+
+  // ─── Pooled PointLight Flash System ──────────────────────────────────────────
+  // Pre-allocated PointLights for muzzle flashes / hit lights.  Zero new THREE.PointLight
+  // after _buildFlashPool() is called.  Exposed as window._acquireFlash for
+  // muzzle-flash-system.js to use.
+  const FLASH_POOL_SIZE = 8;
+  let _flashPool = [];
+
   // Joystick state (mobile)
   const _joy    = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0 };
   const _aimJoy = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0, fired: false };
@@ -312,6 +354,65 @@
       el.style.wordBreak = 'break-word';
       el.textContent = '⚠ Sandbox Error: ' + msg;
     }
+  }
+
+  // ─── Spatial Hash helpers ────────────────────────────────────────────────────
+
+  /** Create the enemy spatial hash if the GamePerformance utility is loaded. */
+  function _initSpatialHash() {
+    if (window.GamePerformance && window.GamePerformance.SpatialHash) {
+      _enemySpatialHash = new window.GamePerformance.SpatialHash(4); // 4-unit cells
+      console.log('[SandboxLoop] Spatial hash initialized (cell size: 4)');
+    }
+  }
+
+  /**
+   * Re-insert every active slime into the spatial hash so projectile collision
+   * queries are O(1) per projectile instead of O(n).  Call once per frame,
+   * before _updateProjectiles.
+   */
+  function _rebuildSpatialHash() {
+    if (!_enemySpatialHash) return;
+    _enemySpatialHash.clear();
+    for (let i = 0; i < _activeSlimes.length; i++) {
+      _enemySpatialHash.insert(_activeSlimes[i]);
+    }
+  }
+
+  // ─── Hit-Stop & Screen Shake helpers ─────────────────────────────────────────
+
+  /**
+   * Freeze the simulation for `ms` milliseconds (renders but no updates).
+   * Concurrent calls extend the freeze only if the new duration is longer.
+   */
+  function _triggerHitStop(ms) {
+    if (ms > _hitStopRemaining) _hitStopRemaining = ms;
+  }
+
+  /**
+   * Trigger a camera shake.  `intensity` is in world units — small hits pass ~0.12,
+   * kills pass ~0.35.  Duration auto-scales so bigger hits shake longer.
+   */
+  function _triggerShake(intensity) {
+    const duration = Math.min(0.5, intensity * SHAKE_DURATION_SCALE);
+    if (intensity > _shakePeakIntensity) _shakePeakIntensity = intensity;
+    if (duration > _shakeTimer) _shakeTimer = duration;
+  }
+
+  /** Advance the shake state each frame; writes into _shakeOffset. */
+  function _updateCameraShake(dt) {
+    if (_shakeTimer <= 0) {
+      _shakeTimer = 0;
+      _shakePeakIntensity = 0;
+      _shakeOffset.x = 0;
+      _shakeOffset.z = 0;
+      return;
+    }
+    _shakeTimer = Math.max(0, _shakeTimer - dt);
+    // Amplitude fades linearly as timer runs out
+    const amp = _shakePeakIntensity * Math.min(1, _shakeTimer * SHAKE_FADE_RATE);
+    _shakeOffset.x = (Math.random() * 2 - 1) * amp;
+    _shakeOffset.z = (Math.random() * 2 - 1) * amp;
   }
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────
@@ -366,18 +467,38 @@
         continue;
       }
 
-      // Collision with any active pool slime
-      for (let si = 0; si < _activeSlimes.length; si++) {
-        const s = _activeSlimes[si];
-        const sx = s.mesh.position.x, sz = s.mesh.position.z;
-        const ex = p.mesh.position.x - sx;
-        const ez = p.mesh.position.z - sz;
-        if (ex * ex + ez * ez < 1.2) {
-          _hitSlime(p, s);
-          _releaseProjectile(p, i);
-          break;
+      // Collision with enemies — use spatial hash if available (O(1) per projectile)
+      let hitThisFrame = false;
+      if (_enemySpatialHash && _activeSlimes.length > 0) {
+        const nearby = _enemySpatialHash.query(p.mesh.position.x, p.mesh.position.z, COLLISION_QUERY_RADIUS);
+        for (let si = 0; si < nearby.length; si++) {
+          const s = nearby[si];
+          if (!s.active || s.dead) continue;
+          const ex = p.mesh.position.x - s.mesh.position.x;
+          const ez = p.mesh.position.z - s.mesh.position.z;
+          if (ex * ex + ez * ez < COLLISION_THRESHOLD_SQ) {
+            _hitSlime(p, s);
+            _releaseProjectile(p, i);
+            hitThisFrame = true;
+            break;
+          }
+        }
+      } else {
+        // Fallback: O(n²) brute-force (used when spatial-hash.js is not loaded)
+        for (let si = 0; si < _activeSlimes.length; si++) {
+          const s = _activeSlimes[si];
+          const sx = s.mesh.position.x, sz = s.mesh.position.z;
+          const ex = p.mesh.position.x - sx;
+          const ez = p.mesh.position.z - sz;
+          if (ex * ex + ez * ez < COLLISION_THRESHOLD_SQ) {
+            _hitSlime(p, s);
+            _releaseProjectile(p, i);
+            hitThisFrame = true;
+            break;
+          }
         }
       }
+      if (hitThisFrame) continue;
     }
   }
 
@@ -634,6 +755,12 @@
     // Squish animation on hit
     slot.squishTime = 0.3;
 
+    // Screen shake — scales with damage: light hit = micro-shake, heavy = harder shake
+    const shakeIntensity = hpPercent < SHAKE_HEAVY_HP_THRESHOLD ? SHAKE_HEAVY_INTENSITY
+                         : hpPercent < SHAKE_MID_HP_THRESHOLD   ? SHAKE_MID_INTENSITY
+                         : SHAKE_LIGHT_INTENSITY;
+    _triggerShake(shakeIntensity);
+
     // Floating damage number — reuse pre-allocated _tmpV3 (no new THREE.Vector3 per hit)
     _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
     createFloatingText('-' + actualDmg, _tmpV3, '#FF4444');
@@ -708,6 +835,11 @@
     const x = slot.mesh.position.x;
     const y = slot.mesh.position.y + 0.4; // center of body
     const z = slot.mesh.position.z;
+
+    // Hit-stop: freeze simulation for a brief moment — gives attacks a heavy, impactful feel
+    _triggerHitStop(HIT_STOP_KILL_DURATION_MS);
+    // Hard camera shake on kill (scales slightly with hit force)
+    _triggerShake(SHAKE_KILL_BASE + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
 
     // ── DEATH EXPLOSION WITH MASSIVE GORE (MATCH OLD MAP: 600 PARTICLES) ─────
     if (window.BloodSystem) {
@@ -1103,6 +1235,63 @@
       return gem;
     }
     return null;
+  }
+
+  // ─── Pooled PointLight Flash System ──────────────────────────────────────────
+  // Pre-allocates FLASH_POOL_SIZE PointLights at boot so muzzle flashes and hit
+  // lights never create new THREE.PointLight during gameplay.
+  // Exposes window._acquireFlash used by muzzle-flash-system.js.
+  function _buildFlashPool() {
+    for (let i = 0; i < FLASH_POOL_SIZE; i++) {
+      const light = new THREE.PointLight(0xFFFFFF, 0, 10);
+      light.visible = false;
+      scene.add(light);
+      _flashPool.push({
+        light,
+        timer: 0,
+        duration: 1,
+        maxIntensity: 0,
+        active: false
+      });
+    }
+    // Expose globally so muzzle-flash-system.js can call _acquireFlash at shot-time.
+    // window._acquireFlash is called lazily (at fire-time), so it just needs to be
+    // set before the first shot — _buildFlashPool() runs during boot, before gameplay.
+    window._acquireFlash = function(sc, color, intensity, radius, pos, durationMs) {
+      for (let i = 0; i < _flashPool.length; i++) {
+        const f = _flashPool[i];
+        if (f.active) continue;
+        f.light.color.setHex(color);
+        f.light.intensity = intensity;
+        f.light.distance  = radius;
+        f.light.position.copy(pos);
+        f.light.visible   = true;
+        f.maxIntensity    = intensity;
+        f.duration        = Math.max(MIN_FLASH_DURATION_SEC, durationMs / 1000);
+        f.timer           = f.duration;
+        f.active          = true;
+        return f;
+      }
+      return null; // pool exhausted — flash skipped (harmless visual miss)
+    };
+    console.log('[SandboxLoop] Flash pool built: ' + FLASH_POOL_SIZE + ' PointLight slots');
+  }
+
+  /** Tick every active flash — fades intensity as the timer runs out. */
+  function _updateFlashPool(dt) {
+    for (let i = 0; i < _flashPool.length; i++) {
+      const f = _flashPool[i];
+      if (!f.active) continue;
+      f.timer -= dt;
+      if (f.timer <= 0) {
+        f.active          = false;
+        f.light.visible   = false;
+        f.light.intensity = 0;
+      } else {
+        // Smooth fade-out: intensity decays to 0 as timer reaches 0
+        f.light.intensity = f.maxIntensity * (f.timer / f.duration);
+      }
+    }
   }
 
   function _updateFleshChunks(dt) {
@@ -1531,6 +1720,20 @@
 
     _fireProjectile(px, pz, tx, tz);
 
+    // Muzzle flash: illuminate environment on every shot
+    const weaponName = (saveData && saveData.equippedGear && saveData.equippedGear.weapon) || 'gun';
+    if (window.spawnWeaponMuzzleFlash) {
+      _tmpV3.set(px, 0.5, pz);
+      const fdx = tx - px, fdz = tz - pz;
+      const flen = Math.sqrt(fdx * fdx + fdz * fdz) || 1;
+      _tmpV3b.set(fdx / flen, 0, fdz / flen);
+      window.spawnWeaponMuzzleFlash(weaponName, _tmpV3, _tmpV3b, scene);
+    } else if (window._acquireFlash) {
+      // Minimal flash if full muzzle-flash-system.js was not loaded
+      _tmpV3.set(px, 1.0, pz);
+      window._acquireFlash(scene, DEFAULT_FLASH_COLOR, DEFAULT_FLASH_INTENSITY, DEFAULT_FLASH_RADIUS, _tmpV3, DEFAULT_FLASH_DURATION_MS);
+    }
+
     // Rotate player mesh to face the aim target
     player.mesh.rotation.y = Math.atan2(tx - px, tz - pz);
   }
@@ -1847,7 +2050,11 @@
 
     // Camera follow — reuse _camTarget to avoid per-frame Vector3 allocation
     if (camera) {
-      _camTarget.set(player.mesh.position.x, 18, player.mesh.position.z + 12);
+      _camTarget.set(
+        player.mesh.position.x + _shakeOffset.x,
+        18,
+        player.mesh.position.z + 12 + _shakeOffset.z
+      );
       camera.position.lerp(_camTarget, 0.06);
       camera.lookAt(player.mesh.position);
     }
@@ -1935,6 +2142,10 @@
     _buildFleshPool();
     // Build pre-allocated EXP gem pool (critical for XP drops to work)
     _buildExpGemPool();
+    // Build pooled PointLight flash pool (muzzle flashes, hit lights)
+    _buildFlashPool();
+    // Initialize spatial hash for O(1) projectile→enemy collision
+    _initSpatialHash();
   }
 
   // ─── Sandbox status overlay ───────────────────────────────────────────────────
@@ -1969,13 +2180,57 @@
     console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
   }
 
+  // ─── WaveManager — encapsulates survivor-style wave spawning logic ───────────
+  // Keeps the core animate loop clean.  Adheres to the pre-allocated pool
+  // architecture — all spawns go through _spawnWave / _activateSlime.
+  const WaveManager = {
+    /** Tick wave timers and escalation.  Call once per frame from _animate. */
+    update: function(dt) {
+      _spawnTimer -= dt;
+      if (_spawnTimer <= 0) {
+        _spawnTimer = _spawnInterval;
+        _spawnWave();
+      }
+
+      _escalationTimer -= dt;
+      if (_escalationTimer <= 0) {
+        _escalationTimer = ESCALATION_INTERVAL;
+        _waveSize      = Math.min(_waveSize + 2, 20);
+        _maxActive     = Math.min(_maxActive + 5, MAX_SLIMES);
+        _spawnInterval = Math.max(1.5, _spawnInterval * 0.85);
+        console.log('[WaveManager] Escalation! waveSize=' + _waveSize +
+          ' maxActive=' + _maxActive +
+          ' interval=' + _spawnInterval.toFixed(2) + 's');
+      }
+    }
+  };
+
+  // ─── LootManager — encapsulates EXP gem update and collection logic ──────────
+  // Delegates to _updateGems for the pooled gem simulation.
+  const LootManager = {
+    /** Tick all active EXP gems and check for player pickup.  Call once per frame. */
+    update: function(dt) {
+      _updateGems(dt);
+    }
+  };
+
   // ─── Main animation loop ──────────────────────────────────────────────────────
   function _animate(nowMs) {
     _rafId = requestAnimationFrame(_animate);
 
     try {
-      const dt = Math.min((nowMs - _lastTime) / 1000, 0.05); // cap at 50 ms
+      const rawDt = Math.min((nowMs - _lastTime) / 1000, 0.05); // cap at 50 ms
       _lastTime = nowMs;
+
+      // ── Hit-stop: freeze simulation for a brief "impact" moment ─────────────
+      if (_hitStopRemaining > 0) {
+        _hitStopRemaining -= rawDt * 1000;
+        if (_hitStopRemaining < 0) _hitStopRemaining = 0;
+        renderer.render(scene, camera); // keep drawing; only physics is frozen
+        return;
+      }
+
+      const dt = rawDt;
 
       if (window.isPaused) {
         renderer.render(scene, camera);
@@ -1989,28 +2244,18 @@
 
       _movePlayer(dt);
       if (_spawnIntroActive) _updateSpawnIntro(dt);
+
+      // Rebuild spatial hash once per frame so _updateProjectiles uses fresh data
+      _rebuildSpatialHash();
+
       _updateSlime(dt);
       _tryFire(dt);
       _updateProjectiles(dt);
       _updateWeaponEffects(dt); // sword/samurai/aura active weapon effects
-      _updateGems(dt);
 
-      // Survivor-style wave spawn timer: always count down and fire a wave
-      _spawnTimer -= dt;
-      if (_spawnTimer <= 0) {
-        _spawnTimer = _spawnInterval;
-        _spawnWave();
-      }
-
-      // Escalation: increase wave size and max cap every ESCALATION_INTERVAL seconds
-      _escalationTimer -= dt;
-      if (_escalationTimer <= 0) {
-        _escalationTimer = ESCALATION_INTERVAL;
-        _waveSize     = Math.min(_waveSize + 2, 20);          // grow wave by 2 each escalation
-        _maxActive    = Math.min(_maxActive + 5, MAX_SLIMES);  // raise cap by 5
-        _spawnInterval = Math.max(1.5, _spawnInterval * 0.85); // shorten interval (min 1.5s)
-        console.log('[SandboxLoop] Escalation! waveSize=' + _waveSize + ' maxActive=' + _maxActive + ' interval=' + _spawnInterval.toFixed(2) + 's');
-      }
+      // Manager updates (wave spawning + loot pickup)
+      WaveManager.update(dt);
+      LootManager.update(dt);
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
@@ -2031,6 +2276,10 @@
       if (window.DopamineSystem && window.DopamineSystem.DamageNumbers) {
         window.DopamineSystem.DamageNumbers.update(dt);
       }
+
+      // Camera shake & pooled flash updates
+      _updateCameraShake(dt);
+      _updateFlashPool(dt);
 
       _refreshHUD(dt);
 
