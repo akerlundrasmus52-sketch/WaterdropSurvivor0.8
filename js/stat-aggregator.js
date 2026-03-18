@@ -383,6 +383,108 @@
       }
     }
 
+    // ── 8. Profile Account deep stat upgrades ────────────────────────────────
+    // Each key in saveData.profileAccount stores the number of upgrade levels
+    // purchased in the Profile & Records building. Per-stat increments below.
+    if (sd.profileAccount) {
+      var pa = sd.profileAccount;
+
+      // Movement & Control
+      if ((pa.topSpeed || 0) > 0)
+        stats.topSpeed = (stats.topSpeed || 6.5) + pa.topSpeed * 0.3;
+      if ((pa.acceleration || 0) > 0)
+        stats.acceleration = (stats.acceleration || 22.0) + pa.acceleration * 1.5;
+      if ((pa.friction || 0) > 0)
+        stats.friction = (stats.friction || 18.0) + pa.friction * 0.8;
+      if ((pa.turnSpeed || 0) > 0)
+        stats.turnSpeed = (stats.turnSpeed || 1.0) * (1 + pa.turnSpeed * 0.05);
+      if ((pa.inputResponsiveness || 0) > 0)
+        stats.inputResponsiveness = Math.min(0.5, (stats.inputResponsiveness || 0.12) + pa.inputResponsiveness * 0.01);
+
+      // Gunplay / Ranged
+      if ((pa.fireRate || 0) > 0)
+        stats.fireRate = (stats.fireRate || 1.0) * (1 + pa.fireRate * 0.08);
+      if ((pa.reloadSpeed || 0) > 0)
+        stats.reloadSpeed = (stats.reloadSpeed || 1.0) * (1 + pa.reloadSpeed * 0.10);
+      if ((pa.aimSpeed || 0) > 0)
+        stats.aimSpeed = (stats.aimSpeed || 1.0) * (1 + pa.aimSpeed * 0.08);
+      if ((pa.projectileSpeed || 0) > 0)
+        stats.projectileSpeed = (stats.projectileSpeed || 1.0) * (1 + pa.projectileSpeed * 0.08);
+      if ((pa.magazineCapacity || 0) > 0)
+        stats.magazineCapacity = Math.max(1, (stats.magazineCapacity || 5) + pa.magazineCapacity);
+
+      // Melee / Close Combat
+      if ((pa.meleeAttackSpeed || 0) > 0)
+        stats.meleeAttackSpeed = (stats.meleeAttackSpeed || 1.0) * (1 + pa.meleeAttackSpeed * 0.07);
+      if ((pa.cleaveAngle || 0) > 0)
+        stats.cleaveAngle = (stats.cleaveAngle || 60) + pa.cleaveAngle * 5;
+      if ((pa.knockbackPower || 0) > 0)
+        stats.meleeKnockbackPower = (stats.meleeKnockbackPower || 1.0) * (1 + pa.knockbackPower * 0.10);
+      if ((pa.meleeRange || 0) > 0)
+        stats.meleeRange = (stats.meleeRange || 1.0) * (1 + pa.meleeRange * 0.08);
+
+      // Survivability
+      if ((pa.maxHp || 0) > 0) {
+        stats.maxHp += pa.maxHp * 20;
+        stats.hp     = stats.maxHp;
+      }
+      if ((pa.hpRegen || 0) > 0) {
+        stats.hpRegen          = (stats.hpRegen          || 0) + pa.hpRegen * 0.5;
+        stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + pa.hpRegen * 0.5;
+      }
+      if ((pa.flatArmor || 0) > 0) {
+        stats.flatArmor = (stats.flatArmor || 0) + pa.flatArmor * 4;
+        stats.armor     = (stats.armor     || 0) + pa.flatArmor * 4;
+      }
+      if ((pa.evadeChance || 0) > 0)
+        stats.evadeChance = Math.min(0.60, (stats.evadeChance || 0) + pa.evadeChance * 0.02);
+      if ((pa.staggerResistance || 0) > 0)
+        stats.staggerResistance = Math.min(0.75, (stats.staggerResistance || 0) + pa.staggerResistance * 0.03);
+
+      // Offense (granular)
+      if ((pa.meleeDamage || 0) > 0)
+        stats.meleeDamage = (stats.meleeDamage || 0) + pa.meleeDamage * 3;
+      if ((pa.projectileDamage || 0) > 0)
+        stats.projectileDamage = (stats.projectileDamage || 0) + pa.projectileDamage * 3;
+      if ((pa.critChance || 0) > 0)
+        stats.critChance = Math.min(0.85, (stats.critChance || 0.10) + pa.critChance * 0.02);
+      if ((pa.critDamage || 0) > 0)
+        stats.critDmg = (stats.critDmg || 1.5) + pa.critDamage * 0.10;
+      if ((pa.armorPiercing || 0) > 0)
+        stats.armorPenetration = Math.min(0.80, (stats.armorPenetration || 0) + pa.armorPiercing * 0.05);
+
+      // Utility
+      if ((pa.luck || 0) > 0)
+        stats.luck = Math.min(1.0, (stats.luck || 0) + pa.luck * 0.03);
+      if ((pa.xpCollectionRadius || 0) > 0)
+        stats.pickupRange = (stats.pickupRange || 1.0) + pa.xpCollectionRadius * 0.08;
+      if ((pa.goldDropBonus || 0) > 0)
+        stats.goldDropBonus = (stats.goldDropBonus || 0) + pa.goldDropBonus * 0.05;
+      if ((pa.expGainBonus || 0) > 0) {
+        stats.expGainBonus = (stats.expGainBonus || 0) + pa.expGainBonus * 0.05;
+        stats.xpMultiplier = (stats.xpMultiplier || 1.0) + pa.expGainBonus * 0.05;
+      }
+
+      // Elemental
+      if ((pa.fireDamage || 0) > 0)
+        stats.fireDamage = (stats.fireDamage || 0) + pa.fireDamage * 0.05;
+      if ((pa.iceDamage || 0) > 0)
+        stats.iceDamage = (stats.iceDamage || 0) + pa.iceDamage * 0.05;
+      if ((pa.lightningDamage || 0) > 0)
+        stats.lightningDamage = (stats.lightningDamage || 0) + pa.lightningDamage * 0.05;
+
+      // Cooldowns
+      if ((pa.dashCooldown || 0) > 0) {
+        var dcRed = Math.min(0.60, pa.dashCooldown * 0.05);
+        stats.dashCooldown  = Math.max(0.2, (stats.dashCooldown  || 1.0) * (1 - dcRed));
+        stats.skillCooldown = Math.max(0.2, (stats.skillCooldown || 1.0) * (1 - dcRed));
+      }
+      if ((pa.skillCooldown || 0) > 0) {
+        var scRed = Math.min(0.60, pa.skillCooldown * 0.05);
+        stats.skillCooldown = Math.max(0.2, (stats.skillCooldown || 1.0) * (1 - scRed));
+      }
+    }
+
     // ── Clamp & sync aliases ─────────────────────────────────────────────────
     stats.armor    = Math.min(85,   stats.armor    || 0);
     stats.flatArmor= Math.min(85,   stats.flatArmor|| 0);

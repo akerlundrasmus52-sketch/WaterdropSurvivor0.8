@@ -229,6 +229,53 @@
       // Passive Skills System
       passiveSkills: {},       // Object: skillId → level
       passiveSkillPoints: 0,   // Points to spend on passive skills
+      // ── Profile Account Deep Stats — individually upgradeable per-stat levels ─
+      // Unlocked/upgraded in the Profile & Records building. Each key stores the
+      // number of upgrade levels purchased. The stat-aggregator reads these and
+      // applies them on top of all other bonuses when a run starts.
+      profileAccount: {
+        // Movement & Control
+        topSpeed:             0,  // +0.3 world-units/s per level  (base 6.5)
+        acceleration:         0,  // +1.5 wu/s² per level          (base 22)
+        friction:             0,  // +0.8 wu/s² per level          (base 18)
+        turnSpeed:            0,  // +0.05× per level              (base 1.0×)
+        inputResponsiveness:  0,  // +0.01 per level               (base 0.12)
+        // Gunplay / Ranged
+        fireRate:             0,  // +0.08× per level              (base 1.0×)
+        reloadSpeed:          0,  // +0.10× per level              (base 1.0×)
+        aimSpeed:             0,  // +0.08× per level              (base 1.0×)
+        projectileSpeed:      0,  // +0.08× per level              (base 1.0×)
+        magazineCapacity:     0,  // +1 bullet per level           (base 5)
+        // Melee / Close Combat
+        meleeAttackSpeed:     0,  // +0.07× per level              (base 1.0×)
+        cleaveAngle:          0,  // +5 degrees per level          (base 60°)
+        knockbackPower:       0,  // +0.10× per level              (base 1.0×)
+        meleeRange:           0,  // +0.08× per level              (base 1.0×)
+        // Survivability
+        maxHp:                0,  // +20 HP per level
+        hpRegen:              0,  // +0.5 HP/s per level
+        flatArmor:            0,  // +4 flat armor per level
+        evadeChance:          0,  // +0.02 (2%) per level          (cap 0.60)
+        staggerResistance:    0,  // +0.03 per level               (cap 0.75)
+        // Offense (granular)
+        meleeDamage:          0,  // +3 flat melee damage per level
+        projectileDamage:     0,  // +3 flat projectile damage per level
+        critChance:           0,  // +0.02 per level               (cap 0.85)
+        critDamage:           0,  // +0.10× per level
+        armorPiercing:        0,  // +0.05 per level               (cap 0.80)
+        // Utility
+        luck:                 0,  // +0.03 per level               (cap 1.0)
+        xpCollectionRadius:   0,  // +0.08× per level
+        goldDropBonus:        0,  // +0.05 (5%) per level
+        expGainBonus:         0,  // +0.05 (5%) per level
+        // Elemental
+        fireDamage:           0,  // +0.05 (5%) per level
+        iceDamage:            0,  // +0.05 (5%) per level
+        lightningDamage:      0,  // +0.05 (5%) per level
+        // Cooldowns
+        dashCooldown:         0,  // -0.05 (5% faster) per level  (cap -0.60)
+        skillCooldown:        0   // -0.05 (5% faster) per level  (cap -0.60)
+      },
       // Camp state
       hasVisitedCamp: false, // Track first camp visit
       nextRunTimeOfDay: 'day', // 'day' or 'night' - chosen from sleep option
@@ -405,6 +452,11 @@
           // Passive skills system
           saveData.passiveSkills = saveData.passiveSkills || {};
           saveData.passiveSkillPoints = saveData.passiveSkillPoints || 0;
+          // Profile Account deep stats (merge with defaults to pick up newly added keys)
+          saveData.profileAccount = Object.assign(
+            JSON.parse(JSON.stringify(defaultSaveData.profileAccount)),
+            saveData.profileAccount || {}
+          );
           // Story quest system (legacy fields)
           saveData.storyQuests = { ...defaultSaveData.storyQuests, ...(saveData.storyQuests || {}) };
           saveData.storyQuests.buildingFirstUse = { ...defaultSaveData.storyQuests.buildingFirstUse, ...(saveData.storyQuests.buildingFirstUse || {}) };
