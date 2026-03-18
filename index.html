@@ -432,6 +432,8 @@
       <div id="fps-booster-status" style="display:none; padding:4px 8px; margin-top:4px; font-size:11px; color:#aaa; text-align:center;"></div>
       
       <button id="settings-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #c0392b, #a93226); margin-top: 10px;">RESET PROGRESS</button>
+      <button id="hard-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #6b0000, #4a0000); border: 1px solid #cc2222; margin-top: 6px;" onclick="if(typeof window.hardResetGame==='function')window.hardResetGame();">🗑️ HARD RESET ACCOUNT</button>
+      <div style="font-size:10px;color:#996666;margin-top:3px;text-align:center;padding:0 8px;">Wipes ALL progress — buildings, skills, gear, gold. Fresh start from Level 0.</div>
       <button id="ui-calibration-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #1a6e9f, #155a82); margin-top: 6px;">🎛️ UI CUSTOMIZATION (Drag &amp; Resize HUD)</button>
       <button class="settings-close-btn" id="settings-close-btn">CLOSE</button>
     </div>
@@ -813,6 +815,7 @@
   <script src="js/gem-system.js"></script>        <!-- Prism Reliquary: Raw/Cut gems, slots, Gacha chests -->
   <script src="js/save-system.js"></script>       <!-- Save/load, achievements, SSB events, gear (~83 KB) -->
   <script src="js/camp-skill-system.js"></script> <!-- Camp buildings, skill tree, training (~93 KB) -->
+  <script src="js/stat-aggregator.js"></script>   <!-- Deep stat aggregator: calculateTotalPlayerStats, hardResetGame -->
   <script src="js/progression-center.js"></script> <!-- Progression Center: permanent stat upgrades -->
   <script src="js/stat-cards.js"></script>        <!-- Stat Cards: Slot machine style stat upgrades -->
   <script src="js/quest-system.js"></script>      <!-- Quests, account, chat, companion, camp screen (~110 KB) -->

@@ -2347,28 +2347,39 @@
 
   // ─── Player init ─────────────────────────────────────────────────────────────
   function _initPlayer() {
-    // Set up playerStats from game's built-in function
-    if (typeof getDefaultPlayerStats === 'function') {
-      playerStats = getDefaultPlayerStats(typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.baseExpReq : 30);
-    } else {
-      playerStats = {
-        lvl: 1, exp: 0, expReq: 30, hp: 100, maxHp: 100,
-        strength: 1, armor: 0, speed: 1, critChance: 0.1, critDmg: 1.5,
-        damage: 1, atkSpeed: 1, walkSpeed: 25, kills: 0, hpRegen: 0, gold: 0,
-        pickupRange: 1.0, dropRate: 1.0, perks: {}, survivalTime: 0,
-      };
+    // ── Camp Bridge: calculateTotalPlayerStats() aggregates ALL permanent bonuses
+    // from the Camp (skill tree, buildings, gear, neural matrix, attributes).
+    // Exposed by stat-aggregator.js, which is loaded before sandbox-loop.js.
+    if (typeof window.calculateTotalPlayerStats === 'function') {
+      try {
+        playerStats = window.calculateTotalPlayerStats();
+        // Inject into window so other systems can read it
+        window.playerStats = playerStats;
+        console.log('[SandboxLoop] calculateTotalPlayerStats() applied — all camp bonuses loaded.');
+      } catch (e) {
+        console.warn('[SandboxLoop] calculateTotalPlayerStats() error (non-fatal):', e);
+        playerStats = null;
+      }
     }
 
-    // ── Camp Bridge: apply skill-tree bonuses accumulated in the Camp ──────────
-    // applySkillTreeBonuses() is exposed by camp-skill-system.js (loaded before
-    // sandbox-loop.js in sandbox.html).  It reads saveData.skillTree and writes
-    // stat upgrades into the global playerStats object.
-    if (typeof window.applySkillTreeBonuses === 'function') {
-      try {
-        window.applySkillTreeBonuses();
-        console.log('[SandboxLoop] Camp skill-tree bonuses applied to playerStats.');
-      } catch (e) {
-        console.warn('[SandboxLoop] applySkillTreeBonuses() error (non-fatal):', e);
+    // Fallback: if aggregator unavailable, use base defaults + skill tree only
+    if (!playerStats) {
+      if (typeof getDefaultPlayerStats === 'function') {
+        playerStats = getDefaultPlayerStats(typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.baseExpReq : 30);
+      } else {
+        playerStats = {
+          lvl: 1, exp: 0, expReq: 30, hp: 100, maxHp: 100,
+          strength: 1, armor: 0, speed: 1, critChance: 0.1, critDmg: 1.5,
+          damage: 1, atkSpeed: 1, walkSpeed: 25, kills: 0, hpRegen: 0, gold: 0,
+          pickupRange: 1.0, dropRate: 1.0, perks: {}, survivalTime: 0,
+        };
+      }
+      if (typeof window.applySkillTreeBonuses === 'function') {
+        try {
+          window.applySkillTreeBonuses();
+        } catch (e) {
+          console.warn('[SandboxLoop] applySkillTreeBonuses() fallback error (non-fatal):', e);
+        }
       }
     }
 
