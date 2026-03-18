@@ -669,15 +669,19 @@
           }
           
           // Adaptive lerp: faster on direction change (snappier turns), normal on straight runs
+          // inputResponsiveness is the per-frame lerp factor (0.07 at L1 = sluggish, 0.5 = instant)
+          // frictionGrip is the stopping lerp factor (0.035 at L1 = slides, 0.25 = snaps to stop)
+          const accelLerp = playerStats.inputResponsiveness || GAME_CONFIG.accelLerpFactor;
+          const decelLerp = playerStats.frictionGrip        || GAME_CONFIG.decelLerpFactor;
           const isChangingDir = dirChangeAmount > 0.25;
           const isStopping = !joystickLeft.active;
           let baseLerp;
           if (isStopping) {
-            baseLerp = GAME_CONFIG.decelLerpFactor * stopResp;
+            baseLerp = decelLerp * stopResp;
           } else if (isChangingDir) {
-            baseLerp = GAME_CONFIG.accelLerpFactor * turnResp * (1.0 + dirChangeAmount * 0.4);
+            baseLerp = accelLerp * turnResp * (1.0 + dirChangeAmount * 0.4);
           } else {
-            baseLerp = GAME_CONFIG.accelLerpFactor * turnResp;
+            baseLerp = accelLerp * turnResp;
           }
           const lerpFactor = Math.min(baseLerp * (dt * 60), 1.0);
           this.velocity.lerp(targetVel, lerpFactor);
@@ -1273,6 +1277,10 @@
 
       dash(dx, dz) {
         if (this.isDashing) return;
+        // Dash must be unlocked via skill tree (set by calculateTotalPlayerStats).
+        // Check for explicit false only: undefined (old saves without the aggregator) still allow dash
+        // for backward compatibility; new saves start with dashUnlocked=false and unlock via skill tree.
+        if (typeof playerStats !== 'undefined' && playerStats !== null && playerStats.dashUnlocked === false) return;
         this.isDashing = true;
         this.dashTime = this.dashDuration;
         

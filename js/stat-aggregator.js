@@ -68,35 +68,94 @@
     } else if (typeof getDefaultPlayerStats === 'function') {
       stats = getDefaultPlayerStats(30);
     } else {
-      // Absolute fallback — absolute minimum for sandbox
+      // Absolute fallback — Level 1 baseline: weak, sluggish, limited
       stats = {
         lvl: 1, exp: 0, expReq: 30, hp: 100, maxHp: 100,
         strength: 1, armor: 0, speed: 1, critChance: 0.10, critDmg: 1.5,
         damage: 1, atkSpeed: 1, walkSpeed: 25, kills: 0, hpRegen: 0,
         hpRegenPerSecond: 0, gold: 0, survivalTime: 0, pickupRange: 1.0,
         dropRate: 1.0, auraRange: 1.0, perks: {},
-        topSpeed: 6.5, acceleration: 22.0, friction: 18.0, turnSpeed: 1.0,
-        inputResponsiveness: 0.12, dashInvincibilityFrames: 8,
-        fireRate: 1.0, reloadSpeed: 1.0, recoilRecovery: 1.0, aimSpeed: 1.0,
-        magazineCapacity: 5, armorPiercing: 0,
-        meleeRange: 1.0, meleeKnockbackPower: 1.0, cleaveAngle: 60,
-        flatArmor: 0, evadeChance: 0, staggerResistance: 0,
-        xpCollectionRadius: 1.0, luck: 0,
-        criticalHitChance: 0.10, criticalHitDamageMulti: 1.5,
-        meleeAttackSpeed: 1.0, projectileFireRate: 1.0, projectileSpeed: 1.0,
-        projectileSize: 1.0, meleeDamage: 0, projectileDamage: 0,
-        dodgeChance: 0, damageReduction: 0, healOnKill: 0,
-        lowHpDamage: 0, executeDamage: 0, armorPenetration: 0,
-        multiHitChance: 0, weaponDamage: 0,
-        fireDamage: 0, iceDamage: 0, lightningDamage: 0, elementalDamage: 0,
-        burnChance: 0, slowChance: 0, chainChance: 0, chainCount: 0,
-        freezeChance: 0, burnSpread: false, spellEchoChance: 0,
-        elementalChain: 0, elementalGuaranteed: false,
-        baseMovementSpeed: 1.0, sprintDashSpeed: 1.0,
-        lifesteal: 0, dodgeChanceBonus: 0, hpRegenRate: 0,
-        goldDropBonus: 0, expGainBonus: 0, itemDropRate: 1.0,
+
+        // ── Kinematics ──────────────────────────────────────────────────────
+        topSpeed: 6.5,             // world-units/s (upgradeable)
+        acceleration: 22.0,        // world-units/s² (upgradeable)
+        friction: 18.0,            // legacy world-units/s² alias
+        frictionGrip: 0.035,       // lerp factor for stopping (0=slip, 1=snap)
+        turnSpeed: 1.0,            // multiplier for facing updates
+        inputResponsiveness: 0.07, // lerp factor for acceleration (sluggish at L1)
         mobilityScore: 1.0, turnResponse: 1.0, stopResponse: 1.0,
-        meleeCooldown: 1.0, skillCooldown: 1.0, dashCooldown: 1.0
+        baseMovementSpeed: 1.0, sprintDashSpeed: 1.0,
+
+        // ── Dash Dynamics ───────────────────────────────────────────────────
+        dashUnlocked: false,       // Must be unlocked via skill tree
+        dashDistance: 5.0,         // world-units per dash
+        dashCooldown: 1.0,         // seconds
+        dashIframes: 8,            // invincibility frames during dash
+        dashInvincibilityFrames: 8,// alias
+
+        // ── Melee Dynamics ──────────────────────────────────────────────────
+        meleeSwingSpeed: 1.0,      // multiplier (higher = faster swings)
+        meleeRecoveryTime: 1.0,    // seconds between swings (lower = faster)
+        meleeCleaveAngle: 60,      // degrees of AoE arc
+        meleeStaggerPower: 1.0,    // knockback force multiplier
+        meleeAttackSpeed: 1.0,     // legacy alias for meleeSwingSpeed
+        meleeRange: 1.0,
+        meleeKnockbackPower: 1.0,  // legacy alias for meleeStaggerPower
+        cleaveAngle: 60,           // legacy alias for meleeCleaveAngle
+        meleeDamage: 0,
+        meleeCooldown: 1.0,
+
+        // ── Ranged Ballistics ────────────────────────────────────────────────
+        gunFireRate: 1.0,          // shots per second multiplier
+        gunReloadSpeed: 1.0,       // reload speed multiplier
+        gunAimSpeed: 1.0,          // how fast gun tracks target
+        projectileVelocity: 1.0,   // projectile travel speed multiplier
+        recoilRecovery: 1.0,       // spread reduction rate multiplier
+        pierceCount: 0,            // extra enemies a bullet passes through
+        fireRate: 1.0,             // legacy alias for gunFireRate
+        reloadSpeed: 1.0,          // legacy alias for gunReloadSpeed
+        aimSpeed: 1.0,             // legacy alias for gunAimSpeed
+        projectileSpeed: 1.0,      // legacy alias for projectileVelocity
+        projectileFireRate: 1.0,
+        projectileSize: 1.0,
+        projectileDamage: 0,
+        magazineCapacity: 5,
+        armorPiercing: 0,
+        skillCooldown: 1.0,
+
+        // ── Resilience (Defense) ─────────────────────────────────────────────
+        hpRegenAmount: 0,          // HP restored per tick
+        hpRegenTickRate: 1.0,      // seconds per regen tick
+        flatArmor: 0,              // flat damage reduction
+        percentDamageReduction: 0, // % damage reduction (0–1)
+        evadeChance: 0,            // chance to fully negate a hit (0–1)
+        staggerResistance: 0,      // reduces knockback (0–1)
+        damageReduction: 0,        // legacy alias for percentDamageReduction
+        dodgeChance: 0,
+        healOnKill: 0,
+        dodgeChanceBonus: 0, hpRegenRate: 0,
+
+        // ── Spiritual & Elemental ────────────────────────────────────────────
+        fireDamage: 0, burnChance: 0,
+        iceDamage: 0, freezeChance: 0,
+        lightningChainCount: 0,    // how many times lightning chains
+        lightningDamage: 0,
+        spiritualEcho: 0,          // chance to double-cast (0–1)
+        spellEchoChance: 0,        // legacy alias for spiritualEcho
+        lifeSteal: 0,              // % of damage dealt restored as HP
+        lifesteal: 0,              // legacy alias
+        elementalDamage: 0,
+        slowChance: 0, chainChance: 0, chainCount: 0,
+        burnSpread: false, elementalChain: 0, elementalGuaranteed: false,
+
+        // ── Utility ──────────────────────────────────────────────────────────
+        luck: 0,                   // general luck factor (0–1)
+        xpCollectionRadius: 1.0,   // pickup radius multiplier
+        critDamageMultiplier: 1.5, // crit damage multiplier
+        goldDropMultiplier: 1.0,   // gold drop rate multiplier
+        goldDropBonus: 0,          // legacy additive bonus
+        expGainBonus: 0, itemDropRate: 1.0,
+        criticalHitChance: 0.10, criticalHitDamageMulti: 1.5
       };
     }
 
@@ -106,7 +165,12 @@
 
     if (!sd) return stats; // No save data yet — return base stats
 
-    // ── 2. Camp Building bonuses ─────────────────────────────────────────────
+    // ── 1b. Sync dashUnlocked from saveData.tutorial (existing mechanism) ────
+    if (sd.tutorial && sd.tutorial.dashUnlocked) {
+      stats.dashUnlocked = true;
+    }
+
+
     if (sd.campBuildings) {
       var bldgs = sd.campBuildings;
 
@@ -255,8 +319,9 @@
         if (bonus.critDamage)    critDmgFlat   += bonus.critDamage;
         if (bonus.attackSpeed)   atkSpeedMult  += bonus.attackSpeed;
         if (bonus.moveSpeed)     moveSpeedMult += bonus.moveSpeed;
-        if (bonus.dashCooldown)  dashCdRed     += bonus.dashCooldown;
-        if (bonus.dashDistance)  dashDistMult  += bonus.dashDistance;
+        if (bonus.dashCooldown)  { dashCdRed += bonus.dashCooldown; }
+        if (bonus.dashDistance)  { dashDistMult += bonus.dashDistance; }
+        if (bonus.dashUnlocked)  stats.dashUnlocked = true;
         if (bonus.cooldown)      cdRed         += bonus.cooldown;
 
         // Deep granular stats
@@ -472,6 +537,31 @@
         stats.iceDamage = (stats.iceDamage || 0) + pa.iceDamage * 0.05;
       if ((pa.lightningDamage || 0) > 0)
         stats.lightningDamage = (stats.lightningDamage || 0) + pa.lightningDamage * 0.05;
+      if ((pa.burnChance || 0) > 0)
+        stats.burnChance = Math.min(0.80, (stats.burnChance || 0) + pa.burnChance * 0.03);
+      if ((pa.freezeChance || 0) > 0)
+        stats.freezeChance = Math.min(0.80, (stats.freezeChance || 0) + pa.freezeChance * 0.03);
+      if ((pa.lightningChainCount || 0) > 0) {
+        stats.lightningChainCount = (stats.lightningChainCount || 0) + pa.lightningChainCount;
+        stats.chainCount = Math.max(stats.chainCount || 0, stats.lightningChainCount);
+      }
+      if ((pa.spiritualEcho || 0) > 0)
+        stats.spiritualEcho = Math.min(0.60, (stats.spiritualEcho || 0) + pa.spiritualEcho * 0.02);
+      if ((pa.lifeSteal || 0) > 0)
+        stats.lifeSteal = Math.min(0.40, (stats.lifeSteal || 0) + pa.lifeSteal * 0.02);
+
+      // Dash unlock from profileAccount
+      if (pa.dashUnlocked) stats.dashUnlocked = true;
+
+      // Pierce count (ranged ballistics)
+      if ((pa.pierceCount || 0) > 0)
+        stats.pierceCount = (stats.pierceCount || 0) + pa.pierceCount;
+
+      // Input responsiveness / frictionGrip
+      if ((pa.inputResponsiveness || 0) > 0)
+        stats.inputResponsiveness = Math.min(0.55, (stats.inputResponsiveness || 0.07) + pa.inputResponsiveness * 0.01);
+      if ((pa.frictionGrip || 0) > 0)
+        stats.frictionGrip = Math.min(0.25, (stats.frictionGrip || 0.035) + pa.frictionGrip * 0.01);
 
       // Cooldowns
       if ((pa.dashCooldown || 0) > 0) {
@@ -485,7 +575,7 @@
       }
     }
 
-    // ── Clamp & sync aliases ─────────────────────────────────────────────────
+    // ── Clamp ────────────────────────────────────────────────────────────────
     stats.armor    = Math.min(85,   stats.armor    || 0);
     stats.flatArmor= Math.min(85,   stats.flatArmor|| 0);
     stats.critChance = Math.min(0.95, stats.critChance || 0.10);
@@ -494,13 +584,81 @@
     stats.luck        = Math.min(1.0,  stats.luck       || 0);
     stats.staggerResistance = Math.min(0.90, stats.staggerResistance || 0);
 
-    stats.criticalHitChance       = stats.critChance;
-    stats.criticalHitDamageMulti  = stats.critDmg || 1.5;
-    stats.xpCollectionRadius      = stats.pickupRange || 1.0;
-    stats.mobilityScore           = stats.turnResponse || 1.0;
+    // percentDamageReduction is the canonical name; damageReduction is the legacy name.
+    // Both accumulate independently during aggregation; take the higher of the two.
+    var pdrMax = Math.max(stats.percentDamageReduction || 0, stats.damageReduction || 0);
+    stats.percentDamageReduction = Math.min(0.75, pdrMax);
+    stats.damageReduction        = stats.percentDamageReduction;
 
-    // Ensure hpRegen and hpRegenPerSecond are synced
-    stats.hpRegen = Math.max(stats.hpRegen || 0, stats.hpRegenPerSecond || 0);
+    // ── Unidirectional alias sync (legacy engine names are authoritative) ────
+    // The engine uses legacy names everywhere. Canonical display names are kept
+    // in sync as read-only copies for the Profile Stats panel.
+
+    // Ranged: legacy names used by engine; canonical names are display aliases.
+    stats.fireRate         = Math.max(stats.fireRate || 1.0, stats.gunFireRate || 1.0);
+    stats.reloadSpeed      = Math.max(stats.reloadSpeed || 1.0, stats.gunReloadSpeed || 1.0);
+    stats.aimSpeed         = Math.max(stats.aimSpeed || 1.0, stats.gunAimSpeed || 1.0);
+    stats.projectileSpeed  = Math.max(stats.projectileSpeed || 1.0, stats.projectileVelocity || 1.0);
+    stats.projectileFireRate = stats.fireRate;
+    // Sync canonical display copies (read-only, engine ignores these)
+    stats.gunFireRate        = stats.fireRate;
+    stats.gunReloadSpeed     = stats.reloadSpeed;
+    stats.gunAimSpeed        = stats.aimSpeed;
+    stats.projectileVelocity = stats.projectileSpeed;
+
+    // Melee: same pattern — legacy names used by engine.
+    stats.meleeAttackSpeed   = Math.max(stats.meleeAttackSpeed || 1.0, stats.meleeSwingSpeed || 1.0);
+    stats.cleaveAngle        = Math.max(stats.cleaveAngle || 60, stats.meleeCleaveAngle || 60);
+    stats.meleeKnockbackPower= Math.max(stats.meleeKnockbackPower || 1.0, stats.meleeStaggerPower || 1.0);
+    stats.meleeSwingSpeed    = stats.meleeAttackSpeed;   // canonical display copy
+    stats.meleeCleaveAngle   = stats.cleaveAngle;        // canonical display copy
+    stats.meleeStaggerPower  = stats.meleeKnockbackPower;// canonical display copy
+
+    // Spiritual: legacy name is spellEchoChance; spiritualEcho is the display alias.
+    stats.spellEchoChance    = Math.max(stats.spellEchoChance || 0, stats.spiritualEcho || 0);
+    stats.spiritualEcho      = stats.spellEchoChance;    // canonical display copy
+    stats.lifesteal          = Math.max(stats.lifesteal || 0, stats.lifeSteal || 0);
+    stats.lifeSteal          = stats.lifesteal;           // canonical display copy
+
+    // Dash: dashInvincibilityFrames is the engine name; dashIframes is the display alias.
+    stats.dashInvincibilityFrames = Math.max(stats.dashInvincibilityFrames || 8, stats.dashIframes || 8);
+    stats.dashIframes             = stats.dashInvincibilityFrames;
+
+    // Lightning chain: chainCount is the engine name; lightningChainCount is display alias.
+    stats.chainCount          = Math.max(stats.chainCount || 0, stats.lightningChainCount || 0);
+    stats.lightningChainCount = stats.chainCount;
+
+    // HP regen: hpRegen / hpRegenPerSecond are used by the engine.
+    stats.hpRegen           = Math.max(stats.hpRegen || 0, stats.hpRegenPerSecond || 0, stats.hpRegenAmount || 0);
+    stats.hpRegenPerSecond  = stats.hpRegen;
+    stats.hpRegenAmount     = stats.hpRegen; // canonical display copy
+
+    // Crit damage: critDmg is the engine name; critDamageMultiplier is the display alias.
+    stats.critDmg             = Math.max(stats.critDmg || 1.5, stats.critDamageMultiplier || 1.5);
+    stats.critDamageMultiplier = stats.critDmg; // canonical display copy
+
+    // Gold: goldDropBonus is the engine additive; goldDropMultiplier is a display total.
+    stats.goldDropBonus      = stats.goldDropBonus || 0;
+    stats.goldDropMultiplier = Math.max(1.0, 1.0 + stats.goldDropBonus);
+
+    // Pickup / XP radius: pickupRange is the engine name; xpCollectionRadius is display alias.
+    stats.pickupRange        = Math.max(stats.pickupRange || 1.0, stats.xpCollectionRadius || 1.0);
+    stats.xpCollectionRadius = stats.pickupRange; // canonical display copy
+
+    // Friction: frictionGrip is the new lerp-based stat (used by player-class.js).
+    // The legacy `friction` field stores the value in world-units/s² for any old code.
+    // Conversion: lerp_per_frame ≈ physics_decel / max_speed; at max_speed=6.5 and
+    // 60 fps the effective decel is frictionGrip * 60 * 6.5 ≈ frictionGrip * 390 ≈ ~500
+    // so we approximate legacy friction = frictionGrip * 500.
+    if (stats.frictionGrip > 0) {
+      stats.friction = stats.frictionGrip * 500;
+    } else {
+      stats.frictionGrip = (stats.friction || 18.0) / 500;
+    }
+
+    stats.criticalHitChance       = stats.critChance;
+    stats.criticalHitDamageMulti  = stats.critDmg;
+    stats.mobilityScore           = stats.turnResponse || 1.0;
 
     return stats;
   }

@@ -70,62 +70,100 @@ window.GameAccount = (function () {
   var ATTR_BONUS_PER_POINT = 0.002; // 0.2% per point
 
   var STAT_CATEGORIES = [
-    { icon: '⚔️', name: 'Combat', stats: [
-      { key: 'damage',        label: 'Damage',            base: 1.0 },
-      { key: 'atkSpeed',      label: 'Attack Speed',      base: 1.0 },
-      { key: 'strength',      label: 'Attack Power',      base: 1.0 },
-      { key: 'weaponDamage',  label: 'Weapon Damage',     base: 0 },
-      { key: 'critChance',    label: 'Crit Chance',       base: 0.1, pct: true },
-      { key: 'critDmg',       label: 'Crit Multiplier',   base: 1.5 },
-      { key: 'multiHitChance',label: 'Multi-Hit Chance',  base: 0,   pct: true },
-      { key: 'armorPenetration',label:'Armor Penetration',base: 0,   pct: true },
-      { key: 'executeDamage', label: 'Execute Damage',    base: 0,   pct: true },
-      { key: 'lowHpDamage',   label: 'Low HP Damage',     base: 0,   pct: true }
+    // ── Kinematics (Movement & Control) ─────────────────────────────────────
+    { icon: '🏃', name: 'Kinematics', stats: [
+      { key: 'walkSpeed',           label: 'Walk Speed',           base: 25 },
+      { key: 'topSpeed',            label: 'Top Speed',            base: 6.5 },
+      { key: 'acceleration',        label: 'Acceleration',         base: 22.0 },
+      { key: 'frictionGrip',        label: 'Friction Grip (Stop)', base: 0.035 },
+      { key: 'turnSpeed',           label: 'Turn Speed',           base: 1.0 },
+      { key: 'inputResponsiveness', label: 'Input Responsiveness', base: 0.07 }
     ]},
-    { icon: '🛡️', name: 'Defensive', stats: [
-      { key: 'maxHp',         label: 'Max HP',            base: 100 },
-      { key: 'hpRegen',       label: 'HP Regen',          base: 0 },
-      { key: 'armor',         label: 'Armor',             base: 0 },
-      { key: 'damageReduction',label:'Damage Reduction',  base: 0,   pct: true },
-      { key: 'dodgeChance',   label: 'Dodge Chance',      base: 0,   pct: true },
-      { key: 'thornsPercent', label: 'Thorns',            base: 0,   pct: true },
-      { key: 'healOnKill',    label: 'Heal on Kill',      base: 0 }
+    // ── Dash Dynamics ────────────────────────────────────────────────────────
+    { icon: '💨', name: 'Dash Dynamics', stats: [
+      { key: 'dashUnlocked',  label: 'Dash Unlocked (0=No/1=Yes)', base: 0 },
+      { key: 'dashDistance',  label: 'Dash Distance',              base: 5.0 },
+      { key: 'dashCooldown',  label: 'Dash Cooldown (s)',          base: 1.0 },
+      { key: 'dashIframes',   label: 'Dash Invincibility Frames',  base: 8 }
     ]},
-    { icon: '🏃', name: 'Speed & Mobility', stats: [
-      { key: 'walkSpeed',     label: 'Walk Speed',        base: 25 },
-      { key: 'speed',         label: 'Speed Multiplier',  base: 1.0 },
-      { key: 'mobilityScore', label: 'Mobility Score',    base: 1.0 },
-      { key: 'dashDistanceBonus',label:'Dash Distance',   base: 0,   pct: true },
-      { key: 'dashCooldownReduction',label:'Dash CDR',    base: 0,   pct: true }
+    // ── Melee Dynamics ───────────────────────────────────────────────────────
+    { icon: '⚔️', name: 'Melee Dynamics', stats: [
+      { key: 'meleeSwingSpeed',    label: 'Melee Swing Speed',     base: 1.0 },
+      { key: 'meleeRecoveryTime',  label: 'Melee Recovery Time',   base: 1.0 },
+      { key: 'meleeCleaveAngle',   label: 'Cleave Angle (°)',       base: 60 },
+      { key: 'meleeStaggerPower',  label: 'Stagger / Knockback',   base: 1.0 }
     ]},
-    { icon: '🔥', name: 'Elemental', stats: [
-      { key: 'fireDamage',    label: 'Fire Damage',       base: 0,   pct: true },
-      { key: 'iceDamage',     label: 'Ice Damage',        base: 0,   pct: true },
-      { key: 'lightningDamage',label:'Lightning Damage',  base: 0,   pct: true },
-      { key: 'elementalDamage',label:'Elemental Damage',  base: 0,   pct: true },
-      { key: 'burnChance',    label: 'Burn Chance',       base: 0,   pct: true },
-      { key: 'slowChance',    label: 'Slow Chance',       base: 0,   pct: true },
-      { key: 'freezeChance',  label: 'Freeze Chance',     base: 0,   pct: true },
-      { key: 'chainChance',   label: 'Chain Chance',      base: 0,   pct: true },
-      { key: 'chainCount',    label: 'Chain Count',       base: 0 },
-      { key: 'spellEchoChance',label:'Spell Echo',        base: 0,   pct: true }
+    // ── Ranged Ballistics ────────────────────────────────────────────────────
+    { icon: '🔫', name: 'Ranged Ballistics', stats: [
+      { key: 'gunFireRate',       label: 'Gun Fire Rate',          base: 1.0 },
+      { key: 'gunReloadSpeed',    label: 'Gun Reload Speed',       base: 1.0 },
+      { key: 'gunAimSpeed',       label: 'Gun Aim Speed',          base: 1.0 },
+      { key: 'projectileVelocity',label: 'Projectile Velocity',    base: 1.0 },
+      { key: 'recoilRecovery',    label: 'Recoil Recovery',        base: 1.0 },
+      { key: 'pierceCount',       label: 'Pierce Count',           base: 0 }
     ]},
-    { icon: '✨', name: 'Magical', stats: [
-      { key: 'elementalChain',label: 'Elemental Chain',   base: 0 },
-      { key: 'auraRange',     label: 'Aura Range',        base: 1.0 },
-      { key: 'doubleCritChance',label:'Double Crit',      base: 0,   pct: true }
+    // ── Resilience (Defense) ────────────────────────────────────────────────
+    { icon: '🛡️', name: 'Resilience', stats: [
+      { key: 'maxHp',                  label: 'Max HP',                base: 100 },
+      { key: 'hpRegenAmount',          label: 'HP Regen / Tick',       base: 0 },
+      { key: 'hpRegenTickRate',        label: 'HP Regen Tick Rate (s)', base: 1.0 },
+      { key: 'flatArmor',              label: 'Flat Armor',            base: 0 },
+      { key: 'percentDamageReduction', label: '% Damage Reduction',    base: 0, pct: true },
+      { key: 'evadeChance',            label: 'Evade Chance',          base: 0, pct: true },
+      { key: 'staggerResistance',      label: 'Stagger Resistance',    base: 0, pct: true }
     ]},
-    { icon: '👻', name: 'Spiritual', stats: [
-      { key: 'lifeStealPercent',label:'Life Steal',       base: 0,   pct: true }
+    // ── Spiritual & Elemental ────────────────────────────────────────────────
+    { icon: '🔥', name: 'Spiritual & Elemental', stats: [
+      { key: 'fireDamage',         label: 'Fire Damage',           base: 0, pct: true },
+      { key: 'burnChance',         label: 'Burn Chance',           base: 0, pct: true },
+      { key: 'iceDamage',          label: 'Ice Damage',            base: 0, pct: true },
+      { key: 'freezeChance',       label: 'Freeze Chance',         base: 0, pct: true },
+      { key: 'lightningChainCount',label: 'Lightning Chain Count', base: 0 },
+      { key: 'spiritualEcho',      label: 'Spiritual Echo (2× cast)', base: 0, pct: true },
+      { key: 'lifeSteal',          label: 'Life Steal',            base: 0, pct: true }
     ]},
+    // ── Utility ──────────────────────────────────────────────────────────────
     { icon: '🎒', name: 'Utility', stats: [
-      { key: 'pickupRange',   label: 'Pickup Range',      base: 1.0 },
-      { key: 'dropRate',      label: 'Drop Rate',         base: 1.0 },
-      { key: 'treasureHunterChance',label:'Treasure Hunter',base:0,  pct: true }
+      { key: 'luck',                label: 'Luck',                  base: 0, pct: true },
+      { key: 'xpCollectionRadius',  label: 'XP Collection Radius',  base: 1.0 },
+      { key: 'critChance',          label: 'Crit Chance',           base: 0.1, pct: true },
+      { key: 'critDamageMultiplier',label: 'Crit Damage Multiplier',base: 1.5 },
+      { key: 'goldDropMultiplier',  label: 'Gold Drop Multiplier',  base: 1.0 }
     ]},
-    { icon: '📊', name: 'Projectile', stats: [
-      { key: 'extraProjectiles',label:'Extra Projectiles',base: 0 },
-      { key: 'doubleCastChance',label:'Double Cast Chance',base:0,   pct: true }
+    // ── Combat (Offense) ────────────────────────────────────────────────────
+    { icon: '💥', name: 'Combat', stats: [
+      { key: 'damage',            label: 'Damage',            base: 1.0 },
+      { key: 'atkSpeed',          label: 'Attack Speed',      base: 1.0 },
+      { key: 'strength',          label: 'Attack Power',      base: 1.0 },
+      { key: 'weaponDamage',      label: 'Weapon Damage',     base: 0 },
+      { key: 'multiHitChance',    label: 'Multi-Hit Chance',  base: 0, pct: true },
+      { key: 'armorPenetration',  label: 'Armor Penetration', base: 0, pct: true },
+      { key: 'executeDamage',     label: 'Execute Damage',    base: 0, pct: true },
+      { key: 'lowHpDamage',       label: 'Low HP Bonus Dmg',  base: 0, pct: true }
+    ]},
+    // ── Elemental (Extended) ─────────────────────────────────────────────────
+    { icon: '✨', name: 'Elemental (Extended)', stats: [
+      { key: 'lightningDamage',  label: 'Lightning Damage',  base: 0, pct: true },
+      { key: 'elementalDamage',  label: 'Elemental Damage',  base: 0, pct: true },
+      { key: 'slowChance',       label: 'Slow Chance',       base: 0, pct: true },
+      { key: 'chainChance',      label: 'Chain Chance',      base: 0, pct: true },
+      { key: 'spellEchoChance',  label: 'Spell Echo Chance', base: 0, pct: true },
+      { key: 'elementalChain',   label: 'Elemental Chain',   base: 0 },
+      { key: 'auraRange',        label: 'Aura Range',        base: 1.0 },
+      { key: 'doubleCritChance', label: 'Double Crit',       base: 0, pct: true },
+      { key: 'extraProjectiles', label: 'Extra Projectiles', base: 0 },
+      { key: 'doubleCastChance', label: 'Double Cast',       base: 0, pct: true }
+    ]},
+    // ── Survivability (Extended) ─────────────────────────────────────────────
+    { icon: '💚', name: 'Survivability (Extended)', stats: [
+      { key: 'hpRegen',          label: 'HP Regen/s',        base: 0 },
+      { key: 'armor',            label: 'Armor (total)',     base: 0 },
+      { key: 'dodgeChance',      label: 'Dodge Chance',      base: 0, pct: true },
+      { key: 'thornsPercent',    label: 'Thorns',            base: 0, pct: true },
+      { key: 'healOnKill',       label: 'Heal on Kill',      base: 0 },
+      { key: 'pickupRange',      label: 'Pickup Range',      base: 1.0 },
+      { key: 'dropRate',         label: 'Drop Rate',         base: 1.0 },
+      { key: 'treasureHunterChance', label: 'Treasure Hunter', base: 0, pct: true }
     ]}
   ];
 

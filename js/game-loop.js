@@ -892,7 +892,8 @@
           
           // Button 0 (A/X) for dash - detect button press (not hold)
           const dashPressed = gamepad.buttons[0].pressed;
-          if (dashPressed && !gameSettings.gamepadButtonStates.dashButton && !player.isDashing && joystickLeft.active) {
+          const dashAllowed = !playerStats || playerStats.dashUnlocked !== false;
+          if (dashPressed && !gameSettings.gamepadButtonStates.dashButton && !player.isDashing && joystickLeft.active && dashAllowed) {
             player.isDashing = true;
             player.dashTime = player.dashDuration;
             // Convert joystick direction to isometric world coordinates before dashing
