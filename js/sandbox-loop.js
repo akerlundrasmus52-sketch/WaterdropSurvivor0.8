@@ -1049,6 +1049,8 @@
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
     slot.dead = true;
+    // CRITICAL FIX: Ensure corpse mesh stays visible!
+    slot.mesh.visible = true;
     // Flatten the corpse mesh and darken to a bloody grey
     slot.mesh.material.color.setHex(0x3A1A1A);
     slot.mesh.material.emissiveIntensity = 0.05;
