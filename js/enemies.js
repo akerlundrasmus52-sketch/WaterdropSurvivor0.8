@@ -72,50 +72,54 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
   // Use the new power-curve scaling instead of the legacy linear multiplier
   const ls = getEnemyLevelScaling(playerLevel);
 
+  // TRAUMA SYSTEM UPDATE: +20% HP across all enemies to allow progressive wound system
+  // to be visible before death (enemies survive longer to show wound aggravation)
+  const TRAUMA_HP_MULTIPLIER = 1.2;
+
   if (type === 0) {           // Tank — simple direct movement
-    stats.hp    = 200 * ls;
+    stats.hp    = 200 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 1.2;
   } else if (type === 1) {    // Fast — simple direct movement
-    stats.hp    = 60  * ls;
+    stats.hp    = 60  * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 2.8;
   } else if (type === 2) {    // Balanced — simple direct movement
-    stats.hp    = 120 * ls;
+    stats.hp    = 120 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 1.8;
   } else if (type === 3) {    // Slowing — simple direct movement
-    stats.hp           = 150 * ls;
+    stats.hp           = 150 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed        = speedBase * 1.6;
     stats.slowDuration = 2000;
     stats.slowAmount   = 0.5;
   } else if (type === 4) {    // Ranged — maintains distance
-    stats.hp             = 100 * ls;
+    stats.hp             = 100 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed          = speedBase * 1.4;
     stats.attackRange    = 8;
     stats.projectileSpeed = 0.15;
   } else if (type === 5) {    // Flying — simple direct movement
-    stats.hp       = 120 * ls;
+    stats.hp       = 120 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed    = speedBase * 2.4;
     stats.isFlying = true;
   } else if (type === 6) {    // Hard Tank — simple direct movement
-    stats.hp    = 350 * ls;
+    stats.hp    = 350 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 1.3;
   } else if (type === 7) {    // Hard Fast — simple direct movement
-    stats.hp    = 110 * ls * 1.2; // +20% HP (yellow/gold enemy)
+    stats.hp    = 110 * ls * 1.2 * TRAUMA_HP_MULTIPLIER; // +20% HP (yellow/gold enemy) + trauma bonus
     stats.speed = speedBase * 3.2;
   } else if (type === 8) {    // Hard Balanced — simple direct movement
-    stats.hp    = 220 * ls;
+    stats.hp    = 220 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 2.0;
   } else if (type === 9) {    // Elite — simple direct movement
-    stats.hp    = 400 * ls;
+    stats.hp    = 400 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 1.8;
   } else if (type === 10) {   // MiniBoss
     const miniBossStartLevel = 10;
-    stats.hp         = 2000 * 1.2 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE); // +20% HP (yellow/gold enemy)
+    stats.hp         = 2000 * 1.2 * (1 + (playerLevel - miniBossStartLevel) * MINI_BOSS_HP_SCALING_RATE) * TRAUMA_HP_MULTIPLIER; // +20% HP (yellow/gold enemy) + trauma bonus
     stats.speed      = speedBase * 1.0;
     stats.isMiniBoss = true;
     stats.armor      = getEnemyArmor(playerLevel, 0.30);
   } else if (type === 11) {   // Flying Boss (level 15) — giant airborne boss
     const flyingBossStartLevel = 15;
-    stats.hp          = 5000 * (1 + Math.max(0, playerLevel - flyingBossStartLevel) * MINI_BOSS_HP_SCALING_RATE);
+    stats.hp          = 5000 * (1 + Math.max(0, playerLevel - flyingBossStartLevel) * MINI_BOSS_HP_SCALING_RATE) * TRAUMA_HP_MULTIPLIER;
     stats.speed       = speedBase * 1.4;
     stats.isFlying    = true;
     stats.isFlyingBoss = true;
@@ -123,34 +127,34 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.attackRange = 12;
     stats.projectileSpeed = 0.18;
   } else if (type === 12) {   // Bug Ranged — ranged attacker
-    stats.hp             = 90 * ls;
+    stats.hp             = 90 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed          = speedBase * 1.5;
     stats.isBug          = true;
     stats.attackRange    = 10;
     stats.projectileSpeed = 0.14;
   } else if (type === 13) {   // Bug Slow — armoured tank
-    stats.hp    = 280 * ls;
+    stats.hp    = 280 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed = speedBase * 0.9;
     stats.isBug = true;
     stats.armor = getEnemyArmor(playerLevel, 0.20);
   } else if (type === 14) {   // Bug Fast — fast flyer
-    stats.hp       = 50 * ls;
+    stats.hp       = 50 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed    = speedBase * 3.4;
     stats.isBug    = true;
     stats.isFlying = true;
   } else if (type === 15) {   // Daddy Longlegs — spider
-    stats.hp       = 110 * ls * 1.2;  // Same HP as yellow enemy
+    stats.hp       = 110 * ls * 1.2 * TRAUMA_HP_MULTIPLIER;  // Same HP as yellow enemy + trauma bonus
     stats.speed    = speedBase * 1.5;
     stats.isDaddyLonglegs = true;
     stats.attackRange    = 3.5;   // Melee-range attack
     stats.isSpider       = true;
   } else if (type === 16) {   // Sweeping Swarm — fast cluster
-    stats.hp       = 10 * ls;  // 1-hit kill (very fragile)
+    stats.hp       = 10 * ls * TRAUMA_HP_MULTIPLIER;  // 1-hit kill (very fragile) + trauma bonus
     stats.speed    = speedBase * 4.0;
     stats.isFlying = true;
     stats.isSwarm  = true;
   } else if (type === 17) {   // Grey Alien Scout — ranged attacker
-    stats.hp             = 280 * ls;
+    stats.hp             = 280 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed          = speedBase * 1.8;
     stats.isFlying       = true;           // hovers above ground
     stats.isGreyAlien    = true;
@@ -158,11 +162,11 @@ function getEnemyBaseStats(type, levelScaling, speedBase, playerLevel) {
     stats.projectileSpeed = 0.17;
     stats.dropsAlienBiomatter = true;      // rare biomatter drop on kill
   } else if (type === 18) {   // Reptilian Shifter — active-camo fast enemy
-    stats.hp          = 160 * ls;
+    stats.hp          = 160 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed       = speedBase * 3.6;
     stats.isReptilian = true;
   } else if (type === 20) {   // Source Glitch — reality-breaking entity
-    stats.hp       = 600 * ls;
+    stats.hp       = 600 * ls * TRAUMA_HP_MULTIPLIER;
     stats.speed    = speedBase * 0;  // Teleports instead of walking — speed handled in AI
     stats.isFlying = true;
     stats.isSourceGlitch = true;

@@ -3031,6 +3031,59 @@
           }
         }
 
+        // ─── TRAUMA SYSTEM INTEGRATION ───────────────────────────────────────────────
+        // Weapon-specific wound decals and gore reactions
+        if (window.TraumaSystem && hitPoint) {
+          // Get weapon level for intensity scaling
+          const wl = (typeof weapons !== 'undefined' && weapons) || {};
+          let weaponLevel = 1;
+          if (damageType === 'gun' || damageType === 'physical') weaponLevel = (wl.gun && wl.gun.level) || 1;
+          else if (damageType === 'drone') weaponLevel = (wl.droneTurret && wl.droneTurret.level) || 1;
+          else if (damageType === 'sword' || damageType === 'samuraiSword') weaponLevel = (wl.sword && wl.sword.level) || (wl.samuraiSword && wl.samuraiSword.level) || 1;
+          else if (damageType === 'shotgun' || damageType === 'doubleBarrel' || damageType === 'pumpShotgun' || damageType === 'autoShotgun') weaponLevel = (wl.shotgun && wl.shotgun.level) || (wl.doubleBarrel && wl.doubleBarrel.level) || 1;
+          else if (damageType === 'bow') weaponLevel = (wl.bow && wl.bow.level) || 1;
+          else if (damageType === 'iceSpear') weaponLevel = (wl.iceSpear && wl.iceSpear.level) || 1;
+
+          // Check if hit is near existing wound (aggravation system)
+          const nearbyWound = TraumaSystem.findNearbyWound(this, hitPoint);
+
+          if (nearbyWound) {
+            // Aggravate existing wound
+            const chunkTornOff = TraumaSystem.aggravateWound(nearbyWound, hitPoint, weaponLevel);
+            if (chunkTornOff && typeof createFloatingText === 'function') {
+              createFloatingText('CHUNK TORN!', hitPoint, '#FF0000');
+            }
+          } else {
+            // Create new wound decal
+            TraumaSystem.addWoundDecal(this, hitPoint, damageType);
+          }
+
+          // Weapon-specific hit effects
+          const SHOTGUN_TYPES = ['shotgun', 'doubleBarrel', 'pumpShotgun', 'autoShotgun'];
+          const SWORD_TYPES = ['sword', 'samuraiSword', 'teslaSaber', 'whip'];
+          const BOW_TYPES = ['bow', 'iceSpear'];
+
+          // Shotgun: Multiple scattered wounds
+          if (SHOTGUN_TYPES.includes(damageType)) {
+            const woundCount = 3 + Math.floor(Math.random() * 5); // 3-8 wounds
+            for (let i = 0; i < woundCount; i++) {
+              const scatterPos = hitPoint.clone();
+              scatterPos.x += (Math.random() - 0.5) * 0.4;
+              scatterPos.y += (Math.random() - 0.5) * 0.3;
+              scatterPos.z += (Math.random() - 0.5) * 0.4;
+              TraumaSystem.addWoundDecal(this, scatterPos, damageType);
+            }
+          }
+
+          // Bow/Arrow: Stick arrow in enemy at hit location
+          if (BOW_TYPES.includes(damageType) && weaponLevel >= 1) {
+            const arrowDir = hitDir ? new THREE.Vector3(hitDir.vx || 0, 0, hitDir.vz || 0).normalize()
+                                    : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────────────
+
         if (this.hp <= 0) {
           this.die();
         }
@@ -4854,10 +4907,11 @@
           }});
         }
       }
-      
+
       dieByShotgun(enemyColor) {
         // "INSIDE-OUT BLOWOUT": Massive blunt/explosive hit — scales mesh to pancake on X/Z,
         // instantly deletes the Torso segment, spawns 30 meat chunks, blasts Head 15 units back.
+        // ENHANCED: Now spawns guts, brains, and bones using TraumaSystem
         const deathPos = this.mesh.position.clone();
 
         // ── Pancake mesh scale: rapidly squash Y while expanding X/Z ──────────────
@@ -4869,6 +4923,46 @@
         if (this.torsoGroup) {
           this.torsoGroup.visible = false;
           if (this.anatomy && this.anatomy.torso) this.anatomy.torso.attached = false;
+        }
+
+        // Calculate backward velocity from bullet direction
+        const bulletVX = this._lastHitVX || 0;
+        const bulletVZ = this._lastHitVZ || 1;
+        const bulletLen = Math.sqrt(bulletVX * bulletVX + bulletVZ * bulletVZ) || 1;
+        const backwardDir = {
+          x: -bulletVX / bulletLen,
+          y: 0,
+          z: -bulletVZ / bulletLen
+        };
+
+        // ── TRAUMA SYSTEM: Spawn guts, brains, bones ─────────────────────────────
+        if (window.TraumaSystem) {
+          // Guts (intestines): 10-15 long pinkish cylinders
+          const gutCount = 10 + Math.floor(Math.random() * 6);
+          const gutVelocity = {
+            x: backwardDir.x * 0.25,
+            y: 0.3,
+            z: backwardDir.z * 0.25
+          };
+          TraumaSystem.spawnGuts(deathPos, gutCount, gutVelocity);
+
+          // Brains: 3-5 grey/pink bouncy spheres (from head)
+          const brainCount = 3 + Math.floor(Math.random() * 3);
+          const brainVelocity = {
+            x: backwardDir.x * 0.3,
+            y: 0.4,
+            z: backwardDir.z * 0.3
+          };
+          TraumaSystem.spawnBrains(deathPos, brainCount, brainVelocity);
+
+          // Bones: 8-12 white shards
+          const boneCount = 8 + Math.floor(Math.random() * 5);
+          const boneVelocity = {
+            x: backwardDir.x * 0.2,
+            y: 0.25,
+            z: backwardDir.z * 0.2
+          };
+          TraumaSystem.spawnBones(deathPos, boneCount, boneVelocity);
         }
 
         // ── Blast Head segment 15 units backwards ────────────────────────────────
@@ -4948,8 +5042,6 @@
         }
 
         // ── 30 MEAT/FLESH CHUNKS flying outward in a full cone — "Inside-Out Blowout" ──
-        const bulletVX = this._lastHitVX || 0;
-        const bulletVZ = this._lastHitVZ || 1;
         const bulletAngle = Math.atan2(bulletVZ, bulletVX);
         const chunkCount = 30; // Exactly 30 per spec
         const goreColors = [0x8B0000, 0x660000, 0x4A0000, 0x550011, 0xAA2200, 0xCC1100];
