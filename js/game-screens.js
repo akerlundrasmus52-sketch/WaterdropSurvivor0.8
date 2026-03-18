@@ -44,6 +44,8 @@
 
       // Initialize advanced blood particle system (THREE.Points, 50k particles)
       if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
+      // Initialize trauma system (wound decals, gore chunks, stuck arrows, corpse blood pump)
+      if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
       // Pre-warm global mesh pools (trail dots + meat chunks) so first firefight has no alloc cost.
       if (window.GameObjectPool) window.GameObjectPool.prewarm();
       console.log('[Init] Scene created OK');

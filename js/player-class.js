@@ -1159,37 +1159,105 @@
           }
         }
         
-        // Update aura force field — spiritual yellow-white pulsating fog ring
+        // Update aura force field — REDESIGNED: Heartbeat pulsing waves expanding outward
         if (weapons.aura.active) {
-          this.auraFogRing.visible = true;
-          this.auraFogRing.position.x = this.mesh.position.x;
-          this.auraFogRing.position.z = this.mesh.position.z;
-          
-          // Scale based on aura range — fog ring
-          const scale = weapons.aura.range * 1.5;
-          if (this.currentAuraRange !== scale) {
-            this.currentAuraRange = scale;
-            this.auraFogRing.geometry.dispose();
-            this.auraFogRing.geometry = new THREE.TorusGeometry(scale * 0.9, 0.3, 8, 24);
+          // Initialize aura wave system if needed
+          if (!this.auraPulseWaves) {
+            this.auraPulseWaves = [];
+            this.auraPulseTimer = 0;
           }
-          
-          // Fast pulsation — rapid spiritual energy waves
-          const fastPulse = Math.sin(gameTime * 10) * 0.04;
-          const slowPulse = Math.sin(gameTime * 3) * 0.02;
-          const colorShift = Math.sin(gameTime * 5) * 0.5 + 0.5;
-          // Fog ring: expand outward from feet with rotation
-          this.auraFogRing.rotation.z += 0.05;
-          const fogPulse = Math.sin(gameTime * 8) * 0.06;
-          this.auraFogRing.material.opacity = 0.08 + fogPulse;
-          const fogScale = 1.0 + Math.sin(gameTime * 6) * 0.08;
-          this.auraFogRing.scale.setScalar(fogScale);
-          this.auraFogRing.material.color.setRGB(
-            1.0,
-            1.0,
-            0.7 + colorShift * 0.2
-          );
-        } else {
+
+          // Hide old static fog ring
           this.auraFogRing.visible = false;
+
+          // Heartbeat pulse timing: Create new wave every 600ms (100 BPM heartbeat)
+          this.auraPulseTimer -= dt * 1000;
+          if (this.auraPulseTimer <= 0) {
+            this.auraPulseTimer = 600; // 100 BPM heartbeat rhythm
+
+            // Create new expanding wave ring from player
+            const waveGeo = new THREE.RingGeometry(0.1, 0.3, 24);
+            const waveMat = new THREE.MeshBasicMaterial({
+              color: 0xFFEE88, // Golden-yellow spiritual energy
+              transparent: true,
+              opacity: 0.6,
+              side: THREE.DoubleSide,
+              depthWrite: false
+            });
+            const wave = new THREE.Mesh(waveGeo, waveMat);
+            wave.rotation.x = -Math.PI / 2; // Lay flat on ground
+            wave.position.set(this.mesh.position.x, 0.05, this.mesh.position.z);
+
+            const targetScene = _getScene();
+            if (targetScene) {
+              targetScene.add(wave);
+
+              // Track wave data for animation
+              this.auraPulseWaves.push({
+                mesh: wave,
+                life: 1.0, // Normalized life 1.0 → 0.0
+                maxRadius: weapons.aura.range * 1.2 // Wave expands to aura range
+              });
+            }
+          }
+
+          // Update all active waves
+          for (let i = this.auraPulseWaves.length - 1; i >= 0; i--) {
+            const wave = this.auraPulseWaves[i];
+            wave.life -= dt * 1.2; // Wave lasts ~0.83 seconds
+
+            if (wave.life <= 0) {
+              // Wave expired, remove it
+              const targetScene = _getScene();
+              if (targetScene) {
+                targetScene.remove(wave.mesh);
+              }
+              wave.mesh.geometry.dispose();
+              wave.mesh.material.dispose();
+              this.auraPulseWaves.splice(i, 1);
+            } else {
+              // Wave expands outward and fades
+              const progress = 1 - wave.life; // 0.0 → 1.0
+              const currentRadius = progress * wave.maxRadius;
+
+              // Update ring geometry to expand
+              wave.mesh.geometry.dispose();
+              wave.mesh.geometry = new THREE.RingGeometry(
+                currentRadius * 0.85, // Inner radius
+                currentRadius * 1.0,  // Outer radius (creates thin ring)
+                24
+              );
+
+              // Fade out as wave expands
+              wave.mesh.material.opacity = wave.life * 0.5; // Fades from 0.5 to 0
+
+              // Slight color shift: yellow → white as it expands
+              const colorLerp = progress * 0.3;
+              wave.mesh.material.color.setRGB(
+                1.0,
+                0.93 + colorLerp, // Slightly whiter
+                0.55 + colorLerp
+              );
+
+              // Keep wave centered on player (player can move while waves expand)
+              wave.mesh.position.x = this.mesh.position.x;
+              wave.mesh.position.z = this.mesh.position.z;
+            }
+          }
+        } else {
+          // Aura inactive: clean up any remaining waves
+          this.auraFogRing.visible = false;
+          if (this.auraPulseWaves && this.auraPulseWaves.length > 0) {
+            const targetScene = _getScene();
+            for (const wave of this.auraPulseWaves) {
+              if (targetScene) {
+                targetScene.remove(wave.mesh);
+              }
+              wave.mesh.geometry.dispose();
+              wave.mesh.material.dispose();
+            }
+            this.auraPulseWaves = [];
+          }
         }
         
         // Update fire ring orbs

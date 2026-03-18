@@ -2892,7 +2892,9 @@
 
       // Update advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.update();
-      
+      // Update trauma system (gore chunks, stuck arrows, wound decals)
+      if (window.TraumaSystem) window.TraumaSystem.update();
+
       // Update managed animations (replaces individual RAF loops for death/damage effects)
       // In-place compaction — no new array allocation each frame.
       if (managedAnimations.length > 0) {

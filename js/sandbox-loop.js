@@ -2821,6 +2821,10 @@
     if (window.BloodSystem && typeof BloodSystem.init === 'function') {
       BloodSystem.init(scene);
     }
+    // Initialize trauma system alongside blood system
+    if (window.TraumaSystem && typeof TraumaSystem.init === 'function') {
+      TraumaSystem.init(scene);
+    }
   }
 
   // ─── Rage combat system init ──────────────────────────────────────────────────
@@ -3007,6 +3011,10 @@
       // Blood system tick
       if (window.BloodSystem && typeof BloodSystem.update === 'function') {
         BloodSystem.update();
+      }
+      // Trauma system tick (gore chunks, stuck arrows, wound decals)
+      if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
+        TraumaSystem.update(dt);
       }
 
       // Blood stain decal fade update

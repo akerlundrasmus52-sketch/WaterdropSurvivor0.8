@@ -268,15 +268,9 @@
         // SPLASH EFFECT: particles match the gem's rarity colour
         const _pc = this._rarityParticleColor || 0x4FC3F7;
         spawnParticles(this.mesh.position, _pc, 8);
-        
-        // Screen flash effect — tint matches gem rarity
-        const _pr = (_pc >> 16) & 0xFF;
-        const _pg = (_pc >> 8) & 0xFF;
-        const _pb = _pc & 0xFF;
-        const flash = document.createElement('div');
-        flash.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(${_pr},${_pg},${_pb},0.18);pointer-events:none;z-index:500`;
-        document.body.appendChild(flash);
-        setTimeout(() => flash.remove(), 100);
+
+        // XP pickup screen flash REMOVED per user request
+        // (Previously showed blue star flash on pickup)
 
         addExp(this.value);
         playSound('collect');
