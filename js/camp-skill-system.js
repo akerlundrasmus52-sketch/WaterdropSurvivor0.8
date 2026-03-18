@@ -1280,14 +1280,26 @@
       if (atkSpeedMult  !== 0) playerStats.atkSpeed   *= (1 + atkSpeedMult);
       if (moveSpeedMult !== 0) playerStats.walkSpeed  *= (1 + moveSpeedMult);
 
-      // Dash variables (module-level; dashDistance was already set from dashPower)
+      // Dash variables (module-level in main.js; guard with typeof so sandbox can call this safely)
       const totalDashCd = Math.min(0.80, dashCdReduction + cooldownReduction);
-      if (totalDashCd > 0) dashCooldown *= (1 - totalDashCd);
-      if (dashDistMult > 0) dashDistance *= (1 + dashDistMult);
+      if (totalDashCd > 0 && typeof dashCooldown !== 'undefined') dashCooldown *= (1 - totalDashCd);
+      if (dashDistMult > 0 && typeof dashDistance !== 'undefined') dashDistance *= (1 + dashDistMult);
+      // Also apply to playerStats fields so sandbox can read them
+      if (totalDashCd > 0) playerStats.dashCooldown = Math.max(0.2, (playerStats.dashCooldown || 1.0) * (1 - totalDashCd));
+      if (dashDistMult > 0) playerStats.dashDistance = (playerStats.dashDistance || 5.0) * (1 + dashDistMult);
 
       // Clamp stats to sane ranges
       playerStats.armor       = Math.min(85, playerStats.armor);
       playerStats.critChance  = Math.min(0.95, playerStats.critChance);
+
+      // Sync granular v2 RPG stat aliases so sandbox uses the same values
+      playerStats.criticalHitChance       = playerStats.critChance;
+      playerStats.criticalHitDamageMulti  = playerStats.critDmg;
+      playerStats.xpCollectionRadius      = playerStats.pickupRange || 1.0;
+      if (moveSpeedMult !== 0) {
+        // Reflect walkSpeed change back into topSpeed
+        playerStats.topSpeed = (playerStats.topSpeed || 6.5) * (1 + moveSpeedMult);
+      }
 
       // Mobility score = average of turnResponse bonuses (visual/feel metric)
       playerStats.mobilityScore = playerStats.turnResponse || 1.0;
@@ -1295,6 +1307,10 @@
       // Apply active mutation synergy bonuses on top
       if (typeof applyMutationBonuses === 'function') applyMutationBonuses();
     }
+
+    // Expose globally so sandbox.html can call applySkillTreeBonuses() after
+    // playerStats is initialised from getDefaultPlayerStats().
+    window.applySkillTreeBonuses = applySkillTreeBonuses;
 
     function isDashUnlocked() {
       return (saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0) ||

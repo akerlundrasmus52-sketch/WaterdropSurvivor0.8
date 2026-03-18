@@ -65,7 +65,7 @@ class Engine2Sandbox {
         console.log('[Engine2] Loaded ground color texture');
         this.textures.diffuse = texture;
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(20, 20); // Tile across 200x200 ground
+        texture.repeat.set(50, 50); // Fine tiling across 200x200 ground (4 units per tile)
         const maxAniso = (typeof renderer !== 'undefined' && renderer?.capabilities?.getMaxAnisotropy)
           ? renderer.capabilities.getMaxAnisotropy()
           : 1;

@@ -117,7 +117,44 @@ function getDefaultPlayerStats(baseExpReq) {
     // Mobility (Flexibility stat)
     mobilityScore: 1.0,    // overall mobility: affects turn speed, dash fluidity
     turnResponse: 1.0,     // how quickly player changes direction (scales with flexibility)
-    stopResponse: 1.0      // how quickly player stops (scales with flexibility)
+    stopResponse: 1.0,     // how quickly player stops (scales with flexibility)
+
+    // ── GRANULAR RPG STATS (v2) ─────────────────────────────────────────────
+    // These are the hooks for Camp upgrades and deep stat customisation.
+    // Not all are consumed yet, but defined here so the Camp has them ready.
+
+    // Movement & Control
+    topSpeed: 6.5,              // world-units / second (absolute speed cap)
+    acceleration: 22.0,         // world-units/s² — how fast to reach topSpeed
+    friction: 18.0,             // world-units/s² — deceleration when no input
+    turnSpeed: 1.0,             // multiplier for how fast facing direction updates
+    inputResponsiveness: 0.12,  // lerp factor applied to raw input (0=sluggish, 1=instant)
+    dashInvincibilityFrames: 8, // frames of invulnerability granted during a dash
+
+    // Gunplay / Ranged
+    fireRate: 1.0,              // multiplier (1 = base cooldown; 2 = double fire rate)
+    reloadSpeed: 1.0,           // multiplier (1 = base; 2 = half reload time)
+    recoilRecovery: 1.0,        // how fast aim resets after each shot (multiplier)
+    aimSpeed: 1.0,              // how fast the gun tracks the cursor (multiplier)
+    magazineCapacity: 5,        // bullets in one magazine before reload is needed
+    armorPiercing: 0,           // fraction of enemy flat-armor bypassed (0–1)
+
+    // Melee / Close Combat
+    meleeRange: 1.0,            // multiplier for melee weapon reach
+    meleeKnockbackPower: 1.0,   // multiplier for knockback applied on melee hits
+    cleaveAngle: 60,            // degrees — width of melee swing arc
+
+    // Survivability
+    hpRegenPerSecond: 0,        // HP regenerated every second (absolute value)
+    flatArmor: 0,               // flat damage reduction applied before percent armor
+    evadeChance: 0,             // 0–1: chance to completely dodge an incoming hit
+    staggerResistance: 0,       // 0–1: fraction of incoming knockback negated
+
+    // Utility
+    xpCollectionRadius: 1.0,    // multiplier for XP-gem pickup magnetism radius
+    luck: 0,                    // 0–1: bonus chance for better drops / crit rolls
+    criticalHitChance: 0.10,    // 0–1: direct crit chance (mirrors critChance)
+    criticalHitDamageMulti: 1.5 // multiplier for critical hit damage (mirrors critDmg)
   };
 }
 
