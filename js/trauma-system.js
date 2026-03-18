@@ -431,16 +431,34 @@
     }
   }
 
-  // ─── Corpse Heartbeat Blood Pump System ──────────────────────────────────────
+  // ─── Corpse Heartbeat Blood Pump System + Dynamic Blood Pools ────────────────
   function registerCorpse(position, weapon, bulletHoles = []) {
     if (!position) return;
+
+    // Create dynamic blood pool mesh
+    const poolGeo = new THREE.CircleGeometry(0.3, 12); // Starts small
+    const poolMat = new THREE.MeshBasicMaterial({
+      color: 0xAA0000, // Bright red initially
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const bloodPool = new THREE.Mesh(poolGeo, poolMat);
+    bloodPool.rotation.x = -Math.PI / 2; // Lay flat on ground
+    bloodPool.position.set(position.x, 0.01, position.z);
+    _scene.add(bloodPool);
 
     const corpse = {
       position: position.clone(),
       startTime: Date.now(),
       weapon: weapon,
       holes: bulletHoles.map(h => ({ pos: h.pos.clone(), dir: h.dir })),
-      pumpCount: 0
+      pumpCount: 0,
+      bloodPool: bloodPool,         // Dynamic blood pool mesh
+      poolSize: 0.3,                // Current pool radius
+      poolMaxSize: 1.8,             // Max pool radius (grows with each pump)
+      poolTargetColor: 0x2A0000     // Dark crimson/black target color
     };
 
     _activeCorpses.push(corpse);
@@ -458,6 +476,26 @@
         // Remove corpse from tracking
         const idx = _activeCorpses.indexOf(corpse);
         if (idx >= 0) _activeCorpses.splice(idx, 1);
+
+        // Fade out and remove blood pool
+        if (corpse.bloodPool) {
+          let fadeLife = 60; // 1 second fade at 60fps
+          const fadeInterval = setInterval(() => {
+            fadeLife--;
+            if (corpse.bloodPool && corpse.bloodPool.material) {
+              corpse.bloodPool.material.opacity = (fadeLife / 60) * 0.6;
+            }
+            if (fadeLife <= 0) {
+              clearInterval(fadeInterval);
+              if (corpse.bloodPool) {
+                _scene.remove(corpse.bloodPool);
+                corpse.bloodPool.geometry.dispose();
+                corpse.bloodPool.material.dispose();
+                corpse.bloodPool = null;
+              }
+            }
+          }, 16); // ~60fps
+        }
         return;
       }
 
@@ -465,6 +503,14 @@
       if (elapsed > CORPSE_LIFETIME) {
         const idx = _activeCorpses.indexOf(corpse);
         if (idx >= 0) _activeCorpses.splice(idx, 1);
+
+        // Fade out blood pool
+        if (corpse.bloodPool) {
+          _scene.remove(corpse.bloodPool);
+          corpse.bloodPool.geometry.dispose();
+          corpse.bloodPool.material.dispose();
+          corpse.bloodPool = null;
+        }
         return;
       }
 
@@ -497,6 +543,27 @@
             spreadY: 0.4 * intensity
           });
         }
+      }
+
+      // DYNAMIC BLOOD POOL: Grow pool with each pump and darken over time
+      if (corpse.bloodPool && corpse.bloodPool.material) {
+        // Grow pool smoothly (lerp toward target size)
+        const growthPerPump = 0.15; // Grows 0.15 units per pump
+        corpse.poolSize = Math.min(corpse.poolMaxSize, corpse.poolSize + growthPerPump);
+
+        // Update geometry to new size
+        corpse.bloodPool.geometry.dispose();
+        corpse.bloodPool.geometry = new THREE.CircleGeometry(corpse.poolSize, 12);
+
+        // Darken color over time: bright red → dark crimson/black
+        const darkProgress = pumpIndex / maxPumps; // 0.0 → 1.0
+        const currentColor = new THREE.Color(0xAA0000); // Bright red
+        const targetColor = new THREE.Color(corpse.poolTargetColor); // Dark crimson
+        currentColor.lerp(targetColor, darkProgress);
+        corpse.bloodPool.material.color.copy(currentColor);
+
+        // Increase opacity slightly as it darkens (more opaque = more blood)
+        corpse.bloodPool.material.opacity = 0.6 + darkProgress * 0.25; // 0.6 → 0.85
       }
 
       pumpIndex++;

@@ -3157,7 +3157,42 @@
           if (BOW_TYPES.includes(damageType) && weaponLevel >= 1) {
             const arrowDir = hitDir ? new THREE.Vector3(hitDir.vx || 0, 0, hitDir.vz || 0).normalize()
                                     : new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-            TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
+
+            // Level 10+: PIERCE-THROUGH with flesh chunk — arrow goes completely through
+            if (weaponLevel >= 10) {
+              // Create flesh chunk at exit wound
+              const exitPoint = hitPoint.clone();
+              exitPoint.x += arrowDir.x * 0.5; // Exit on opposite side
+              exitPoint.z += arrowDir.z * 0.5;
+
+              if (window.TraumaSystem && window.TraumaSystem.tearOffFleshChunk) {
+                window.TraumaSystem.tearOffFleshChunk(this, exitPoint, arrowDir, 0.12);
+
+                // Extra blood spray for pierce-through
+                if (window.BloodSystem && window.BloodSystem.emitBurst) {
+                  window.BloodSystem.emitBurst(exitPoint, 30, {
+                    spreadXZ: 0.5,
+                    spreadY: 0.2,
+                    direction: { x: arrowDir.x, y: 0, z: arrowDir.z }
+                  });
+                }
+
+                // Create entry and exit wound decals
+                TraumaSystem.addWoundDecal(this, hitPoint, 'bullethole'); // Entry wound
+                TraumaSystem.addWoundDecal(this, exitPoint, 'bullethole'); // Exit wound
+
+                // Visual feedback
+                if (typeof createFloatingText === 'function') {
+                  createFloatingText('PIERCE!', hitPoint, '#FFAA00');
+                }
+              }
+
+              // Arrow continues through (but we still show it stuck for visual clarity)
+              TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
+            } else {
+              // Normal arrow stick (levels 1-9)
+              TraumaSystem.stickArrowInEnemy(this, hitPoint, arrowDir, damageType);
+            }
           }
 
           // ── 180 SPIN DEATH: 15% chance on high-impact hits ─────────────────────────
@@ -6210,150 +6245,165 @@
       }
 
       dieByAura(enemyColor) {
-        const variation = Math.floor(Math.random() * 3);
+        // DISINTEGRATE FROM BELOW — body melts from feet upward into glowing ash/blood
         const deathPos = this.mesh.position.clone();
 
-        if (variation === 0) {
-          // ENERGY DISSIPATION — yellow-white spiritual overwhelm (original)
-          spawnParticles(deathPos, 0xFFEE88, 12);
-          spawnParticles(deathPos, 0xFFFFCC, 8);
-          spawnParticles(deathPos, 0x8B0000, 6);
-          if (window.BloodSystem) {
-            window.BloodSystem.emitAuraBurn(deathPos, 60);
-            window.BloodSystem.emitBurst(deathPos, 30, { spreadXZ: 0.3, spreadY: 0.1, minSize: 0.015, maxSize: 0.05, minLife: 15, maxLife: 40 });
-          }
-          const burnGeo = new THREE.CircleGeometry(0.6, 12);
-          const burnMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-          const burnMark = new THREE.Mesh(burnGeo, burnMat);
-          burnMark.rotation.x = -Math.PI / 2;
-          burnMark.position.set(deathPos.x, 0.01, deathPos.z);
-          scene.add(burnMark);
-          for (let i = 0; i < 3; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.5, y: 0, z: deathPos.z + (Math.random()-0.5)*0.5 });
-          const corpseGeo = new THREE.SphereGeometry(0.45, 8, 6);
-          const corpseMat = new THREE.MeshBasicMaterial({ color: 0x2a1a00, transparent: true, opacity: 0.7 });
-          const corpse = new THREE.Mesh(corpseGeo, corpseMat);
-          corpse.position.copy(deathPos); corpse.position.y = 0.1; corpse.scale.y = 0.2;
-          scene.add(corpse);
-          let life = 120;
-          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-            managedAnimations.push({ update(_dt) {
+        // Initial burst of glowing ash and blood particles
+        spawnParticles(deathPos, 0xFF4500, 16); // Glowing orange ash
+        spawnParticles(deathPos, 0xFFEE88, 14); // Golden energy
+        spawnParticles(deathPos, 0x8B0000, 12); // Dark blood
+        spawnParticles(deathPos, 0xFF6347, 10); // Red-orange mix
+
+        if (window.BloodSystem) {
+          window.BloodSystem.emitAuraBurn(deathPos, 100); // Heavy burn effect
+          window.BloodSystem.emitBurst(deathPos, 40, {
+            spreadXZ: 0.4,
+            spreadY: 0.2,
+            minSize: 0.02,
+            maxSize: 0.06,
+            minLife: 20,
+            maxLife: 50
+          });
+        }
+
+        // Create disintegrating body stump with glowing emissive material
+        const stumpGeo = new THREE.CylinderGeometry(0.25, 0.3, 0.8, 8);
+        const stumpMat = new THREE.MeshBasicMaterial({
+          color: enemyColor,
+          transparent: true,
+          opacity: 0.85,
+          emissive: 0xFF4500, // Glowing orange emissive
+          emissiveIntensity: 0.4
+        });
+        const stump = new THREE.Mesh(stumpGeo, stumpMat);
+        stump.position.copy(deathPos);
+        stump.position.y = 0.4;
+        scene.add(stump);
+
+        // Create dark blood/ash pool on ground (grows as body melts)
+        const poolGeo = new THREE.CircleGeometry(0.3, 10); // Starts small
+        const poolMat = new THREE.MeshBasicMaterial({
+          color: 0x2A0000, // Dark blood
+          transparent: true,
+          opacity: 0.5,
+          side: THREE.DoubleSide
+        });
+        const bloodPool = new THREE.Mesh(poolGeo, poolMat);
+        bloodPool.rotation.x = -Math.PI / 2;
+        bloodPool.position.set(deathPos.x, 0.01, deathPos.z);
+        scene.add(bloodPool);
+
+        // Glowing burn mark underneath
+        const burnGeo = new THREE.CircleGeometry(0.5, 10);
+        const burnMat = new THREE.MeshBasicMaterial({
+          color: 0xFF3300, // Bright orange-red glow
+          transparent: true,
+          opacity: 0.6,
+          side: THREE.DoubleSide
+        });
+        const burnMark = new THREE.Mesh(burnGeo, burnMat);
+        burnMark.rotation.x = -Math.PI / 2;
+        burnMark.position.set(deathPos.x, 0.005, deathPos.z);
+        scene.add(burnMark);
+
+        let life = 110; // Longer animation for dramatic effect
+
+        if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+          managedAnimations.push({
+            update(_dt) {
               life--;
-              corpse.material.opacity = (life / 120) * 0.85;
-              burnMat.opacity = (life / 120) * 0.55;
-              if (life <= 0) {
-                scene.remove(corpse); scene.remove(burnMark);
-                corpse.geometry.dispose(); corpse.material.dispose();
-                burnGeo.dispose(); burnMat.dispose();
-                return false;
-              }
-              return true;
-            }, cleanup() {
-              scene.remove(corpse); scene.remove(burnMark);
-              corpse.geometry.dispose(); corpse.material.dispose();
-              burnGeo.dispose(); burnMat.dispose();
-            }});
-          } else {
-            scene.remove(corpse); scene.remove(burnMark);
-            corpse.geometry.dispose(); corpse.material.dispose();
-            burnGeo.dispose(); burnMat.dispose();
-          }
-        } else if (variation === 1) {
-          // DISINTEGRATE FROM BELOW — body erodes from feet upward with rising particles
-          spawnParticles(deathPos, 0xFFEE88, 14);
-          spawnParticles(deathPos, 0xFFFFCC, 10);
-          if (window.BloodSystem) {
-            window.BloodSystem.emitAuraBurn(deathPos, 80);
-          }
-          const stumpGeo = new THREE.CylinderGeometry(0.25, 0.3, 0.8, 8);
-          const stumpMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
-          const stump = new THREE.Mesh(stumpGeo, stumpMat);
-          stump.position.copy(deathPos);
-          stump.position.y = 0.4;
-          scene.add(stump);
-          const burnGeo = new THREE.CircleGeometry(0.5, 10);
-          const burnMat = new THREE.MeshBasicMaterial({ color: 0x332200, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-          const burnMark = new THREE.Mesh(burnGeo, burnMat);
-          burnMark.rotation.x = -Math.PI / 2;
-          burnMark.position.set(deathPos.x, 0.01, deathPos.z);
-          scene.add(burnMark);
-          let life = 100;
-          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-            managedAnimations.push({ update(_dt) {
-              life--;
-              const erode = life / 100;
-              stump.scale.y = Math.max(0.05, erode);
+              const erode = life / 110;
+
+              // Body melts down from top (scale.y shrinks)
+              stump.scale.y = Math.max(0.02, erode);
               stump.position.y = 0.4 * erode;
               stump.material.opacity = erode * 0.85;
-              if (life % 4 === 0 && life > 10) {
-                spawnParticles({ x: deathPos.x + (Math.random()-0.5)*0.3, y: stump.position.y, z: deathPos.z + (Math.random()-0.5)*0.3 }, 0xFFEE88, 3);
-              }
-              burnMat.opacity = (life / 100) * 0.4;
-              if (life <= 0) {
-                scene.remove(stump); scene.remove(burnMark);
-                stumpGeo.dispose(); stumpMat.dispose();
-                burnGeo.dispose(); burnMat.dispose();
-                return false;
-              }
-              return true;
-            }, cleanup() {
-              scene.remove(stump); scene.remove(burnMark);
-              stumpGeo.dispose(); stumpMat.dispose();
-              burnGeo.dispose(); burnMat.dispose();
-            }});
-          } else {
-            scene.remove(stump); scene.remove(burnMark);
-            stumpGeo.dispose(); stumpMat.dispose();
-            burnGeo.dispose(); burnMat.dispose();
-          }
-        } else {
-          // PULSE OVERLOAD — body pulses 3 times with energy wisps then bursts
-          spawnParticles(deathPos, 0xFFEE88, 10);
-          spawnParticles(deathPos, 0xFFFFCC, 6);
-          if (window.BloodSystem) {
-            window.BloodSystem.emitAuraBurn(deathPos, 50);
-          }
-          const pulseGeo = new THREE.SphereGeometry(0.4, 8, 6);
-          const pulseMat = new THREE.MeshBasicMaterial({ color: enemyColor, transparent: true, opacity: 0.85 });
-          const pulseBody = new THREE.Mesh(pulseGeo, pulseMat);
-          pulseBody.position.copy(deathPos);
-          pulseBody.position.y = 0.2;
-          scene.add(pulseBody);
-          for (let i = 0; i < 3; i++) spawnBloodDecal({ x: deathPos.x + (Math.random()-0.5)*0.5, y: 0, z: deathPos.z + (Math.random()-0.5)*0.5 });
-          let life = 90;
-          if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
-            managedAnimations.push({ update(_dt) {
-              life--;
-              if (life > 30) {
-                const pulsePhase = Math.sin((90 - life) * 0.15) * 0.3;
-                pulseBody.scale.setScalar(1 + pulsePhase);
-                if (life % 10 === 0) {
-                  spawnParticles(pulseBody.position, 0xFFEE88, 4);
-                  spawnParticles(pulseBody.position, 0xFFFFCC, 2);
+
+              // Increase emissive glow as body disintegrates
+              stump.material.emissiveIntensity = 0.4 + (1 - erode) * 0.6;
+
+              // Blood pool grows as body melts (inverse of erode)
+              const poolGrowth = 1 - erode;
+              bloodPool.scale.setScalar(1 + poolGrowth * 1.5); // Grows to 2.5x size
+              bloodPool.material.opacity = 0.5 + poolGrowth * 0.3;
+
+              // Continuous stream of glowing ash/blood particles rising from dissolving body
+              if (life % 3 === 0 && life > 10) {
+                const particlePos = {
+                  x: deathPos.x + (Math.random() - 0.5) * 0.35,
+                  y: stump.position.y + 0.1,
+                  z: deathPos.z + (Math.random() - 0.5) * 0.35
+                };
+
+                // Mix of glowing ash (orange) and blood (dark red)
+                if (Math.random() < 0.5) {
+                  spawnParticles(particlePos, 0xFF4500, 2); // Orange ash
+                } else {
+                  spawnParticles(particlePos, 0x8B0000, 2); // Blood
                 }
-              } else if (life === 30) {
-                spawnParticles(deathPos, 0xFFEE88, 20);
-                spawnParticles(deathPos, 0xFFFFCC, 15);
-                spawnParticles(deathPos, 0x8B0000, 8);
+
+                // Additional golden energy wisps
+                if (Math.random() < 0.3) {
+                  spawnParticles(particlePos, 0xFFEE88, 1);
+                }
+              }
+
+              // Burn mark pulses and fades
+              burnMat.opacity = (life / 110) * 0.6 * (1 + Math.sin(life * 0.2) * 0.2);
+
+              // Final burst of ash as body fully disintegrates
+              if (life === 15) {
+                spawnParticles(deathPos, 0xFF4500, 20); // Big orange ash burst
+                spawnParticles(deathPos, 0x8B0000, 15); // Blood burst
+                spawnParticles(deathPos, 0xFFEE88, 10); // Golden energy
                 if (window.BloodSystem) {
-                  window.BloodSystem.emitBurst(deathPos, 60, { spreadXZ: 1.0, spreadY: 0.5, minSize: 0.02, maxSize: 0.08, minLife: 20, maxLife: 50 });
+                  window.BloodSystem.emitBurst(deathPos, 50, {
+                    spreadXZ: 0.6,
+                    spreadY: 0.3,
+                    minSize: 0.015,
+                    maxSize: 0.05,
+                    minLife: 15,
+                    maxLife: 40
+                  });
                 }
-                pulseBody.scale.setScalar(0.5);
               }
-              if (life < 30) {
-                pulseBody.material.opacity = (life / 30) * 0.85;
-                pulseBody.scale.multiplyScalar(0.97);
-              }
+
               if (life <= 0) {
-                scene.remove(pulseBody); pulseBody.geometry.dispose(); pulseBody.material.dispose();
+                scene.remove(stump);
+                scene.remove(bloodPool);
+                scene.remove(burnMark);
+                stumpGeo.dispose();
+                stumpMat.dispose();
+                poolGeo.dispose();
+                poolMat.dispose();
+                burnGeo.dispose();
+                burnMat.dispose();
                 return false;
               }
               return true;
-            }, cleanup() {
-              scene.remove(pulseBody); pulseBody.geometry.dispose(); pulseBody.material.dispose();
-            }});
-          } else {
-            scene.remove(pulseBody); pulseBody.geometry.dispose(); pulseBody.material.dispose();
-          }
+            },
+            cleanup() {
+              scene.remove(stump);
+              scene.remove(bloodPool);
+              scene.remove(burnMark);
+              stumpGeo.dispose();
+              stumpMat.dispose();
+              poolGeo.dispose();
+              poolMat.dispose();
+              burnGeo.dispose();
+              burnMat.dispose();
+            }
+          });
+        } else {
+          scene.remove(stump);
+          scene.remove(bloodPool);
+          scene.remove(burnMark);
+          stumpGeo.dispose();
+          stumpMat.dispose();
+          poolGeo.dispose();
+          poolMat.dispose();
+          burnGeo.dispose();
+          burnMat.dispose();
         }
       }
 
