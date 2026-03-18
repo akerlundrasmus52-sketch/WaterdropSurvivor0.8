@@ -18,10 +18,14 @@
     };
   }
   if (typeof createFloatingText === 'undefined') {
-    window.createFloatingText = function (text, pos, color) {
-      const el = document.createElement('div');
-      el.textContent = text;
-      el.style.cssText = [
+    // ── Pooled floating-text system: pre-allocates DOM elements, zero new div() during play ──
+    const _FT_POOL_SIZE = 32;
+    const _ftPool  = []; // available elements
+    const _ftNDC   = { x: 0, y: 0 }; // reusable NDC projection (no new object)
+    // Pre-allocate all floating-text divs once (called lazily on first use)
+    function _ftInit() {
+      if (_ftPool.length) return;
+      const baseStyle = [
         'position:fixed',
         'pointer-events:none',
         'font-family:Bangers,cursive',
@@ -29,28 +33,51 @@
         'font-weight:bold',
         'text-shadow:1px 1px 4px #000',
         'z-index:9999',
-        'transition:transform 1.2s ease-out,opacity 1.2s ease-out',
+        'will-change:transform,opacity',
+        'display:none',
       ].join(';');
+      for (let _i = 0; _i < _FT_POOL_SIZE; _i++) {
+        const _el = document.createElement('div');
+        _el.style.cssText = baseStyle;
+        document.body.appendChild(_el);
+        _ftPool.push(_el);
+      }
+    }
+    // Reusable Vector3 for world→screen projection (avoids new THREE.Vector3 per call)
+    const _ftV3 = { x: 0, y: 0, z: 0, _v3: null }; // _v3 set after THREE loads
+    window.createFloatingText = function (text, pos, color) {
+      _ftInit();
+      const el = _ftPool.length ? _ftPool.pop() : null;
+      if (!el) return; // pool exhausted — skip to avoid visual glitch (32 slots is plenty)
+      el.textContent = text;
       el.style.color = color || '#FFD700';
-      // Project world→screen using the global camera (set up later)
-      const _proj = function () {
-        if (!camera || !renderer) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        const v = new THREE.Vector3(pos.x, pos.y + 1, pos.z);
-        v.project(camera);
-        return {
-          x: (v.x * 0.5 + 0.5) * window.innerWidth,
-          y: (-v.y * 0.5 + 0.5) * window.innerHeight,
-        };
-      };
-      const p = _proj();
-      el.style.left = p.x + 'px';
-      el.style.top  = p.y + 'px';
-      document.body.appendChild(el);
+      el.style.transition = 'none';
+      el.style.transform  = 'translateY(0)';
+      el.style.opacity    = '1';
+      // Project world→screen using pre-allocated Vector3
+      let sx = window.innerWidth / 2, sy = window.innerHeight / 2;
+      if (camera && renderer) {
+        if (!_ftV3._v3) _ftV3._v3 = new THREE.Vector3();
+        _ftV3._v3.set(pos.x, pos.y + 1, pos.z);
+        _ftV3._v3.project(camera);
+        sx = (_ftV3._v3.x * 0.5 + 0.5) * window.innerWidth;
+        sy = (-_ftV3._v3.y * 0.5 + 0.5) * window.innerHeight;
+      }
+      el.style.left    = sx + 'px';
+      el.style.top     = sy + 'px';
+      el.style.display = 'block';
       requestAnimationFrame(function () {
-        el.style.transform = 'translateY(-60px)';
-        el.style.opacity   = '0';
+        el.style.transition = 'transform 1.2s ease-out,opacity 1.2s ease-out';
+        el.style.transform  = 'translateY(-60px)';
+        el.style.opacity    = '0';
       });
-      setTimeout(function () { el.parentNode && el.parentNode.removeChild(el); }, 1400);
+      setTimeout(function () {
+        el.style.display    = 'none';
+        el.style.transition = 'none';
+        el.style.transform  = 'translateY(0)';
+        el.style.opacity    = '1';
+        _ftPool.push(el); // return to pool
+      }, 1400);
     };
   }
   if (typeof showYouDiedBanner === 'undefined') {
@@ -239,6 +266,18 @@
   let _expGemFreeList = [];        // slots available for reuse
   // Sword melee cooldown (sandbox double-barrel / sword fire timer)
   let _swordCooldown = 0;
+  // Active weapon effect timers (for unlocked weapons in sandbox)
+  let _swordEffectCooldown = 0;  // sword slash cooldown
+  let _auraEffectTimer    = 0;   // aura damage tick
+
+  // Pre-allocated reusable Vector3 objects — ZERO new THREE.Vector3() during gameplay
+  // Declared as plain objects first; upgraded to THREE.Vector3 after THREE is available
+  // (THREE loads before sandbox-loop.js, so they become real Vector3s at IIFE boot time)
+  let _tmpV3  = null; // general-purpose temp vector (set in _initScene)
+  let _tmpV3b = null; // second reusable temp vector (set in _initScene)
+
+  // Reusable world-space position object for blood emission (avoids new {} per hit)
+  const _reusableBloodPos = { x: 0, y: 0, z: 0 };
 
   // Joystick state (mobile)
   const _joy    = { dx: 0, dz: 0, active: false, id: -1, startX: 0, startZ: 0 };
@@ -595,16 +634,18 @@
     // Squish animation on hit
     slot.squishTime = 0.3;
 
-    // Floating damage number
-    createFloatingText(
-      '-' + actualDmg,
-      new THREE.Vector3(slot.mesh.position.x, 1.5, slot.mesh.position.z),
-      '#FF4444'
-    );
+    // Floating damage number — reuse pre-allocated _tmpV3 (no new THREE.Vector3 per hit)
+    _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
+    createFloatingText('-' + actualDmg, _tmpV3, '#FF4444');
 
-    // Blood splatter on hit — spawn from center of slime body
-    // ENHANCED: Match old map's realistic blood behavior with higher particle counts
-    const _bloodPos = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ── (hpPercent declared first, used below too)
+    const hpPercent = slot.hp / slot.maxHp;
+
+    // Blood splatter on hit — reuse _reusableBloodPos (no new {} per hit)
+    _reusableBloodPos.x = slot.mesh.position.x;
+    _reusableBloodPos.y = slot.mesh.position.y + 0.4;
+    _reusableBloodPos.z = slot.mesh.position.z;
+    const _bloodPos = _reusableBloodPos;
     if (window.BloodSystem) {
       // Increased from 12 to 30 particles to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -640,7 +681,7 @@
     }
 
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
-    const hpPercent = slot.hp / slot.maxHp;
+    // (hpPercent already declared above before blood system section)
 
     if (hpPercent <= 0.75 && slot.damageStage === 0) {
       slot.damageStage = 1;
@@ -739,7 +780,8 @@
     const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
     if (_droppedGem) expGems.push(_droppedGem);
 
-    createFloatingText('SLIME DEFEATED!', new THREE.Vector3(x, 1.8, z), '#AAFFAA');
+    _tmpV3.set(x, 1.8, z);
+    createFloatingText('SLIME DEFEATED!', _tmpV3, '#AAFFAA');
 
     playerStats.kills++;
 
@@ -788,7 +830,8 @@
       }
     }
 
-    const _bPos1 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    const _bPos1 = _reusableBloodPos;
+    _bPos1.x = slot.mesh.position.x; _bPos1.y = slot.mesh.position.y + 0.4; _bPos1.z = slot.mesh.position.z;
     if (window.BloodSystem) {
       // Increased from 8 to 30 to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -810,7 +853,8 @@
         });
       }
     }
-    createFloatingText('WOUNDED!', new THREE.Vector3(slot.mesh.position.x, 1.6, slot.mesh.position.z), '#FF8800');
+    _tmpV3.set(slot.mesh.position.x, 1.6, slot.mesh.position.z);
+    createFloatingText('WOUNDED!', _tmpV3, '#FF8800');
   }
 
   // Stage 2: 50% HP - More wounds, flesh chunks start flying
@@ -828,7 +872,8 @@
 
     _spawnFleshChunks(slot, 2 + Math.floor(Math.random() * 2));
 
-    const _bPos2 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    const _bPos2 = _reusableBloodPos;
+    _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
     if (window.BloodSystem) {
       // Increased from 18 to 60 to match old map impact
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -845,7 +890,8 @@
         BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 5, perPulse: 120, interval: 200, woundHeight: 0.8 });
       }
     }
-    createFloatingText('HEAVY DAMAGE!', new THREE.Vector3(slot.mesh.position.x, 1.7, slot.mesh.position.z), '#FF4400');
+    _tmpV3.set(slot.mesh.position.x, 1.7, slot.mesh.position.z);
+    createFloatingText('HEAVY DAMAGE!', _tmpV3, '#FF4400');
   }
 
   // Stage 3: 35% HP - Body parts breaking off, heavy bleeding
@@ -865,7 +911,8 @@
 
     _spawnFleshChunks(slot, 3 + Math.floor(Math.random() * 3));
 
-    const _bPos3 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    const _bPos3 = _reusableBloodPos;
+    _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
     if (window.BloodSystem) {
       // Increased from 30 to 100 to match old map's sniper hit intensity
       if (typeof BloodSystem.emitBurst === 'function') {
@@ -895,7 +942,8 @@
         });
       }
     }
-    createFloatingText('CRITICAL!', new THREE.Vector3(slot.mesh.position.x, 1.8, slot.mesh.position.z), '#FF0000');
+    _tmpV3.set(slot.mesh.position.x, 1.8, slot.mesh.position.z);
+    createFloatingText('CRITICAL!', _tmpV3, '#FF0000');
   }
 
   // Stage 4: 20% HP - Near death, chunks flying everywhere
@@ -916,7 +964,8 @@
 
     _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 3), true);
 
-    const _bPos4 = { x: slot.mesh.position.x, y: slot.mesh.position.y + 0.4, z: slot.mesh.position.z };
+    const _bPos4 = _reusableBloodPos;
+    _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
     if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos4, 45, { spreadXZ: 2.5, spreadY: 1.0 });
@@ -937,7 +986,8 @@
         }
       }
     }
-    createFloatingText('NEAR DEATH!', new THREE.Vector3(slot.mesh.position.x, 1.9, slot.mesh.position.z), '#DD0000');
+    _tmpV3.set(slot.mesh.position.x, 1.9, slot.mesh.position.z);
+    createFloatingText('NEAR DEATH!', _tmpV3, '#DD0000');
   }
 
   // ─── Flesh chunk object pool ──────────────────────────────────────────────────
@@ -1285,7 +1335,12 @@
 
   function _collectGem(gem, idx) {
     const expGain = gem.value || (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 15);
-    const gemPos  = gem.mesh ? gem.mesh.position.clone() : new THREE.Vector3();
+    // Reuse _tmpV3b for gem position (avoids .clone() allocation)
+    if (gem.mesh) {
+      _tmpV3b.copy(gem.mesh.position);
+    } else {
+      _tmpV3b.set(0, 0, 0);
+    }
 
     if (typeof gem.collect === 'function') {
       // gem.collect() removes the mesh and calls addExp() internally
@@ -1298,7 +1353,7 @@
       playSound('exp_pickup');
     }
 
-    createFloatingText('+' + expGain + ' EXP', gemPos, '#5DADE2');
+    createFloatingText('+' + expGain + ' EXP', _tmpV3b, '#5DADE2');
 
     if (idx !== undefined) expGems.splice(idx, 1);
   }
@@ -1328,7 +1383,12 @@
   }
 
   function _onLevelUp() {
-    createFloatingText('LEVEL UP!', player ? player.mesh.position : new THREE.Vector3(), '#FFD700');
+    _tmpV3.set(
+      player && player.mesh ? player.mesh.position.x : 0,
+      player && player.mesh ? player.mesh.position.y + 0.5 : 0.5,
+      player && player.mesh ? player.mesh.position.z : 0
+    );
+    createFloatingText('LEVEL UP!', _tmpV3, '#FFD700');
     // Trigger the level-up upgrade modal if available
     if (typeof showUpgradeModal === 'function') {
       // Use direct window.isPaused assignment in sandbox to bypass main.js overlay counter,
@@ -1343,6 +1403,105 @@
           window.isPaused = false;
         }
       }, 80);
+    }
+  }
+
+  // ─── Sandbox weapon effects (sword, samurai sword, aura) ────────────────────
+  // These run when those weapons are unlocked at level-up and deal area damage
+  // to active slimes, giving immediate visible feedback in the sandbox.
+
+  // Pre-allocated reusable objects for weapon effects (avoids GC during combat)
+  const _swordSlashColor  = 0xFF8800;
+  const _auraColor        = 0x3399FF;
+
+  function _updateWeaponEffects(dt) {
+    if (!player || !player.mesh || !weapons) return;
+    const px = player.mesh.position.x;
+    const pz = player.mesh.position.z;
+
+    // ── SWORD / SAMURAI SWORD: periodic melee slash in front of player ────────
+    const hasSword = (weapons.sword && weapons.sword.active) ||
+                     (weapons.samuraiSword && weapons.samuraiSword.active);
+    if (hasSword) {
+      _swordEffectCooldown -= dt * 1000;
+      if (_swordEffectCooldown <= 0) {
+        // Choose best active sword
+        const sw = (weapons.samuraiSword && weapons.samuraiSword.active)
+          ? weapons.samuraiSword : weapons.sword;
+        _swordEffectCooldown = sw.cooldown || 1200;
+        const sRange = sw.range || 3.5;
+        const sRangeSq = sRange * sRange;
+        // Iterate backward so that _killSlime's splice doesn't skip entries
+        for (let si = _activeSlimes.length - 1; si >= 0; si--) {
+          const s = _activeSlimes[si];
+          if (!s || !s.active || s.dead) continue;
+          const dx = s.mesh.position.x - px;
+          const dz = s.mesh.position.z - pz;
+          if (dx * dx + dz * dz <= sRangeSq) {
+            const dmg = Math.round((sw.damage || 30) * (playerStats ? playerStats.strength || 1 : 1));
+            s.hp -= dmg;
+            s.flashTimer = 0.12;
+            s.squishTime = 0.25;
+            _tmpV3.set(s.mesh.position.x, 1.4, s.mesh.position.z);
+            createFloatingText('-' + dmg, _tmpV3, '#FF8800');
+            if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+              _reusableBloodPos.x = s.mesh.position.x;
+              _reusableBloodPos.y = s.mesh.position.y + 0.5;
+              _reusableBloodPos.z = s.mesh.position.z;
+              BloodSystem.emitBurst(_reusableBloodPos, 20, { spreadXZ: 1.0, spreadY: 0.4 });
+            }
+            if (s.hp <= 0) {
+              _killSlime(s, 1.2, 0, 0); // _deactivateSlime splices from _activeSlimes (safe: iterating backward)
+            } else {
+              _updateSlimeHPBar(s);
+            }
+          }
+        }
+        // Visual flash on player
+        if (player.mesh && player.mesh.material) {
+          const origC = player.mesh.material.color.getHex();
+          player.mesh.material.color.setHex(_swordSlashColor);
+          setTimeout(function () {
+            if (player && player.mesh && player.mesh.material)
+              player.mesh.material.color.setHex(origC);
+          }, 100);
+        }
+        _tmpV3.set(px, 1.2, pz);
+        createFloatingText('⚔', _tmpV3, '#FF8800');
+      }
+    } else {
+      _swordEffectCooldown = 0; // reset if weapon removed
+    }
+
+    // ── AURA: continuous damage ring around player ────────────────────────────
+    if (weapons.aura && weapons.aura.active) {
+      _auraEffectTimer -= dt * 1000;
+      if (_auraEffectTimer <= 0) {
+        _auraEffectTimer = weapons.aura.cooldown || 1000;
+        const aRange = weapons.aura.range || 3.5;
+        const aRangeSq = aRange * aRange;
+        // Iterate backward so _killSlime's splice is safe
+        for (let si = _activeSlimes.length - 1; si >= 0; si--) {
+          const s = _activeSlimes[si];
+          if (!s || !s.active || s.dead) continue;
+          const dx = s.mesh.position.x - px;
+          const dz = s.mesh.position.z - pz;
+          if (dx * dx + dz * dz <= aRangeSq) {
+            const dmg = Math.round((weapons.aura.damage || 8) * (playerStats ? playerStats.strength || 1 : 1));
+            s.hp -= dmg;
+            s.flashTimer = 0.08;
+            _tmpV3.set(s.mesh.position.x, 1.3, s.mesh.position.z);
+            createFloatingText('-' + dmg, _tmpV3, '#33AAFF');
+            if (s.hp <= 0) {
+              _killSlime(s, 1.0, 0, 0);
+            } else {
+              _updateSlimeHPBar(s);
+            }
+          }
+        }
+      }
+    } else {
+      _auraEffectTimer = 0;
     }
   }
 
@@ -1478,6 +1637,10 @@
 
   // ─── Three.js scene init ──────────────────────────────────────────────────────
   function _initScene() {
+    // Allocate pre-shared Vector3 objects — must be after THREE.js is available
+    _tmpV3  = new THREE.Vector3();
+    _tmpV3b = new THREE.Vector3();
+
     // Renderer - expose as window global for gem-classes.js and other systems
     window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -1660,7 +1823,8 @@
       player.mesh.position.y = 0.5;
       _spawnIntroActive = false;
       player.invulnerable = false;
-      createFloatingText('READY!', new THREE.Vector3(0, 2, 0), '#FFD700');
+      _tmpV3.set(0, 2, 0);
+      createFloatingText('READY!', _tmpV3, '#FFD700');
     }
   }
 
@@ -1828,6 +1992,7 @@
       _updateSlime(dt);
       _tryFire(dt);
       _updateProjectiles(dt);
+      _updateWeaponEffects(dt); // sword/samurai/aura active weapon effects
       _updateGems(dt);
 
       // Survivor-style wave spawn timer: always count down and fire a wave
