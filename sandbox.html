@@ -95,6 +95,24 @@
         height: clamp(180px, 52vw, 240px) !important;
       }
     }
+
+    /* ── Revolver ammo bullets ──────────────────────────────────────────────── */
+    .revolver-bullet {
+      width: 10px;
+      height: 20px;
+      border-radius: 5px 5px 2px 2px;
+      border: 1px solid #888;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .revolver-bullet.loaded {
+      background: linear-gradient(to bottom, #FFE066, #C8860A);
+      border-color: #FFD700;
+      box-shadow: 0 0 4px rgba(255,200,0,0.5);
+    }
+    .revolver-bullet.empty {
+      background: #333;
+      border-color: #555;
+    }
   </style>
 </head>
 <body>
@@ -465,6 +483,18 @@
        • ExpGem magnetism pulls gems to player → EXP gain → Level-Up modal
        ═══════════════════════════════════════════════════════════════════════ -->
   <script src="js/sandbox-loop.js"></script>
+
+  <!-- Revolver ammo UI -->
+  <div id="revolver-ui" style="position:fixed;bottom:80px;right:20px;z-index:9999;background:rgba(0,0,0,0.7);border:1px solid #FFD700;border-radius:12px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;">
+    <div style="display:flex;gap:6px;" id="revolver-bullets-row">
+      <div class="revolver-bullet loaded"></div>
+      <div class="revolver-bullet loaded"></div>
+      <div class="revolver-bullet loaded"></div>
+      <div class="revolver-bullet loaded"></div>
+      <div class="revolver-bullet loaded"></div>
+    </div>
+    <div class="revolver-label" style="font-family:'Bangers',cursive;font-size:14px;color:#FFD700;letter-spacing:1px;">5/5</div>
+  </div>
 
 </body>
 </html>
