@@ -290,7 +290,8 @@
   const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
   const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
   // XP gem drop rate bonus — probability of spawning an extra star on every enemy kill
-  const BONUS_XP_DROP_RATE = 0.15; // 15% chance for a bonus star per kill
+  // ── INCREASED BY 15%: was 0.15 (15%), now 0.1725 (17.25%) ──
+  const BONUS_XP_DROP_RATE = 0.1725; // 17.25% chance for a bonus star per kill (+15% increase)
 
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
