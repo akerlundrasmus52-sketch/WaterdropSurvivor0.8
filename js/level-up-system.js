@@ -15,8 +15,9 @@ const UPGRADE_RARITIES = [
   { name: 'mythic',    label: 'MYTHIC',    cssClass: 'rarity-mythical',  scale: 5.0, color: '#ff0000' },
 ];
 
-// Weapon unlock levels: Weapon 2 at Lv4, Weapon 3 at Lv12, Weapon 4 at Lv25
-const WEAPON_UNLOCK_LEVELS = [4, 12, 25];
+// Weapon unlock levels: Weapon 2 at Lv6, Weapon 3 at Lv18, Weapon 4 at Lv50
+// Matches the new leveling curve (max level ~75) — all 4 weapons unlocked by level 50.
+const WEAPON_UNLOCK_LEVELS = [6, 18, 50];
 
 // Boss chest gold reward constants
 const BOSS_CHEST_MIN_GOLD   = 150;

@@ -140,6 +140,48 @@
   if (typeof playSound === 'undefined') {
     window.playSound = function () {};
   }
+  // ── Player Status Effect API ──────────────────────────────────────────────────
+  // window.setPlayerStatusEffect(type, duration) — call from any damage system.
+  // type: 'fire' | 'poison' | 'ice' | 'shock'
+  // Updates the StatusBar CSS class and depletes the bar over `duration` seconds.
+  (function () {
+    var _statusContainer = null;
+    var _statusFill = null;
+    var _statusType = null;
+    var _statusTimer = 0;
+    var _statusDuration = 0;
+    window.setPlayerStatusEffect = function (type, duration) {
+      _statusContainer = document.getElementById('rage-bar-container');
+      _statusFill = document.getElementById('rage-unified-fill');
+      if (!_statusContainer) return;
+      // Remove old effect class
+      _statusContainer.classList.remove('status-fire','status-poison','status-ice','status-shock');
+      _statusType = type;
+      _statusTimer = duration;
+      _statusDuration = duration;
+      if (type) _statusContainer.classList.add('status-' + type);
+    };
+    window.clearPlayerStatusEffect = function () {
+      _statusType = null;
+      _statusTimer = 0;
+      var c = document.getElementById('rage-bar-container');
+      if (c) c.classList.remove('status-fire','status-poison','status-ice','status-shock');
+      var f = document.getElementById('rage-unified-fill');
+      if (f) f.style.width = '';
+    };
+    // Tick is called from the game loop (via addExp/updateHUD path) every frame
+    window._tickPlayerStatus = function (dt) {
+      if (!_statusType || _statusTimer <= 0) return;
+      _statusTimer -= dt;
+      if (_statusTimer <= 0) {
+        window.clearPlayerStatusEffect();
+      } else {
+        var pct = (_statusTimer / _statusDuration) * 100;
+        var f = _statusFill || document.getElementById('rage-unified-fill');
+        if (f) f.style.width = Math.max(0, pct) + '%';
+      }
+    };
+  }());
   // addExp — called by gem-classes.js ExpGem.collect() when a gem is picked up.
   // Handles EXP gain, HUD refresh, and level-up trigger.
   if (typeof window.addExp === 'undefined') {
@@ -149,7 +191,10 @@
       if (playerStats.exp >= playerStats.expReq) {
         playerStats.exp -= playerStats.expReq;
         playerStats.lvl++;
-        playerStats.expReq = Math.floor(playerStats.expReq * 1.25);
+        // Slower leveling curve: power-law formula so max level ~75 coincides with final boss.
+        // Base 40 is chosen so Level 1→2 costs 40 XP (fast) and Level 74→75 costs ~31 000 XP
+        // (requires sustained late-game combat). Exponent 1.75 gives Jotun-Slayer-style pacing.
+        playerStats.expReq = Math.floor(40 * Math.pow(playerStats.lvl, 1.75));
         _onLevelUp();
       }
     };
@@ -244,6 +289,8 @@
   // Slime separation: minimum distance before soft push-apart force is applied
   const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
   const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
+  // XP gem drop rate bonus — probability of spawning an extra star on every enemy kill
+  const BONUS_XP_DROP_RATE = 0.15; // 15% chance for a bonus star per kill
 
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
@@ -289,6 +336,9 @@
   // Active weapon effect timers (for unlocked weapons in sandbox)
   let _swordEffectCooldown = 0;  // sword slash cooldown
   let _auraEffectTimer    = 0;   // aura damage tick
+  // ─── Gore: Corpse Linger System ──────────────────────────────────────────────
+  // Corpses linger 5-8 seconds after death with heartbeat blood pumping.
+  const _activeCorpses = [];       // { slot, timer, lingerDuration, bloodTimer, poolMesh, poolMat }
 
   // Pre-allocated reusable Vector3 objects — ZERO new THREE.Vector3() during gameplay
   // Declared as plain objects first; upgraded to THREE.Vector3 after THREE is available
@@ -692,6 +742,67 @@
     if (idx !== -1) _activeSlimes.splice(idx, 1);
   }
 
+  /** Update lingering corpses: heartbeat blood pumping, growing blood pool, eventual cleanup. */
+  function _updateCorpses(dt) {
+    for (let i = _activeCorpses.length - 1; i >= 0; i--) {
+      const c = _activeCorpses[i];
+      c.timer += dt;
+      const lifeRatio = c.timer / c.lingerDuration; // 0 → 1 over linger duration
+
+      // Grow blood pool from small to large as corpse bleeds out
+      const poolRadius = 0.1 + lifeRatio * 1.8; // grows from 0.1 to 1.9 units
+      if (c.poolMesh) {
+        c.poolMesh.scale.set(poolRadius * 10, poolRadius * 10, 1); // scale the fixed-size geo
+        // Darken pool as time passes (more blood = darker)
+        c.poolMat.opacity = 0.75 * (1 - lifeRatio * 0.3);
+      }
+
+      // Heartbeat blood pumping: sin-wave drives burst rate
+      if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+        const heartRate = 3.0 * (1 - lifeRatio * 0.8); // slows from 3 Hz to 0.6 Hz
+        c.bloodTimer += dt;
+        const heartbeat = Math.sin(c.bloodTimer * heartRate * Math.PI * 2);
+        if (heartbeat > 0.85 && lifeRatio < 0.85) {
+          const pressure = (1 - lifeRatio) * 0.5; // weakening pressure
+          BloodSystem.emitBurst(
+            { x: c.x, y: 0.3, z: c.z },
+            Math.floor(6 + pressure * 12),
+            { spreadXZ: 0.4 * pressure, spreadY: 0.25 * pressure, minLife: 15, maxLife: 40 }
+          );
+        }
+      }
+
+      // After linger duration: fade out, clean up, return to pool
+      if (c.timer >= c.lingerDuration) {
+        // Fade out corpse mesh
+        if (c.slot.mesh && c.slot.mesh.material) {
+          c.slot.mesh.material.opacity -= dt * 2;
+          if (c.slot.mesh.material.opacity <= 0) {
+            // Fully faded — return slot to pool
+            if (c.poolMesh) { scene.remove(c.poolMesh); c.poolMesh.geometry.dispose(); c.poolMat.dispose(); }
+            // Restore slot mesh for reuse
+            c.slot.mesh.visible = false;
+            c.slot.mesh.material.opacity = 0.92;
+            c.slot.mesh.material.color.setHex(0x55EE44);
+            c.slot.mesh.material.emissiveIntensity = 0.2;
+            c.slot.mesh.scale.set(1, 1, 1);
+            c.slot.woundCount = 0;
+            if (c.slot.woundPool) {
+              for (let w = 0; w < c.slot.woundPool.length; w++) c.slot.woundPool[w].visible = false;
+            }
+            if (c.slot.hpBar) { c.slot.hpBar.visible = true; }
+            if (c.slot.hpFill) { c.slot.hpFill.visible = true; }
+            _activeCorpses.splice(i, 1);
+          }
+        } else {
+          // No material — just clean up immediately
+          if (c.poolMesh) { scene.remove(c.poolMesh); c.poolMesh.geometry.dispose(); c.poolMat.dispose(); }
+          _activeCorpses.splice(i, 1);
+        }
+      }
+    }
+  }
+
   /** Spawn a single slime from the pool at a random position around the player. */
   function _spawnSlime() {
     if (!player || !player.mesh) return;
@@ -930,10 +1041,33 @@
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
 
-    // Deactivate the slot (returns it to the pool)
-    _deactivateSlime(slot);
+    // ── GORE: Corpse linger for 5-8 seconds with heartbeat blood pumping ─────────
+    // Remove from active list but keep the mesh visible as a "corpse"
+    const corpseLinger = 5 + Math.random() * 3; // 5-8 seconds
+    const idx = _activeSlimes.indexOf(slot);
+    if (idx !== -1) _activeSlimes.splice(idx, 1);
+    slot.active = false;
+    slot.dead = true;
+    // Flatten the corpse mesh and darken to a bloody grey
+    slot.mesh.material.color.setHex(0x3A1A1A);
+    slot.mesh.material.emissiveIntensity = 0.05;
+    slot.mesh.scale.set(1.4, 0.35, 1.4); // squish flat on ground
+    slot.mesh.position.y = 0.12; // lay on ground
+    // Hide HP bar
+    if (slot.hpBar) slot.hpBar.visible = false;
+    if (slot.hpFill) slot.hpFill.visible = false;
+    // Growing blood pool under corpse
+    const poolGeo = new THREE.CircleGeometry(0.1, 10);
+    const poolMat = new THREE.MeshBasicMaterial({
+      color: 0x550000, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false
+    });
+    const poolMesh = new THREE.Mesh(poolGeo, poolMat);
+    poolMesh.rotation.x = -Math.PI / 2;
+    poolMesh.position.set(x, 0.03, z);
+    scene.add(poolMesh);
+    _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh, poolMat, x, z });
 
-    // ── EXP star drop: exactly 1 star per kill, physics from hit force/weapon ──
+    // ── EXP star drop: 1 guaranteed star + 15% chance for a bonus star per kill ──
     // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
     let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
     if (hitForce > 2.0)      gemEnemyType = 5; // rare (gold)
@@ -941,6 +1075,11 @@
     // Use the pre-allocated pool — no new THREE.Mesh during gameplay
     const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
     if (_droppedGem) expGems.push(_droppedGem);
+    // +15% drop rate bonus: 15% chance for an extra star on every kill
+    if (Math.random() < BONUS_XP_DROP_RATE) {
+      const _bonusGem = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemEnemyType);
+      if (_bonusGem) expGems.push(_bonusGem);
+    }
 
     _tmpV3.set(x, 1.8, z);
 
@@ -2479,8 +2618,10 @@
       // Each ring spins in alternating direction
       const dir = r % 2 === 0 ? 1 : -1;
       const angle = part.baseAngle + dir * spin * (1 + r * 0.3);
-      // Segments spread radially outward as door opens
-      const radius = part.baseRadius + outFrac * (2.0 + r * 0.8);
+      // Segments start near center (closed: iris covering hole) and spread outward when opened.
+      // closedR: very small so all segments cluster over the hole; openR: fully spread outside hole.
+      const closedR = 0.15 + r * 0.12;
+      const radius = closedR + outFrac * (part.baseRadius - closedR + 2.0 + r * 0.8);
       part.mesh.position.set(
         Math.cos(angle) * radius,
         0.04 + r * 0.01,
@@ -2871,6 +3012,9 @@
       // Blood stain decal fade update
       _updateBloodStains(dt);
 
+      // Gore: corpse linger system — heartbeat blood pumping and cleanup
+      _updateCorpses(dt);
+
       // Rage combat system tick
       if (window.GameRageCombat && typeof GameRageCombat.update === 'function') {
         GameRageCombat.update(dt);
@@ -2886,6 +3030,9 @@
       _updateFlashPool(dt);
 
       _refreshHUD(dt);
+
+      // Tick player status effects (StatusBar depletion)
+      if (typeof window._tickPlayerStatus === 'function') window._tickPlayerStatus(dt);
 
       renderer.render(scene, camera);
     } catch (e) {

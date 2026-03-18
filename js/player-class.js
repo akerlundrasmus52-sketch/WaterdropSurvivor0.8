@@ -1329,8 +1329,10 @@
 
       takeDamage(amount) {
         // Safety: do not process damage when game is not active or already over
-        const gameActive = isGameActive || window.isGameActive;
-        const gameOver   = isGameOver   || window.isGameOver;
+        // Use typeof guards to avoid ReferenceError in sandbox mode where main.js
+        // lexical vars (isGameActive, isGameOver) are not in scope.
+        const gameActive = (typeof isGameActive !== 'undefined' ? isGameActive : false) || window.isGameActive;
+        const gameOver   = (typeof isGameOver !== 'undefined' ? isGameOver : false)   || window.isGameOver;
         if (!gameActive || gameOver) return;
         // Prevent stray hits during boss kill-cam cinematics
         if (killCamActive) return;
@@ -1556,7 +1558,7 @@
         };
         shakeAnim();
 
-        if (playerStats.hp <= 0 && !isGameOver) {
+        if (playerStats.hp <= 0 && !((typeof isGameOver !== 'undefined' ? isGameOver : false) || window.isGameOver)) {
           // ENHANCED Death splash: more particles + ground pool with fade
           spawnParticles(this.mesh.position, COLORS.player, 25); // Reduced for performance
           spawnParticles(this.mesh.position, 0xFFFFFF, 8); // Reduced for performance

@@ -5234,10 +5234,13 @@
         return;
       }
       
-      // XP Curve: Power scaling for a 1–100 progression loop.
-      // Levels 1–20: fast (linear feel), 21–50: slows down, 51–100: massive grind.
-      // Formula: expReq = baseExp * Math.pow(level, 1.6)
-      playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 1.6));
+      // XP Curve: Power scaling aimed at max level ~75 coinciding with the final boss.
+      // Exponent 1.8 gives a smooth, Jotun-Slayer-style progression where:
+      //   - Levels 1-6 feel fast and rewarding
+      //   - Levels 6-50 (4 weapons unlocked) build steadily
+      //   - Levels 50-75 (late game) require significant effort
+      // Formula: expReq = baseExp * level^1.8
+      playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 1.8));
       
       // Quest: The Egg Hunt — Spawn mysterious egg when reaching Level 15
       if (playerStats.lvl >= 15 && saveData.tutorialQuests &&
