@@ -256,7 +256,7 @@
     const SPIDER_SHEET_ROWS = 6;
     // Sprite sheet paths — IMG_1155.png (walk+rear) and IMG_1149.png (attack+hit+die)
     // Both are 1024×1536 grids → 4 columns × 6 rows, each cell ≈ 256×256 px
-    const SPIDER_SHEET_PATHS = ['IMG_1155.png', 'IMG_1149.png'];
+    const SPIDER_SHEET_PATHS = ['sprite sheet/IMG_1155.png', 'sprite sheet/IMG_1149.png'];
     const SPIDER_ANIMS = {
       walk:   { sheet: 0, frames: [{c:0,r:0},{c:1,r:0},{c:2,r:0},{c:3,r:0},{c:0,r:1},{c:1,r:1},{c:2,r:1},{c:3,r:1}], fps: 8,  loop: true  },
       rear:   { sheet: 0, frames: [{c:0,r:2},{c:1,r:2},{c:2,r:2},{c:3,r:2},{c:0,r:3},{c:1,r:3},{c:2,r:3},{c:3,r:3}], fps: 10, loop: true  },
