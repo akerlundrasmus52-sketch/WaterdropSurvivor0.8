@@ -1311,6 +1311,8 @@
     // Expose globally so sandbox.html can call applySkillTreeBonuses() after
     // playerStats is initialised from getDefaultPlayerStats().
     window.applySkillTreeBonuses = applySkillTreeBonuses;
+    // Expose SKILL_TREE so stat-aggregator.js can read skill bonus definitions
+    window.SKILL_TREE = SKILL_TREE;
 
     function isDashUnlocked() {
       return (saveData.skillTree && saveData.skillTree.dash && saveData.skillTree.dash.level > 0) ||
