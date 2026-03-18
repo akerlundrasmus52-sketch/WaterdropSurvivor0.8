@@ -290,7 +290,8 @@
   const SLIME_SEPARATION_DIST  = 2.2;      // world units (increased from 1.6 to prevent overlapping)
   const SLIME_SEPARATION_FORCE = 2.5;      // push strength (units/sec) (increased from 1.0 for stronger separation)
   // XP gem drop rate bonus — probability of spawning an extra star on every enemy kill
-  const BONUS_XP_DROP_RATE = 0.15; // 15% chance for a bonus star per kill
+  // ── INCREASED BY 15%: was 0.15 (15%), now 0.1725 (17.25%) ──
+  const BONUS_XP_DROP_RATE = 0.1725; // 17.25% chance for a bonus star per kill (+15% increase)
 
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
@@ -1048,6 +1049,8 @@
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
     slot.dead = true;
+    // CRITICAL FIX: Ensure corpse mesh stays visible!
+    slot.mesh.visible = true;
     // Flatten the corpse mesh and darken to a bloody grey
     slot.mesh.material.color.setHex(0x3A1A1A);
     slot.mesh.material.emissiveIntensity = 0.05;

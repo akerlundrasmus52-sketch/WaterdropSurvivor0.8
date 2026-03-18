@@ -1452,6 +1452,17 @@
         }
 
         playerStats.hp -= reduced;
+
+        // ── IMMORTALITY BUG FIX: Check if player died ──
+        if (playerStats.hp <= 0) {
+          if (typeof gameOver === 'function') {
+            gameOver();
+          } else if (typeof window.gameOver === 'function') {
+            window.gameOver();
+          }
+          return;
+        }
+
         if (window.GameMilestones) window.GameMilestones.recordDamageTaken(reduced);
         // Add rage when taking damage (rage builds from combat)
         if (window.GameRageCombat && typeof window.GameRageCombat.addRage === 'function') {
