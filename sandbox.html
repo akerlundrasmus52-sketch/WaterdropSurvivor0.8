@@ -59,6 +59,43 @@
     /* Keep ui-layer visible once sandbox boots */
     #ui-layer { display: none; }
 
+    /* ── Settings button (cogwheel) ─────────────────────────────────────────── */
+    #settings-btn {
+      position: fixed !important;
+      top: 12px !important;
+      right: 12px !important;
+      z-index: 9995 !important;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.6);
+      border: 1.5px solid rgba(255,215,0,0.5);
+      color: #FFD700;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
+      padding: 0;
+    }
+    #settings-btn:hover {
+      background: rgba(40,40,70,0.9);
+      border-color: #FFD700;
+    }
+
+    /* ── Enhanced settings modal ─────────────────────────────────────────────── */
+    .settings-modal {
+      position: fixed !important;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.75);
+      z-index: 9998;
+      backdrop-filter: blur(4px);
+    }
+
     /* ── Sandbox: Level-Up modal enhancements ───────────────────────────────
        Make upgrade cards larger and ensure the grid fits all screen sizes.
        Uses viewport-relative sizing with sensible min/max bounds.
@@ -166,7 +203,7 @@
 
     <!-- Hidden stubs so game-hud.js lookups don't throw -->
     <button id="stats-btn"     class="btn-small" style="display:none;">STATS</button>
-    <button id="settings-btn"  class="btn-small" style="position:absolute;top:16px;right:16px;z-index:150;">⚙️</button>
+    <button id="settings-btn" title="Settings (Esc)">⚙</button>
     <button id="equipment-btn" style="display:none;">⚔️</button>
     <div id="minimap-container"><div id="minimap"></div></div>
     <div id="companion-skills-panel" style="display:none;">
@@ -347,16 +384,38 @@
   <div id="progression-shop"      style="display:none;"><div id="shop-gold">GOLD: 0</div><div id="shop-grid"></div></div>
   <!-- Gear stubs -->
   <div id="gear-screen"           style="display:none;"><div id="gear-stats-content"></div><div id="gear-content"></div></div>
-  <!-- Settings modal (kept lightweight for sandbox) -->
+  <!-- Settings modal — Graphics Quality + Return to Camp -->
   <div id="settings-modal" class="settings-modal" style="display:none;">
-    <div class="settings-container">
-      <div class="settings-title">SANDBOX SETTINGS</div>
-      <div class="settings-item">
-        <div style="font-weight:700;">UI Customizer</div>
-        <div style="font-size:12px;color:#c9d1d9;margin-top:4px;">Drag and resize the HUD just like the main map.</div>
-        <button id="ui-calibration-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #1a6e9f, #155a82); margin-top: 10px;">🎛️ OPEN UI CUSTOMIZER</button>
+    <div class="settings-container" style="max-width:420px;width:94vw;padding:24px 20px 20px;background:linear-gradient(160deg,#0d1b2a,#1a2e45);border:1.5px solid #2a5580;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,0.7);">
+      <div class="settings-title" style="font-size:22px;letter-spacing:3px;color:#FFD700;text-shadow:0 0 12px rgba(255,215,0,0.4);margin-bottom:20px;">⚙️ SETTINGS</div>
+
+      <!-- Graphics Quality -->
+      <div class="settings-item" style="margin-bottom:18px;">
+        <div style="font-weight:700;font-size:14px;color:#aac8e8;margin-bottom:6px;letter-spacing:1px;">🖥️ GRAPHICS QUALITY</div>
+        <div style="font-size:11px;color:#7799bb;margin-bottom:10px;">Lower settings improve performance on older devices (e.g. Samsung S10).</div>
+        <select id="graphics-quality-select" style="width:100%;padding:9px 12px;background:#0d1b2a;color:#FFD700;border:1.5px solid #2a5580;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:1px;cursor:pointer;outline:none;appearance:none;">
+          <option value="ultralow">📱 Ultra Low  — S10 / Budget phones</option>
+          <option value="low">🔋 Low         — Mid-range Android</option>
+          <option value="medium" selected>⚖️ Medium      — Balanced (default)</option>
+          <option value="high">🌟 High        — Modern phones</option>
+          <option value="ultra">🍎 Ultra       — iPhone 16 / High-end</option>
+        </select>
+        <div id="quality-desc" style="margin-top:7px;font-size:11px;color:#88aac8;min-height:32px;line-height:1.5;padding:6px 10px;background:rgba(0,0,0,0.3);border-radius:6px;border-left:2px solid #2a5580;">Shadows ON · Pixel ratio 1× · Standard tone mapping</div>
+        <button id="apply-quality-btn" style="width:100%;margin-top:10px;padding:10px;background:linear-gradient(to bottom,#1a6e9f,#155a82);color:#FFD700;border:1.5px solid #2a7ec4;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;">APPLY QUALITY</button>
       </div>
-      <button id="settings-close-btn" class="settings-close-btn" style="margin-top:14px;">CLOSE</button>
+
+      <!-- UI Customizer -->
+      <div class="settings-item" style="margin-bottom:18px;">
+        <div style="font-weight:700;font-size:14px;color:#aac8e8;margin-bottom:6px;letter-spacing:1px;">🎛️ HUD LAYOUT</div>
+        <button id="ui-calibration-btn" class="settings-close-btn" style="width:100%;background:linear-gradient(to bottom,#1a6e9f,#155a82);border:1.5px solid #2a7ec4;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;padding:10px;cursor:pointer;color:#fff;">🎛️ OPEN UI CUSTOMIZER</button>
+      </div>
+
+      <!-- Return to Camp -->
+      <div class="settings-item" style="margin-bottom:14px;">
+        <button id="return-to-camp-btn" style="width:100%;padding:12px;background:linear-gradient(to bottom,#2d5a1b,#1e3d10);color:#88ff66;border:1.5px solid #4a9e2a;border-radius:8px;font-family:'Bangers',cursive;font-size:18px;letter-spacing:2px;cursor:pointer;text-shadow:0 0 8px rgba(100,255,60,0.4);">⛺ RETURN TO CAMP</button>
+      </div>
+
+      <button id="settings-close-btn" class="settings-close-btn" style="width:100%;padding:10px;background:rgba(60,60,80,0.6);color:#aaa;border:1px solid #444;border-radius:8px;font-family:'Bangers',cursive;font-size:15px;letter-spacing:2px;cursor:pointer;margin-top:4px;">✕  CLOSE</button>
     </div>
   </div>
   <!-- Menu gold (referenced by addGold stub) -->

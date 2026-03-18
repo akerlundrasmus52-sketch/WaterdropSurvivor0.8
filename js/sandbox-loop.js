@@ -927,6 +927,9 @@
     // Spawn 8-12 large flesh chunks flying in all directions
     _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 5), true);
 
+    // Place a blood stain decal on the ground at the kill position
+    _placeBloodStain(x, z);
+
     // Deactivate the slot (returns it to the pool)
     _deactivateSlime(slot);
 
@@ -1146,6 +1149,69 @@
     }
     _tmpV3.set(slot.mesh.position.x, 1.9, slot.mesh.position.z);
     createFloatingText('NEAR DEATH!', _tmpV3, '#DD0000');
+  }
+
+  // ─── Blood ground stain decal pool ───────────────────────────────────────────
+  // Pre-allocated circular planes placed on the floor at enemy kill/hit positions.
+  // Uses a ring-buffer so oldest stains are recycled when the pool is full.
+  const BLOOD_STAIN_POOL_SIZE = 30;
+  const _bloodStainPool = [];
+  let _bloodStainHead = 0; // ring-buffer index
+
+  function _buildBloodStainPool() {
+    const stainGeo = new THREE.CircleGeometry(0.8, 12);
+    for (let i = 0; i < BLOOD_STAIN_POOL_SIZE; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x550000,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(stainGeo, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(0, 0.02, 0);
+      mesh.visible = false;
+      scene.add(mesh);
+      _bloodStainPool.push({ mesh, fadeTimer: 0 });
+    }
+  }
+
+  /**
+   * Place a blood stain at (x, z) when an enemy dies.
+   * Stains fade in quickly and then very slowly fade out over ~20 seconds.
+   */
+  function _placeBloodStain(x, z) {
+    const slot = _bloodStainPool[_bloodStainHead % BLOOD_STAIN_POOL_SIZE];
+    _bloodStainHead++;
+    if (!slot) return;
+    const size = 0.6 + Math.random() * 0.9;
+    slot.mesh.scale.set(size, size, size);
+    slot.mesh.position.set(x + (Math.random() - 0.5) * 0.3, 0.02, z + (Math.random() - 0.5) * 0.3);
+    slot.mesh.rotation.z = Math.random() * Math.PI * 2;
+    slot.mesh.material.opacity = 0;
+    slot.mesh.visible = true;
+    slot.fadeTimer = 20.0; // seconds to live
+    slot.fadeIn = 0.5; // seconds to fade in
+    slot.age = 0;
+  }
+
+  function _updateBloodStains(dt) {
+    for (let i = 0; i < _bloodStainPool.length; i++) {
+      const s = _bloodStainPool[i];
+      if (!s.mesh.visible) continue;
+      s.age += dt;
+      if (s.age < s.fadeIn) {
+        s.mesh.material.opacity = Math.min(0.7, (s.age / s.fadeIn) * 0.7);
+      } else {
+        const remaining = s.fadeTimer - s.age;
+        s.mesh.material.opacity = Math.max(0, (remaining / (s.fadeTimer - s.fadeIn)) * 0.7);
+        if (remaining <= 0) {
+          s.mesh.visible = false;
+          s.mesh.material.opacity = 0;
+        }
+      }
+    }
   }
 
   // ─── Flesh chunk object pool ──────────────────────────────────────────────────
@@ -1483,10 +1549,12 @@
             player.takeDamage(8, 'slime', s.mesh.position);
           } else {
             playerStats.hp -= 8;
-            if (playerStats.hp <= 0) {
-              playerStats.hp = 0;
-              gameOver();
-            }
+          }
+          // Sandbox HP guard: always check game-over via playerStats (works even if
+          // player.takeDamage doesn't call gameOver() itself in sandbox context)
+          if (playerStats && playerStats.hp <= 0) {
+            playerStats.hp = 0;
+            gameOver();
           }
         }
       }
@@ -2001,6 +2069,10 @@
 
     // Renderer - expose as window global for gem-classes.js and other systems
     window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // Apply saved or default graphics quality — this sets pixelRatio, shadowMap, toneMapping
+    let _savedQuality = DEFAULT_QUALITY;
+    try { _savedQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
+    // Apply defaults first so properties exist before _applyGraphicsQuality runs
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
@@ -2062,38 +2134,169 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    // Apply saved quality after renderer is set up
+    _applyGraphicsQuality(_savedQuality);
+  }
+
+  // ─── Graphics Quality presets ─────────────────────────────────────────────────
+  // Maps quality key → renderer configuration.
+  // Called once at boot (from saved preference) and dynamically when user changes.
+  const QUALITY_DESCS = {
+    ultralow: 'Shadows OFF · Pixel ratio 0.5× · No tone mapping — best for budget phones',
+    low:      'Shadows OFF · Pixel ratio 1× · Linear tone mapping — good for S10/mid-range',
+    medium:   'Shadows ON  · Pixel ratio 1× · Linear tone mapping — balanced (default)',
+    high:     'Shadows ON (PCF) · Pixel ratio ≤1.5× · Filmic tone mapping — modern phones',
+    ultra:    'Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping — iPhone 16 / PC',
+  };
+  const DEFAULT_QUALITY = 'ultra';
+
+  function _applyGraphicsQuality(quality) {
+    if (!renderer) return;
+    switch (quality) {
+      case 'ultralow':
+        renderer.setPixelRatio(0.5);
+        renderer.shadowMap.enabled = false;
+        renderer.toneMapping = THREE.NoToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        break;
+      case 'low':
+        renderer.setPixelRatio(1.0);
+        renderer.shadowMap.enabled = false;
+        renderer.toneMapping = THREE.LinearToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        break;
+      case 'medium':
+        renderer.setPixelRatio(1.0);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.BasicShadowMap;
+        renderer.toneMapping = THREE.LinearToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        break;
+      case 'high':
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        break;
+      case 'ultra':
+      default:
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.4;
+        break;
+    }
+    // Force shader recompile so shadow map type change takes effect
+    renderer.shadowMap.needsUpdate = true;
+    // Persist selection
+    try { localStorage.setItem('sandboxGraphicsQuality', quality); } catch (_) {}
+    // Update gameSettings global if present
+    if (window.gameSettings) window.gameSettings.quality = quality;
+    console.log('[SandboxLoop] Graphics quality applied:', quality);
   }
 
   // ─── Settings modal + UI Calibration entry (sandbox) ─────────────────────────
   function _initSandboxSettings() {
-    const settingsBtn = document.getElementById('settings-btn');
+    const settingsBtn   = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
-    const closeBtn = document.getElementById('settings-close-btn');
-    const uiCalBtn = document.getElementById('ui-calibration-btn');
+    const closeBtn      = document.getElementById('settings-close-btn');
+    const uiCalBtn      = document.getElementById('ui-calibration-btn');
+    const campBtn       = document.getElementById('return-to-camp-btn');
+    const qualitySelect = document.getElementById('graphics-quality-select');
+    const qualityDesc   = document.getElementById('quality-desc');
+    const applyQualBtn  = document.getElementById('apply-quality-btn');
 
-    if (!settingsBtn || !settingsModal || !closeBtn || !uiCalBtn) return;
+    if (!settingsBtn || !settingsModal || !closeBtn) return;
 
     settingsBtn.style.display = 'block';
-    settingsBtn.addEventListener('click', () => {
+
+    // Open settings (also accessible via Escape key)
+    settingsBtn.addEventListener('click', function () {
+      window.isPaused = true;
+      // Sync select to current quality
+      if (qualitySelect) {
+        let cur = DEFAULT_QUALITY;
+        try { cur = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
+        qualitySelect.value = cur;
+        if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[cur] || '';
+      }
       settingsModal.style.display = 'flex';
     });
-
-    closeBtn.addEventListener('click', () => {
-      settingsModal.style.display = 'none';
-    });
-
-    uiCalBtn.addEventListener('click', () => {
-      settingsModal.style.display = 'none';
-      if (window.UICalibration && typeof window.UICalibration.enter === 'function') {
-        // Pause while editing layout, resume afterwards
-        if (typeof setGamePaused === 'function') setGamePaused(true);
-        window.UICalibration.enter(() => {
-          if (typeof setGamePaused === 'function') setGamePaused(false);
-        });
-      } else {
-        console.warn('[SandboxLoop] UI Calibration unavailable — script missing?');
+    document.addEventListener('keydown', function (e) {
+      if (e.code === 'Escape') {
+        if (settingsModal.style.display === 'flex') {
+          settingsModal.style.display = 'none';
+          window.isPaused = false;
+        } else if (!window.isPaused) {
+          // Only open settings if game is not paused for level-up etc.
+          window.isPaused = true;
+          if (qualitySelect) {
+            let cur = DEFAULT_QUALITY;
+            try { cur = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
+            qualitySelect.value = cur;
+            if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[cur] || '';
+          }
+          settingsModal.style.display = 'flex';
+        }
       }
     });
+
+    closeBtn.addEventListener('click', function () {
+      settingsModal.style.display = 'none';
+      window.isPaused = false;
+    });
+
+    // Return to Camp
+    if (campBtn) {
+      campBtn.addEventListener('click', function () {
+        window.location.href = 'index.html';
+      });
+    }
+
+    // Quality dropdown — update description text live
+    if (qualitySelect) {
+      // Load persisted quality
+      let saved = null;
+      try { saved = localStorage.getItem('sandboxGraphicsQuality'); } catch (_) {}
+      if (saved && QUALITY_DESCS[saved]) {
+        qualitySelect.value = saved;
+        if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[saved];
+      }
+      qualitySelect.addEventListener('change', function () {
+        if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[this.value] || '';
+      });
+    }
+
+    // Apply quality button
+    if (applyQualBtn && qualitySelect) {
+      applyQualBtn.addEventListener('click', function () {
+        _applyGraphicsQuality(qualitySelect.value);
+        // Flash button to confirm
+        applyQualBtn.textContent = '✔ APPLIED!';
+        applyQualBtn.style.background = 'linear-gradient(to bottom,#1a9f3f,#158230)';
+        setTimeout(function () {
+          applyQualBtn.textContent = 'APPLY QUALITY';
+          applyQualBtn.style.background = 'linear-gradient(to bottom,#1a6e9f,#155a82)';
+        }, 1200);
+      });
+    }
+
+    if (uiCalBtn) {
+      uiCalBtn.addEventListener('click', function () {
+        settingsModal.style.display = 'none';
+        if (window.UICalibration && typeof window.UICalibration.enter === 'function') {
+          if (typeof setGamePaused === 'function') setGamePaused(true);
+          window.UICalibration.enter(function () {
+            if (typeof setGamePaused === 'function') setGamePaused(false);
+          });
+        } else {
+          console.warn('[SandboxLoop] UI Calibration unavailable — script missing?');
+        }
+      });
+    }
 
     // Apply saved HUD layout on boot if available
     if (window.UICalibration && typeof window.UICalibration.applyLayout === 'function') {
@@ -2122,11 +2325,14 @@
     scene.add(ground);
   }
 
-  // ─── Player init & spawn intro ───────────────────────────────────────────────
-  let _spawnIntroTimer = 0;          // seconds into spawn animation
-  const SPAWN_INTRO_DURATION = 1.8;  // seconds to rise from ground
+  // ─── Spiral Door Spawn Sequence ───────────────────────────────────────────────
+  // Multi-layered rotating circular door that opens on the ground, revealing
+  // the player rising from below on an elevator platform with a light from below.
+  let _spawnIntroTimer = 0;
+  const SPAWN_INTRO_DURATION = 2.8;  // total seconds for the full intro
   let _spawnIntroActive = false;
 
+  // ─── Player init ─────────────────────────────────────────────────────────────
   function _initPlayer() {
     // Set up playerStats from game's built-in function
     if (typeof getDefaultPlayerStats === 'function') {
@@ -2139,19 +2345,15 @@
         pickupRange: 1.0, dropRate: 1.0, perks: {}, survivalTime: 0,
       };
     }
-
     // Set up weapons
     if (typeof getDefaultWeapons === 'function') {
       weapons = getDefaultWeapons();
     }
-
     // Create player using the existing Player class
     if (typeof Player === 'function') {
       player = new Player();
-      // Start below ground for spawn intro (center hole is at y=0, radius 3)
       player.mesh.position.set(0, -1.5, 0);
     } else {
-      // Ultra-minimal fallback player
       const geo = new THREE.SphereGeometry(0.5, 12, 12);
       const mat = new THREE.MeshPhongMaterial({ color: 0x3A9FD8, emissive: 0x0A3D5C, emissiveIntensity: 0.35 });
       const mesh = new THREE.Mesh(geo, mat);
@@ -2160,28 +2362,159 @@
       scene.add(mesh);
       player = { mesh, invulnerable: false };
     }
-
-    // Mark player invulnerable during intro
+    // Mark invulnerable during intro, build spiral door and gun
     player.invulnerable = true;
+    _buildSpiralDoor();
     _buildGunModel();
     _spawnIntroActive = true;
     _spawnIntroTimer = 0;
   }
 
-  /** Animate the spawn intro: player rises from center hole over SPAWN_INTRO_DURATION seconds. */
+  const _spiralDoorParts = []; // { mesh, ring, segment, baseAngle, baseRadius }
+  let _elevatorPlatform = null;
+  let _spawnLight = null;
+  const SPIRAL_RING_COUNT = 3;    // concentric rings
+  const SPIRAL_SEG_COUNT  = 8;    // segments per ring
+  const SPIRAL_RING_RADII = [1.4, 2.2, 3.0]; // inner to outer
+  const SPIRAL_COLORS     = [0xCC8833, 0xAA6622, 0x886611]; // rust/bronze
+
+  function _buildSpiralDoor() {
+    // Segment geometry: thin wedge, approximated as BoxGeometry rotated
+    // Each segment fills 360/8 = 45 degrees of its ring
+    const segH = 0.08; // height of door panel
+    for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
+      const ringR = SPIRAL_RING_RADII[r];
+      const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.9; // 90% fill
+      const segGeo = new THREE.BoxGeometry(arcLen, segH, 0.25);
+      const segMat = new THREE.MeshStandardMaterial({
+        color: SPIRAL_COLORS[r],
+        roughness: 0.5,
+        metalness: 0.6,
+        emissive: 0x331100,
+        emissiveIntensity: 0.3,
+      });
+      for (let s = 0; s < SPIRAL_SEG_COUNT; s++) {
+        const mesh = new THREE.Mesh(segGeo, segMat);
+        mesh.castShadow = true;
+        mesh.visible = false;
+        scene.add(mesh);
+        _spiralDoorParts.push({
+          mesh,
+          ring:      r,
+          segment:   s,
+          baseAngle: (s / SPIRAL_SEG_COUNT) * Math.PI * 2,
+          baseRadius: ringR,
+        });
+      }
+    }
+
+    // Elevator platform — simple disc below the player
+    const platGeo = new THREE.CylinderGeometry(1.1, 1.2, 0.12, 20);
+    const platMat = new THREE.MeshStandardMaterial({
+      color: 0x445566, roughness: 0.4, metalness: 0.7,
+      emissive: 0x112233, emissiveIntensity: 0.4,
+    });
+    _elevatorPlatform = new THREE.Mesh(platGeo, platMat);
+    _elevatorPlatform.position.set(0, -2.0, 0);
+    _elevatorPlatform.castShadow = true;
+    _elevatorPlatform.visible = false;
+    scene.add(_elevatorPlatform);
+
+    // Spawn light (point light from below, warm amber)
+    _spawnLight = new THREE.PointLight(0xFFAA44, 0, 12);
+    _spawnLight.position.set(0, -1.0, 0);
+    scene.add(_spawnLight);
+  }
+
+  /** Place spiral door segments for a given open fraction (0=closed, 1=fully open). */
+  function _updateSpiralDoorGeometry(openFrac, spin) {
+    const outFrac = Math.max(0, openFrac);
+    for (let i = 0; i < _spiralDoorParts.length; i++) {
+      const part = _spiralDoorParts[i];
+      const r = part.ring;
+      // Each ring spins in alternating direction
+      const dir = r % 2 === 0 ? 1 : -1;
+      const angle = part.baseAngle + dir * spin * (1 + r * 0.3);
+      // Segments spread radially outward as door opens
+      const radius = part.baseRadius + outFrac * (2.0 + r * 0.8);
+      part.mesh.position.set(
+        Math.cos(angle) * radius,
+        0.04 + r * 0.01,
+        Math.sin(angle) * radius
+      );
+      // Rotate segment to face tangent
+      part.mesh.rotation.set(0, -angle + Math.PI / 2, 0);
+      part.mesh.visible = true;
+    }
+  }
+
+  function _hideSpiralDoor() {
+    for (let i = 0; i < _spiralDoorParts.length; i++) {
+      _spiralDoorParts[i].mesh.visible = false;
+    }
+    if (_elevatorPlatform) _elevatorPlatform.visible = false;
+    if (_spawnLight) { _spawnLight.intensity = 0; }
+  }
+
+  /** Main spawn intro tick — drives door, elevator, light from timer. */
   function _updateSpawnIntro(dt) {
     if (!_spawnIntroActive || !player || !player.mesh) return;
     _spawnIntroTimer += dt;
     const t = Math.min(1, _spawnIntroTimer / SPAWN_INTRO_DURATION);
-    // Smooth ease-out rise from y=-1.5 to y=0.5
-    const easedT = 1 - Math.pow(1 - t, 3);
-    player.mesh.position.y = -1.5 + easedT * 2.0;
 
-    // Brief scale-up pop on arrival
+    // ── Phase 1 (t 0→0.3): Door appears, starts spinning, light ramps up ────
+    const doorAppear = Math.min(1, t / 0.3);
+
+    // ── Phase 2 (t 0.2→0.75): Door opens (segments spread outward) ─────────
+    const openT = _clamp((t - 0.2) / 0.55, 0, 1);
+    const openEased = openT * openT * (3 - 2 * openT); // smoothstep
+
+    // ── Phase 3 (t 0.35→0.85): Player + elevator rises ─────────────────────
+    const riseT = _clamp((t - 0.35) / 0.5, 0, 1);
+    const riseEased = 1 - Math.pow(1 - riseT, 3);
+
+    // ── Phase 4 (t 0.80→1.0): Door closes back, light fades ────────────────
+    const closeT = _clamp((t - 0.80) / 0.20, 0, 1);
+
+    // Spin speed: fast during open, slows as it closes
+    const spin = (openEased * 1.4 - closeT * 0.8) * 0.6;
+
+    // Door open fraction: opens then closes back around elevator
+    const doorOpen = openEased * (1 - closeT * 0.5);
+
+    // Only render door if it's appeared
+    if (doorAppear > 0.01) {
+      _updateSpiralDoorGeometry(doorOpen, spin);
+      // Fade segment opacity in during appearance
+      for (let i = 0; i < _spiralDoorParts.length; i++) {
+        const mat = _spiralDoorParts[i].mesh.material;
+        if (!mat.transparent) mat.transparent = true;
+        mat.opacity = _clamp(doorAppear, 0, 1);
+      }
+    }
+
+    // Elevator platform: rises from y=-2 to y=0
+    if (_elevatorPlatform) {
+      _elevatorPlatform.visible = riseT > 0;
+      _elevatorPlatform.position.y = -2.0 + riseEased * 2.1;
+    }
+
+    // Player: rises from y=-1.5 to y=0.5 with elevator, staying above platform
+    player.mesh.position.y = -1.5 + riseEased * 2.0;
+
+    // Spawn light: ramps up early, fades as door closes
+    if (_spawnLight) {
+      const lightStrength = _clamp(doorAppear - closeT, 0, 1);
+      _spawnLight.intensity = lightStrength * 5.0;
+      _spawnLight.position.y = -1.5 + riseEased * 1.5;
+    }
+
+    // Completion
     if (t >= 1) {
       player.mesh.position.y = 0.5;
       _spawnIntroActive = false;
       player.invulnerable = false;
+      _hideSpiralDoor();
       _tmpV3.set(0, 2, 0);
       createFloatingText('READY!', _tmpV3, '#FFD700');
     }
@@ -2211,7 +2544,7 @@
       _playerBounceTime += dt * 8.5;
       const bounceY = Math.abs(Math.sin(_playerBounceTime)) * 0.12;
       const squishX = 1 + Math.abs(Math.sin(_playerBounceTime)) * 0.08;
-      player.mesh.position.y = 0.5 + bounceY;
+      if (!_spawnIntroActive) player.mesh.position.y = 0.5 + bounceY;
       if (!player.currentScaleXZ) {
         player.mesh.scale.x = squishX;
         player.mesh.scale.z = squishX;
@@ -2223,7 +2556,7 @@
       // Smooth return to upright
       player.mesh.rotation.z = _lerp(player.mesh.rotation.z, 0, 0.09);
       player.mesh.rotation.x = _lerp(player.mesh.rotation.x, 0, 0.09);
-      player.mesh.position.y = _lerp(player.mesh.position.y, 0.5, 0.1);
+      if (!_spawnIntroActive) player.mesh.position.y = _lerp(player.mesh.position.y, 0.5, 0.1);
       // Idle gentle wobble
       _playerIdleTime += dt;
       const idleWobble = Math.sin(_playerIdleTime * 2.2) * 0.025;
@@ -2327,6 +2660,8 @@
     _buildProjectilePool();
     // Build pre-allocated flesh chunk pool (avoids new THREE.Mesh during gameplay)
     _buildFleshPool();
+    // Build pre-allocated blood stain decal pool (ground stains at kill positions)
+    _buildBloodStainPool();
     // Build pre-allocated EXP gem pool (critical for XP drops to work)
     _buildExpGemPool();
     // Build pooled PointLight flash pool (muzzle flashes, hit lights)
@@ -2454,6 +2789,9 @@
       if (window.BloodSystem && typeof BloodSystem.update === 'function') {
         BloodSystem.update();
       }
+
+      // Blood stain decal fade update
+      _updateBloodStains(dt);
 
       // Rage combat system tick
       if (window.GameRageCombat && typeof GameRageCombat.update === 'function') {
