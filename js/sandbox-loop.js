@@ -1599,7 +1599,9 @@
         const gx = g.mesh.position.x, gz = g.mesh.position.z;
         const ddx = px - gx, ddz = pz - gz;
         const distToPlayer = Math.sqrt(ddx * ddx + ddz * ddz);
-        if (distToPlayer < PICKUP_RANGE * (playerStats.pickupRange || 1.0)) {
+        // xpCollectionRadius (v2 stat) takes priority; falls back to pickupRange then 1.0
+        const radiusMult = (playerStats.xpCollectionRadius || playerStats.pickupRange || 1.0);
+        if (distToPlayer < PICKUP_RANGE * radiusMult) {
           const pullSpeed = MAGNETISM_SPEED * dt;
           g.mesh.position.x += (ddx / distToPlayer) * pullSpeed;
           g.mesh.position.z += (ddz / distToPlayer) * pullSpeed;
@@ -1811,19 +1813,29 @@
   let _playerBounceActive = false;
   let _playerIdleTime = 0;
 
+  // ─── Player velocity physics (acceleration / friction / inputResponsiveness) ─
+  let _playerVx = 0;        // current X velocity (world units / second)
+  let _playerVz = 0;        // current Z velocity (world units / second)
+  let _smoothInputX = 0;    // lerped input direction X (inputResponsiveness lerp)
+  let _smoothInputZ = 0;    // lerped input direction Z
+
   function _tryFire(dt) {
     if (!player) return;
+
+    // Effective magazine size and reload time — read from playerStats if available
+    const _effMaxAmmo    = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
+    const _effReloadTime = REVOLVER_RELOAD_TIME / Math.max(0.1, (playerStats && playerStats.reloadSpeed) || 1.0);
 
     // Handle reload state
     if (_isReloading) {
       _reloadTimer -= dt;
-      const progress = 1 - Math.max(0, _reloadTimer / REVOLVER_RELOAD_TIME);
-      _reloadAnimFrame = Math.floor(progress * REVOLVER_MAX_AMMO);
+      const progress = 1 - Math.max(0, _reloadTimer / _effReloadTime);
+      _reloadAnimFrame = Math.floor(progress * _effMaxAmmo);
       _updateRevolverUI();
       if (_reloadTimer <= 0) {
         _isReloading = false;
-        _revolverAmmo = REVOLVER_MAX_AMMO;
-        _reloadAnimFrame = REVOLVER_MAX_AMMO;
+        _revolverAmmo = _effMaxAmmo;
+        _reloadAnimFrame = _effMaxAmmo;
         _updateRevolverUI();
       }
       return; // can't fire while reloading
@@ -1832,7 +1844,7 @@
     // Out of ammo — start reload
     if (_revolverAmmo <= 0) {
       _isReloading = true;
-      _reloadTimer = REVOLVER_RELOAD_TIME;
+      _reloadTimer = _effReloadTime;
       _reloadAnimFrame = 0;
       _updateRevolverUI();
       return;
@@ -1843,8 +1855,9 @@
     _gunCooldown -= dt * 1000;
     if (_gunCooldown > 0) return;
 
-    // Slightly faster fire rate than original (REVOLVER_FIRE_RATE_MULT = 0.85 = 15% faster)
-    const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * REVOLVER_FIRE_RATE_MULT) : 850;
+    // Fire rate: base cooldown reduced by playerStats.fireRate multiplier
+    const fireRateMult = Math.max(0.1, (playerStats && playerStats.fireRate) || 1.0);
+    const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * REVOLVER_FIRE_RATE_MULT / fireRateMult) : Math.round(850 / fireRateMult);
     _gunCooldown = cooldown;
 
     const px = player.mesh.position.x, pz = player.mesh.position.z;
@@ -2345,6 +2358,23 @@
         pickupRange: 1.0, dropRate: 1.0, perks: {}, survivalTime: 0,
       };
     }
+
+    // ── Camp Bridge: apply skill-tree bonuses accumulated in the Camp ──────────
+    // applySkillTreeBonuses() is exposed by camp-skill-system.js (loaded before
+    // sandbox-loop.js in sandbox.html).  It reads saveData.skillTree and writes
+    // stat upgrades into the global playerStats object.
+    if (typeof window.applySkillTreeBonuses === 'function') {
+      try {
+        window.applySkillTreeBonuses();
+        console.log('[SandboxLoop] Camp skill-tree bonuses applied to playerStats.');
+      } catch (e) {
+        console.warn('[SandboxLoop] applySkillTreeBonuses() error (non-fatal):', e);
+      }
+    }
+
+    // Sync revolver ammo to stat — reload after playerStats has been applied
+    _revolverAmmo = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
+
     // Set up weapons
     if (typeof getDefaultWeapons === 'function') {
       weapons = getDefaultWeapons();
@@ -2362,6 +2392,9 @@
       scene.add(mesh);
       player = { mesh, invulnerable: false };
     }
+    // Reset velocity state so previous run's momentum doesn't carry over
+    _playerVx = 0; _playerVz = 0;
+    _smoothInputX = 0; _smoothInputZ = 0;
     // Mark invulnerable during intro, build spiral door and gun
     player.invulnerable = true;
     _buildSpiralDoor();
@@ -2523,18 +2556,52 @@
   // ─── Player movement ──────────────────────────────────────────────────────────
   function _movePlayer(dt) {
     if (!player || !player.mesh) return;
-    const dir = _getMoveDir();
-    const speed = (playerStats ? playerStats.walkSpeed : 25) * MOVEMENT_TIME_SCALE;
+    const rawDir = _getMoveDir();
 
-    const isMoving = dir.dx !== 0 || dir.dz !== 0;
+    // ── Stats with safe fallbacks ──────────────────────────────────────────────
+    const ps         = playerStats || {};
+    // topSpeed: world-units/sec.  Use new stat if set, otherwise derive from walkSpeed.
+    const topSpeed   = ps.topSpeed   || ((ps.walkSpeed || 25) * MOVEMENT_TIME_SCALE * 60);
+    // inputResponsiveness: lerp factor per frame (0.04=heavy/sluggish, 1.0=instant snap)
+    const inputResp  = _clamp(ps.inputResponsiveness || 0.12, 0.04, 1.0);
+    // acceleration / friction: clamp the per-frame lerp factor to [0, 1]
+    const accelFrac  = _clamp((ps.acceleration || 22.0) * dt, 0, 1);
+    const fricFrac   = _clamp((ps.friction     || 18.0) * dt, 0, 1);
 
-    if (isMoving) {
-      player.mesh.position.x = _clamp(player.mesh.position.x + dir.dx * speed, -ARENA_RADIUS, ARENA_RADIUS);
-      player.mesh.position.z = _clamp(player.mesh.position.z + dir.dz * speed, -ARENA_RADIUS, ARENA_RADIUS);
+    const hasInput = rawDir.dx !== 0 || rawDir.dz !== 0;
 
-      // Lean into movement direction
-      player.mesh.rotation.z = _lerp(player.mesh.rotation.z, -dir.dx * 0.22, 0.14);
-      player.mesh.rotation.x = _lerp(player.mesh.rotation.x, -dir.dz * 0.18, 0.14);
+    // 1. Smooth the raw input direction using inputResponsiveness (creates "heavy" feel)
+    _smoothInputX = _lerp(_smoothInputX, rawDir.dx, inputResp);
+    _smoothInputZ = _lerp(_smoothInputZ, rawDir.dz, inputResp);
+
+    // 2. Velocity physics: accelerate toward target or apply friction
+    if (hasInput) {
+      _playerVx = _lerp(_playerVx, _smoothInputX * topSpeed, accelFrac);
+      _playerVz = _lerp(_playerVz, _smoothInputZ * topSpeed, accelFrac);
+    } else {
+      _playerVx = _lerp(_playerVx, 0, fricFrac);
+      _playerVz = _lerp(_playerVz, 0, fricFrac);
+      // Snap to rest when moving very slowly to avoid infinite creep
+      if (Math.abs(_playerVx) < 0.02) _playerVx = 0;
+      if (Math.abs(_playerVz) < 0.02) _playerVz = 0;
+    }
+
+    // 3. Apply velocity to position
+    if (_playerVx !== 0 || _playerVz !== 0) {
+      player.mesh.position.x = _clamp(player.mesh.position.x + _playerVx * dt, -ARENA_RADIUS, ARENA_RADIUS);
+      player.mesh.position.z = _clamp(player.mesh.position.z + _playerVz * dt, -ARENA_RADIUS, ARENA_RADIUS);
+    }
+
+    // 4. Visual effects — use actual velocity magnitude, not raw input, for smooth transitions
+    const speed         = Math.sqrt(_playerVx * _playerVx + _playerVz * _playerVz);
+    const movingVisually = speed > 0.15;
+    const leanDirX      = speed > 0.1 ? _playerVx / Math.max(speed, 0.01) : 0;
+    const leanDirZ      = speed > 0.1 ? _playerVz / Math.max(speed, 0.01) : 0;
+
+    if (movingVisually) {
+      // Lean into movement direction (proportional to velocity, not raw input)
+      player.mesh.rotation.z = _lerp(player.mesh.rotation.z, -leanDirX * 0.22, 0.14);
+      player.mesh.rotation.x = _lerp(player.mesh.rotation.x, -leanDirZ * 0.18, 0.14);
 
       // Bounce/wiggle: squish and stretch
       if (!_playerBounceActive) {
