@@ -444,13 +444,29 @@
   // ── HUD helpers ───────────────────────────────────────────────
   function _buildHUD() {
     // Wire event listeners onto static HTML elements in #special-attacks-panel
+    // The rage-activate-btn has been replaced by special-attacks-open-btn
+    const specialAttacksOpenBtn = document.getElementById('special-attacks-open-btn');
+    if (specialAttacksOpenBtn) {
+      const newBtn = specialAttacksOpenBtn.cloneNode(true);
+      specialAttacksOpenBtn.parentNode.replaceChild(newBtn, specialAttacksOpenBtn);
+      // Opens the special attacks / rage loadout panel on click
+      newBtn.addEventListener('click', function () {
+        if (typeof _toggleLoadoutPanel === 'function') _toggleLoadoutPanel();
+        else activateRage();
+      });
+      newBtn.addEventListener('touchstart', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (typeof _toggleLoadoutPanel === 'function') _toggleLoadoutPanel();
+        else activateRage();
+      }, { passive: false });
+    }
+    // Legacy: also wire rage-activate-btn if it exists (for backwards compat)
     const rageBtn = document.getElementById('rage-activate-btn');
     if (rageBtn) {
-      // Clone to clear any previously attached listeners
-      const newBtn = rageBtn.cloneNode(true);
-      rageBtn.parentNode.replaceChild(newBtn, rageBtn);
-      newBtn.addEventListener('click', activateRage);
-      newBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); activateRage(); }, { passive: false });
+      const newRageBtn = rageBtn.cloneNode(true);
+      rageBtn.parentNode.replaceChild(newRageBtn, rageBtn);
+      newRageBtn.addEventListener('click', activateRage);
+      newRageBtn.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); activateRage(); }, { passive: false });
     }
 
     const loadoutBtn = document.getElementById('sa-loadout-btn');
@@ -620,18 +636,19 @@
   }
 
   function _updateRageHUD() {
+    // StatusBar (repurposed rage meter) — shows rage fill color until status effects are active
     const fill = document.getElementById('rage-unified-fill');
     if (fill) {
       fill.style.width = (_rageMeter / RAGE_MAX * 100) + '%';
       fill.style.background = _rageActive
         ? 'linear-gradient(90deg,#FF4400,#FF8800)'
-        : (_rageMeter >= RAGE_MIN_TO_ACTIVATE ? 'linear-gradient(90deg,#FF6600,#FFD700)' : 'linear-gradient(90deg,#884400,#CC6600)');
+        : (_rageMeter >= RAGE_MIN_TO_ACTIVATE ? 'linear-gradient(90deg,#FF6600,#FFD700)' : 'linear-gradient(90deg,#4466FF,#8844FF)');
     }
-    const btn = document.getElementById('rage-activate-btn');
-    if (btn) {
-      btn.disabled = _rageActive || _rageMeter < RAGE_MIN_TO_ACTIVATE;
-      btn.className = 'companion-skill-btn rage-activate-btn' + (_rageActive ? ' rage-active' : '') + (_rageMeter >= RAGE_MIN_TO_ACTIVATE && !_rageActive ? ' rage-ready' : '');
-      btn.textContent = _rageActive ? '🔥' : '⚡';
+    // Update the open-btn icon to reflect rage state (optional visual feedback)
+    const openBtn = document.getElementById('special-attacks-open-btn');
+    if (openBtn) {
+      openBtn.textContent = _rageActive ? '🔥' : '⚔️';
+      openBtn.style.borderColor = _rageActive ? '#FF4400' : (_rageMeter >= RAGE_MIN_TO_ACTIVATE ? '#FFD700' : 'rgba(100,180,255,0.6)');
     }
 
     // Update special attack cooldowns on sa-slot-N elements

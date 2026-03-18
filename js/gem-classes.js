@@ -144,20 +144,19 @@
         var force = hitForce || 1.0;
         var isCritical = force > 1.5;
         var isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
-        var spinMult = isCritical ? 2.0 : isExplosive ? 2.5 : 1.0;
-        this.rotSpeedX = (Math.random() * 0.12 + 0.04) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedY = (Math.random() * 0.15 + 0.10) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedZ = (Math.random() * 0.10 + 0.03) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        var spinMult = isCritical ? 2.5 : isExplosive ? 3.5 : 1.5;
+        this.rotSpeedX = (Math.random() * 0.18 + 0.08) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.22 + 0.14) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.16 + 0.06) * spinMult * (Math.random() < 0.5 ? 1 : -1);
 
-        // Physics: pop velocity + gravity
-        // Tripled gravity/drag so gems hit the ground hard and fast (requirement).
-        var popSpeed = (0.02 + Math.random() * 0.025) * force;
+        // Physics: explosive casino-coin pop — outward 3D velocity, hard gravity, bouncing
+        var popSpeed = (0.06 + Math.random() * 0.07) * force; // 3× more explosive than before
         this.vx = Math.cos(popAngle) * popSpeed;
-        this.vy = 0.04 + Math.random() * 0.02 * force; // upward pop
+        this.vy = 0.10 + Math.random() * 0.08 * force; // strong upward arc
         this.vz = Math.sin(popAngle) * popSpeed;
-        this.gravity = -0.039; // tripled gravity (-0.013 × 3) — gems hit ground hard and fast
+        this.gravity = -0.022; // normal gravity so arc looks natural
         this.onGround = false;
-        this.groundFriction = 0.55; // increased drag (lower coefficient = stops faster on ground)
+        this.groundFriction = 0.62; // some slide then stop
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
@@ -188,23 +187,26 @@
           this.mesh.position.y += this.vy;
           this.mesh.position.z += this.vz;
 
-          // Hit ground — bounce with damping for a lively drop effect
+          // Hit ground — bounce like a casino coin then lay flat
           if (this.mesh.position.y <= 0.08) {
             this.mesh.position.y = 0.08;
             // Bounce: invert vertical velocity with damping coefficient
-            this.vy = -this.vy * 0.48;
+            this.vy = -this.vy * 0.42;
             this.vx *= this.groundFriction;
             this.vz *= this.groundFriction;
             // Stop bouncing when velocity is negligible
-            if (Math.abs(this.vy) < 0.006) {
+            if (Math.abs(this.vy) < 0.005) {
               this.vy = 0;
               this.vx = 0;
               this.vz = 0;
               this.onGround = true;
-              // Dampen spin when finally resting on ground
-              this.rotSpeedX *= 0.25;
-              this.rotSpeedZ *= 0.25;
-              this.rotSpeedY *= 0.4;
+              // Coin lands flat: kill X/Z spin, keep gentle Y spin
+              this.rotSpeedX = 0;
+              this.rotSpeedZ = 0;
+              this.rotSpeedY *= 0.3;
+              // Tilt star to lay flat on ground (rotate to near-horizontal)
+              this.mesh.rotation.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+              this.mesh.rotation.z = Math.random() * Math.PI * 2;
             }
           }
         } else {

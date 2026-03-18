@@ -44,7 +44,7 @@ class Engine2Sandbox {
   }
 
   /**
-   * Load ground PBR textures with fallback to color.jpg
+   * Load ground PBR textures — tries mossy brick diffuse first, falls back to color.jpg
    */
   _loadTextures(callback) {
     const loader = new THREE.TextureLoader();
@@ -58,32 +58,42 @@ class Engine2Sandbox {
       }
     };
 
-    // Load diffuse texture from assets/textures/ground/color.jpg
+    const applyTexture = (texture, label) => {
+      console.log('[Engine2] Loaded ground texture: ' + label);
+      this.textures.diffuse = texture;
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(40, 40); // Mossy brick tiled at 5-unit scale across 200x200 ground
+      const maxAniso = (typeof renderer !== 'undefined' && renderer && renderer.capabilities &&
+                        typeof renderer.capabilities.getMaxAnisotropy === 'function')
+        ? renderer.capabilities.getMaxAnisotropy()
+        : 1;
+      texture.anisotropy = maxAniso;
+      // Set encoding to sRGB for proper color display.
+      if (typeof THREE.SRGBColorSpace !== 'undefined') {
+        texture.colorSpace = THREE.SRGBColorSpace;
+      } else {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+      texture.needsUpdate = true;
+      checkComplete();
+    };
+
+    // Try mossy brick diffuse first (best quality), fall back to color.jpg then plain color
     loader.load(
-      'assets/textures/ground/color.jpg',
-      (texture) => {
-        console.log('[Engine2] Loaded ground color texture');
-        this.textures.diffuse = texture;
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(50, 50); // Fine tiling across 200x200 ground (4 units per tile)
-        const maxAniso = (typeof renderer !== 'undefined' && renderer?.capabilities?.getMaxAnisotropy)
-          ? renderer.capabilities.getMaxAnisotropy()
-          : 1;
-        texture.anisotropy = maxAniso;
-        // Set encoding to sRGB for proper color display.
-        // Check colorSpace first (THREE r152+); fall back to encoding for older builds.
-        if (typeof THREE.SRGBColorSpace !== 'undefined') {
-          texture.colorSpace = THREE.SRGBColorSpace;
-        } else {
-          texture.encoding = THREE.sRGBEncoding;
-        }
-        texture.needsUpdate = true;
-        checkComplete();
-      },
+      'assets/textures/mossy_brick_diff_4k.jpg',
+      (texture) => applyTexture(texture, 'mossy_brick_diff_4k.jpg'),
       undefined,
-      (error) => {
-        console.warn('[Engine2] Failed to load ground texture, using fallback:', error);
-        checkComplete();
+      () => {
+        // Fallback 1: ground/color.jpg
+        loader.load(
+          'assets/textures/ground/color.jpg',
+          (texture) => applyTexture(texture, 'ground/color.jpg'),
+          undefined,
+          (error) => {
+            console.warn('[Engine2] All ground textures failed, using fallback color:', error);
+            checkComplete();
+          }
+        );
       }
     );
   }

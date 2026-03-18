@@ -7,85 +7,71 @@
       // Exclusion zones: each entry is { x, z, r } — no prop spawns within r units of (x,z)
       const exclusionZones = [];
 
-      // Ground - Enhanced ground with highly realistic procedural detail texture
-      // Create a detailed grass texture using canvas with improved realism
-      const groundTexCanvas = document.createElement('canvas');
-      groundTexCanvas.width = 512;
-      groundTexCanvas.height = 512;
-      const gCtx = groundTexCanvas.getContext('2d');
-
-      // Base grass color with natural variation - lighter, sun-kissed green
-      const baseGreen = '#3a6b28';
-      gCtx.fillStyle = baseGreen;
-      gCtx.fillRect(0, 0, 512, 512);
-
-      // Add detailed noise pattern for grass blades and texture
-      for (let i = 0; i < 12000; i++) {
-        const x = Math.random() * 512;
-        const y = Math.random() * 512;
-        const brightness = Math.random() * 60 + 20;
-        const size = Math.random() * 1.5 + 0.5;
-        // Mix of lighter green tones for brighter grass look
-        const greenTone = Math.random() * 40 + 30;
-        gCtx.fillStyle = `rgba(${brightness}, ${brightness + greenTone}, ${brightness + 5}, 0.35)`;
-        gCtx.fillRect(x, y, size, size);
-      }
-
-      // Add organic darker patches for ground variation (dirt, worn paths, shadows)
-      for (let i = 0; i < 50; i++) {
-        const x = Math.random() * 512;
-        const y = Math.random() * 512;
-        const radius = Math.random() * 35 + 15;
-        const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
-        // Slightly lighter brown-tinted patches
-        grd.addColorStop(0, 'rgba(35, 55, 25, 0.4)');
-        grd.addColorStop(0.5, 'rgba(30, 50, 22, 0.25)');
-        grd.addColorStop(1, 'rgba(30, 50, 22, 0)');
-        gCtx.fillStyle = grd;
-        gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-      }
-
-      // Add lighter grass highlights for sun-kissed areas
-      for (let i = 0; i < 60; i++) {
-        const x = Math.random() * 512;
-        const y = Math.random() * 512;
-        const radius = Math.random() * 30 + 12;
-        const grd = gCtx.createRadialGradient(x, y, 0, x, y, radius);
-        grd.addColorStop(0, 'rgba(100, 160, 70, 0.30)');
-        grd.addColorStop(1, 'rgba(100, 160, 70, 0)');
-        gCtx.fillStyle = grd;
-        gCtx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-      }
-
-      // Subtle directional shading to simulate natural sunlight and depth
-      const sweepGrad = gCtx.createLinearGradient(0, 0, 512, 512);
-      sweepGrad.addColorStop(0, 'rgba(255, 255, 220, 0.05)'); // Sun-kissed highlight
-      sweepGrad.addColorStop(1, 'rgba(12, 24, 14, 0.10)');    // Cooler shadowed areas
-      gCtx.globalCompositeOperation = 'soft-light';
-      gCtx.fillStyle = sweepGrad;
-      gCtx.fillRect(0, 0, 512, 512);
-      gCtx.globalCompositeOperation = 'source-over';
-
-      const groundTexture = new THREE.CanvasTexture(groundTexCanvas);
-      groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-      groundTexture.repeat.set(20, 20); // Tile the texture for detail
-
+      // Ground — load mossy-brick PBR texture via TextureLoader for realistic appearance.
+      // Falls back to a UUID-named PNG in the root, then to a canvas procedural texture.
       // ENGINE 2.0: Skip old ground plane if Engine 2.0 Sandbox mode is active
       if (!window._engine2SandboxMode) {
-        // One ground plane with enhanced material - OPTIMIZED: Reduced from 200x200 to 120x120, now 80x80 for ultra-compact world
-        const mainGroundGeo = new THREE.PlaneGeometry(80, 80);
-        const mainGroundMat = new THREE.MeshStandardMaterial({
-          color: 0x4A8C2A,  // Light-medium grass green matching COLORS.ground
-          map: groundTexture,
-          roughness: 0.95,
-          metalness: 0.0,
-          normalScale: new THREE.Vector2(0.3, 0.3)
-        });
-        const mainGround = new THREE.Mesh(mainGroundGeo, mainGroundMat);
-        mainGround.rotation.x = -Math.PI / 2;
-        mainGround.position.set(0, 0, 0);
-        mainGround.receiveShadow = true;
-        scene.add(mainGround);
+        const _wgLoader = new THREE.TextureLoader();
+        const _wgGroundGeo = new THREE.PlaneGeometry(80, 80);
+
+        const _applyGroundTexture = (texture) => {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(16, 16); // ~5 world-units per tile across 80×80 ground
+          if (typeof THREE.SRGBColorSpace !== 'undefined') {
+            texture.colorSpace = THREE.SRGBColorSpace;
+          } else {
+            texture.encoding = THREE.sRGBEncoding;
+          }
+          texture.needsUpdate = true;
+          return texture;
+        };
+
+        const _buildGroundMesh = (texture) => {
+          const mat = new THREE.MeshStandardMaterial({
+            color: 0xFFFFFF,
+            map: texture,
+            roughness: 0.92,
+            metalness: 0.0,
+          });
+          const mesh = new THREE.Mesh(_wgGroundGeo, mat);
+          mesh.rotation.x = -Math.PI / 2;
+          mesh.position.set(0, 0, 0);
+          mesh.receiveShadow = true;
+          scene.add(mesh);
+        };
+
+        // Attempt 1: mossy brick 4k diffuse in assets/textures
+        _wgLoader.load(
+          'assets/textures/mossy_brick_diff_4k.jpg',
+          (tex) => { _buildGroundMesh(_applyGroundTexture(tex)); },
+          undefined,
+          () => {
+            // Attempt 2: UUID-named PNG in the root directory
+            _wgLoader.load(
+              '654811F9-1760-4A74-B977-73ECB1A92913.png',
+              (tex) => { _buildGroundMesh(_applyGroundTexture(tex)); },
+              undefined,
+              () => {
+                // Fallback: procedural canvas grass texture
+                const groundTexCanvas = document.createElement('canvas');
+                groundTexCanvas.width = 512; groundTexCanvas.height = 512;
+                const gCtx = groundTexCanvas.getContext('2d');
+                gCtx.fillStyle = '#3a6b28';
+                gCtx.fillRect(0, 0, 512, 512);
+                for (let i = 0; i < 12000; i++) {
+                  const bx = Math.random() * 512, by = Math.random() * 512;
+                  const br = Math.random() * 60 + 20, gt = Math.random() * 40 + 30;
+                  gCtx.fillStyle = `rgba(${br},${br+gt},${br+5},0.35)`;
+                  gCtx.fillRect(bx, by, Math.random()*1.5+0.5, Math.random()*1.5+0.5);
+                }
+                const fallbackTex = new THREE.CanvasTexture(groundTexCanvas);
+                fallbackTex.wrapS = fallbackTex.wrapT = THREE.RepeatWrapping;
+                fallbackTex.repeat.set(20, 20);
+                _buildGroundMesh(fallbackTex);
+              }
+            );
+          }
+        );
       } else {
         console.log('[Engine2] Skipping old ground plane - Engine 2.0 Sandbox mode active');
       }
