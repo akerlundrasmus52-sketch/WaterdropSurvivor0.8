@@ -1725,7 +1725,8 @@
 
   // ─── Revolver ammo / reload state ────────────────────────────────────────────
   const REVOLVER_MAX_AMMO = 5;
-  const REVOLVER_RELOAD_TIME = 1.8; // seconds for full reload
+  const REVOLVER_RELOAD_TIME = 1.8;        // seconds for full reload
+  const REVOLVER_FIRE_RATE_MULT = 0.85;    // 15% faster than base gun cooldown (snappier feel)
   let _revolverAmmo = REVOLVER_MAX_AMMO;
   let _isReloading = false;
   let _reloadTimer = 0;
@@ -1769,11 +1770,13 @@
       return;
     }
 
+    // _gunCooldown is tracked in milliseconds (matching weapons.gun.cooldown units).
+    // dt is in seconds, so dt*1000 converts to ms per frame.
     _gunCooldown -= dt * 1000;
     if (_gunCooldown > 0) return;
 
-    // Slightly faster fire rate than original (850ms vs 1000ms)
-    const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * 0.85) : 850;
+    // Slightly faster fire rate than original (REVOLVER_FIRE_RATE_MULT = 0.85 = 15% faster)
+    const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * REVOLVER_FIRE_RATE_MULT) : 850;
     _gunCooldown = cooldown;
 
     const px = player.mesh.position.x, pz = player.mesh.position.z;
@@ -2212,6 +2215,7 @@
       if (!player.currentScaleXZ) {
         player.mesh.scale.x = squishX;
         player.mesh.scale.z = squishX;
+        // Halve the squish on Y to prevent extreme vertical shrink: volume-preserving approx.
         player.mesh.scale.y = 1 / (squishX * 0.5 + 0.5);
       }
     } else {
@@ -2226,6 +2230,7 @@
       if (!player.currentScaleXZ) {
         player.mesh.scale.x = 1 + idleWobble;
         player.mesh.scale.z = 1 + idleWobble;
+        // Y-axis uses half the wobble to keep vertical proportions natural during breathing
         player.mesh.scale.y = 1 - idleWobble * 0.5;
       }
     }
