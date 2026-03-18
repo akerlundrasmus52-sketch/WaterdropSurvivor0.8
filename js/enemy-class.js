@@ -3391,8 +3391,11 @@
         } else if (damageType === 'lightning') {
           // Lightning death: Blackened and smoke
           this.dieByLightning(enemyColor);
+        } else if (damageType === 'meteor' || damageType === 'homingMissile' || damageType === 'fireball') {
+          // Meteor/Missile death: Crushing impact, flatten enemy into crater
+          this.dieByMeteor(enemyColor);
         } else if (damageType === 'shotgun' || damageType === 'doubleBarrel') {
-          // Shotgun / double barrel / homing missile death: Massive gibs explosion
+          // Shotgun / double barrel death: Massive gibs explosion
           this.dieByShotgun(enemyColor);
         } else if (damageType === 'headshot') {
           // Headshot: Specific head explosion
@@ -4866,12 +4869,38 @@
       
       dieByIce(enemyColor) {
         // Enhanced ice death: crack → struggle → shatter, leaves ice chunks + water pools
+        // Ice Spear weapon gets extra shatter effect (15+ chunks that slide on ground)
         const deathPos = this.mesh.position.clone();
-        spawnParticles(deathPos, 0x87CEEB, 15); // Light blue ice
-        spawnParticles(deathPos, 0xFFFFFF, 12); // White frost
+        const isIceSpear = this.lastDamageType === 'iceSpear';
+
+        spawnParticles(deathPos, 0x87CEEB, isIceSpear ? 25 : 15); // Light blue ice
+        spawnParticles(deathPos, 0xFFFFFF, isIceSpear ? 20 : 12); // White frost
+
+        // Ice Spear: Freeze enemy solid with visual effect
+        if (isIceSpear && this.mesh && this.mesh.material) {
+          // Turn material white/blue frozen
+          if (this.mesh.material._isShared) {
+            this.mesh.material = this.mesh.material.clone();
+            this.mesh.material._isShared = false;
+          }
+          this.mesh.material.color.setHex(0xDDEEFF);
+          this.mesh.material.roughness = 0.1;
+          this.mesh.material.metalness = 0.8;
+          this.mesh.material.needsUpdate = true;
+        }
+
         // Ice crack particles
         if (window.BloodSystem) {
-          window.BloodSystem.emitBurst(deathPos, 40, { spreadXZ: 0.5, spreadY: 0.4, color1: 0xAEEEFF, color2: 0xFFFFFF, minSize: 0.05, maxSize: 0.14, minLife: 30, maxLife: 60 });
+          window.BloodSystem.emitBurst(deathPos, isIceSpear ? 60 : 40, {
+            spreadXZ: isIceSpear ? 0.8 : 0.5,
+            spreadY: isIceSpear ? 0.6 : 0.4,
+            color1: 0xAEEEFF,
+            color2: 0xFFFFFF,
+            minSize: 0.05,
+            maxSize: 0.14,
+            minLife: 30,
+            maxLife: 60
+          });
         }
 
         // Brief struggle: body shakes before shattering
@@ -4887,8 +4916,8 @@
           if (struggleCount >= 10) clearInterval(struggleInterval);
         }, 40);
 
-        // Shatter into ice shards (with slight delay for drama)
-        const shardCount = 10;
+        // Shatter into ice shards (Ice Spear gets 15+ chunks that slide)
+        const shardCount = isIceSpear ? 18 : 10;
         for(let i = 0; i < shardCount; i++) {
           const shardGeo = new THREE.ConeGeometry(0.1, 0.3, 4);
           const shardMat = new THREE.MeshBasicMaterial({ 
@@ -4901,22 +4930,48 @@
           scene.add(shard);
           
           const angle = (i / shardCount) * Math.PI * 2;
+          // Ice Spear chunks slide on ground with friction
           const vel = new THREE.Vector3(
-            Math.cos(angle) * 0.3,
+            Math.cos(angle) * (isIceSpear ? 0.4 : 0.3),
             0.4 + Math.random() * 0.2,
-            Math.sin(angle) * 0.3
+            Math.sin(angle) * (isIceSpear ? 0.4 : 0.3)
           );
-          
-          let life = 60;
+
+          let life = isIceSpear ? 120 : 60; // Ice Spear chunks last longer
+          const GROUND_Y = 0.05;
+          let grounded = false;
+
           if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
             managedAnimations.push({ update(_dt) {
               life--;
+
+              // Physics
               shard.position.add(vel);
               vel.y -= 0.03;
-              shard.rotation.x += 0.2;
-              shard.rotation.z += 0.15;
-              shard.material.opacity = (life / 60) * 0.7;
-              if (life <= 0 || shard.position.y < 0) {
+
+              // Ground collision with slide
+              if (shard.position.y <= GROUND_Y) {
+                shard.position.y = GROUND_Y;
+                if (!grounded) {
+                  vel.y = 0;
+                  grounded = true;
+                }
+                // Ice Spear: chunks slide on ground with friction
+                if (isIceSpear) {
+                  vel.x *= 0.96; // Low friction for ice
+                  vel.z *= 0.96;
+                  shard.rotation.y += 0.1; // Spin on ground
+                } else {
+                  vel.x *= 0.85;
+                  vel.z *= 0.85;
+                }
+              }
+
+              shard.rotation.x += grounded ? 0.05 : 0.2;
+              shard.rotation.z += grounded ? 0.05 : 0.15;
+              shard.material.opacity = (life / (isIceSpear ? 120 : 60)) * 0.7;
+
+              if (life <= 0) {
                 scene.remove(shard);
                 shard.geometry.dispose();
                 shard.material.dispose();
@@ -4955,8 +5010,8 @@
       }
       
       dieByLightning(enemyColor) {
-        // LIGHTNING DEATH: Nervous System Spasm — mesh scales to 0 instantly,
-        // leaving behind a glowing blue static spark that stays on the floor forever.
+        // LIGHTNING DEATH: Violent shake, swell, cook into blackened smoking husk
+        // Enemy violently shakes, swells slightly, then cooks into blackened husk with smoke
         const deathPos = this.mesh.position.clone();
 
         // Skip the generic fall animation — lightning death handles the mesh itself
@@ -4971,35 +5026,169 @@
             color1: 0xFFFFFF, color2: 0x8888FF, minSize: 0.03, maxSize: 0.09, minLife: 15, maxLife: 40 });
         }
 
-        // Instantly scale mesh to 0 — electrocuted body vaporised
-        if (this.mesh) this.mesh.scale.set(0, 0, 0);
+        // Phase 1: VIOLENT SHAKE (rapid alternating rotation)
+        let shakePhase = 0;
+        const originalScale = this.mesh ? this.mesh.scale.clone() : new THREE.Vector3(1, 1, 1);
+        const shakeInterval = setInterval(() => {
+          shakePhase++;
+          if (!this.mesh) {
+            clearInterval(shakeInterval);
+            return;
+          }
 
-        // Permanent glowing blue static spark on the floor
-        const sparkGeo = new THREE.SphereGeometry(0.08, 6, 6);
-        const sparkMat = new THREE.MeshBasicMaterial({ color: 0x44AAFF, transparent: true, opacity: 0.9 });
-        const spark    = new THREE.Mesh(sparkGeo, sparkMat);
-        spark.position.set(deathPos.x, 0.07, deathPos.z);
-        scene.add(spark);
+          // Violent alternating rotations
+          this.mesh.rotation.x = (Math.random() - 0.5) * 0.8;
+          this.mesh.rotation.z = (Math.random() - 0.5) * 0.8;
 
-        // Pulse glow animation: the spark flickers as static electricity
-        let sparkTimer = 0;
+          // Swell slightly as energy builds
+          const swellFactor = 1.0 + (shakePhase / 20) * 0.3; // Up to 30% larger
+          this.mesh.scale.copy(originalScale).multiplyScalar(swellFactor);
+
+          // Electric spark particles during shake
+          if (shakePhase % 2 === 0) {
+            spawnParticles(this.mesh.position, 0xFFFF00, 2);
+          }
+
+          // After 20 shakes (~0.4 seconds), transition to cooking phase
+          if (shakePhase >= 20) {
+            clearInterval(shakeInterval);
+
+            // Phase 2: COOK INTO BLACKENED HUSK
+            // Turn material black/charred
+            if (this.mesh.material) {
+              if (this.mesh.material._isShared) {
+                this.mesh.material = this.mesh.material.clone();
+                this.mesh.material._isShared = false;
+              }
+              this.mesh.material.color.setHex(0x1A1A1A); // Charcoal black
+              this.mesh.material.emissive.setHex(0x330000); // Faint red ember glow
+              this.mesh.material.emissiveIntensity = 0.3;
+              this.mesh.material.roughness = 1.0;
+              this.mesh.material.needsUpdate = true;
+            }
+
+            // Reset rotations and scale down slightly (cooked/shriveled)
+            this.mesh.rotation.set(0, 0, 0);
+            this.mesh.scale.copy(originalScale).multiplyScalar(0.85);
+
+            // Smoke particles rising from the cooked husk
+            let smokeTimer = 0;
+            if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
+              managedAnimations.push({ update(_dt) {
+                smokeTimer++;
+                // Emit smoke particles every few frames
+                if (smokeTimer % 8 === 0 && smokeTimer < 240) { // Smoke for ~4 seconds
+                  spawnParticles(deathPos, 0x333333, 1); // Dark smoke
+                  spawnParticles(deathPos, 0x555555, 1); // Grey smoke
+                }
+                return smokeTimer < 240;
+              }});
+            }
+          }
+        }, 20); // Shake every 20ms for violent effect
+
+        // Permanent blackened husk on the floor (no blue spark, just smoking corpse)
+        // The mesh itself stays as the husk
+      }
+
+      dieByMeteor(enemyColor) {
+        // METEOR/MISSILE DEATH: Crushing impact — instant flatten (scale.y = 0.1)
+        // Creates massive dark red/black crater decal, splashes blood on nearby enemies
+        const deathPos = this.mesh.position.clone();
+
+        // Skip the generic fall animation
+        this._skipMainDeathAnim = true;
+
+        // Massive impact particles
+        spawnParticles(deathPos, 0xFF4400, 20); // Orange explosion
+        spawnParticles(deathPos, 0xFFAA00, 15); // Yellow fire
+        spawnParticles(deathPos, 0x8B0000, 25); // Dark red blood
+        spawnParticles(deathPos, 0x330000, 15); // Nearly black blood
+
+        // Blood explosion burst
+        if (window.BloodSystem) {
+          window.BloodSystem.emitMeteorExplosion(deathPos, 80, {
+            spreadXZ: 2.0,
+            spreadY: 0.8,
+            color1: 0x8B0000,
+            color2: 0x330000
+          });
+        }
+
+        // INSTANTLY FLATTEN enemy (scale.y = 0.1, complete annihilation)
+        if (this.mesh) {
+          this.mesh.scale.y = 0.1;
+          this.mesh.position.y = 0.05; // Squashed into ground
+
+          // Turn material dark/bloodied
+          if (this.mesh.material) {
+            if (this.mesh.material._isShared) {
+              this.mesh.material = this.mesh.material.clone();
+              this.mesh.material._isShared = false;
+            }
+            this.mesh.material.color.setHex(0x2A0000); // Dark blood red
+            this.mesh.material.needsUpdate = true;
+          }
+        }
+
+        // Create massive dark red/black crater decal on floor
+        const craterGeo = new THREE.CircleGeometry(1.2, 16);
+        const craterMat = new THREE.MeshBasicMaterial({
+          color: 0x1A0000,
+          transparent: true,
+          opacity: 0.85,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+        const crater = new THREE.Mesh(craterGeo, craterMat);
+        crater.rotation.x = -Math.PI / 2;
+        crater.position.set(deathPos.x, 0.04, deathPos.z);
+        scene.add(crater);
+
+        // Crater fades slowly over time
+        let craterLife = 360; // ~6 seconds
         if (managedAnimations.length < MAX_MANAGED_ANIMATIONS) {
           managedAnimations.push({ update(_dt) {
-            sparkTimer++;
-            // Flicker pulsing glow
-            const _pulse = Math.sin(sparkTimer * 0.35) * 0.5 + 0.5;
-            sparkMat.opacity = 0.55 + _pulse * 0.45;
-            spark.scale.setScalar(0.9 + _pulse * 0.35);
-            // Tiny blue arc particles every ~0.5 second
-            if (sparkTimer % 30 === 0 && scene) {
-              spawnParticles(spark.position, 0x66BBFF, 2);
+            craterLife--;
+            crater.material.opacity = (craterLife / 360) * 0.85;
+            if (craterLife <= 0) {
+              scene.remove(crater);
+              crater.geometry.dispose();
+              crater.material.dispose();
+              return false;
             }
-            // Spark persists indefinitely — return true forever
             return true;
-          }, cleanup() {
-            if (spark.parent) scene.remove(spark);
-            sparkGeo.dispose(); sparkMat.dispose();
           }});
+        }
+
+        // SPLASH BLOOD ON NEARBY ENEMIES (within 3 units)
+        if (enemies) {
+          for (let ne = 0; ne < enemies.length; ne++) {
+            const other = enemies[ne];
+            if (other === this || other.isDead || !other.mesh) continue;
+
+            const dx = other.mesh.position.x - deathPos.x;
+            const dz = other.mesh.position.z - deathPos.z;
+            const distSq = dx * dx + dz * dz;
+
+            if (distSq < 9.0) { // Within 3 units
+              // Stain the nearby enemy with heavy blood splatter
+              if (other.mesh.material && other.mesh.material.color) {
+                if (other.mesh.material._isShared) {
+                  other.mesh.material = other.mesh.material.clone();
+                  other.mesh.material._isShared = false;
+                }
+                if (!other._originalColor) other._originalColor = other.mesh.material.color.clone();
+
+                const stainAmt = Math.max(0, 0.4 * (1 - Math.sqrt(distSq) / 3));
+                if (!Enemy._bloodColor) Enemy._bloodColor = new THREE.Color(0x8B0000);
+                other.mesh.material.color.lerp(Enemy._bloodColor, stainAmt);
+
+                // Spawn blood particles on the splattered enemy
+                spawnParticles(other.mesh.position, 0x8B0000, Math.floor(stainAmt * 10));
+              }
+            }
+          }
         }
       }
 
