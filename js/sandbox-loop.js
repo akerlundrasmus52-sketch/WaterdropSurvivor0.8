@@ -620,7 +620,8 @@
       mesh.visible = false; // inactive until spawned
       scene.add(mesh);
 
-      // Eye pair
+      // Eye pair with tracking
+      const eyePupils = [];
       [-0.22, 0.22].forEach(function (ox) {
         const eye = new THREE.Mesh(eyeGeo, eyeMat);
         eye.position.set(ox, 0.3, 0.6);
@@ -628,6 +629,7 @@
         pupil.position.set(0, 0, 0.06);
         eye.add(pupil);
         mesh.add(eye);
+        eyePupils.push(pupil); // Store reference for eye tracking
       });
 
       // HP bar
@@ -666,6 +668,7 @@
         hpFillGeo,
         woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
         woundCount: 0, // number of currently active wound meshes
+        eyePupils,   // Store eye pupil references for tracking
         hp: SLIME_HP,
         maxHp: SLIME_HP,
         active: false,
@@ -1598,10 +1601,39 @@
       // Attack timer cooldown
       if (s.attackTimer > 0) s.attackTimer -= dt;
 
-      // Wobble animation — more pronounced (0.12 amplitude) for slimy jelly feel
+      // Get positions early for eye tracking and movement
+      const sx = s.mesh.position.x, sz = s.mesh.position.z;
+
+      // Enhanced breathing animation — constant pulsing/squishing for alive feel
       s.wobbleTime += dt * 3.5;
+      const breathCycle = Math.sin(s.wobbleTime * 0.8) * 0.08; // Breathing scale factor
       const wobble   = Math.sin(s.wobbleTime) * 0.12;
       const wobbleY  = Math.sin(s.wobbleTime * 2.0) * 0.06; // secondary vertical bob
+
+      // Eye tracking — pupils follow player (unless dead)
+      if (s.eyePupils && !s.dead && player && player.mesh) {
+        const eyeTrackingEnabled = true; // Can be disabled on death
+        if (eyeTrackingEnabled) {
+          // Calculate direction from slime to player
+          const dirX = px - sx;
+          const dirZ = pz - sz;
+          const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
+          if (dirLength > 0.1) {
+            // Normalized direction
+            const ndx = dirX / dirLength;
+            const ndz = dirZ / dirLength;
+            // Convert to local space (relative to slime's rotation)
+            const angle = Math.atan2(dirX, dirZ) - s.mesh.rotation.y;
+            const pupilOffsetX = Math.sin(angle) * 0.03; // Horizontal pupil movement
+            const pupilOffsetZ = Math.cos(angle) * 0.03; // Depth pupil movement
+            // Apply to each pupil
+            s.eyePupils.forEach(pupil => {
+              pupil.position.x = pupilOffsetX;
+              pupil.position.z = 0.06 + pupilOffsetZ; // Base Z + offset
+            });
+          }
+        }
+      }
 
       // Squish animation on hit
       let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
@@ -1639,12 +1671,12 @@
         }
       }
 
-      // Combined scale: wobble + squish + lunge + damage stage shrink
+      // Combined scale: breathing + wobble + squish + lunge + damage stage shrink
       const damageScale = s.damageStage >= 4 ? 0.85 : (s.damageStage >= 3 ? 0.92 : 1.0);
       s.mesh.scale.set(
-        damageScale * squishX * lungeScaleX * (1 + wobble),
-        damageScale * squishY * lungeScaleY * (1 - wobbleY),
-        damageScale * squishZ * lungeScaleZ * (1 + wobble)
+        damageScale * squishX * lungeScaleX * (1 + wobble + breathCycle * 0.5),
+        damageScale * squishY * lungeScaleY * (1 - wobbleY + breathCycle),
+        damageScale * squishZ * lungeScaleZ * (1 + wobble + breathCycle * 0.5)
       );
 
       // Knockback physics — gentle decay to prevent stutter
@@ -1655,8 +1687,7 @@
         s.knockbackVz *= Math.pow(0.05, dt);
       }
 
-      // Move toward player
-      const sx = s.mesh.position.x, sz = s.mesh.position.z;
+      // Move toward player (sx, sz already defined above)
       const ddx = px - sx, ddz = pz - sz;
       const dist = Math.sqrt(ddx * ddx + ddz * ddz);
 
