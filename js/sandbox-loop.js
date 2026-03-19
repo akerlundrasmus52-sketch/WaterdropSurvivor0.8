@@ -537,6 +537,8 @@
         }
       }
       if (p.distSq > PROJECTILE_RANGE_SQ) {
+        // Place bullet hole when projectile reaches max range (missed target)
+        _placeBulletHole(p.mesh.position.x, p.mesh.position.z);
         _releaseProjectile(p, i);
         continue;
       }
@@ -1045,8 +1047,9 @@
       }
     }
 
-    // Spawn 8-12 large flesh chunks flying in all directions
-    _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 5), true);
+    // DISABLED: Flying flesh chunks removed for realistic gore (user request)
+    // User wants realistic slime death without chunks - just blood and corpse
+    // _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 5), true);
 
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
@@ -1376,6 +1379,68 @@
   // Pre-allocated pool prevents new THREE.Mesh calls during gameplay
   const FLESH_POOL_SIZE = 80;
   let _fleshPool = [];
+
+  // ─── Bullet hole decal pool ───────────────────────────────────────────────────
+  // Pre-allocated circular decals for ground bullet impacts when projectiles miss
+  const BULLET_HOLE_POOL_SIZE = 50;
+  const _bulletHolePool = [];
+  let _bulletHoleHead = 0; // ring-buffer index
+
+  function _buildBulletHolePool() {
+    const holeGeo = new THREE.CircleGeometry(0.08, 8);
+    for (let i = 0; i < BULLET_HOLE_POOL_SIZE; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x222222,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(holeGeo, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(0, 0.015, 0);
+      mesh.visible = false;
+      scene.add(mesh);
+      _bulletHolePool.push({ mesh, fadeTimer: 0 });
+    }
+  }
+
+  /**
+   * Place a bullet hole decal at (x, z) when a projectile hits the ground.
+   * Holes fade in quickly and slowly fade out over ~15 seconds.
+   */
+  function _placeBulletHole(x, z) {
+    const slot = _bulletHolePool[_bulletHoleHead % BULLET_HOLE_POOL_SIZE];
+    _bulletHoleHead++;
+    if (!slot) return;
+    const size = 0.7 + Math.random() * 0.4;
+    slot.mesh.scale.set(size, size, size);
+    slot.mesh.position.set(x + (Math.random() - 0.5) * 0.05, 0.015, z + (Math.random() - 0.5) * 0.05);
+    slot.mesh.rotation.z = Math.random() * Math.PI * 2;
+    slot.mesh.material.opacity = 0;
+    slot.mesh.visible = true;
+    slot.fadeTimer = 15.0; // seconds to live
+    slot.fadeIn = 0.15; // seconds to fade in (quick)
+    slot.age = 0;
+  }
+
+  function _updateBulletHoles(dt) {
+    for (let i = 0; i < _bulletHolePool.length; i++) {
+      const h = _bulletHolePool[i];
+      if (!h.mesh.visible) continue;
+      h.age += dt;
+      if (h.age < h.fadeIn) {
+        h.mesh.material.opacity = Math.min(0.85, (h.age / h.fadeIn) * 0.85);
+      } else {
+        const remaining = h.fadeTimer - h.age;
+        h.mesh.material.opacity = Math.max(0, (remaining / (h.fadeTimer - h.fadeIn)) * 0.85);
+        if (remaining <= 0) {
+          h.mesh.visible = false;
+          h.mesh.material.opacity = 0;
+        }
+      }
+    }
+  }
 
   function _buildFleshPool() {
     const colors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
@@ -3006,6 +3071,8 @@
     _buildFleshPool();
     // Build pre-allocated blood stain decal pool (ground stains at kill positions)
     _buildBloodStainPool();
+    // Build pre-allocated bullet hole decal pool (ground impacts at miss positions)
+    _buildBulletHolePool();
     // Build pre-allocated EXP gem pool (critical for XP drops to work)
     _buildExpGemPool();
     // Build pooled PointLight flash pool (muzzle flashes, hit lights)
@@ -3143,6 +3210,9 @@
 
       // Blood stain decal fade update
       _updateBloodStains(dt);
+
+      // Bullet hole decal fade update
+      _updateBulletHoles(dt);
 
       // Gore: corpse linger system — heartbeat blood pumping and cleanup
       _updateCorpses(dt);
