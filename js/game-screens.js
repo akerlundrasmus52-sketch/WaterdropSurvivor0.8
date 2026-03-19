@@ -886,7 +886,7 @@
         );
       } else {
         // Re-show current quest reminder if player died and has an active quest
-        const currentQuest = getCurrentQuest();
+        const currentQuest = (typeof getCurrentQuest === 'function' && !window._engine2SandboxMode) ? getCurrentQuest() : null;
         const lastShownQuest = saveData.tutorialQuests && saveData.tutorialQuests.lastShownQuestReminder;
         if (currentQuest && currentQuest.id !== lastShownQuest && saveData.tutorialQuests.firstDeathShown) {
           saveData.tutorialQuests.lastShownQuestReminder = currentQuest.id;
