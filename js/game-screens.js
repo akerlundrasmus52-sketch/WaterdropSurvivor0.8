@@ -5167,6 +5167,7 @@
     }
 
     function addExp(amount) {
+      if (!isGameActive || isGameOver) return;
       playerStats.exp += amount;
       
       // Phase 5: Give companion XP (10% of player XP)
