@@ -191,10 +191,13 @@
       if (playerStats.exp >= playerStats.expReq) {
         playerStats.exp -= playerStats.expReq;
         playerStats.lvl++;
-        // Slower leveling curve: power-law formula so max level ~75 coincides with final boss.
-        // Base 40 is chosen so Level 1→2 costs 40 XP (fast) and Level 74→75 costs ~31 000 XP
-        // (requires sustained late-game combat). Exponent 1.75 gives Jotun-Slayer-style pacing.
-        playerStats.expReq = Math.floor(40 * Math.pow(playerStats.lvl, 1.75));
+        // Adjusted leveling curve: power-law formula so max level ~60-65 is achievable end-game.
+        // Base 45 with exponent 1.85 creates steep progression:
+        // - Level 1→2: 45 XP (very fast start)
+        // - Level 30: ~5,000 XP (mid-game)
+        // - Level 60: ~25,000 XP (hard to reach, requires sustained combat)
+        // - Level 65: ~30,000 XP (extreme late-game grind)
+        playerStats.expReq = Math.floor(45 * Math.pow(playerStats.lvl, 1.85));
         _onLevelUp();
       }
     };

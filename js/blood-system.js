@@ -52,6 +52,28 @@
   let _dPos = null, _dQuat = null, _dScale = null, _dMtx = null;
 
   // ─── Init ────────────────────────────────────────────────────────────────────
+  // ─── Create circular texture for point particles ─────────────────────────────
+  function _createCircleTexture() {
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Draw a radial gradient circle
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
   function init(threeScene) {
     if (typeof THREE === 'undefined') {
       console.warn('[BloodSystem] THREE.js not yet available – init deferred');
@@ -89,7 +111,10 @@
       depthWrite: false,
       depthTest: true,
       sizeAttenuation: true,
-      blending: THREE.NormalBlending
+      blending: THREE.NormalBlending,
+      // Make points circular (not square) by using a radial gradient
+      alphaTest: 0.01,
+      map: _createCircleTexture()
     });
 
     _points = new THREE.Points(_geo, _mat);
