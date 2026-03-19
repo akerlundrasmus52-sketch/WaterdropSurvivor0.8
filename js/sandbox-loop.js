@@ -2337,6 +2337,80 @@
   };
   const DEFAULT_QUALITY = 'ultra';
 
+  // ─── FPS Tracking & Auto-Quality Adjustment ───────────────────────────────────
+  let _fpsSamples = [];
+  let _fpsCheckTimer = 0;
+  let _autoQualityEnabled = true;
+  let _hasAutoAdjusted = false;
+  const FPS_SAMPLE_COUNT = 60; // Track 60 frames (1 second at 60fps)
+  const FPS_CHECK_INTERVAL = 2.0; // Check every 2 seconds
+  const FPS_LOW_THRESHOLD = 30; // If average FPS drops below 30
+  const FPS_VERY_LOW_THRESHOLD = 20; // If average FPS drops below 20
+
+  function _trackFPS(dt) {
+    if (!_autoQualityEnabled || _hasAutoAdjusted) return;
+
+    const fps = dt > 0 ? 1.0 / dt : 60;
+    _fpsSamples.push(fps);
+    if (_fpsSamples.length > FPS_SAMPLE_COUNT) {
+      _fpsSamples.shift();
+    }
+
+    _fpsCheckTimer += dt;
+    if (_fpsCheckTimer >= FPS_CHECK_INTERVAL && _fpsSamples.length >= FPS_SAMPLE_COUNT) {
+      _fpsCheckTimer = 0;
+
+      // Calculate average FPS
+      const avgFPS = _fpsSamples.reduce((a, b) => a + b, 0) / _fpsSamples.length;
+
+      // Get current quality
+      let currentQuality = DEFAULT_QUALITY;
+      try {
+        currentQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY;
+      } catch (_) {}
+
+      // Auto-adjust if performance is poor
+      if (avgFPS < FPS_VERY_LOW_THRESHOLD && currentQuality !== 'ultralow') {
+        console.log(`[Auto-Detect] FPS too low (${avgFPS.toFixed(1)}). Switching to ULTRA LOW quality.`);
+        _applyGraphicsQuality('ultralow');
+        _hasAutoAdjusted = true;
+        _showPerformanceNotification('Performance mode enabled (Ultra Low)');
+      } else if (avgFPS < FPS_LOW_THRESHOLD && currentQuality !== 'ultralow' && currentQuality !== 'low') {
+        console.log(`[Auto-Detect] FPS below threshold (${avgFPS.toFixed(1)}). Switching to LOW quality.`);
+        _applyGraphicsQuality('low');
+        _hasAutoAdjusted = true;
+        _showPerformanceNotification('Performance mode enabled (Low)');
+      }
+    }
+  }
+
+  function _showPerformanceNotification(message) {
+    // Create a simple notification overlay
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #FFD700;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.transition = 'opacity 0.5s';
+      notification.style.opacity = '0';
+      setTimeout(() => document.body.removeChild(notification), 500);
+    }, 3000);
+  }
+
   function _applyGraphicsQuality(quality) {
     if (!renderer) return;
     switch (quality) {
@@ -3010,6 +3084,9 @@
       }
 
       const dt = rawDt;
+
+      // Track FPS for auto-quality adjustment
+      _trackFPS(dt);
 
       if (window.isPaused) {
         renderer.render(scene, camera);
