@@ -1528,7 +1528,10 @@
       const gem = new ExpGem(0, 0, 'gun', 1.0, 0);
       gem._pooled = true;
       gem._returnToPool = function (g) { _expGemFreeList.push(g); };
-      gem.deactivate(); // park off-screen
+      // Bug 3 fix: ensure the mesh is explicitly in the sandbox scene, then hide it.
+      // Only add if not already parented (THREE.js moves mesh between scenes otherwise).
+      if (gem.mesh && scene && !gem.mesh.parent) scene.add(gem.mesh);
+      gem.deactivate(); // park off-screen (sets active=false, visible=false)
       _expGemPool.push(gem);
       _expGemFreeList.push(gem);
     }
@@ -1541,12 +1544,15 @@
     if (_expGemFreeList.length > 0) {
       const gem = _expGemFreeList.pop();
       gem.reset(x, z, sourceWeapon, hitForce, enemyType);
+      // Bug 3 fix: guarantee visibility in case reset() didn't set it
+      if (gem.mesh) gem.mesh.visible = true;
       return gem;
     }
     // Pool exhausted (shouldn't happen with 40 slots in a single-player sandbox)
     if (typeof ExpGem !== 'undefined') {
       const gem = new ExpGem(x, z, sourceWeapon, hitForce, enemyType);
       gem._pooled = false; // not pooled — will be disposed normally on collect
+      if (gem.mesh && scene) scene.add(gem.mesh);
       return gem;
     }
     return null;
@@ -3074,7 +3080,13 @@
     // Build pre-allocated bullet hole decal pool (ground impacts at miss positions)
     _buildBulletHolePool();
     // Build pre-allocated EXP gem pool (critical for XP drops to work)
+    // If ExpGem is not yet defined (rare race), retry on window load.
     _buildExpGemPool();
+    if (typeof ExpGem === 'undefined') {
+      window.addEventListener('load', function () {
+        if (typeof ExpGem !== 'undefined' && _expGemPool.length === 0) _buildExpGemPool();
+      });
+    }
     // Build pooled PointLight flash pool (muzzle flashes, hit lights)
     _buildFlashPool();
     // Initialize spatial hash for O(1) projectile→enemy collision
@@ -3250,6 +3262,10 @@
   function _boot() {
     if (_ready) return;
     _ready = true;
+
+    // Bug 1 fix: set sandbox mode flag BEFORE any init calls so world-gen.js
+    // skips the duplicate ground plane and Engine2Sandbox initialises correctly.
+    window._engine2SandboxMode = true;
 
     try {
       // Allow showUpgradeModal to run (main.js defaults isGameActive=false for menu).
