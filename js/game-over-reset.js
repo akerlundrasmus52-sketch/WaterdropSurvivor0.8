@@ -712,10 +712,12 @@
         if (d.material) d.material.dispose();
       });
       bloodDecals = [];
-      
-      // Reset advanced blood particle system
+
+      // Reset advanced blood particle system V2 (fully pooled, zero-GC)
+      if (window.BloodV2) window.BloodV2.reset();
+      // Legacy blood system reset (kept for compatibility)
       if (window.BloodSystem) window.BloodSystem.reset();
-      
+
       // Reset lava timers
       window._lavaDamageTimer = 0;
       window._lavaSpoutTimer = 0;

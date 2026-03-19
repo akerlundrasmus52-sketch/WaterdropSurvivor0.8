@@ -42,7 +42,9 @@
       // Pre-allocate blood-drop and meat-chunk pools (500 + 200 meshes, zero GC during gameplay)
       if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
 
-      // Initialize advanced blood particle system (THREE.Points, 50k particles)
+      // Initialize advanced blood particle system V2 (fully pooled, zero-GC)
+      if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
+      // Legacy blood system (kept for compatibility)
       if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
       // Initialize trauma system (wound decals, gore chunks, stuck arrows, corpse blood pump)
       if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);

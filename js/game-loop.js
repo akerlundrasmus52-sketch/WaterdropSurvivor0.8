@@ -2890,7 +2890,9 @@
         window.bulletTrails.length = _j;
       }
 
-      // Update advanced blood particle system
+      // Update advanced blood particle system V2 (fully pooled, zero-GC)
+      if (window.BloodV2) window.BloodV2.update(dt);
+      // Legacy blood system (kept for compatibility)
       if (window.BloodSystem) window.BloodSystem.update();
       // Update trauma system (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem) window.TraumaSystem.update();

@@ -1793,7 +1793,32 @@
           }
         }
         // ────────────────────────────────────────────────────────────────────
-        
+
+        // ── BLOOD SYSTEM V2 & GORE SIMULATOR INTEGRATION ───────────────────
+        // Call BloodV2.hit() with enemy, weapon key, hit point, and hit normal
+        if (window.BloodV2 && window.BloodV2.hit && this.mesh && hitPoint) {
+          // Convert damage type to weapon key (maps game damage types to gore-sim weapon profiles)
+          const weaponKey = damageType || 'physical';
+          // Calculate hit normal (direction away from hit point toward enemy center)
+          const hitNormal = new THREE.Vector3(
+            this.mesh.position.x - hitPoint.x,
+            0, // keep Y at 0 for horizontal spray
+            this.mesh.position.z - hitPoint.z
+          ).normalize();
+          window.BloodV2.hit(this, weaponKey, hitPoint, hitNormal);
+        }
+        // Call GoreSim.onHit() with enemy, weapon, hit point, and hit normal
+        if (window.GoreSim && window.GoreSim.onHit && this.mesh && hitPoint) {
+          const weaponKey = damageType || 'physical';
+          const hitNormal = new THREE.Vector3(
+            this.mesh.position.x - hitPoint.x,
+            0,
+            this.mesh.position.z - hitPoint.z
+          ).normalize();
+          window.GoreSim.onHit(this, weaponKey, hitPoint, hitNormal);
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         // Damage type sets for cleaner conditional checks
         const HEAVY_HIT_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun', 'sniperRifle', 'homingMissile', 'fireball'];
         const SHOTGUN_TYPES = ['doubleBarrel', 'shotgun', 'pumpShotgun', 'autoShotgun'];
@@ -3316,7 +3341,20 @@
           this._usesInstancing = false;
         }
         const deathPos = this.mesh.position.clone();
-        
+
+        // ── BLOOD SYSTEM V2 & GORE SIMULATOR DEATH INTEGRATION ─────────────
+        // Call BloodV2.kill() with enemy and weapon key
+        if (window.BloodV2 && window.BloodV2.kill) {
+          const weaponKey = this.lastDamageType || 'physical';
+          window.BloodV2.kill(this, weaponKey);
+        }
+        // Call GoreSim.onKill() with enemy, weapon, and killer projectile (if available)
+        if (window.GoreSim && window.GoreSim.onKill) {
+          const weaponKey = this.lastDamageType || 'physical';
+          window.GoreSim.onKill(this, weaponKey, null); // killerProjectile not tracked, pass null
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         // Track kills for active quests
         if (montanaQuest.active) {
           montanaQuest.kills++;
