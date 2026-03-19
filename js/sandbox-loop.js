@@ -1062,6 +1062,13 @@
     slot.mesh.material.emissiveIntensity = 0.05;
     slot.mesh.scale.set(1.4, 0.35, 1.4); // squish flat on ground
     slot.mesh.position.y = 0.12; // lay on ground
+    // Reset eye pupils to center (dead stare)
+    if (slot.eyePupils) {
+      slot.eyePupils.forEach(pupil => {
+        pupil.position.x = 0;
+        pupil.position.z = 0.06; // Center position
+      });
+    }
     // Hide HP bar
     if (slot.hpBar) slot.hpBar.visible = false;
     if (slot.hpFill) slot.hpFill.visible = false;
