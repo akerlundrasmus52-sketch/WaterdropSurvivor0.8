@@ -45,7 +45,8 @@ class Engine2Sandbox {
 
   /**
    * Load ground PBR textures with enhanced fallbacks
-   * Priority: mossy_brick_diff_4k.jpg > ground/color.jpg > procedural texture
+   * Priority: mossy_brick_diff_4k.jpg > ground/color.jpg > ground_texture.png > procedural texture
+   * CRITICAL FIX: Proper texture loading with comprehensive error logging
    */
   _loadTextures(callback) {
     const loader = new THREE.TextureLoader();
@@ -62,7 +63,11 @@ class Engine2Sandbox {
     };
 
     const applyTexture = (texture, label) => {
-      console.log('[Engine2] ✓ Successfully loaded ground texture: ' + label);
+      console.log('='.repeat(60));
+      console.log('[Engine2] ✓✓✓ SUCCESS! Loaded ground texture: ' + label);
+      console.log('[Engine2] Texture dimensions: ' + texture.image.width + 'x' + texture.image.height);
+      console.log('='.repeat(60));
+
       this.textures.diffuse = texture;
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(40, 40);
@@ -73,40 +78,72 @@ class Engine2Sandbox {
         ? renderer.capabilities.getMaxAnisotropy()
         : 16;
       texture.anisotropy = Math.min(maxAniso, 16);
+      console.log('[Engine2] Applied anisotropic filtering: ' + texture.anisotropy);
 
-      // Set encoding to sRGB for proper color display
+      // CRITICAL: Set encoding to sRGB for proper color display
       if (typeof THREE.SRGBColorSpace !== 'undefined') {
         texture.colorSpace = THREE.SRGBColorSpace;
-      } else {
+        console.log('[Engine2] Using SRGBColorSpace (modern THREE.js)');
+      } else if (typeof THREE.sRGBEncoding !== 'undefined') {
         texture.encoding = THREE.sRGBEncoding;
+        console.log('[Engine2] Using sRGBEncoding (legacy THREE.js)');
+      } else {
+        console.warn('[Engine2] WARNING: No sRGB color space available!');
       }
+
       texture.needsUpdate = true;
       checkComplete();
     };
 
     // Try loading textures in priority order
-    console.log('[Engine2] Loading ground textures...');
+    console.log('='.repeat(60));
+    console.log('[Engine2] LOADING GROUND TEXTURES...');
+    console.log('='.repeat(60));
+
+    // ATTEMPT 1: mossy_brick_diff_4k.jpg (PRIMARY - 4K mossy stone texture)
+    const path1 = 'assets/textures/mossy_brick_diff_4k.jpg';
+    console.log('[Engine2] ATTEMPT 1: ' + path1);
     loader.load(
-      'assets/textures/mossy_brick_diff_4k.jpg',
-      (texture) => applyTexture(texture, 'mossy_brick_diff_4k.jpg [4K Quality]'),
+      path1,
+      (texture) => applyTexture(texture, 'mossy_brick_diff_4k.jpg [4K Quality Mossy Stone]'),
       (progress) => {
         if (progress.lengthComputable) {
           const percent = (progress.loaded / progress.total * 100).toFixed(0);
-          console.log('[Engine2] Loading mossy brick texture: ' + percent + '%');
+          console.log('[Engine2] Loading: ' + percent + '% (' + (progress.loaded / 1024 / 1024).toFixed(1) + ' MB)');
         }
       },
-      (error) => {
-        console.log('[Engine2] Primary texture not found, trying fallback...');
-        // Fallback 1: ground/color.jpg
+      (error1) => {
+        console.error('[Engine2] ✗ FAILED: ' + path1);
+        console.error('[Engine2] Error details:', error1);
+
+        // ATTEMPT 2: ground/color.jpg (FALLBACK 1)
+        const path2 = 'assets/textures/ground/color.jpg';
+        console.log('[Engine2] ATTEMPT 2: ' + path2);
         loader.load(
-          'assets/textures/ground/color.jpg',
+          path2,
           (texture) => applyTexture(texture, 'ground/color.jpg [Fallback 1]'),
           undefined,
           (error2) => {
-            console.log('[Engine2] Texture files not available, generating procedural ground texture...');
-            // Fallback 2: Generate beautiful procedural texture
-            this._generateProceduralTexture();
-            checkComplete();
+            console.error('[Engine2] ✗ FAILED: ' + path2);
+            console.error('[Engine2] Error details:', error2);
+
+            // ATTEMPT 3: UUID texture in root (FALLBACK 2)
+            const path3 = '654811F9-1760-4A74-B977-73ECB1A92913.png';
+            console.log('[Engine2] ATTEMPT 3: ' + path3);
+            loader.load(
+              path3,
+              (texture) => applyTexture(texture, 'UUID Ground Texture [Fallback 2]'),
+              undefined,
+              (error3) => {
+                console.error('[Engine2] ✗ FAILED: ' + path3);
+                console.error('[Engine2] Error details:', error3);
+                console.warn('[Engine2] All texture files failed - generating procedural texture...');
+
+                // FALLBACK 3: Generate procedural texture
+                this._generateProceduralTexture();
+                checkComplete();
+              }
+            );
           }
         );
       }
@@ -315,11 +352,15 @@ class Engine2Sandbox {
     // Apply color/albedo texture
     if (this.textures.diffuse) {
       materialOptions.map = this.textures.diffuse;
-      console.log('[Engine2] ✓ Using ground color texture with enhanced PBR');
+      console.log('[Engine2] ========================================');
+      console.log('[Engine2] ✓✓✓ APPLYING TEXTURE TO MATERIAL ✓✓✓');
+      console.log('[Engine2] Texture object:', this.textures.diffuse);
+      console.log('[Engine2] Material will use WHITE base color (0xFFFFFF) to show texture naturally');
+      console.log('[Engine2] ========================================');
     } else {
       // Fallback: warm stone color
       materialOptions.color = 0x6B5A4A;
-      console.log('[Engine2] Using fallback stone color (no texture loaded)');
+      console.log('[Engine2] ⚠ WARNING: Using fallback stone color (no texture loaded)');
     }
 
     // Apply normal map for surface depth

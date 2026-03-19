@@ -8,18 +8,19 @@
       const exclusionZones = [];
 
       // Ground — load mossy-brick PBR texture via TextureLoader for realistic appearance.
-      // Falls back to a UUID-named PNG in the root, then to a canvas procedural texture.
+      // Fallback chain: mossy_brick_diff_4k.jpg > ground/color.jpg > UUID PNG > procedural texture
       // ENGINE 2.0: Skip old ground plane if Engine 2.0 Sandbox mode is active
       if (!window._engine2SandboxMode) {
         const _wgLoader = new THREE.TextureLoader();
         const _wgGroundGeo = new THREE.PlaneGeometry(80, 80);
 
-        const _applyGroundTexture = (texture) => {
+        const _applyGroundTexture = (texture, label) => {
+          console.log('[WorldGen] ✓ Successfully loaded texture: ' + label);
           texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
           texture.repeat.set(16, 16); // ~5 world-units per tile across 80×80 ground
           if (typeof THREE.SRGBColorSpace !== 'undefined') {
             texture.colorSpace = THREE.SRGBColorSpace;
-          } else {
+          } else if (typeof THREE.sRGBEncoding !== 'undefined') {
             texture.encoding = THREE.sRGBEncoding;
           }
           texture.needsUpdate = true;
@@ -38,37 +39,53 @@
           mesh.position.set(0, 0, 0);
           mesh.receiveShadow = true;
           scene.add(mesh);
+          console.log('[WorldGen] ✓ Ground mesh created with texture');
         };
 
-        // Attempt 1: mossy brick 4k diffuse in assets/textures
+        // Attempt 1: mossy brick 4k diffuse in assets/textures (PRIMARY)
+        console.log('[WorldGen] Loading ground textures...');
         _wgLoader.load(
           'assets/textures/mossy_brick_diff_4k.jpg',
-          (tex) => { _buildGroundMesh(_applyGroundTexture(tex)); },
+          (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'mossy_brick_diff_4k.jpg [4K Quality]')); },
           undefined,
-          () => {
-            // Attempt 2: UUID-named PNG bundled in the root directory (mossy ground tile)
-            // The UUID filename is from the original asset import — do not rename without updating the file
+          (err1) => {
+            console.error('[WorldGen] Failed to load mossy_brick_diff_4k.jpg:', err1);
+
+            // Attempt 2: ground/color.jpg (FALLBACK 1)
             _wgLoader.load(
-              '654811F9-1760-4A74-B977-73ECB1A92913.png',
-              (tex) => { _buildGroundMesh(_applyGroundTexture(tex)); },
+              'assets/textures/ground/color.jpg',
+              (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'ground/color.jpg [Fallback 1]')); },
               undefined,
-              () => {
-                // Fallback: procedural canvas grass texture
-                const groundTexCanvas = document.createElement('canvas');
-                groundTexCanvas.width = 512; groundTexCanvas.height = 512;
-                const gCtx = groundTexCanvas.getContext('2d');
-                gCtx.fillStyle = '#3a6b28';
-                gCtx.fillRect(0, 0, 512, 512);
-                for (let i = 0; i < 12000; i++) {
-                  const bx = Math.random() * 512, by = Math.random() * 512;
-                  const br = Math.random() * 60 + 20, gt = Math.random() * 40 + 30;
-                  gCtx.fillStyle = `rgba(${br},${br+gt},${br+5},0.35)`;
-                  gCtx.fillRect(bx, by, Math.random()*1.5+0.5, Math.random()*1.5+0.5);
-                }
-                const fallbackTex = new THREE.CanvasTexture(groundTexCanvas);
-                fallbackTex.wrapS = fallbackTex.wrapT = THREE.RepeatWrapping;
-                fallbackTex.repeat.set(20, 20);
-                _buildGroundMesh(fallbackTex);
+              (err2) => {
+                console.error('[WorldGen] Failed to load ground/color.jpg:', err2);
+
+                // Attempt 3: UUID-named PNG in root (FALLBACK 2)
+                _wgLoader.load(
+                  '654811F9-1760-4A74-B977-73ECB1A92913.png',
+                  (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'UUID Ground Texture [Fallback 2]')); },
+                  undefined,
+                  (err3) => {
+                    console.error('[WorldGen] Failed to load UUID texture:', err3);
+
+                    // Fallback 3: procedural canvas grass texture
+                    console.log('[WorldGen] All textures failed - generating procedural texture...');
+                    const groundTexCanvas = document.createElement('canvas');
+                    groundTexCanvas.width = 512; groundTexCanvas.height = 512;
+                    const gCtx = groundTexCanvas.getContext('2d');
+                    gCtx.fillStyle = '#3a6b28';
+                    gCtx.fillRect(0, 0, 512, 512);
+                    for (let i = 0; i < 12000; i++) {
+                      const bx = Math.random() * 512, by = Math.random() * 512;
+                      const br = Math.random() * 60 + 20, gt = Math.random() * 40 + 30;
+                      gCtx.fillStyle = `rgba(${br},${br+gt},${br+5},0.35)`;
+                      gCtx.fillRect(bx, by, Math.random()*1.5+0.5, Math.random()*1.5+0.5);
+                    }
+                    const fallbackTex = new THREE.CanvasTexture(groundTexCanvas);
+                    fallbackTex.wrapS = fallbackTex.wrapT = THREE.RepeatWrapping;
+                    fallbackTex.repeat.set(20, 20);
+                    _buildGroundMesh(fallbackTex);
+                  }
+                );
               }
             );
           }
