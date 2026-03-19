@@ -1401,7 +1401,9 @@
           const now = Date.now();
           if (now - this.lastAttackTime > this.attackCooldown) {
             windmillQuest.windmill.userData.hp -= this.damage;
-            updateWindmillQuestUI();
+            if (typeof updateWindmillQuestUI === 'function') {
+              updateWindmillQuestUI();
+            }
             this.lastAttackTime = now;
             playSound('hit');
           }
@@ -1409,9 +1411,11 @@
           const _wkDt = Math.min(dt, 0.05);
           this.mesh.position.x -= (dx / dist) * 120 * _wkDt;
           this.mesh.position.z -= (dz / dist) * 120 * _wkDt;
-          
+
           if (windmillQuest.windmill.userData.hp <= 0) {
-            failWindmillQuest();
+            if (typeof failWindmillQuest === 'function') {
+              failWindmillQuest();
+            }
           }
         } else if (dist < _MELEE_STOP_DIST && this.type !== 4) { // Attack within stop distance (melee enemies only)
           // Attack player with cooldown to prevent instant death
@@ -3316,11 +3320,15 @@
         // Track kills for active quests
         if (montanaQuest.active) {
           montanaQuest.kills++;
-          updateMontanaQuestUI();
+          if (typeof updateMontanaQuestUI === 'function') {
+            updateMontanaQuestUI();
+          }
         }
         if (eiffelQuest.active) {
           eiffelQuest.kills++;
-          updateEiffelQuestUI();
+          if (typeof updateEiffelQuestUI === 'function') {
+            updateEiffelQuestUI();
+          }
         }
         
         // Determine death effect based on damage type and health when dying

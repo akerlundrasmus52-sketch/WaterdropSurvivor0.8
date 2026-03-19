@@ -191,10 +191,13 @@
       if (playerStats.exp >= playerStats.expReq) {
         playerStats.exp -= playerStats.expReq;
         playerStats.lvl++;
-        // Slower leveling curve: power-law formula so max level ~75 coincides with final boss.
-        // Base 40 is chosen so Level 1→2 costs 40 XP (fast) and Level 74→75 costs ~31 000 XP
-        // (requires sustained late-game combat). Exponent 1.75 gives Jotun-Slayer-style pacing.
-        playerStats.expReq = Math.floor(40 * Math.pow(playerStats.lvl, 1.75));
+        // Adjusted leveling curve: power-law formula so max level ~60-65 is achievable end-game.
+        // Base 45 with exponent 1.85 creates steep progression:
+        // - Level 1→2: 45 XP (very fast start)
+        // - Level 30: ~5,000 XP (mid-game)
+        // - Level 60: ~25,000 XP (hard to reach, requires sustained combat)
+        // - Level 65: ~30,000 XP (extreme late-game grind)
+        playerStats.expReq = Math.floor(45 * Math.pow(playerStats.lvl, 1.85));
         _onLevelUp();
       }
     };
@@ -620,7 +623,8 @@
       mesh.visible = false; // inactive until spawned
       scene.add(mesh);
 
-      // Eye pair
+      // Eye pair with tracking
+      const eyePupils = [];
       [-0.22, 0.22].forEach(function (ox) {
         const eye = new THREE.Mesh(eyeGeo, eyeMat);
         eye.position.set(ox, 0.3, 0.6);
@@ -628,6 +632,7 @@
         pupil.position.set(0, 0, 0.06);
         eye.add(pupil);
         mesh.add(eye);
+        eyePupils.push(pupil); // Store reference for eye tracking
       });
 
       // HP bar
@@ -666,6 +671,7 @@
         hpFillGeo,
         woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
         woundCount: 0, // number of currently active wound meshes
+        eyePupils,   // Store eye pupil references for tracking
         hp: SLIME_HP,
         maxHp: SLIME_HP,
         active: false,
@@ -1056,6 +1062,13 @@
     slot.mesh.material.emissiveIntensity = 0.05;
     slot.mesh.scale.set(1.4, 0.35, 1.4); // squish flat on ground
     slot.mesh.position.y = 0.12; // lay on ground
+    // Reset eye pupils to center (dead stare)
+    if (slot.eyePupils) {
+      slot.eyePupils.forEach(pupil => {
+        pupil.position.x = 0;
+        pupil.position.z = 0.06; // Center position
+      });
+    }
     // Hide HP bar
     if (slot.hpBar) slot.hpBar.visible = false;
     if (slot.hpFill) slot.hpFill.visible = false;
@@ -1598,10 +1611,39 @@
       // Attack timer cooldown
       if (s.attackTimer > 0) s.attackTimer -= dt;
 
-      // Wobble animation — more pronounced (0.12 amplitude) for slimy jelly feel
+      // Get positions early for eye tracking and movement
+      const sx = s.mesh.position.x, sz = s.mesh.position.z;
+
+      // Enhanced breathing animation — constant pulsing/squishing for alive feel
       s.wobbleTime += dt * 3.5;
+      const breathCycle = Math.sin(s.wobbleTime * 0.8) * 0.08; // Breathing scale factor
       const wobble   = Math.sin(s.wobbleTime) * 0.12;
       const wobbleY  = Math.sin(s.wobbleTime * 2.0) * 0.06; // secondary vertical bob
+
+      // Eye tracking — pupils follow player (unless dead)
+      if (s.eyePupils && !s.dead && player && player.mesh) {
+        const eyeTrackingEnabled = true; // Can be disabled on death
+        if (eyeTrackingEnabled) {
+          // Calculate direction from slime to player
+          const dirX = px - sx;
+          const dirZ = pz - sz;
+          const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
+          if (dirLength > 0.1) {
+            // Normalized direction
+            const ndx = dirX / dirLength;
+            const ndz = dirZ / dirLength;
+            // Convert to local space (relative to slime's rotation)
+            const angle = Math.atan2(dirX, dirZ) - s.mesh.rotation.y;
+            const pupilOffsetX = Math.sin(angle) * 0.03; // Horizontal pupil movement
+            const pupilOffsetZ = Math.cos(angle) * 0.03; // Depth pupil movement
+            // Apply to each pupil
+            s.eyePupils.forEach(pupil => {
+              pupil.position.x = pupilOffsetX;
+              pupil.position.z = 0.06 + pupilOffsetZ; // Base Z + offset
+            });
+          }
+        }
+      }
 
       // Squish animation on hit
       let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
@@ -1639,12 +1681,12 @@
         }
       }
 
-      // Combined scale: wobble + squish + lunge + damage stage shrink
+      // Combined scale: breathing + wobble + squish + lunge + damage stage shrink
       const damageScale = s.damageStage >= 4 ? 0.85 : (s.damageStage >= 3 ? 0.92 : 1.0);
       s.mesh.scale.set(
-        damageScale * squishX * lungeScaleX * (1 + wobble),
-        damageScale * squishY * lungeScaleY * (1 - wobbleY),
-        damageScale * squishZ * lungeScaleZ * (1 + wobble)
+        damageScale * squishX * lungeScaleX * (1 + wobble + breathCycle * 0.5),
+        damageScale * squishY * lungeScaleY * (1 - wobbleY + breathCycle),
+        damageScale * squishZ * lungeScaleZ * (1 + wobble + breathCycle * 0.5)
       );
 
       // Knockback physics — gentle decay to prevent stutter
@@ -1655,8 +1697,7 @@
         s.knockbackVz *= Math.pow(0.05, dt);
       }
 
-      // Move toward player
-      const sx = s.mesh.position.x, sz = s.mesh.position.z;
+      // Move toward player (sx, sz already defined above)
       const ddx = px - sx, ddz = pz - sz;
       const dist = Math.sqrt(ddx * ddx + ddz * ddz);
 
@@ -2305,6 +2346,80 @@
     ultra:    'Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping — iPhone 16 / PC',
   };
   const DEFAULT_QUALITY = 'ultra';
+
+  // ─── FPS Tracking & Auto-Quality Adjustment ───────────────────────────────────
+  let _fpsSamples = [];
+  let _fpsCheckTimer = 0;
+  let _autoQualityEnabled = true;
+  let _hasAutoAdjusted = false;
+  const FPS_SAMPLE_COUNT = 60; // Track 60 frames (1 second at 60fps)
+  const FPS_CHECK_INTERVAL = 2.0; // Check every 2 seconds
+  const FPS_LOW_THRESHOLD = 30; // If average FPS drops below 30
+  const FPS_VERY_LOW_THRESHOLD = 20; // If average FPS drops below 20
+
+  function _trackFPS(dt) {
+    if (!_autoQualityEnabled || _hasAutoAdjusted) return;
+
+    const fps = dt > 0 ? 1.0 / dt : 60;
+    _fpsSamples.push(fps);
+    if (_fpsSamples.length > FPS_SAMPLE_COUNT) {
+      _fpsSamples.shift();
+    }
+
+    _fpsCheckTimer += dt;
+    if (_fpsCheckTimer >= FPS_CHECK_INTERVAL && _fpsSamples.length >= FPS_SAMPLE_COUNT) {
+      _fpsCheckTimer = 0;
+
+      // Calculate average FPS
+      const avgFPS = _fpsSamples.reduce((a, b) => a + b, 0) / _fpsSamples.length;
+
+      // Get current quality
+      let currentQuality = DEFAULT_QUALITY;
+      try {
+        currentQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY;
+      } catch (_) {}
+
+      // Auto-adjust if performance is poor
+      if (avgFPS < FPS_VERY_LOW_THRESHOLD && currentQuality !== 'ultralow') {
+        console.log(`[Auto-Detect] FPS too low (${avgFPS.toFixed(1)}). Switching to ULTRA LOW quality.`);
+        _applyGraphicsQuality('ultralow');
+        _hasAutoAdjusted = true;
+        _showPerformanceNotification('Performance mode enabled (Ultra Low)');
+      } else if (avgFPS < FPS_LOW_THRESHOLD && currentQuality !== 'ultralow' && currentQuality !== 'low') {
+        console.log(`[Auto-Detect] FPS below threshold (${avgFPS.toFixed(1)}). Switching to LOW quality.`);
+        _applyGraphicsQuality('low');
+        _hasAutoAdjusted = true;
+        _showPerformanceNotification('Performance mode enabled (Low)');
+      }
+    }
+  }
+
+  function _showPerformanceNotification(message) {
+    // Create a simple notification overlay
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: #FFD700;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.transition = 'opacity 0.5s';
+      notification.style.opacity = '0';
+      setTimeout(() => document.body.removeChild(notification), 500);
+    }, 3000);
+  }
 
   function _applyGraphicsQuality(quality) {
     if (!renderer) return;
@@ -2979,6 +3094,9 @@
       }
 
       const dt = rawDt;
+
+      // Track FPS for auto-quality adjustment
+      _trackFPS(dt);
 
       if (window.isPaused) {
         renderer.render(scene, camera);

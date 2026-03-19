@@ -909,7 +909,14 @@
             // Only update rotation if joystick has meaningful input (prevents jitter near center)
             if (targetVel.lengthSq() > 0.000001) {
               const angle = Math.atan2(targetVel.x, targetVel.z);
-              this.mesh.rotation.y = angle;
+              // Smooth rotation with responsiveness scaling (starts slow at level 1, gets faster with upgrades)
+              const rotationSpeed = 8 + (playerStats.inputResponsiveness || 1.0) * 2; // 8-10+ rad/s
+              let angleDiff = angle - this.mesh.rotation.y;
+              // Normalize angle difference to [-PI, PI]
+              while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+              while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+              // Lerp rotation smoothly
+              this.mesh.rotation.y += angleDiff * Math.min(rotationSpeed * dt, 1);
             }
           }
         }
