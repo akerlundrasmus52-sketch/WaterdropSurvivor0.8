@@ -2022,3 +2022,132 @@ console.log([
 ].join(’\n’));
 
 })(window);
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BACKWARDS-COMPAT SHIM
+//  All existing game files call window.BloodSystem (the old API name).
+//  This shim maps every BloodSystem method to its BloodV2 equivalent so that
+//  no other file needs to change.  BloodV2 is the single source of truth.
+// ─────────────────────────────────────────────────────────────────────────────
+(function () {
+  'use strict';
+
+  var BV2 = window.BloodV2;
+  if (!BV2) { console.warn('[BloodV2 shim] window.BloodV2 not found — shim skipped'); return; }
+
+  // --- tiny helpers used by several shim methods ---
+  function _pos3(pos) {
+    // Accept THREE.Vector3, {x,y,z} plain object, or positional args
+    if (!pos) return { x: 0, y: 0, z: 0 };
+    return { x: pos.x || 0, y: pos.y || 0, z: pos.z || 0 };
+  }
+
+  function _fakeEnemy(pos) {
+    // BloodV2.hit / kill expects an enemy-like object with {mesh.position, alive}
+    var p = _pos3(pos);
+    return {
+      alive: true,
+      enemyType: 'slime',
+      id: 'shim_' + Date.now() + '_' + Math.random(),
+      hp: 100,
+      maxHp: 100,
+      mesh: {
+        position: { x: p.x, y: p.y, z: p.z },
+        scale:    { y: 1 }
+      }
+    };
+  }
+
+  window.BloodSystem = {
+
+    // ── lifecycle ─────────────────────────────────────────────────────────────
+    init: function (scene) {
+      BV2.init(scene);
+    },
+
+    update: function (dt) {
+      // game-loop.js calls update() with no arg; sandbox-loop.js calls update() with no arg too.
+      // BloodV2.update expects deltaTime in seconds.  Default to 1/60 when omitted.
+      BV2.update(typeof dt === 'number' ? dt : 1 / 60);
+    },
+
+    reset: function () {
+      if (typeof BV2.reset === 'function') BV2.reset();
+    },
+
+    // ── burst / spray ─────────────────────────────────────────────────────────
+    emitBurst: function (pos /*, count, opts */) {
+      // BloodV2 high-level entry point: hit() / kill().
+      // For generic positional bursts we synthesise a fake enemy at the target position.
+      // count/opts are not forwarded — BloodV2 uses its own weapon profiles for particle counts.
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'pistol', e.mesh.position, null);
+    },
+
+    emitPulse: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      var p = _pos3(pos);
+      BV2.hit(e, 'revolver', { x: p.x, y: p.y, z: p.z }, null);
+    },
+
+    emitDrop: function (x, y, z /*, vx, vy, vz, size */) {
+      var e = _fakeEnemy({ x: x, y: y, z: z });
+      BV2.hit(e, 'pistol', { x: x, y: y, z: z }, null);
+    },
+
+    // ── gore ──────────────────────────────────────────────────────────────────
+    emitGuts: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.kill(e, 'shotgun');
+    },
+
+    emitHeartbeatWound: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'revolver', e.mesh.position, null);
+    },
+
+    // ── wounds / drips ────────────────────────────────────────────────────────
+    addWound: function (enemy /*, opts */) {
+      // BloodV2 manages wounds internally via hit(); no separate wound-tracking call needed.
+    },
+
+    // ── weapon-specific effects (used by enemy-class.js) ─────────────────────
+    emitSwordSlash: function (pos, dir, count) {
+      var e = _fakeEnemy(pos);
+      var p = _pos3(pos);
+      BV2.hit(e, 'sword', { x: p.x, y: p.y, z: p.z }, dir || null);
+    },
+
+    emitAuraBurn: function (pos, count) {
+      var e = _fakeEnemy(pos);
+      var p = _pos3(pos);
+      BV2.hit(e, 'aura', { x: p.x, y: p.y, z: p.z }, null);
+    },
+
+    emitHeadBleed: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      var p = _pos3(pos);
+      BV2.hit(e, 'pistol', { x: p.x, y: p.y + 0.5, z: p.z }, null);
+    },
+
+    emitExitWound: function (pos, dir, count /*, opts */) {
+      var e = _fakeEnemy(pos);
+      var p = _pos3(pos);
+      BV2.hit(e, 'shotgun', { x: p.x, y: p.y, z: p.z }, dir || null);
+    },
+
+    emitDroneMist: function (pos, dir, count) {
+      var e = _fakeEnemy(pos);
+      var p = _pos3(pos);
+      BV2.hit(e, 'pistol', { x: p.x, y: p.y, z: p.z }, dir || null);
+    },
+
+    // ── catch-all for any future callers ─────────────────────────────────────
+    emitSwordSlashFX: function (pos, dir) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'sword', _pos3(pos), dir || null);
+    }
+  };
+
+  console.log('[BloodV2] BloodSystem shim installed — all BloodSystem.* calls now route to BloodV2');
+}());
