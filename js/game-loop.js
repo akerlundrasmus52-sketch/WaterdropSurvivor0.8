@@ -2193,6 +2193,8 @@
                   spawnParticles(missileGroup.position, 0x222222, 6); // Smoke explosion
                   // Massive blood burst from explosion
                   if (window.BloodSystem) window.BloodSystem.emitBurst(e.mesh.position, 500, { spreadXZ: 2.5, spreadY: 1.5 });
+                  if (window.BloodV2) window.BloodV2.kill(e, 'shotgun');
+                  if (window.GoreSim) window.GoreSim.onKill(e, 'rocket');
                   // Homing missile: massive gore blobs + heavy blood spray
                   spawnParticles(e.mesh.position, 0x8B0000, 5);
                   spawnParticles(e.mesh.position, 0xCC0000, 4);
@@ -2892,6 +2894,8 @@
 
       // Update advanced blood particle system
       if (window.BloodSystem) window.BloodSystem.update();
+      if (window.BloodV2) window.BloodV2.update(dt);
+      if (window.GoreSim) window.GoreSim.update(dt);
       // Update trauma system (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem) window.TraumaSystem.update();
 

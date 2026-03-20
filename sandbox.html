@@ -150,6 +150,9 @@
       background: #333;
       border-color: #555;
     }
+    /* Suppress quest/tutorial popups that don't apply in sandbox mode */
+    #quest-popup-overlay, #quest-popup, #quest-notification,
+    #tutorial-quest-box, .quest-popup, .quest-notification { display: none !important; }
   </style>
 </head>
 <body>
