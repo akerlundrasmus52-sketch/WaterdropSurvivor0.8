@@ -114,6 +114,11 @@
         if (onClose) onClose();
         return;
       }
+      // Bug 2 fix: if the game is already over, skip the blocking overlay entirely
+      if (typeof isGameOver !== 'undefined' && isGameOver) {
+        if (onClose) onClose();
+        return;
+      }
       // Pause game when popup is shown
       const wasGameActive = isGameActive && !isGameOver;
       if (wasGameActive) setGamePaused(true);
@@ -161,11 +166,15 @@
       xBtn.className = 'overlay-close-x';
       xBtn.innerHTML = '✕';
       xBtn.title = 'Close';
+      xBtn.style.cssText = 'pointer-events:auto;z-index:999;';
       popup.style.position = 'relative';
       popup.appendChild(xBtn);
-      
+
+      let _questPopupClosed = false;
       const closeHandler = () => {
-        document.body.removeChild(overlay);
+        if (_questPopupClosed) return;
+        _questPopupClosed = true;
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (wasGameActive) setGamePaused(false);
         if (onClose) onClose();
       };
@@ -174,6 +183,9 @@
       
       overlay.appendChild(popup);
       document.body.appendChild(overlay);
+
+      // Bug 2 fix: safety watchdog — auto-close after 15 seconds to prevent permanent block
+      setTimeout(closeHandler, 15000);
     }
 
     // NEW: Comic-magazine styled info box (80s Batman style)
@@ -181,6 +193,11 @@
       // Suppress quest popups in sandbox mode
       if (window._engine2SandboxMode === true || window.location.pathname.includes('sandbox.html')) {
         console.log('[Quest] Comic info box suppressed in sandbox mode:', title);
+        if (onClose) onClose();
+        return;
+      }
+      // Bug 2 fix: if the game is already over, skip the blocking overlay entirely
+      if (typeof isGameOver !== 'undefined' && isGameOver) {
         if (onClose) onClose();
         return;
       }
@@ -270,12 +287,16 @@
       xBtn.className = 'overlay-close-x';
       xBtn.innerHTML = '✕';
       xBtn.title = 'Close';
+      xBtn.style.cssText = 'pointer-events:auto;z-index:999;';
       popup.style.position = 'relative';
       popup.appendChild(xBtn);
       xBtn.onclick = comicCloseHandler;
       
       overlay.appendChild(popup);
       document.body.appendChild(overlay);
+
+      // Bug 2 fix: safety watchdog — auto-close after 15 seconds to prevent permanent block
+      setTimeout(comicCloseHandler, 15000);
     }
 
     // NEW: Show Quest Hall UI for claiming completed quests
