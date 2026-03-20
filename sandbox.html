@@ -440,6 +440,9 @@
 
   <!-- 1. Three.js (local copy, same version used by main game) -->
   <script src="js/three.min.js"></script>
+  <script src="js/enemy-class.js"></script>
+  <script src="js/blood-slime-wave.js"></script>
+  <script src="js/slime-wave-spawner.js"></script>
 
   <!-- 2. Game state namespace + enemy instancing flag -->
   <script src="js/state.js"></script>
@@ -477,10 +480,15 @@
   <script src="js/dopamine-system.js"></script>
 
   <!-- 11. Blood & physics: instanced blood drops, ground stains, wounds -->
-  <script src="js/blood-system.js"></script>
+  <script src="js/blood-system-v2.js"></script>
+  <script src="js/gore-simulator.js"></script>
 
   <!-- 11b. Trauma system: wound decals, gore chunks, stuck arrows, corpse blood pump -->
   <script src="js/trauma-system.js"></script>
+
+  <!-- 11c. Slime enemy and wave spawning system -->
+  <script src="js/slime-enemy.js"></script>
+  <script src="js/wave-system.js"></script>
 
   <!-- ── DOM UI HELPERS ──────────────────────────────────────────────── -->
 
