@@ -217,6 +217,12 @@
   // screen from the main game (which requires systems not loaded here).
   if (typeof gameOver === 'undefined') {
     window.gameOver = function () {
+      // Reset all new v2 systems before unloading
+      if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
+      if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
+      if (window.SlimePool && typeof window.SlimePool.reset === 'function') window.SlimePool.reset();
+      if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
+      if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
       const b = document.getElementById('you-died-banner');
       if (b) {
         b.style.display = 'block';
@@ -2660,9 +2666,28 @@
         console.warn('[SandboxLoop] Engine2Sandbox failed, falling back to basic ground:', e);
       }
     }
-    // Fallback flat ground (also used when Engine2Sandbox is missing or throws)
+    // Fallback flat ground with texture — also used when Engine2Sandbox is missing or throws
     const geo = new THREE.PlaneGeometry(200, 200);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x2d5a1b, roughness: 0.8, metalness: 0.0 });
+    // Create material first so texture-load callbacks can safely reference it
+    const mat = new THREE.MeshStandardMaterial({ color: 0x2d5a1b, roughness: 0.85, metalness: 0.02 });
+    try {
+      const loader = new THREE.TextureLoader();
+      const tex = loader.load(
+        'assets/textures/mossy_brick_diff_4k.jpg',
+        function(t) { mat.map = t; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); mat.color.setHex(0xffffff); mat.needsUpdate = true; },
+        undefined,
+        function() {
+          loader.load('assets/textures/ground/color.jpg',
+            function(t) { mat.map = t; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); mat.color.setHex(0xffffff); mat.needsUpdate = true; },
+            undefined,
+            function() { /* all textures failed, plain colour is fine */ }
+          );
+        }
+      );
+      void tex; // texture object kept alive by THREE's cache
+    } catch (e) {
+      // keep plain-colour material
+    }
     const ground = new THREE.Mesh(geo, mat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -2979,6 +3004,18 @@
       }
     }
 
+    // ── Continuous 360° smooth aim rotation ────────────────────────────────────
+    // Update player facing direction every frame so the model follows the right
+    // joystick (or mouse) even when not actively firing.
+    const px2 = player.mesh.position.x, pz2 = player.mesh.position.z;
+    if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
+      const aimAngle = Math.atan2(_aimJoy.dx, _aimJoy.dz);
+      player.mesh.rotation.y = _lerp(player.mesh.rotation.y, aimAngle, 0.25);
+    } else if (_mouse && (_mouse.worldX !== 0 || _mouse.worldZ !== 0)) {
+      const mAngle = Math.atan2(_mouse.worldX - px2, _mouse.worldZ - pz2);
+      player.mesh.rotation.y = _lerp(player.mesh.rotation.y, mAngle, 0.25);
+    }
+
     // Camera follow — reuse _camTarget to avoid per-frame Vector3 allocation
     if (camera) {
       _camTarget.set(
@@ -3012,6 +3049,22 @@
   function _initBloodSystem() {
     if (window.BloodSystem && typeof BloodSystem.init === 'function') {
       BloodSystem.init(scene);
+    }
+    // New v2 systems — guarded so missing scripts are harmless
+    if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
+      window.BloodV2.init(scene);
+    }
+    if (window.GoreSim && typeof window.GoreSim.init === 'function') {
+      window.GoreSim.init(scene, camera);
+    }
+    if (window.SlimePool && typeof window.SlimePool.init === 'function') {
+      window.SlimePool.init(scene, 40);
+    }
+    if (window.WaveSpawner && typeof window.WaveSpawner.init === 'function') {
+      window.WaveSpawner.init(scene, 9);
+    }
+    if (window.HitDetection && typeof window.HitDetection.init === 'function') {
+      window.HitDetection.init(scene);
     }
     // Initialize trauma system alongside blood system
     if (window.TraumaSystem && typeof TraumaSystem.init === 'function') {
@@ -3214,6 +3267,22 @@
       // Blood system tick
       if (window.BloodSystem && typeof BloodSystem.update === 'function') {
         BloodSystem.update();
+      }
+      // New v2 system ticks — guarded so missing scripts are harmless
+      if (window.BloodV2 && typeof window.BloodV2.update === 'function') {
+        window.BloodV2.update(dt);
+      }
+      if (window.GoreSim && typeof window.GoreSim.update === 'function') {
+        window.GoreSim.update(dt);
+      }
+      if (window.SlimePool && typeof window.SlimePool.update === 'function') {
+        window.SlimePool.update(dt, player ? player.mesh.position : null);
+      }
+      if (window.WaveSpawner && typeof window.WaveSpawner.update === 'function') {
+        window.WaveSpawner.update(dt, player ? player.mesh.position : null);
+      }
+      if (window.HitDetection && typeof window.HitDetection.update === 'function') {
+        window.HitDetection.update(dt, player ? player.mesh.position : null);
       }
       // Trauma system tick (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {

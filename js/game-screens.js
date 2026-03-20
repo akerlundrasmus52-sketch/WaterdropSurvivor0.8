@@ -37,6 +37,7 @@ function init() {
   );
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
+  if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
   if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
   if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
@@ -48,6 +49,9 @@ function init() {
   camera.position.set(RENDERER_CONFIG.cameraPositionX, RENDERER_CONFIG.cameraPositionY, RENDERER_CONFIG.cameraPositionZ);
   camera.lookAt(scene.position);
   console.log('[Init] Camera created OK');
+
+  // Init GoreSim after camera is created (needs camera reference for billboard effects)
+  if (window.GoreSim && typeof THREE !== 'undefined') window.GoreSim.init(scene, camera);
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,
