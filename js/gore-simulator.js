@@ -19,20 +19,17 @@
 - 1. Add <script src="js/gore-simulator.js"></script> in index.html
 - ```
     AFTER blood-system.js
-  ```
 - 1. In combat.js where you apply damage, call:
 - ```
     window.GoreSim.onHit(enemy, weapon, hitPoint, hitNormal)
-  ```
 - 1. In enemy-class.js death handler, call:
 - ```
     window.GoreSim.onKill(enemy, weapon, killerProjectile)
-  ```
 - ============================================================
   */
 
 (function() {
-‘use strict’;
+'use strict';
 
 // ─────────────────────────────────────────────
 //  CONSTANTS
@@ -67,9 +64,9 @@ bloodVelocity:  { min: 2.0, max: 5.0 },
 mistDensity:    0.7,       // fine mist on entry
 chunkChance:    0.0,
 pushForce:      0.3,
-sound:          ‘thud_wet’,
-killStyle:      ‘penetration’,
-description:    ‘Clean entry, ragged exit. Blood channel follows bullet path.’,
+sound:          'thud_wet',
+killStyle:      'penetration',
+description:    'Clean entry, ragged exit. Blood channel follows bullet path.',
 },
 revolver: {
 woundRadius:    0.055,
@@ -81,9 +78,9 @@ bloodVelocity:  { min: 3.5, max: 7.0 },
 mistDensity:    1.0,
 chunkChance:    0.05,
 pushForce:      0.6,
-sound:          ‘thud_heavy’,
-killStyle:      ‘penetration’,
-description:    ‘Heavy round. Hydrostatic shock wave sends ripple through flesh.’,
+sound:          'thud_heavy',
+killStyle:      'penetration',
+description:    'Heavy round. Hydrostatic shock wave sends ripple through flesh.',
 },
 shotgun: {
 woundRadius:    0.18,
@@ -98,9 +95,9 @@ chunkCount:     { min: 4, max: 9 },
 pushForce:      2.5,
 pelletCount:    8,         // spread pattern
 pelletSpread:   0.4,
-sound:          ‘boom_wet’,
-killStyle:      ‘devastation’,
-description:    ‘Massive cavity. Flesh vaporizes at center. Chunks fly outward.’,
+sound:          'boom_wet',
+killStyle:      'devastation',
+description:    'Massive cavity. Flesh vaporizes at center. Chunks fly outward.',
 },
 smg: {
 woundRadius:    0.035,
@@ -112,9 +109,9 @@ bloodVelocity:  { min: 2.5, max: 6.0 },
 mistDensity:    0.9,
 chunkChance:    0.0,
 pushForce:      0.25,
-sound:          ‘thud_fast’,
-killStyle:      ‘perforation’,
-description:    ‘Rapid small wounds. Swiss cheese effect. Blood from every hole.’,
+sound:          'thud_fast',
+killStyle:      'perforation',
+description:    'Rapid small wounds. Swiss cheese effect. Blood from every hole.',
 },
 sniper: {
 woundRadius:    0.025,
@@ -126,9 +123,9 @@ bloodVelocity:  { min: 6.0, max: 18.0 }, // supersonic mist explosion
 mistDensity:    2.0,
 chunkChance:    0.15,
 pushForce:      1.5,
-sound:          ‘crack_wet’,
-killStyle:      ‘supersonic’,
-description:    ‘Sonic pressure wave. Temporary cavity 10x bullet diameter. Blood erupts then collapses.’,
+sound:          'crack_wet',
+killStyle:      'supersonic',
+description:    'Sonic pressure wave. Temporary cavity 10x bullet diameter. Blood erupts then collapses.',
 },
 minigun: {
 woundRadius:    0.03,
@@ -140,9 +137,9 @@ bloodVelocity:  { min: 2.0, max: 5.5 },
 mistDensity:    0.8,
 chunkChance:    0.02,
 pushForce:      0.2,
-sound:          ‘thud_rapid’,
-killStyle:      ‘saturation’,
-description:    ‘Constant stream. Body dances. Blood sprays continuously.’,
+sound:          'thud_rapid',
+killStyle:      'saturation',
+description:    'Constant stream. Body dances. Blood sprays continuously.',
 },
 
 // ── EXPLOSIVE ─────────────────────────────
@@ -159,9 +156,9 @@ chunkCount:     { min: 8, max: 20 },
 pushForce:      15.0,
 isExplosive:    true,
 blastRadius:    3.0,
-sound:          ‘blast_wet’,
-killStyle:      ‘explosion’,
-description:    ‘Overpressure. Internal organs rupture. Body cavity becomes shrapnel.’,
+sound:          'blast_wet',
+killStyle:      'explosion',
+description:    'Overpressure. Internal organs rupture. Body cavity becomes shrapnel.',
 },
 rocket: {
 woundRadius:    0.8,
@@ -176,9 +173,9 @@ chunkCount:     { min: 15, max: 35 },
 pushForce:      40.0,
 isExplosive:    true,
 blastRadius:    5.0,
-sound:          ‘explosion_wet’,
-killStyle:      ‘vaporize’,
-description:    ‘Direct hit liquefies. Only chunks remain. Blood rains.’,
+sound:          'explosion_wet',
+killStyle:      'vaporize',
+description:    'Direct hit liquefies. Only chunks remain. Blood rains.',
 },
 
 // ── ENERGY ────────────────────────────────
@@ -192,11 +189,11 @@ bloodVelocity:  { min: 0.5, max: 2.0 },
 mistDensity:    0.1,
 chunkChance:    0.0,
 pushForce:      0.1,
-cauterizes:     true,      // wound smokes, doesn’t drip
+cauterizes:     true,      // wound smokes, doesn't drip
 charEffect:     true,
-sound:          ‘sizzle’,
-killStyle:      ‘cauterize’,
-description:    ‘Cauterized entry. Smoke. Little blood — but organ damage is catastrophic.’,
+sound:          'sizzle',
+killStyle:      'cauterize',
+description:    'Cauterized entry. Smoke. Little blood — but organ damage is catastrophic.',
 },
 plasma: {
 woundRadius:    0.12,
@@ -210,9 +207,9 @@ chunkChance:    0.3,
 pushForce:      2.0,
 cauterizes:     false,
 charEffect:     true,
-sound:          ‘plasma_hit’,
-killStyle:      ‘melt’,
-description:    ‘Superheated. Tissue flash-boils. Blood vaporizes at wound edge.’,
+sound:          'plasma_hit',
+killStyle:      'melt',
+description:    'Superheated. Tissue flash-boils. Blood vaporizes at wound edge.',
 },
 
 // ── MELEE ─────────────────────────────────
@@ -229,9 +226,9 @@ pushForce:      0.1,
 isSlashing:     true,
 slashLength:    0.3,
 pumpBlood:      true,      // arterial pumping if organ hit
-sound:          ‘slash_wet’,
-killStyle:      ‘slash’,
-description:    ‘Clean cut. Blood wells up. If artery hit — pump spray.’,
+sound:          'slash_wet',
+killStyle:      'slash',
+description:    'Clean cut. Blood wells up. If artery hit — pump spray.',
 },
 sword: {
 woundRadius:    0.04,
@@ -246,9 +243,9 @@ pushForce:      0.8,
 isSlashing:     true,
 slashLength:    0.7,
 pumpBlood:      true,
-sound:          ‘slash_heavy’,
-killStyle:      ‘sever’,
-description:    ‘Deep cut. May sever limb. Blood arc follows blade momentum.’,
+sound:          'slash_heavy',
+killStyle:      'sever',
+description:    'Deep cut. May sever limb. Blood arc follows blade momentum.',
 },
 axe: {
 woundRadius:    0.08,
@@ -264,9 +261,9 @@ pushForce:      2.0,
 isSlashing:     true,
 slashLength:    0.5,
 pumpBlood:      true,
-sound:          ‘chop_wet’,
-killStyle:      ‘cleave’,
-description:    ‘Splitting force. Bone shatters. Wet crunch. Blood fans out from impact.’,
+sound:          'chop_wet',
+killStyle:      'cleave',
+description:    'Splitting force. Bone shatters. Wet crunch. Blood fans out from impact.',
 },
 
 // ── SPECIAL ───────────────────────────────
@@ -283,9 +280,9 @@ pushForce:      0.5,
 cauterizes:     true,
 charEffect:     true,
 burnsEnemy:     true,
-sound:          ‘flame_hit’,
-killStyle:      ‘combust’,
-description:    ‘Tissue chars. No blood — it vaporizes. Enemy burns, collapses.’,
+sound:          'flame_hit',
+killStyle:      'combust',
+description:    'Tissue chars. No blood — it vaporizes. Enemy burns, collapses.',
 },
 ice: {
 woundRadius:    0.06,
@@ -298,9 +295,9 @@ mistDensity:    0.2,
 chunkChance:    0.0,
 pushForce:      0.3,
 freezesBlood:   true,
-sound:          ‘crack_ice’,
-killStyle:      ‘shatter’,
-description:    ‘Blood crystallizes on exit. Kill: enemy flash-freezes and shatters.’,
+sound:          'crack_ice',
+killStyle:      'shatter',
+description:    'Blood crystallizes on exit. Kill: enemy flash-freezes and shatters.',
 },
 lightning: {
 woundRadius:    0.03,
@@ -313,9 +310,9 @@ mistDensity:    0.3,
 chunkChance:    0.05,
 pushForce:      3.0,
 electricEffect: true,
-sound:          ‘zap_wet’,
-killStyle:      ‘electrocute’,
-description:    ‘Vaporizes water in tissue. Steam burst. Blood boils from wound.’,
+sound:          'zap_wet',
+killStyle:      'electrocute',
+description:    'Vaporizes water in tissue. Steam burst. Blood boils from wound.',
 },
 
 // ── KNIFE TAKEDOWN (your existing ability) ─
@@ -333,9 +330,9 @@ isSlashing:     true,
 slashLength:    0.2,
 pumpBlood:      true,
 isTakedown:     true,      // triggers special execution animation
-sound:          ‘stab_deep’,
-killStyle:      ‘execution’,
-description:    ‘Precision stab. Held in place. Blood wells slowly then gushes.’,
+sound:          'stab_deep',
+killStyle:      'execution',
+description:    'Precision stab. Held in place. Blood wells slowly then gushes.',
 },
 };
 
@@ -351,42 +348,42 @@ membrane: {
 hp: 35, maxHp: 35,
 yRange: [-1.0, 1.0],   // outermost — hit anywhere
 color: 0x33cc44,
-deathReaction: ‘membrane_burst’,
+deathReaction: 'membrane_burst',
 bleedRate: 0.3,
-description: ‘Outer membrane — protective gel layer’,
+description: 'Outer membrane — protective gel layer',
 },
 brain: {
 hp: 20, maxHp: 20,
 yRange: [0.55, 1.0],   // top of slime
 color: 0xaaffaa,
-deathReaction: ‘brain_death’,
+deathReaction: 'brain_death',
 bleedRate: 0.15,
-description: ‘Tiny nucleus — cognitive center’,
+description: 'Tiny nucleus — cognitive center',
 },
 heart: {
 hp: 45, maxHp: 45,
 yRange: [0.1, 0.55],   // upper center
 color: 0xff3333,
-deathReaction: ‘heart_death’,
+deathReaction: 'heart_death',
 bleedRate: 1.0,        // arterial — pumps hard
 pumpBlood: true,
-description: ‘Pumping core — arterial bleed if destroyed’,
+description: 'Pumping core — arterial bleed if destroyed',
 },
 guts: {
 hp: 65, maxHp: 65,
 yRange: [-0.3, 0.1],   // center-lower
 color: 0x88ff55,
-deathReaction: ‘gut_death’,
+deathReaction: 'gut_death',
 bleedRate: 0.6,
-description: ‘Digestive fluid sac — slow deflation death’,
+description: 'Digestive fluid sac — slow deflation death',
 },
 coreFluid: {
 hp: 90, maxHp: 90,
 yRange: [-1.0, -0.3],  // base/bottom
 color: 0x00ff88,
-deathReaction: ‘deflate_death’,
+deathReaction: 'deflate_death',
 bleedRate: 0.8,
-description: ‘Vital fluid core — death when depleted’,
+description: 'Vital fluid core — death when depleted',
 },
 };
 
@@ -452,7 +449,6 @@ if (!this.active) return;
 this.life -= dt;
 if (this.life <= 0) { this.deactivate(); return; }
 
-```
 if (this.onGround) {
   // Settled on ground — spread into puddle slowly
   this.size += dt * 0.08;
@@ -525,7 +521,6 @@ if (this.mesh) {
     }
   }
 }
-```
 
 }
 
@@ -582,7 +577,6 @@ if (!this.active) return;
 this.life -= dt;
 if (this.life <= 0) { this.deactivate(); return; }
 
-```
 // Gravity
 this.vel.y += GRAVITY * 0.7 * dt;
 
@@ -620,7 +614,6 @@ if (this.mesh) {
     this.mesh.material.opacity = this.life / 1.5;
   }
 }
-```
 
 }
 
@@ -668,7 +661,6 @@ this.active = false;
 return;
 }
 
-```
 // Pressure decreases as enemy loses blood
 this.pressure = Math.max(0, this.life / 5.0);
 
@@ -677,7 +669,6 @@ if (this.timer >= this.interval / this.pressure) {
   this.timer = 0;
   this._pump();
 }
-```
 
 }
 
@@ -691,7 +682,6 @@ this.direction.y + Math.random() * 0.4 * this.pressure,
 this.direction.z + (Math.random() - 0.5) * 0.3
 ).multiplyScalar(speed * (0.7 + Math.random() * 0.6));
 
-```
   // Update origin to enemy position
   const worldOrigin = this.origin.clone();
   if (this.enemy.mesh) {
@@ -706,7 +696,6 @@ this.direction.z + (Math.random() - 0.5) * 0.3
     viscosity:  SLIME_VISCOSITY,
   });
 }
-```
 
 }
 }
@@ -758,7 +747,6 @@ if (this.mesh) this.mesh.scale.setScalar(this.radius * 8);
 update(dt, enemyPos, enemyVelocity) {
 if (!this.active || this.isCauterized || this.isFrozen) return;
 
-```
 const anatomy = SLIME_ANATOMY[this.organ];
 if (!anatomy) return;
 
@@ -768,14 +756,12 @@ if (this.drip_timer >= dripInterval) {
   this.drip_timer = 0;
   this._drip(enemyPos, enemyVelocity);
 }
-```
 
 }
 
 _drip(enemyPos, enemyVelocity) {
 const worldPos = enemyPos.clone().add(this.localPos);
 
-```
 // Drip direction: down + enemy velocity influence + small random
 const vel = new THREE.Vector3(
   (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.x * 0.15 : 0),
@@ -790,7 +776,6 @@ GoreSim._spawnDrop(worldPos, vel, {
   maxBounces: 2,
   viscosity:  SLIME_VISCOSITY,
 });
-```
 
 }
 }
@@ -809,12 +794,10 @@ this.anatomy  = {};
 this.alive    = true;
 this.killedBy = null;
 
-```
 // Copy anatomy from template
 for (const [key, data] of Object.entries(SLIME_ANATOMY)) {
   this.anatomy[key] = { hp: data.hp, maxHp: data.maxHp };
 }
-```
 
 }
 
@@ -825,7 +808,7 @@ if (localY >= data.yRange[0] && localY <= data.yRange[1]) {
 return key;
 }
 }
-return ‘membrane’;
+return 'membrane';
 }
 
 damageOrgan(organ, amount) {
@@ -909,7 +892,7 @@ this.scene  = scene;
 this.camera = camera;
 this._buildPools();
 this._initialized = true;
-console.log(’[GoreSim] Initialized — Realistic Gore Simulator v1.0 ready.’);
+console.log('[GoreSim] Initialized — Realistic Gore Simulator v1.0 ready.');
 },
 
 _buildPools() {
@@ -925,7 +908,6 @@ drop.mesh    = mesh;
 this._drops.push(drop);
 }
 
-```
 // Flesh chunk pool
 const chunkGeo = new THREE.DodecahedronGeometry(0.5, 0);
 const chunkMat = new THREE.MeshLambertMaterial({ color: 0x22aa33, transparent: true });
@@ -956,7 +938,6 @@ for (let i = 0; i < MAX_DECALS; i++) {
 }
 
 console.log(`[GoreSim] Pools built: ${MAX_BLOOD_DROPS} drops, ${MAX_CHUNKS} chunks, ${MAX_DECALS} decals.`);
-```
 
 },
 
@@ -967,7 +948,6 @@ console.log(`[GoreSim] Pools built: ${MAX_BLOOD_DROPS} drops, ${MAX_CHUNKS} chun
 onHit(enemy, weaponType, hitPoint, hitNormal) {
 if (!this._initialized || !enemy) return;
 
-```
 const profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
 
 // Get or create gore state for this enemy
@@ -1051,7 +1031,6 @@ if (organDead && !enemy.dead) {
 }
 
 return { organHit, organDead, wound };
-```
 
 },
 
@@ -1061,7 +1040,6 @@ return { organHit, organDead, wound };
 onKill(enemy, weaponType, projectile) {
 if (!this._initialized) return;
 
-```
 const profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
 const gore    = this._enemyGoreMap.get(enemy.id || enemy.uuid);
 const pos     = enemy.mesh ? enemy.mesh.position.clone() : new THREE.Vector3();
@@ -1075,7 +1053,6 @@ if (gore) {
 this._killExplosion(pos, profile, killedBy, enemy);
 if (gore) gore.cleanup();
 this._enemyGoreMap.delete(enemy.id || enemy.uuid);
-```
 
 },
 
@@ -1086,7 +1063,6 @@ _bulletBlood(pos, normal, profile, gore, organ, localY) {
 const count = Math.ceil(profile.bloodVolume * 20);
 const speed = profile.bloodVelocity;
 
-```
 // Entry wound spray — forward cone opposite to normal
 const hitDir = normal ? normal.clone().negate() : new THREE.Vector3(0, 0, 1);
 
@@ -1133,7 +1109,6 @@ if (profile.exitWound) {
 if (profile.killStyle === 'supersonic') {
   this._supersonicCavity(pos, profile);
 }
-```
 
 },
 
@@ -1185,7 +1160,6 @@ viscosity: SLIME_VISCOSITY,
 });
 }
 
-```
 // Additional drips falling straight down from wound
 for (let i = 0; i < 5; i++) {
   const vel = new THREE.Vector3(
@@ -1201,7 +1175,6 @@ for (let i = 0; i < 5; i++) {
     viscosity: SLIME_VISCOSITY * 1.2,
   });
 }
-```
 
 },
 
@@ -1352,7 +1325,6 @@ viscosity:  SLIME_VISCOSITY,
 _organDeathReaction(enemy, gore, organ, pos, profile) {
 const p = pos || (enemy.mesh ? enemy.mesh.position : new THREE.Vector3());
 
-```
 switch (organ) {
   case 'brain':
     // Sudden massive mist burst from top of slime — neural fluid
@@ -1416,7 +1388,6 @@ switch (organ) {
     this._spawnBloodBurst(p, null, 50, 0x00ff88, 'core');
     break;
 }
-```
 
 },
 
@@ -1426,7 +1397,6 @@ switch (organ) {
 // ────────────────────────────────────────
 _killExplosion(pos, profile, killedBy, enemy) {
 
-```
 if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
   // MASSIVE chunk explosion
   this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile);
@@ -1539,7 +1509,6 @@ switch (killedBy) {
     }
     break;
 }
-```
 
 },
 
@@ -1615,14 +1584,14 @@ size:  0.04 + Math.random() * 0.14,
 _spawnBloodBurst(pos, direction, count, color, style) {
 for (let i = 0; i < count; i++) {
 let vel;
-if (style === ‘pump’ || style === ‘heart_death’) {
+if (style === 'pump' || style === 'heart_death') {
 // Upward fountain
 vel = new THREE.Vector3(
 (Math.random()-0.5) * 4,
 3 + Math.random() * 5,
 (Math.random()-0.5) * 4
 );
-} else if (style === ‘brain_death’) {
+} else if (style === 'brain_death') {
 // Spray outward from top
 const a = Math.random() * Math.PI * 2;
 vel = new THREE.Vector3(
@@ -1630,7 +1599,7 @@ Math.cos(a) * (1 + Math.random() * 3),
 1 + Math.random() * 4,
 Math.sin(a) * (1 + Math.random() * 3)
 );
-} else if (style === ‘ground’) {
+} else if (style === 'ground') {
 // Splat outward flat
 const a = Math.random() * Math.PI * 2;
 vel = new THREE.Vector3(
@@ -1689,10 +1658,9 @@ this._streams = [];
 getKillDescription(weaponType, organ) {
 const w = WEAPON_GORE[weaponType];
 const o = SLIME_ANATOMY[organ];
-const weaponDesc = w ? w.description : ‘Unknown weapon.’;
-const organDesc  = o ? o.description : ‘unknown organ’;
+const weaponDesc = w ? w.description : 'Unknown weapon.';
+const organDesc  = o ? o.description : 'unknown organ';
 
-```
 const deaths = {
   brain:     'Neural fluid erupts. The slime cross-eyes, wobbles, and melts from the top down.',
   heart:     'The pumping core ruptures. Three massive spurts of arterial green. Collapse.',
@@ -1706,7 +1674,6 @@ return {
   organ:  organDesc,
   death:  deaths[organ] || 'It dies.',
 };
-```
 
 },
 

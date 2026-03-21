@@ -1451,28 +1451,6 @@ function showWeaponBuilding() {
     }
   }
 
-      var miniStats = _el('div', 'display:flex;gap:8px;font-size:11px;color:#888;margin-top:2px;');
-      info.appendChild(miniStats);
-      miniStats.appendChild(_html('span', 'color:' + CYAN + ';', '⚔️' + effective.damage));
-      miniStats.appendChild(_html('span', '', '⏱️' + effective.cooldown + 'ms'));
-      miniStats.appendChild(_html('span', 'color:#8BC34A;', '🎯' + effective.range));
-
-      if (!isCurrent) {
-        var selBtn = _el('div',
-          'font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;' +
-          'background:rgba(255,255,255,0.08);color:#ccc;flex-shrink:0;', 'Select');
-        selBtn.addEventListener('click', (function (wId) {
-          return function () {
-            saveData.startWeapon = wId;
-            if (typeof saveSaveData === 'function') saveSaveData();
-            if (typeof playSound === 'function') playSound('collect');
-            buildSpinWheel(tabPanels.spin);
-          };
-        })(w.id));
-        row.appendChild(selBtn);
-      }
-    });
-  }
 
   /* ── Small helpers used by tab builders ──────────────────────── */
 

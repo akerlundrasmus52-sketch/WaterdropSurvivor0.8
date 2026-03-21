@@ -2,7 +2,6 @@
 // camp board, progression shop, wave spawning, kill cam, particle/blood/water effects, level-up utilities.
 // Depends on: all previously loaded game files
 
-```
 // --- GAME LOGIC ---
 
 function init() {
@@ -2335,4 +2334,3 @@ function createFloatingText(text, pos, color) {
     try { _orig(); } catch(e) { console.error('[CampWorld] updateCampScreen error:', e); }
   };
 })();
-```

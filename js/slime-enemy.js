@@ -38,7 +38,7 @@
   */
 
 ;(function(global) {
-‘use strict’;
+'use strict';
 
 // ════════════════════════════════════════════════
 //  SLIME CONFIGURATION
@@ -61,11 +61,11 @@ SQUISH_ON_HIT:    true,
 
 // Organ layout (normalized Y: -1=bottom, +1=top)
 var ORGANS = {
-brain:    { yMin: 0.52, yMax: 1.00, hp: 22,  maxHp: 22,  bleedRate: 0.18, name: ‘Nucleus’    },
-heart:    { yMin: 0.10, yMax: 0.52, hp: 48,  maxHp: 48,  bleedRate: 1.00, name: ‘Pump Core’  },
-guts:     { yMin:-0.28, yMax: 0.10, hp: 68,  maxHp: 68,  bleedRate: 0.55, name: ‘Fluid Sac’  },
-membrane: { yMin:-1.00, yMax: 1.00, hp: 38,  maxHp: 38,  bleedRate: 0.28, name: ‘Outer Gel’  },
-core:     { yMin:-1.00, yMax:-0.28, hp: 95,  maxHp: 95,  bleedRate: 0.72, name: ‘Vital Core’  },
+brain:    { yMin: 0.52, yMax: 1.00, hp: 22,  maxHp: 22,  bleedRate: 0.18, name: 'Nucleus'    },
+heart:    { yMin: 0.10, yMax: 0.52, hp: 48,  maxHp: 48,  bleedRate: 1.00, name: 'Pump Core'  },
+guts:     { yMin:-0.28, yMax: 0.10, hp: 68,  maxHp: 68,  bleedRate: 0.55, name: 'Fluid Sac'  },
+membrane: { yMin:-1.00, yMax: 1.00, hp: 38,  maxHp: 38,  bleedRate: 0.28, name: 'Outer Gel'  },
+core:     { yMin:-1.00, yMax:-0.28, hp: 95,  maxHp: 95,  bleedRate: 0.72, name: 'Vital Core'  },
 };
 
 // Slime colour palette — outer gel changes as slime takes damage
@@ -126,7 +126,7 @@ lx:0, ly:0, lz:0,    // local position on slime body
 radius:     0.04,
 depth:      0.0,
 hits:       0,
-organ:      ‘membrane’,
+organ:      'membrane',
 dripTimer:  0,
 pumpTimer:  0,
 isPumping:  false,    // arterial pump active
@@ -144,7 +144,7 @@ function SlimeEnemy() {
 this.alive       = false;
 this.active      = false;
 this.id          = Math.random().toString(36).slice(2);
-this.enemyType   = ‘slime’;
+this.enemyType   = 'slime';
 
 // Stats
 this.hp          = 0;
@@ -164,7 +164,7 @@ this.vz          = 0;
 this.velocity    = new THREE.Vector3(); // for BloodV2 integration
 
 // State machine
-this.state       = ‘idle’; // idle | chase | attack | dying | dead
+this.state       = 'idle'; // idle | chase | attack | dying | dead
 this.stateTimer  = 0;
 this.attackTimer = 0;
 
@@ -231,7 +231,7 @@ this.velocity.set(0,0,0);
 this.pushX = 0; this.pushZ = 0;
 
 // State
-this.state      = ‘idle’;
+this.state      = 'idle';
 this.stateTimer = Math.random() * 2.0;
 this.attackTimer= 0;
 this.deathTimer = 0;
@@ -307,19 +307,17 @@ var dx = playerPos.x - this.mesh.position.x;
 var dz = playerPos.z - this.mesh.position.z;
 var dist = Math.sqrt(dx*dx + dz*dz);
 
-```
 if (dist < SLIME_CFG.AGGRO_RANGE) {
   this.state = 'chase';
 }
 if (dist < SLIME_CFG.ATTACK_RANGE && this.attackTimer <= 0) {
   this.state = 'attack';
 }
-```
 
 }
 
 // ── Movement
-if (this.state === ‘chase’ && playerPos) {
+if (this.state === 'chase' && playerPos) {
 var dx = playerPos.x - this.mesh.position.x;
 var dz = playerPos.z - this.mesh.position.z;
 var dist = Math.sqrt(dx*dx + dz*dz) + 0.001;
@@ -529,14 +527,14 @@ var pos    = this.mesh ? this.mesh.position.clone() : new THREE.Vector3();
 var hpRatio = this.hp / this.maxHp;
 
 // ── PISTOL REACTIONS (6 variants) ─────────────────────────────────
-if (wk === ‘pistol’) {
+if (wk === 'pistol') {
 if (isThrough) {
 // THROUGH-SHOT: clean entry + exit spray out back
 this._throughShotReaction(pos, hitPoint, hitNormal, bulletDir, wlvl);
-} else if (organ === ‘brain’) {
+} else if (organ === 'brain') {
 // Brain hit: sudden lurch backward, eyes go wide
 this._lurchReaction(pos, 0.3);
-} else if (organ === ‘heart’) {
+} else if (organ === 'heart') {
 // Heart hit: violent shudder, pump starts
 this._shudderReaction(pos, 0.4);
 this._startPumpWound(organ);
@@ -553,14 +551,14 @@ this._flinchReaction(pos, 0.25);
 }
 
 // ── REVOLVER REACTIONS (5 variants) ───────────────────────────────
-else if (wk === ‘revolver’) {
+else if (wk === 'revolver') {
 if (isThrough) {
 this._throughShotReaction(pos, hitPoint, hitNormal, bulletDir, wlvl * 1.3);
-} else if (organ === ‘heart’) {
+} else if (organ === 'heart') {
 // Heavy round to heart: stumble, clutch animation
 this._stumbleReaction(pos, 0.6);
 this._startPumpWound(organ);
-} else if (organ === ‘brain’) {
+} else if (organ === 'brain') {
 // Revolver headshot: spin stagger
 this._spinStaggerReaction(pos, 0.5);
 } else if (hpRatio < 0.4) {
@@ -572,17 +570,17 @@ this._shudderReaction(pos, 0.55);
 }
 
 // ── SHOTGUN REACTIONS (7 variants) ────────────────────────────────
-else if (wk === ‘shotgun’) {
+else if (wk === 'shotgun') {
 if (wlvl >= 5 || this.hp <= 0) {
 // High level shotgun at close range: full devastation
 this._devastationReaction(pos, bulletDir);
-} else if (organ === ‘membrane’) {
+} else if (organ === 'membrane') {
 // Pellets spread across membrane: multiple small impacts
 this._multiImpactReaction(pos, 6, 0.8);
-} else if (organ === ‘guts’) {
+} else if (organ === 'guts') {
 // Gut shot: immediate deflation begin, lurch forward
 this._gutShotReaction(pos);
-} else if (organ === ‘heart’) {
+} else if (organ === 'heart') {
 this._heartBlastReaction(pos);
 } else if (hpRatio < 0.4) {
 // Almost dead — shotgun spins it
@@ -596,7 +594,7 @@ this._pushbackReaction(pos, bulletDir, 2.5);
 }
 
 // ── SMG REACTIONS (4 variants) ────────────────────────────────────
-else if (wk === ‘smg’) {
+else if (wk === 'smg') {
 if (isThrough) {
 this._throughShotReaction(pos, hitPoint, hitNormal, bulletDir, wlvl);
 } else if (hpRatio < 0.2) {
@@ -609,19 +607,19 @@ this._rapidFlinchReaction(pos);
 }
 
 // ── SNIPER REACTIONS (5 variants) ─────────────────────────────────
-else if (wk === ‘sniper’) {
+else if (wk === 'sniper') {
 // Sniper ALWAYS goes through (pen=1.0)
 this._supersonicThroughReaction(pos, hitPoint, hitNormal, bulletDir, wlvl);
-if (organ === ‘brain’) {
+if (organ === 'brain') {
 // Brain snipe: instant neural collapse sequence
 this._brainSnipeReaction(pos);
-} else if (organ === ‘heart’) {
+} else if (organ === 'heart') {
 this._heartSnipeReaction(pos);
 }
 }
 
 // ── MINIGUN REACTIONS (3 variants) ────────────────────────────────
-else if (wk === ‘minigun’) {
+else if (wk === 'minigun') {
 if (wlvl >= 5) {
 this._throughShotReaction(pos, hitPoint, hitNormal, bulletDir, wlvl * 0.8);
 }
@@ -633,37 +631,37 @@ this._rapidFlinchReaction(pos);
 }
 
 // ── GRENADE REACTIONS (3 variants) ────────────────────────────────
-else if (wk === ‘grenade’) {
+else if (wk === 'grenade') {
 this._explosionReaction(pos, bulletDir, 12.0);
 }
 
 // ── ROCKET REACTIONS (2 variants) ─────────────────────────────────
-else if (wk === ‘rocket’) {
+else if (wk === 'rocket') {
 this._explosionReaction(pos, bulletDir, 30.0);
 }
 
 // ── LASER REACTIONS (4 variants) ──────────────────────────────────
-else if (wk === ‘laser’) {
+else if (wk === 'laser') {
 // Laser: no flinch, just… smokes
 this._laserHitReaction(pos, wlvl);
-if (organ === ‘heart’) {
+if (organ === 'heart') {
 this._cauterizedPumpReaction(pos); // heart pumps despite cauterize
 }
 }
 
 // ── PLASMA REACTIONS (3 variants) ─────────────────────────────────
-else if (wk === ‘plasma’) {
+else if (wk === 'plasma') {
 this._plasmaHitReaction(pos, wlvl);
-if (organ === ‘brain’ || organ === ‘heart’) {
+if (organ === 'brain' || organ === 'heart') {
 this._heavyImpactReaction(pos, 0.9);
 }
 }
 
 // ── KNIFE REACTIONS (4 variants) ──────────────────────────────────
-else if (wk === ‘knife’) {
-if (organ === ‘heart’) {
+else if (wk === 'knife') {
+if (organ === 'heart') {
 this._knifeHeartReaction(pos);
-} else if (organ === ‘brain’) {
+} else if (organ === 'brain') {
 this._knifeBrainReaction(pos);
 } else {
 this._knifeStabReaction(pos, wlvl);
@@ -671,7 +669,7 @@ this._knifeStabReaction(pos, wlvl);
 }
 
 // ── SWORD REACTIONS (3 variants) ──────────────────────────────────
-else if (wk === ‘sword’) {
+else if (wk === 'sword') {
 if (wlvl >= 4) {
 this._spinThrowReaction(pos, bulletDir, 1.2);
 } else {
@@ -680,27 +678,27 @@ this._slashKnockReaction(pos, bulletDir, wlvl);
 }
 
 // ── AXE REACTIONS (3 variants) ────────────────────────────────────
-else if (wk === ‘axe’) {
+else if (wk === 'axe') {
 this._axeCleavReaction(pos, organ, wlvl);
 }
 
 // ── FLAME REACTIONS (3 variants) ──────────────────────────────────
-else if (wk === ‘flame’) {
+else if (wk === 'flame') {
 this._flameHitReaction(pos, wlvl);
 }
 
 // ── ICE REACTIONS (3 variants) ────────────────────────────────────
-else if (wk === ‘ice’) {
+else if (wk === 'ice') {
 this._iceHitReaction(pos, wlvl);
 }
 
 // ── LIGHTNING REACTIONS (3 variants) ──────────────────────────────
-else if (wk === ‘lightning’) {
+else if (wk === 'lightning') {
 this._lightningHitReaction(pos, wlvl);
 }
 
 // ── KNIFE TAKEDOWN ─────────────────────────────────────────────────
-else if (wk === ‘knife_takedown’) {
+else if (wk === 'knife_takedown') {
 this._takedownReaction(pos);
 }
 };
@@ -870,7 +868,7 @@ self.mesh.rotation.z = Math.sin(count * 1.5) * 0.22;
 self.mesh.position.y += Math.sin(count) * 0.03;
 count++;
 }, 40);
-this._startPumpWound(‘heart’);
+this._startPumpWound('heart');
 };
 
 // Big spin-throw
@@ -937,7 +935,7 @@ self.mesh.rotation.x = 0.4;
 
 // Heart snipe
 SlimeEnemy.prototype._heartSnipeReaction = function(pos) {
-this._startPumpWound(‘heart’);
+this._startPumpWound('heart');
 this._shudderReaction(pos, 1.2);
 };
 
@@ -971,7 +969,7 @@ setTimeout(function() { if (self.mesh) self.mesh.rotation.x += 0.04; }, 80);
 
 // Cauterized pump — heart still pumps despite burn
 SlimeEnemy.prototype._cauterizedPumpReaction = function(pos) {
-this._startPumpWound(‘heart’);
+this._startPumpWound('heart');
 };
 
 // Plasma — char + stagger
@@ -990,7 +988,7 @@ setTimeout(function() { if (self.mesh) self.mesh.scale.setScalar(self.scale); },
 
 // Knife to heart — starts arterial pump, body seizes
 SlimeEnemy.prototype._knifeHeartReaction = function(pos) {
-this._startPumpWound(‘heart’);
+this._startPumpWound('heart');
 if (!this.mesh) return;
 var self = this;
 var freeze = setInterval(function() {
@@ -1020,7 +1018,7 @@ this._spinThrowReaction(pos, dir, scale * 0.5);
 // Axe cleave
 SlimeEnemy.prototype._axeCleavReaction = function(pos, organ, wlvl) {
 this._heavyImpactReaction(pos, 1.0 + wlvl * 0.15);
-if (organ === ‘brain’ || organ === ‘membrane’) {
+if (organ === 'brain' || organ === 'membrane') {
 var self = this;
 // Deep cleave — body tilts hard
 if (this.mesh) {
@@ -1076,7 +1074,7 @@ if (!this.mesh) return;
 var self = this;
 // Slime is pinned — freeze in place
 this.speed = 0;
-this.state = ‘pinned’;
+this.state = 'pinned';
 this.mesh.rotation.x = 0.3;
 // Gradual lean and settle
 var t = 0;
@@ -1110,7 +1108,7 @@ if (this.dying) return;
 this.dying    = true;
 this.hp       = 0;
 this.speed    = 0;
-this.state    = ‘dying’;
+this.state    = 'dying';
 this.deathTimer = 0;
 
 if (global.BloodV2) {
@@ -1126,37 +1124,37 @@ this._initDeathAnimation(style);
 
 SlimeEnemy.prototype._chooseDeathStyle = function(wk, wlvl, organ) {
 // Explosive weapons: always explosive death
-if (wk === ‘rocket’ || wk === ‘meteor’) return ‘vaporize’;
-if (wk === ‘grenade’) return ‘explosion_toss’;
+if (wk === 'rocket' || wk === 'meteor') return 'vaporize';
+if (wk === 'grenade') return 'explosion_toss';
 // Brain kill
-if (organ === ‘brain’) {
-if (wk === ‘sniper’) return ‘brain_snipe’;
-if (wk === ‘axe’)    return ‘split_top’;
-return ‘neural_melt’;
+if (organ === 'brain') {
+if (wk === 'sniper') return 'brain_snipe';
+if (wk === 'axe')    return 'split_top';
+return 'neural_melt';
 }
 // Heart kill
-if (organ === ‘heart’) {
-if (wk === ‘knife_takedown’) return ‘execution_bleed’;
-if (wk === ‘knife’ || wk === ‘sword’) return ‘slash_collapse’;
-return ‘cardiac_pump_collapse’;
+if (organ === 'heart') {
+if (wk === 'knife_takedown') return 'execution_bleed';
+if (wk === 'knife' || wk === 'sword') return 'slash_collapse';
+return 'cardiac_pump_collapse';
 }
 // Gut kill
-if (organ === ‘guts’) return ‘deflation_death’;
+if (organ === 'guts') return 'deflation_death';
 // Elemental kills
-if (wk === ‘flame’) return ‘burn_collapse’;
-if (wk === ‘ice’)   return ‘freeze_shatter’;
-if (wk === ‘lightning’) return ‘electro_death’;
-if (wk === ‘laser’) return ‘laser_collapse’;
+if (wk === 'flame') return 'burn_collapse';
+if (wk === 'ice')   return 'freeze_shatter';
+if (wk === 'lightning') return 'electro_death';
+if (wk === 'laser') return 'laser_collapse';
 // Shotgun at high level
-if (wk === ‘shotgun’ && wlvl >= 4) return ‘shotgun_explosion’;
+if (wk === 'shotgun' && wlvl >= 4) return 'shotgun_explosion';
 // Sniper generic
-if (wk === ‘sniper’) return ‘sniper_spin’;
+if (wk === 'sniper') return 'sniper_spin';
 // Knife takedown
-if (wk === ‘knife_takedown’) return ‘execution_bleed’;
+if (wk === 'knife_takedown') return 'execution_bleed';
 // Melee generic
-if (wk === ‘axe’ || wk === ‘sword’) return ‘melee_spin’;
+if (wk === 'axe' || wk === 'sword') return 'melee_spin';
 // Default
-return ‘standard_collapse’;
+return 'standard_collapse';
 };
 
 SlimeEnemy.prototype._initDeathAnimation = function(style) {
@@ -1165,7 +1163,6 @@ var pos  = this.mesh ? this.mesh.position.clone() : new THREE.Vector3();
 
 switch (style) {
 
-```
 // ── 1. STANDARD COLLAPSE ─────────────────────────────────────
 case 'standard_collapse':
   // Slime tips over and melts flat
@@ -1303,7 +1300,6 @@ case 'plasma_melt':
   this.deathData.meltProgress = 0;
   if (this.mesh) this.mesh.material.color.setHex(0x885533);
   break;
-```
 
 }
 };
@@ -1327,7 +1323,6 @@ this._dropTrail();
 
 switch (style) {
 
-```
 case 'standard_collapse':
   if (data.phase === 'tipping') {
     this.mesh.rotation.z += dt * 1.8;
@@ -1524,7 +1519,6 @@ case 'melee_spin':
   pos.y = Math.max(0.02, pos.y - dt * 1.0);
   if (pos.y <= 0.02 || Math.abs(data.spinV) < 0.3) this._finishDeath();
   break;
-```
 
 }
 
@@ -1541,7 +1535,7 @@ SlimeEnemy.prototype._finishDeath = function() {
 var self = this;
 if (this.mesh) {
 // Flatten onto ground
-if (this.deathStyle !== ‘vaporize’ && this.deathStyle !== ‘freeze_shatter’) {
+if (this.deathStyle !== 'vaporize' && this.deathStyle !== 'freeze_shatter') {
 this.mesh.scale.set(this.scale * 1.6, 0.05, this.scale * 1.6);
 this.mesh.position.y = 0.015;
 this.mesh.rotation.z = 0;
@@ -1580,7 +1574,7 @@ SlimeEnemy.prototype._getOrgan = function(localY) {
 for (var k in ORGANS) {
 if (localY >= ORGANS[k].yMin && localY <= ORGANS[k].yMax) return k;
 }
-return ‘membrane’;
+return 'membrane';
 };
 
 SlimeEnemy.prototype._damageOrgan = function(organ, amount) {
@@ -1628,8 +1622,8 @@ slot.dripTimer  = 0;
 slot.pumpTimer  = 0;
 slot.isPumping  = false;
 slot.pumpLife   = 0;
-slot.cauterized = (wk === ‘laser’ || wk === ‘flame’);
-slot.frozen     = (wk === ‘ice’);
+slot.cauterized = (wk === 'laser' || wk === 'flame');
+slot.frozen     = (wk === 'ice');
 return slot;
 };
 
@@ -1652,13 +1646,12 @@ var s = this._buildSlimeMesh(scene);
 this._pool.push(s);
 }
 this._ready = true;
-console.log(’[SlimePool] Ready. ’ + this._count + ’ slimes pre-allocated.’);
+console.log('[SlimePool] Ready. ' + this._count + ' slimes pre-allocated.');
 },
 
 _buildSlimeMesh: function(scene) {
 var s = new SlimeEnemy();
 
-```
 // ── BODY ────────────────────────────────────────────────────
 // Use a slightly flattened sphere for slime shape
 var bodyGeo = new THREE.SphereGeometry(1.0, 16, 12);
@@ -1729,7 +1722,6 @@ scene.add(shadow);
 s.shadowMesh = shadow;
 
 return s;
-```
 
 },
 
@@ -1768,7 +1760,7 @@ for (var i = 0; i < this._pool.length; i++) {
 var s = this._pool[i];
 if (s.alive || s.dying) s._cleanup();
 }
-console.log(’[SlimePool] Reset complete.’);
+console.log('[SlimePool] Reset complete.');
 },
 };
 
@@ -1781,31 +1773,31 @@ global.SLIME_COLORS = SLIME_COLORS;
 global.ORGANS       = ORGANS;
 
 console.log([
-‘’,
-‘╔══════════════════════════════════════════════════════╗’,
-‘║  SlimeEnemy System v1.0 — LOADED                    ║’,
-‘╠══════════════════════════════════════════════════════╣’,
-‘║  18 kill animations  |  47 hit reactions            ║’,
-‘║  5-organ anatomy     |  Blood trail system          ║’,
-‘║  Progressive wounds  |  Level scaling               ║’,
-‘║  Zero GC             |  Full BloodV2 integration    ║’,
-‘╠══════════════════════════════════════════════════════╣’,
-‘║  game-screens.js init():                            ║’,
-‘║    window.SlimePool.init(scene, 40);                ║’,
-‘║                                                      ║’,
-‘║  To spawn:                                          ║’,
-‘║    window.SlimePool.spawn(x, y, z, waveLevel);     ║’,
-‘║                                                      ║’,
-‘║  game-loop.js animate():                            ║’,
-‘║    window.SlimePool.update(delta, playerPos);       ║’,
-‘║                                                      ║’,
-‘║  On hit (from combat.js):                          ║’,
-‘║    window.SlimePool.hit(                            ║’,
-‘║      slime, “shotgun”, weaponLevel,                 ║’,
-‘║      hitPoint, hitNormal, bulletDir                 ║’,
-‘║    );                                               ║’,
-‘╚══════════════════════════════════════════════════════╝’,
-‘’,
-].join(’\n’));
+'',
+'╔══════════════════════════════════════════════════════╗',
+'║  SlimeEnemy System v1.0 — LOADED                    ║',
+'╠══════════════════════════════════════════════════════╣',
+'║  18 kill animations  |  47 hit reactions            ║',
+'║  5-organ anatomy     |  Blood trail system          ║',
+'║  Progressive wounds  |  Level scaling               ║',
+'║  Zero GC             |  Full BloodV2 integration    ║',
+'╠══════════════════════════════════════════════════════╣',
+'║  game-screens.js init():                            ║',
+'║    window.SlimePool.init(scene, 40);                ║',
+'║                                                      ║',
+'║  To spawn:                                          ║',
+'║    window.SlimePool.spawn(x, y, z, waveLevel);     ║',
+'║                                                      ║',
+'║  game-loop.js animate():                            ║',
+'║    window.SlimePool.update(delta, playerPos);       ║',
+'║                                                      ║',
+'║  On hit (from combat.js):                          ║',
+'║    window.SlimePool.hit(                            ║',
+'║      slime, "shotgun", weaponLevel,                 ║',
+'║      hitPoint, hitNormal, bulletDir                 ║',
+'║    );                                               ║',
+'╚══════════════════════════════════════════════════════╝',
+'',
+].join('\n'));
 
 })(window);

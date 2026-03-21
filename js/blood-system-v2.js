@@ -27,7 +27,7 @@
 - ║  RESET between runs:                                            ║
 - ║          window.BloodV2.reset()                                  ║
 - ║                                                                  ║
-- ║  That’s it. Everything else is automatic.                       ║
+- ║  That's it. Everything else is automatic.                       ║
 - ╚══════════════════════════════════════════════════════════════════╝
 - 
 - DESIGN PRINCIPLES:
@@ -45,7 +45,7 @@
   */
 
 ;(function (global) {
-‘use strict’;
+'use strict';
 
 // ══════════════════════════════════════════
 //  POOL SIZES — tuned for mobile performance
@@ -85,7 +85,6 @@ default:  { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
 // ══════════════════════════════════════════
 var WEAPONS = {
 
-```
 // ── PISTOL ─────────────────────────────────────────────────────
 pistol: {
   label:         'Pistol',
@@ -455,7 +454,6 @@ meteor: {
   blastR:        8.0,
   killStyle:     'vaporize',
 },
-```
 
 };
 
@@ -467,7 +465,6 @@ meteor: {
 // ══════════════════════════════════════════
 var ANATOMY = {
 
-```
 slime: {
   membrane: { hp:35,  maxHp:35,  yRange:[-1.0, 1.0], bleedRate:0.30, pumpBlood:false },
   brain:    { hp:20,  maxHp:20,  yRange:[ 0.5, 1.0], bleedRate:0.15, pumpBlood:false },
@@ -479,7 +476,6 @@ slime: {
 // Add more enemy types here as you build them:
 // bug:   { membrane:{...}, brain:{...}, ... },
 // alien: { ... },
-```
 
 };
 
@@ -588,7 +584,7 @@ organs[k] = { hp: profile[k].hp, maxHp: profile[k].maxHp };
 }
 return {
 enemy:    enemy,
-type:     enemyType || ‘slime’,
+type:     enemyType || 'slime',
 organs:   organs,
 wounds:   [],        // array of wound objects
 killedBy: null,
@@ -603,7 +599,7 @@ lx:0, ly:0, lz:0,   // local position on enemy
 radius:     0.04,
 depth:      0.0,
 hits:       0,
-organ:      ‘membrane’,
+organ:      'membrane',
 dripTimer:  0,
 cauterized: false,
 frozen:     false,
@@ -622,11 +618,11 @@ _buildChunkPool();
 _buildDecalPool();
 _ready = true;
 console.log(
-‘[BloodV2] ✅ Ready. Pools: ’ +
-CFG.DROP_COUNT + ’ drops, ’ +
-CFG.MIST_COUNT + ’ mist, ’ +
-CFG.CHUNK_COUNT + ’ chunks, ’ +
-CFG.DECAL_COUNT + ’ decals’
+'[BloodV2] ✅ Ready. Pools: ' +
+CFG.DROP_COUNT + ' drops, ' +
+CFG.MIST_COUNT + ' mist, ' +
+CFG.CHUNK_COUNT + ' chunks, ' +
+CFG.DECAL_COUNT + ' decals'
 );
 }
 
@@ -638,7 +634,6 @@ function _buildDropPool() {
 var geo = new THREE.SphereGeometry(1.0, 4, 3); // unit sphere, scaled per instance
 var mat = new THREE.MeshBasicMaterial({ vertexColors: false });
 
-```
 _dropIM = new THREE.InstancedMesh(geo, mat, CFG.DROP_COUNT);
 _dropIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
@@ -656,7 +651,6 @@ for (var i = 0; i < CFG.DROP_COUNT; i++) {
   _dropIM.setMatrixAt(i, _m4);
 }
 _dropIM.instanceMatrix.needsUpdate = true;
-```
 
 }
 
@@ -664,7 +658,6 @@ function _buildMistPool() {
 var geo = new THREE.SphereGeometry(1.0, 3, 2);
 var mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
 
-```
 _mistIM = new THREE.InstancedMesh(geo, mat, CFG.MIST_COUNT);
 _mistIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
@@ -681,7 +674,6 @@ for (var i = 0; i < CFG.MIST_COUNT; i++) {
   _mistIM.setMatrixAt(i, _m4);
 }
 _mistIM.instanceMatrix.needsUpdate = true;
-```
 
 }
 
@@ -694,7 +686,6 @@ new THREE.OctahedronGeometry(1.0, 0),
 ];
 var mat = new THREE.MeshLambertMaterial({ transparent: true });
 
-```
 _chunks = [];
 for (var i = 0; i < CFG.CHUNK_COUNT; i++) {
   var geo  = shapes[i % shapes.length];
@@ -705,7 +696,6 @@ for (var i = 0; i < CFG.CHUNK_COUNT; i++) {
   c.mesh   = mesh;
   _chunks.push(c);
 }
-```
 
 }
 
@@ -718,7 +708,6 @@ opacity:     0.80,
 depthWrite:  false,
 });
 
-```
 _decals = [];
 for (var i = 0; i < CFG.DECAL_COUNT; i++) {
   var mesh = new THREE.Mesh(geo, mat.clone());
@@ -731,7 +720,6 @@ for (var i = 0; i < CFG.DECAL_COUNT; i++) {
   d.mesh = mesh;
   _decals.push(d);
 }
-```
 
 }
 
@@ -746,19 +734,14 @@ for (var i = 0; i < CFG.DECAL_COUNT; i++) {
 - enemy      — your enemy object. Needs:
 - ```
             .mesh (THREE.Mesh or THREE.Object3D)
-  ```
 - ```
             .id or .uuid (unique identifier)
-  ```
 - ```
             .velocity (THREE.Vector3, optional)
-  ```
 - ```
             .enemyType (string: 'slime','bug'... optional)
-  ```
 - ```
             .alive (bool)
-  ```
 - weaponKey  — string key from WEAPONS table above
 - hitPoint   — THREE.Vector3 world position of hit
 - hitNormal  — THREE.Vector3 surface normal at hit (optional)
@@ -766,7 +749,6 @@ for (var i = 0; i < CFG.DECAL_COUNT; i++) {
   function hit(enemy, weaponKey, hitPoint, hitNormal) {
   if (!_ready || !enemy) return;
 
-```
 var wp   = WEAPONS[weaponKey] || WEAPONS.pistol;
 var eId  = enemy.id !== undefined ? enemy.id : enemy.uuid;
 var eType = enemy.enemyType || 'slime';
@@ -849,7 +831,6 @@ if (organKilled) {
 }
 
 return { organ: organ, organKilled: organKilled };
-```
 
 }
 
@@ -861,7 +842,6 @@ return { organ: organ, organKilled: organKilled };
   function kill(enemy, weaponKey) {
   if (!_ready || !enemy) return;
 
-```
 var wp   = WEAPONS[weaponKey] || WEAPONS.pistol;
 var eId  = enemy.id !== undefined ? enemy.id : enemy.uuid;
 var eType = enemy.enemyType || 'slime';
@@ -887,7 +867,6 @@ if (gs) {
   for (var j = 0; j < gs.wounds.length; j++) gs.wounds[j].alive = false;
 }
 _goreMap.delete(eId);
-```
 
 }
 
@@ -900,7 +879,6 @@ _goreMap.delete(eId);
   if (!_ready) return;
   _frame++;
 
-```
 var dirty = false;
 
 // ── Update blood drops ───────────────────
@@ -960,7 +938,6 @@ for (var i = 0; i < 10; i++) {
     dd.mesh.material.opacity = (dd.life / 4.0) * 0.80;
   }
 }
-```
 
 }
 
@@ -978,7 +955,7 @@ for (var i = 0; i < 10; i++) {
   _streams = [];
   if (_dropIM) _dropIM.instanceMatrix.needsUpdate = true;
   if (_mistIM) _mistIM.instanceMatrix.needsUpdate = true;
-  console.log(’[BloodV2] Reset complete.’);
+  console.log('[BloodV2] Reset complete.');
   }
 
 // ══════════════════════════════════════════
@@ -988,7 +965,6 @@ function _updateDrop(d, dt, im, isMist) {
 d.life -= dt;
 if (d.life <= 0) { _killDrop(d, im); return; }
 
-```
 if (d.onGround) {
   // Settled: slowly spread as puddle, fade near end
   d.r = Math.min(d.r + dt * 0.04, 0.18);
@@ -1064,7 +1040,6 @@ if (!d.onGround && spd > 3.5) {
 
 _m4.setPosition(d.px, d.py, d.pz);
 im.setMatrixAt(d.idx, _m4);
-```
 
 }
 
@@ -1076,7 +1051,6 @@ if (!c.alive) return;
 c.life -= dt;
 if (c.life <= 0) { _killChunk(c); return; }
 
-```
 // Gravity
 c.vy += CFG.GRAVITY * 0.65 * dt;
 // Drag
@@ -1116,7 +1090,6 @@ if (c.mesh) {
   c.mesh.rotation.set(c.rx, c.ry, c.rz);
   if (c.life < 1.5) c.mesh.material.opacity = c.life / 1.5;
 }
-```
 
 }
 
@@ -1127,7 +1100,6 @@ function _updateStream(s, dt) {
 if (!s.alive) return;
 if (!s.enemy || !s.enemy.alive) { s.alive = false; return; }
 
-```
 s.life -= dt;
 if (s.life <= 0) { s.alive = false; return; }
 
@@ -1139,7 +1111,6 @@ if (s.timer >= interval) {
   s.timer = 0;
   _pumpStream(s);
 }
-```
 
 }
 
@@ -1149,7 +1120,6 @@ var ey = s.enemy.mesh ? s.enemy.mesh.position.y : 0;
 var ez = s.enemy.mesh ? s.enemy.mesh.position.z : 0;
 var wx = ex + s.lx, wy = ey + s.ly, wz = ez + s.lz;
 
-```
 var spd   = 3.5 + s.pressure * 9.5;
 var count = Math.max(1, Math.ceil(s.pressure * 6));
 
@@ -1171,7 +1141,6 @@ for (var i = 0; i < count; i++) {
   d.color      = s.color;
   d.frozen     = false; d.charred = false;
 }
-```
 
 }
 
@@ -1184,7 +1153,6 @@ var anat  = ANATOMY[col._type] || ANATOMY.slime;
 var oData = anat[w.organ];
 if (!oData) return;
 
-```
 w.dripTimer += dt;
 var rate = CFG.DRIP_RATE / (oData.bleedRate * (0.4 + w.depth));
 if (w.dripTimer >= rate) {
@@ -1207,7 +1175,6 @@ if (w.dripTimer >= rate) {
   d.color     = w.color;
   d.frozen    = false; d.charred = false;
 }
-```
 
 }
 
@@ -1220,7 +1187,6 @@ var nx = normal ? -normal.x : 0;
 var ny = normal ? -normal.y : 0;
 var nz = normal ? -normal.z : 1;
 
-```
 var count = wp.dropCount;
 var sMin  = wp.dropSpeed[0], sMax = wp.dropSpeed[1];
 
@@ -1286,7 +1252,6 @@ if (wp.exitWound) {
     d.frozen    = false; d.charred = false;
   }
 }
-```
 
 }
 
@@ -1539,7 +1504,6 @@ d.color = col.base; d.frozen = false; d.charred = false;
 function _organDeathFX(gs, organ, hx, hy, hz, wp, col) {
 switch (organ) {
 
-```
   case 'brain':
     // Neural fluid eruption from top — greenish mist burst
     _burstRadial(hx, hy+0.15, hz, 30, col.organ, 2.5, 6.0, 0.006, 0.010, 1.0, 0.2);
@@ -1589,7 +1553,6 @@ switch (organ) {
     _burstRadial(hx, hy, hz, 55, col.organ, 2.5, 9.0, 0.014, 0.032, 3.5, 0.55);
     break;
 }
-```
 
 }
 
@@ -1598,7 +1561,6 @@ switch (organ) {
 // ══════════════════════════════════════════
 function _killExplosion(ex, ey, ez, wp, col, killedBy, enemy) {
 
-```
 if (wp.killStyle === 'vaporize') {
   _fxExplosion(ex, ey, ez, wp, col);
   _spawnChunks(ex, ey, ez, null, wp.chunkCount[1], wp, col);
@@ -1694,7 +1656,6 @@ switch (killedBy) {
     if (Math.random() < 0.5) _spawnChunks(ex, ey, ez, null, 3+Math.floor(Math.random()*4), wp, col);
     break;
 }
-```
 
 }
 
@@ -1814,7 +1775,7 @@ for (var k in profile) {
 var o = profile[k];
 if (localY >= o.yRange[0] && localY <= o.yRange[1]) return k;
 }
-return ‘membrane’;
+return 'membrane';
 }
 
 function _damageOrgan(gs, organ, amount) {
@@ -1952,7 +1913,6 @@ kill:    kill,
 update:  update,
 reset:   reset,
 
-```
 // Data tables — extend these to add new weapons/enemies
 WEAPONS:     WEAPONS,
 ANATOMY:     ANATOMY,
@@ -1989,37 +1949,36 @@ addWeapon: function(key, profile) {
 addAnatomy: function(enemyType, anatomyProfile) {
   ANATOMY[enemyType] = anatomyProfile;
 },
-```
 
 };
 
 // Print integration guide
 console.log([
-‘’,
-‘╔══════════════════════════════════════════════════════╗’,
-‘║  BloodV2 — Realistic Gore System — LOADED           ║’,
-‘╠══════════════════════════════════════════════════════╣’,
-‘║  Step 1  sandbox.html:                              ║’,
-‘║    <script src="js/blood-system-v2.js"></script>    ║’,
-‘║    (after three.js, before enemy-class.js)          ║’,
-‘║                                                      ║’,
-‘║  Step 2  game-screens.js  init():                   ║’,
-‘║    window.BloodV2.init(scene);                      ║’,
-‘║                                                      ║’,
-‘║  Step 3  game-loop.js  animate():                   ║’,
-‘║    window.BloodV2.update(delta);                    ║’,
-‘║                                                      ║’,
-‘║  Step 4  combat.js  on bullet hit:                  ║’,
-‘║    window.BloodV2.hit(enemy,                        ║’,
-‘║      “shotgun”, hitPoint, hitNormal);               ║’,
-‘║                                                      ║’,
-‘║  Step 5  enemy-class.js  on death:                  ║’,
-‘║    window.BloodV2.kill(enemy, “shotgun”);           ║’,
-‘║                                                      ║’,
-‘║  Reset:  window.BloodV2.reset();                    ║’,
-‘╚══════════════════════════════════════════════════════╝’,
-‘’,
-].join(’\n’));
+'',
+'╔══════════════════════════════════════════════════════╗',
+'║  BloodV2 — Realistic Gore System — LOADED           ║',
+'╠══════════════════════════════════════════════════════╣',
+'║  Step 1  sandbox.html:                              ║',
+'║    <script src="js/blood-system-v2.js"></script>    ║',
+'║    (after three.js, before enemy-class.js)          ║',
+'║                                                      ║',
+'║  Step 2  game-screens.js  init():                   ║',
+'║    window.BloodV2.init(scene);                      ║',
+'║                                                      ║',
+'║  Step 3  game-loop.js  animate():                   ║',
+'║    window.BloodV2.update(delta);                    ║',
+'║                                                      ║',
+'║  Step 4  combat.js  on bullet hit:                  ║',
+'║    window.BloodV2.hit(enemy,                        ║',
+'║      "shotgun", hitPoint, hitNormal);               ║',
+'║                                                      ║',
+'║  Step 5  enemy-class.js  on death:                  ║',
+'║    window.BloodV2.kill(enemy, "shotgun");           ║',
+'║                                                      ║',
+'║  Reset:  window.BloodV2.reset();                    ║',
+'╚══════════════════════════════════════════════════════╝',
+'',
+].join('\n'));
 
 })(window);
 
