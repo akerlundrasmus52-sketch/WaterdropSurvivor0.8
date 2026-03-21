@@ -36,7 +36,7 @@
   */
 
 ;(function(global) {
-‘use strict’;
+'use strict';
 
 // ════════════════════════════════════════════════════════════
 //  SHARED SCRATCH — never allocate in loops
@@ -50,7 +50,7 @@ var _ray = new THREE.Raycaster();
 //  WAVE DEFINITIONS
 //  Each wave has: count, enemyLevel, spawnDelay, spawnPattern,
 //  announceText, specialEvent
-//  spawnPattern: ‘circle’ | ‘sides’ | ‘random’ | ‘swarm’ | ‘pincer’
+//  spawnPattern: 'circle' | 'sides' | 'random' | 'swarm' | 'pincer'
 // ════════════════════════════════════════════════════════════
 var WAVES = [
 // Wave 1 — Tutorial. Single slow slime. Player learns controls.
@@ -59,9 +59,9 @@ waveNum:      1,
 count:        1,
 enemyLevel:   1,
 spawnDelay:   0,
-spawnPattern: ‘random’,
+spawnPattern: 'random',
 spawnRadius:  6,
-announceText: ‘WAVE 1 — First contact’,
+announceText: 'WAVE 1 — First contact',
 pauseBetween: 0,
 specialEvent: null,
 },
@@ -71,9 +71,9 @@ waveNum:      2,
 count:        3,
 enemyLevel:   1,
 spawnDelay:   0.4,
-spawnPattern: ‘circle’,
+spawnPattern: 'circle',
 spawnRadius:  7,
-announceText: ‘WAVE 2 — They multiply’,
+announceText: 'WAVE 2 — They multiply',
 pauseBetween: 0,
 specialEvent: null,
 },
@@ -83,9 +83,9 @@ waveNum:      3,
 count:        4,
 enemyLevel:   1,
 spawnDelay:   0.3,
-spawnPattern: ‘pincer’,
+spawnPattern: 'pincer',
 spawnRadius:  7,
-announceText: ‘WAVE 3 — PINCER ATTACK’,
+announceText: 'WAVE 3 — PINCER ATTACK',
 pauseBetween: 0,
 specialEvent: null,
 },
@@ -95,9 +95,9 @@ waveNum:      4,
 count:        3,
 enemyLevel:   2,
 spawnDelay:   0.5,
-spawnPattern: ‘sides’,
+spawnPattern: 'sides',
 spawnRadius:  8,
-announceText: ‘WAVE 4 — They're getting bigger’,
+announceText: 'WAVE 4 — They\'re getting bigger',
 pauseBetween: 0,
 specialEvent: null,
 },
@@ -107,11 +107,11 @@ waveNum:      5,
 count:        8,
 enemyLevel:   1,
 spawnDelay:   0.15,
-spawnPattern: ‘swarm’,
+spawnPattern: 'swarm',
 spawnRadius:  9,
-announceText: ‘⚠ WAVE 5 — SWARM INCOMING’,
+announceText: '⚠ WAVE 5 — SWARM INCOMING',
 pauseBetween: 0,
-specialEvent: ‘swarm_sound’,
+specialEvent: 'swarm_sound',
 },
 // Wave 6 — Mixed: 2 heavies + 4 normals
 {
@@ -119,9 +119,9 @@ waveNum:      6,
 count:        6,
 enemyLevel:   2,
 spawnDelay:   0.35,
-spawnPattern: ‘circle’,
+spawnPattern: 'circle',
 spawnRadius:  9,
-announceText: ‘WAVE 6 — Heavy support arriving’,
+announceText: 'WAVE 6 — Heavy support arriving',
 pauseBetween: 0,
 specialEvent: null,
 },
@@ -131,11 +131,11 @@ waveNum:      7,
 count:        10,
 enemyLevel:   2,
 spawnDelay:   0.12,
-spawnPattern: ‘swarm’,
+spawnPattern: 'swarm',
 spawnRadius:  10,
-announceText: ‘⚠ WAVE 7 — SWARM × 2’,
+announceText: '⚠ WAVE 7 — SWARM × 2',
 pauseBetween: 0,
-specialEvent: ‘swarm_sound’,
+specialEvent: 'swarm_sound',
 },
 // Wave 8 — Level 3 slimes introduced
 {
@@ -143,11 +143,11 @@ waveNum:      8,
 count:        5,
 enemyLevel:   3,
 spawnDelay:   0.4,
-spawnPattern: ‘sides’,
+spawnPattern: 'sides',
 spawnRadius:  10,
-announceText: ‘WAVE 8 — EVOLVED SLIMES’,
+announceText: 'WAVE 8 — EVOLVED SLIMES',
 pauseBetween: 0,
-specialEvent: ‘screen_shake’,
+specialEvent: 'screen_shake',
 },
 // Wave 9 — Pincer with heavy
 {
@@ -155,9 +155,9 @@ waveNum:      9,
 count:        7,
 enemyLevel:   3,
 spawnDelay:   0.25,
-spawnPattern: ‘pincer’,
+spawnPattern: 'pincer',
 spawnRadius:  11,
-announceText: ‘WAVE 9 — Close quarters’,
+announceText: 'WAVE 9 — Close quarters',
 pauseBetween: 0,
 specialEvent: null,
 },
@@ -167,11 +167,11 @@ waveNum:      10,
 count:        6,   // 1 boss + 5 normal
 enemyLevel:   4,
 spawnDelay:   0.6,
-spawnPattern: ‘boss_wave’,
+spawnPattern: 'boss_wave',
 spawnRadius:  12,
-announceText: ‘☠ WAVE 10 — BOSS INCOMING’,
+announceText: '☠ WAVE 10 — BOSS INCOMING',
 pauseBetween: 2.0,
-specialEvent: ‘boss_music’,
+specialEvent: 'boss_music',
 bossLevel:    8,   // one slime spawns at this level
 },
 ];
@@ -180,7 +180,7 @@ bossLevel:    8,   // one slime spawns at this level
 function generateInfiniteWave(waveNum) {
 var cycle    = Math.floor((waveNum - 11) / 5);
 var position = (waveNum - 11) % 5;
-var patterns = [‘circle’, ‘swarm’, ‘pincer’, ‘sides’, ‘swarm’];
+var patterns = ['circle', 'swarm', 'pincer', 'sides', 'swarm'];
 var level    = 4 + cycle;
 var count    = 6 + cycle * 2 + position * 2;
 return {
@@ -190,9 +190,9 @@ enemyLevel:   Math.min(level, 10),
 spawnDelay:   Math.max(0.08, 0.3 - cycle * 0.03),
 spawnPattern: patterns[position],
 spawnRadius:  12 + cycle,
-announceText: ’WAVE ’ + waveNum + ’ — Level ’ + level,
+announceText: 'WAVE ' + waveNum + ' — Level ' + level,
 pauseBetween: 0,
-specialEvent: (count > 20) ? ‘swarm_sound’ : null,
+specialEvent: (count > 20) ? 'swarm_sound' : null,
 bossLevel:    (waveNum % 5 === 0) ? (level + 4) : null,
 };
 }
@@ -219,11 +219,11 @@ init: function(scene, spawnRadius) {
 this._scene       = scene;
 this._spawnRadius = spawnRadius || 9;
 this._ready       = true;
-console.log(’[WaveSpawner] Ready. Spawn radius: ’ + this._spawnRadius);
+console.log('[WaveSpawner] Ready. Spawn radius: ' + this._spawnRadius);
 },
 
 // ── Register event callbacks ──────────────────────
-// Usage: WaveSpawner.on(‘waveStart’, function(wave) { … })
+// Usage: WaveSpawner.on('waveStart', function(wave) { … })
 on: function(event, fn) {
 this._callbacks[event] = fn;
 },
@@ -244,7 +244,6 @@ this._spawnQueue  = [];
 update: function(dt, playerPos) {
 if (!this._ready || !playerPos) return;
 
-```
 // Count alive slimes
 var alive = global.SlimePool ? global.SlimePool.getAlive().length : 0;
 
@@ -272,7 +271,6 @@ if (!this._waveActive && this._spawnQueue.length === 0) {
     this._startNextWave(playerPos);
   }
 }
-```
 
 },
 
@@ -288,7 +286,6 @@ this._currentWave++;
 this._waveKills  = 0;
 this._waveActive = true;
 
-```
 var waveDef = this._currentWave <= WAVES.length
   ? WAVES[this._currentWave - 1]
   : generateInfiniteWave(this._currentWave);
@@ -320,7 +317,6 @@ for (var i = 0; i < positions.length; i++) {
 this._spawnTimer = 0;
 
 console.log('[WaveSpawner] Wave ' + this._currentWave + ' started. ' + positions.length + ' enemies.');
-```
 
 },
 
@@ -330,7 +326,6 @@ var count  = waveDef.count;
 var radius = waveDef.spawnRadius || this._spawnRadius;
 var px     = playerPos.x, pz = playerPos.z;
 
-```
 switch (waveDef.spawnPattern) {
 
   case 'circle':
@@ -414,7 +409,6 @@ switch (waveDef.spawnPattern) {
     break;
 }
 return positions;
-```
 
 },
 
@@ -423,7 +417,6 @@ if (!global.SlimePool) return;
 var slime = global.SlimePool.spawn(entry.x, 0, entry.z, entry.level);
 if (!slime) return;
 
-```
 // Boss gets bigger scale
 if (entry.isBoss && slime.mesh) {
   slime.scale = 0.9 + Math.random() * 0.1;
@@ -451,7 +444,6 @@ if (slime.mesh) {
 }
 
 this._emit('slimeSpawned', { slime: slime, wave: this._currentWave });
-```
 
 },
 
@@ -459,7 +451,7 @@ this._emit('slimeSpawned', { slime: slime, wave: this._currentWave });
 onSlimeKilled: function(slime) {
 this._totalKills++;
 this._waveKills++;
-this._emit(‘slimeKilled’, {
+this._emit('slimeKilled', {
 totalKills: this._totalKills,
 waveKills:  this._waveKills,
 wave:       this._currentWave,
@@ -474,7 +466,7 @@ this._spawnTimer  = 0;
 this._wavePause   = 0;
 this._totalKills  = 0;
 this._waveKills   = 0;
-console.log(’[WaveSpawner] Reset.’);
+console.log('[WaveSpawner] Reset.');
 },
 };
 
@@ -747,7 +739,7 @@ var MAX_PROJECTILES = 80;
 function makeProjectile() {
 return {
 alive:       false,
-weaponKey:   ‘’,
+weaponKey:   '',
 weaponLevel: 1,
 px:0, py:0, pz:0,    // position
 vx:0, vy:0, vz:0,    // velocity
@@ -777,7 +769,7 @@ init: function(scene) {
 this._scene = scene;
 this._ready = true;
 this._buildProjectilePool();
-console.log(’[HitDetection] Ready. ’ + MAX_PROJECTILES + ’ projectiles pooled.’);
+console.log('[HitDetection] Ready. ' + MAX_PROJECTILES + ' projectiles pooled.');
 },
 
 _buildProjectilePool: function() {
@@ -803,7 +795,6 @@ if (!this._ready) return;
 var def = PROJECTILE_DEFS[weaponKey] || PROJECTILE_DEFS.pistol;
 weaponLevel = weaponLevel || 1;
 
-```
 // Level scaling for pierce count and spread
 var lvlPierce = Math.min(def.pierceCount + Math.floor(weaponLevel / 3), 10);
 var lvlSpread = def.spread * Math.max(0.5, 1.0 - (weaponLevel - 1) * 0.08);
@@ -826,7 +817,6 @@ for (var b = 0; b < def.bulletCount; b++) {
     this._fireProjectile(weaponKey, weaponLevel, origin, dx, dy, dz, def, lvlPierce);
   }
 }
-```
 
 },
 
@@ -837,7 +827,6 @@ var piercesLeft = pierceCount;
 var travelDist  = 0;
 var ox = origin.x, oy = origin.y, oz = origin.z;
 
-```
 // Visual trail for hitscan
 if (def.trailLen > 0 && this._scene) {
   this._spawnBulletTrail(ox, oy, oz, dx, dy, dz, def, maxRange);
@@ -912,7 +901,6 @@ if (def.isExplosive && hits.length === 0) {
   var endZ = oz + dz * maxRange;
   this._triggerExplosion(wk, wlvl, new THREE.Vector3(endX, oy, endZ), def);
 }
-```
 
 },
 
@@ -944,7 +932,6 @@ _fireProjectile: function(wk, wlvl, origin, dx, dy, dz, def, pierceCount) {
 var p = this._getFreeProjectile();
 if (!p) return;
 
-```
 p.alive       = true;
 p.weaponKey   = wk;
 p.weaponLevel = wlvl;
@@ -968,7 +955,6 @@ if (p.mesh) {
   p.mesh.position.set(origin.x, origin.y, origin.z);
   p.mesh.visible = true;
 }
-```
 
 },
 
@@ -986,7 +972,6 @@ _updateProjectile: function(p, dt) {
 var def = p.def;
 if (!def) { p.alive = false; return; }
 
-```
 p.life -= dt;
 if (p.life <= 0) {
   // Fuse explosion
@@ -1078,7 +1063,6 @@ for (var i = 0; i < slimes.length; i++) {
     }
   }
 }
-```
 
 },
 
@@ -1112,7 +1096,6 @@ var pool = global.BloodV2._dropData;
 var trailLen = Math.min(range, def.trailLen || 0.3);
 if (trailLen <= 0) return;
 
-```
 // Spawn a few drops along the trail path
 var steps = Math.ceil(trailLen / 0.15);
 for (var i = 0; i < Math.min(steps, 8); i++) {
@@ -1138,7 +1121,6 @@ for (var i = 0; i < Math.min(steps, 8); i++) {
   }
 }
 if (global.BloodV2._dropIM) global.BloodV2._dropIM.instanceMatrix.needsUpdate = true;
-```
 
 },
 
@@ -1168,7 +1150,7 @@ reset: function() {
 for (var i = 0; i < this._projectiles.length; i++) {
 this._killProjectile(this._projectiles[i]);
 }
-console.log(’[HitDetection] Reset.’);
+console.log('[HitDetection] Reset.');
 },
 };
 
@@ -1180,37 +1162,37 @@ global.HitDetection  = HitDetection;
 global.PROJECTILE_DEFS = PROJECTILE_DEFS;
 
 console.log([
-‘’,
-‘╔══════════════════════════════════════════════════════╗’,
-‘║  Wave System + Hit Detection v1.0 — LOADED          ║’,
-‘╠══════════════════════════════════════════════════════╣’,
-‘║  10 handcrafted waves + infinite scaling            ║’,
-‘║  18 projectile weapon types                         ║’,
-‘║  Hitscan + physics projectiles + explosions         ║’,
-‘║  Shotgun spread | Sniper pierce | Chain lightning   ║’,
-‘║  Level scaling: spread↓ pierce↑ range↑             ║’,
-‘╠══════════════════════════════════════════════════════╣’,
-‘║  game-screens.js init():                            ║’,
-‘║    window.WaveSpawner.init(scene, 9);               ║’,
-‘║    window.HitDetection.init(scene);                 ║’,
-‘║    window.WaveSpawner.start();                      ║’,
-‘║                                                      ║’,
-‘║  game-loop.js animate():                            ║’,
-‘║    window.WaveSpawner.update(dt, playerPos);        ║’,
-‘║    window.HitDetection.update(dt, playerPos);       ║’,
-‘║                                                      ║’,
-‘║  When player fires:                                 ║’,
-‘║    window.HitDetection.fireWeapon(                  ║’,
-‘║      “shotgun”, weaponLevel, origin, direction      ║’,
-‘║    );                                               ║’,
-‘║                                                      ║’,
-‘║  Wave events:                                       ║’,
-‘║    WaveSpawner.on(“waveStart”, fn);                 ║’,
-‘║    WaveSpawner.on(“waveComplete”, fn);              ║’,
-‘║    WaveSpawner.on(“announce”, fn);                  ║’,
-‘║    WaveSpawner.on(“slimeKilled”, fn);               ║’,
-‘╚══════════════════════════════════════════════════════╝’,
-‘’,
-].join(’\n’));
+'',
+'╔══════════════════════════════════════════════════════╗',
+'║  Wave System + Hit Detection v1.0 — LOADED          ║',
+'╠══════════════════════════════════════════════════════╣',
+'║  10 handcrafted waves + infinite scaling            ║',
+'║  18 projectile weapon types                         ║',
+'║  Hitscan + physics projectiles + explosions         ║',
+'║  Shotgun spread | Sniper pierce | Chain lightning   ║',
+'║  Level scaling: spread↓ pierce↑ range↑             ║',
+'╠══════════════════════════════════════════════════════╣',
+'║  game-screens.js init():                            ║',
+'║    window.WaveSpawner.init(scene, 9);               ║',
+'║    window.HitDetection.init(scene);                 ║',
+'║    window.WaveSpawner.start();                      ║',
+'║                                                      ║',
+'║  game-loop.js animate():                            ║',
+'║    window.WaveSpawner.update(dt, playerPos);        ║',
+'║    window.HitDetection.update(dt, playerPos);       ║',
+'║                                                      ║',
+'║  When player fires:                                 ║',
+'║    window.HitDetection.fireWeapon(                  ║',
+'║      "shotgun", weaponLevel, origin, direction      ║',
+'║    );                                               ║',
+'║                                                      ║',
+'║  Wave events:                                       ║',
+'║    WaveSpawner.on("waveStart", fn);                 ║',
+'║    WaveSpawner.on("waveComplete", fn);              ║',
+'║    WaveSpawner.on("announce", fn);                  ║',
+'║    WaveSpawner.on("slimeKilled", fn);               ║',
+'╚══════════════════════════════════════════════════════╝',
+'',
+].join('\n'));
 
 })(window);
