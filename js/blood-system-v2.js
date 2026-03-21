@@ -2101,6 +2101,56 @@ console.log([
       BV2.hit(e, 'pistol', { x: p.x, y: p.y, z: p.z }, dir || null);
     },
 
+    // ── water / player effects (player-class.js) ─────────────────────────────
+    emitWaterBurst: function (pos /*, count, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'pistol', _pos3(pos), null);
+    },
+
+    emitWaterPulse: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'revolver', _pos3(pos), null);
+    },
+
+    // ── trail effects (enemy-class.js) ───────────────────────────────────────
+    emitDragTrail: function (pos, dir /*, count */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'pistol', _pos3(pos), dir || null);
+    },
+
+    emitSpinTrail: function (pos, angle /*, count */) {
+      var e = _fakeEnemy(pos);
+      var dir = { x: Math.cos(angle || 0), y: 0, z: Math.sin(angle || 0) };
+      BV2.hit(e, 'pistol', _pos3(pos), dir);
+    },
+
+    emitCrawlTrail: function (pos, dir /*, count */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'pistol', _pos3(pos), dir || null);
+    },
+
+    // ── arterial / throat sprays ──────────────────────────────────────────────
+    emitArterialSpurt: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'shotgun', _pos3(pos), null);
+    },
+
+    emitThroatSpray: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'shotgun', _pos3(pos), null);
+    },
+
+    // ── area effects ─────────────────────────────────────────────────────────
+    emitMeteorExplosion: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.kill(e, 'shotgun');
+    },
+
+    emitPoolGrow: function (pos /*, opts */) {
+      var e = _fakeEnemy(pos);
+      BV2.hit(e, 'pistol', _pos3(pos), null);
+    },
+
     // ── catch-all for any future callers ─────────────────────────────────────
     emitSwordSlashFX: function (pos, dir) {
       var e = _fakeEnemy(pos);

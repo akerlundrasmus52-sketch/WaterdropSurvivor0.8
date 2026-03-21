@@ -185,4 +185,71 @@
       }
     }
   };
+
+  // ---- visual error box (iPhone-friendly, no F12 needed) ----
+  // Only active when ?debug=1 is in the URL.
+  if (enabled) {
+    var _errBox = null;
+    var _errCount = 0;
+
+    function _getErrBox() {
+      if (_errBox) return _errBox;
+      // Re-use an existing box if the DOM already has one (e.g. after hot-reload)
+      _errBox = document.getElementById('dbg-error-box');
+      if (_errBox) return _errBox;
+      _errBox = document.createElement('div');
+      _errBox.id = 'dbg-error-box';
+      _errBox.style.cssText = [
+        'position:fixed',
+        'top:0',
+        'left:0',
+        'right:0',
+        'max-height:40vh',
+        'overflow-y:auto',
+        'background:rgba(180,0,0,0.92)',
+        'color:#fff',
+        'font-family:monospace',
+        'font-size:12px',
+        'line-height:1.4',
+        'padding:8px',
+        'z-index:999999',
+        'word-break:break-all',
+        'pointer-events:auto',
+        'border-bottom:3px solid #ff0',
+        'display:none'
+      ].join(';');
+      // tap to dismiss
+      _errBox.addEventListener('click', function () { _errBox.style.display = 'none'; });
+      document.body.appendChild(_errBox);
+      return _errBox;
+    }
+
+    function _showError(msg, src, line) {
+      _errCount++;
+      var box = _getErrBox();
+      var entry = document.createElement('div');
+      entry.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.3);padding:4px 0;';
+      entry.textContent = '[' + _errCount + '] ' + msg +
+        (src ? ' — ' + src.split('/').pop() : '') +
+        (line ? ':' + line : '');
+      box.insertBefore(entry, box.firstChild);
+      box.style.display = 'block';
+    }
+
+    window.addEventListener('error', function (e) {
+      _showError(e.message || String(e), e.filename, e.lineno);
+    });
+
+    window.addEventListener('unhandledrejection', function (e) {
+      var msg = (e.reason && e.reason.message) ? e.reason.message : String(e.reason);
+      _showError('Unhandled promise rejection: ' + msg, '', '');
+    });
+
+    // ensure box exists after DOM loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { _getErrBox(); });
+    } else {
+      _getErrBox();
+    }
+  }
 })();

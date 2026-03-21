@@ -37,7 +37,6 @@ function init() {
 
   if (typeof window._ensureEntityPools === 'function') window._ensureEntityPools();
   if (window.BloodV2 && typeof THREE !== 'undefined') window.BloodV2.init(scene);
-  if (window.BloodSystem && typeof THREE !== 'undefined') window.BloodSystem.init(scene);
   if (window.TraumaSystem && typeof THREE !== 'undefined') window.TraumaSystem.init(scene);
   if (window.GameObjectPool) window.GameObjectPool.prewarm();
   console.log('[Init] Scene created OK');
@@ -954,8 +953,11 @@ function endCountdown() {
   gameStartTime = Date.now();
   console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
 
-  window._engine2SandboxMode = true;
-  if (window.Engine2Sandbox && !window._engine2Instance) {
+  // Engine 2.0 Sandbox mode is only active when sandbox.html explicitly sets
+  // window._engine2SandboxMode = true before init().  The main game (index.html)
+  // should NOT enter sandbox mode here — doing so disables normal wave spawning
+  // and creates a second ground mesh on top of the world-gen ground.
+  if (window._engine2SandboxMode === true && window.Engine2Sandbox && !window._engine2Instance) {
     window._engine2Instance = new window.Engine2Sandbox(scene, camera);
     window._engine2Instance.init();
     console.log('[Engine2] Engine 2.0 Sandbox mode activated');
