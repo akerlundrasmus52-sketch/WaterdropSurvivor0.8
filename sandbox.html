@@ -152,7 +152,11 @@
     }
     /* Suppress quest/tutorial popups that don't apply in sandbox mode */
     #quest-popup-overlay, #quest-popup, #quest-notification,
-    #tutorial-quest-box, .quest-popup, .quest-notification { display: none !important; }
+    #tutorial-quest-box, .quest-popup, .quest-notification,
+    #comic-info-overlay, .comic-info-box, #quest-marker-tooltip,
+    .quest-marker, #quest-hud, .quest-hud-item,
+    [id^="quest-"], [class^="quest-"],
+    [id^="tutorial-"], [class^="tutorial-"] { display: none !important; }
   </style>
 </head>
 <body>
@@ -440,6 +444,10 @@
   <!-- ═══════════════════════════════════════════════════════════════════════
        SCRIPT LOADING — strictly ordered, enforcing pool-first architecture
        ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Sandbox mode flag — set before ANY other script loads so that all
+       subsequently-loaded scripts (quest-system.js, etc.) can check this. -->
+  <script>window._engine2SandboxMode = true;</script>
 
   <!-- 1. Three.js (local copy, same version used by main game) -->
   <script src="js/three.min.js"></script>
