@@ -139,6 +139,14 @@ class Engine2Sandbox {
                 console.error('[Engine2] Error details:', error3);
                 console.warn('[Engine2] All texture files failed - generating procedural texture...');
 
+                // FALLBACK: procedural stone color
+                if (this.groundMesh && this.groundMesh.material) {
+                  this.groundMesh.material.color.setHex(0x667755);
+                  this.groundMesh.material.roughness = 0.95;
+                  this.groundMesh.material.needsUpdate = true;
+                  console.log('[Engine2] Using procedural stone color fallback');
+                }
+
                 // FALLBACK 3: Generate procedural texture
                 this._generateProceduralTexture();
                 checkComplete();
