@@ -1070,7 +1070,7 @@
     // CRITICAL FIX: Ensure corpse mesh stays visible!
     slot.mesh.visible = true;
     // Flatten the corpse mesh and darken to a bloody grey
-    slot.mesh.material.color.setHex(0x3A1A1A);
+    slot.mesh.material.color.setHex(0x1a4a1a);
     slot.mesh.material.emissiveIntensity = 0.05;
     slot.mesh.scale.set(1.4, 0.35, 1.4); // squish flat on ground
     slot.mesh.position.y = 0.12; // lay on ground
