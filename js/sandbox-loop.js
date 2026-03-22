@@ -244,7 +244,7 @@
     equippedGear: { weapon: 'gun' },
     companions: {},
     selectedCompanion: null,
-    tutorialQuests: null,
+    tutorialQuests: { currentQuest: null, readyToClaim: [], firstDeathShown: false, pendingBuildQuest: null, landmarksFound: null, mysteriousEggFound: false },
     tutorial: { completed: true, currentStep: 'completed' },
     upgrades: { goldEarned: 0 },
     resources: { magicEssence: 0 },
