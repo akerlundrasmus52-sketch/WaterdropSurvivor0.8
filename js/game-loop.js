@@ -690,6 +690,10 @@
       const frameStartTime = performance.now();
 
       let dt = (time - lastTime) / 1000;
+      if (window.BloodV2) window.BloodV2.update(dt);
+      if (window.SlimePool) window.SlimePool.update(dt, player && player.mesh ? player.mesh.position : null);
+      if (window.WaveSpawner) window.WaveSpawner.update(dt, player && player.mesh ? player.mesh.position : null);
+      if (window.HitDetection) window.HitDetection.update(dt, player && player.mesh ? player.mesh.position : null);
       lastTime = time;
       gameTime = time / 1000; // Update game time in seconds
 
