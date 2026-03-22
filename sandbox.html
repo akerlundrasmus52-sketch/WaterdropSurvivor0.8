@@ -599,5 +599,16 @@ console.warn = (...a) => { _origWarn(...a); _log.innerHTML += '<div style="color
     <div class="revolver-label" style="font-family:'Bangers',cursive;font-size:14px;color:#FFD700;letter-spacing:1px;">5/5</div>
   </div>
 
-</body>
+</body><div id="debug-log" style="position:fixed;bottom:0;left:0;right:0;height:200px;background:rgba(0,0,0,0.8);color:#00ff00;font-size:10px;overflow-y:auto;z-index:9999;padding:4px;"></div>
+
+<script>
+const _log = document.getElementById('debug-log');
+const _origLog = console.log;
+const _origError = console.error;
+const _origWarn = console.warn;
+console.log = (...a) => { _origLog(...a); _log.innerHTML += '<div>' + a.join(' ') + '</div>'; _log.scrollTop = 9999; };
+console.error = (...a) => { _origError(...a); _log.innerHTML += '<div style="color:red">' + a.join(' ') + '</div>'; _log.scrollTop = 9999; };
+console.warn = (...a) => { _origWarn(...a); _log.innerHTML += '<div style="color:yellow">' + a.join(' ') + '</div>'; _log.scrollTop = 9999; };
+</script>
+
 </html>
