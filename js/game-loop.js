@@ -1317,7 +1317,7 @@
           scene.remove(window.stonehengeChest);
           window.stonehengeChest = null;
           
-          const activeQuestId = saveData.tutorialQuests.currentQuest;
+          const activeQuestId = saveData.tutorialQuests ? saveData.tutorialQuests.currentQuest : null;
           // Show item card popup
           showComicInfoBox(
             '🎁 Treasure Found!',
