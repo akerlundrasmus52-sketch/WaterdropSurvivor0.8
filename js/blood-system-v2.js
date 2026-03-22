@@ -2035,12 +2035,15 @@ console.log([
     },
 
     // ── burst / spray ─────────────────────────────────────────────────────────
-    emitBurst: function (pos /*, count, opts */) {
-      // BloodV2 high-level entry point: hit() / kill().
-      // For generic positional bursts we synthesise a fake enemy at the target position.
-      // count/opts are not forwarded — BloodV2 uses its own weapon profiles for particle counts.
+    emitBurst: function (pos, count, opts) {
+      var p = _pos3(pos);
+      var hp = new THREE.Vector3(p.x, p.y, p.z);
+      var cnt = typeof count === 'number' ? count : 30;
+      var wk = cnt > 200 ? 'shotgun' : cnt > 50 ? 'revolver' : 'pistol';
       var e = _fakeEnemy(pos);
-      BV2.hit(e, 'pistol', e.mesh.position, null);
+      BV2.hit(e, wk, hp, null);
+      if (cnt > 100) BV2.hit(e, 'shotgun', hp, null);
+      if (cnt > 300) BV2.hit(e, 'grenade', hp, null);
     },
 
     emitPulse: function (pos /*, opts */) {
