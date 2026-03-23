@@ -59,6 +59,22 @@
     // ─── Close Settings Modal ───
     closeBtn.addEventListener('click', closeSettings);
 
+    // ─── Go to Camp Button ───
+    const goToCampBtn = document.getElementById('settings-go-to-camp-btn');
+    if (goToCampBtn) {
+      goToCampBtn.addEventListener('click', function() {
+        closeSettings();
+        // Navigate to camp if CampWorld is available
+        if (window.updateCampScreen && typeof window.updateCampScreen === 'function') {
+          window.updateCampScreen();
+        } else if (window.CampWorld && window.CampWorld.enter && typeof window.CampWorld.enter === 'function') {
+          window.CampWorld.enter();
+        } else {
+          console.warn('[SettingsUI] Camp navigation functions not available');
+        }
+      });
+    }
+
     function closeSettings() {
       settingsModal.style.display = 'none';
       if (window.setGamePaused) window.setGamePaused(false);
@@ -81,6 +97,22 @@
             // Apply the current quality preset immediately
             if (qualitySelect && typeof window.applyGraphicsQuality === 'function') {
               window.applyGraphicsQuality(qualitySelect.value);
+            }
+
+            // FORCE FULL BLOOD/GORE RENDERING IN MANUAL MODE
+            // Manual mode overrides all performance throttles for Blood/Gore simulators
+            if (window.gameSettings.particleEffects !== false) {
+              // Enable full particle effects
+              if (window.BloodV2 && typeof window.BloodV2.setParticleEffects === 'function') {
+                window.BloodV2.setParticleEffects(true);
+              }
+              if (window.GoreSim && typeof window.GoreSim.setEnabled === 'function') {
+                window.GoreSim.setEnabled(true);
+              }
+              if (window.TraumaSystem && typeof window.TraumaSystem.setEnabled === 'function') {
+                window.TraumaSystem.setEnabled(true);
+              }
+              console.log('[SettingsUI] Manual mode: Full Blood/Gore rendering ENABLED');
             }
           }
 

@@ -1,8 +1,45 @@
 # 💧 Waterdrop Survivor
 
-**Version 0.5.2 alpha — playable**
+**Version 0.5.2 alpha — playable — ENGINE 2.0**
 
 A browser-based THREE.js survivor/roguelike set in an alien-contaminated lake. You are a sentient waterdrop trying to find your way back to the collective — guided (or manipulated?) by an AI entity named A.I.D.A.
+
+---
+
+## 🧠 AI MANIFEST — CRITICAL CONTEXT FOR ALL FUTURE AI AGENTS
+
+### 🌊 The Lore
+You are a **conscious Lake from Nirvana**, now trapped in physical form as a waterdrop in a contaminated alien world. Your mission is to find your way back to the collective consciousness.
+
+**A.I.D.A. (Artificial Intelligence Data Archive)** is your guide—a mysterious AI entity that helps you survive. But she is secretly the **final boss**: an Annunaki creation designed to manipulate and control you. The deeper you progress, the more her true nature is revealed.
+
+### ⚙️ Technical Rules — ENGINE 2.0
+**DO NOT rebuild the engine. DO NOT delete the new map.**
+
+- **ENGINE 2.0 is ACTIVE**: The game now runs on a completely rebuilt core system. All previous references to the "legacy engine" are deprecated.
+- **Strict Object Pooling for EVERYTHING**: Enemies, projectiles, particles, blood drops, gore chunks, decals—all use pre-allocated object pools. NO `new` allocations during gameplay to prevent garbage collection spikes.
+- **No ES Modules**: Everything runs via `<script>` tags in global scope. Script load order in `index.html` and `sandbox.html` is critical.
+- **THREE.js v0.176.0** loaded from CDN.
+
+### 🩸 THE SIMULATORS — DO NOT REPLACE, ONLY TUNE
+
+This game contains **HIGHLY ADVANCED, TUNABLE SIMULATORS** for:
+1. **Blood System V2** (`js/blood-system-v2.js`) — Physics-based blood simulation with gravity, viscosity, drag, arterial pumps, and pooled InstancedMesh rendering.
+2. **Gore Simulator** (`js/gore-simulator.js`) — Anatomically-aware dismemberment system with organ damage, wound placement, and weapon-specific gore profiles.
+3. **Slime Physics** (handled within enemy-class.js and trauma-system.js) — Hit reactions, death animations, corpse flattening, and chunk generation.
+
+**CRITICAL**: These are NOT simple animations. They are **complex systems with internal parameters**.
+
+**Future AI agents MUST**:
+- **Locate these files and READ their internal parameters/variables**
+- **TWEAK the parameters** to achieve the desired visual effects
+- **NEVER replace them with basic code** or "simple implementations"
+
+Example parameters you can adjust:
+- `WEAPON_GORE` profiles (wound radius, blood volume, chunk count, penetration depth)
+- `CFG` pool sizes (drop count, mist count, decal count)
+- `GRAVITY`, `BLOOD_VISCOSITY`, `DRIP_INTERVAL`, `PUMP_INTERVAL`
+- Corpse persistence timers, fade rates, pool sizes
 
 ---
 
