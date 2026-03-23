@@ -1529,6 +1529,12 @@
           }
           const autoAimLabel = document.getElementById('auto-aim-label-tooltip');
           if (autoAimLabel) autoAimLabel.style.display = 'none';
+
+          // Call the settings UI update function
+          if (typeof window.updateAutoAimUI === 'function') {
+            window.updateAutoAimUI(true);
+          }
+
           showStatChange('🎯 Auto-Aim unlocked! Enable it in Settings > Auto-Aim checkbox');
         }
         

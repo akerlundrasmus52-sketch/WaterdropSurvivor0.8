@@ -756,29 +756,33 @@
     function saveSettings() {
       try {
         const settings = {
+          graphicsMode: gameSettings.graphicsMode || 'auto',
+          graphicsQuality: gameSettings.graphicsQuality || 'auto',
+          particleEffects: gameSettings.particleEffects !== false,
           autoAim: gameSettings.autoAim,
           controlType: gameSettings.controlType,
           soundEnabled: gameSettings.soundEnabled,
-          musicEnabled: gameSettings.musicEnabled,
-          graphicsQuality: gameSettings.graphicsQuality
+          musicEnabled: gameSettings.musicEnabled
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       } catch (e) {
         console.error('Failed to save settings:', e);
       }
     }
-    
+
     function loadSettings() {
       try {
         const saved = localStorage.getItem(SETTINGS_KEY);
         if (saved) {
           const settings = JSON.parse(saved);
           // Apply saved settings to gameSettings
+          if (settings.graphicsMode) gameSettings.graphicsMode = settings.graphicsMode;
+          if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
+          if (settings.particleEffects !== undefined) gameSettings.particleEffects = settings.particleEffects;
           if (settings.autoAim !== undefined) gameSettings.autoAim = settings.autoAim;
           if (settings.controlType) gameSettings.controlType = settings.controlType;
           if (settings.soundEnabled !== undefined) gameSettings.soundEnabled = settings.soundEnabled;
           if (settings.musicEnabled !== undefined) gameSettings.musicEnabled = settings.musicEnabled;
-          if (settings.graphicsQuality) gameSettings.graphicsQuality = settings.graphicsQuality;
         } else {
           // No saved settings — auto-detect best control type.
           // Touch events + no fine pointer = mobile/tablet → 'touch' (on-screen joystick).

@@ -643,7 +643,9 @@
       controlType: 'touch', // 'touch', 'keyboard', 'gamepad'
       soundEnabled: true,
       musicEnabled: true,
+      graphicsMode: 'auto', // 'auto' or 'manual'
       graphicsQuality: 'auto', // 'auto','ultra-low','very-low','low','medium','high','very-high','ultra'
+      particleEffects: true, // Enable particle effects (blood, gore, etc.)
       isPortrait: null,
       inputListenersRegistered: false
     };

@@ -2864,12 +2864,20 @@
     glow.position.set(0, 2.2, 0.8);
     grp.add(glow);
 
-    // Eye of Horus notification indicator (3D floating pyramid with exclamation glow)
-    // This is a small golden pyramid hovering above the sign that becomes visible when new codex entries are available
+    // Eye of Horus notification indicator - Golden Pyramid with Black Eye
+    // This is a golden pyramid hovering above the sign that becomes visible when new codex entries are available
+    // The pyramid has 4 faces, and we'll add the Eye of Horus symbol on one face
+
+    // Main pyramid structure
     const notifGeo = new THREE.ConeGeometry(0.22, 0.38, 4);
     const notifMat = new THREE.MeshPhongMaterial({
-      color: 0xFFD700, emissive: 0xFFAA00, emissiveIntensity: 0.95,
-      transparent: true, opacity: 0.9
+      color: 0xFFD700,        // Bright gold
+      emissive: 0xFFAA00,     // Golden emissive
+      emissiveIntensity: 0.95,
+      transparent: true,
+      opacity: 0.95,
+      shininess: 80,
+      specular: 0xFFFFAA
     });
     const notifPyramid = new THREE.Mesh(notifGeo, notifMat);
     notifPyramid.name = 'codex-notif-pyramid';
@@ -2877,17 +2885,54 @@
     notifPyramid.rotation.y = Math.PI / 4;
     grp.add(notifPyramid);
 
-    const notifLight = new THREE.PointLight(0xFFD700, 1.6, 4, 2);
+    // Eye of Horus symbol on front face (black on gold)
+    // Create a small plane with the Eye of Horus using simple geometry
+    const eyeGroup = new THREE.Group();
+
+    // Eye outline (horizontal ellipse)
+    const eyeOutlineGeo = new THREE.CircleGeometry(0.08, 16);
+    eyeOutlineGeo.scale(1.4, 0.7, 1); // Make it elliptical
+    const eyeOutlineMat = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.9
+    });
+    const eyeOutline = new THREE.Mesh(eyeOutlineGeo, eyeOutlineMat);
+    eyeGroup.add(eyeOutline);
+
+    // Inner eye (smaller circle)
+    const innerEyeGeo = new THREE.CircleGeometry(0.04, 16);
+    const innerEye = new THREE.Mesh(innerEyeGeo, eyeOutlineMat);
+    eyeGroup.add(innerEye);
+
+    // Eye makeup line (bottom curve - distinctive Egyptian style)
+    const curveGeo = new THREE.PlaneGeometry(0.1, 0.02);
+    const bottomCurve = new THREE.Mesh(curveGeo, eyeOutlineMat);
+    bottomCurve.position.set(0.06, -0.05, 0.001);
+    bottomCurve.rotation.z = -0.3;
+    eyeGroup.add(bottomCurve);
+
+    // Position eye on the front face of the pyramid
+    eyeGroup.position.set(0, 3.15, 0.15);
+    eyeGroup.rotation.x = Math.PI / 6; // Tilt to match pyramid face angle
+    grp.add(eyeGroup);
+
+    // Store reference for updating visibility
+    grp.userData.notifPyramid = notifPyramid;
+    grp.userData.notifEye = eyeGroup;
+
+    // Pulsing golden light beneath the pyramid
+    const notifLight = new THREE.PointLight(0xFFD700, 1.8, 4.5, 2);
     notifLight.name = 'codex-notif-light';
     notifLight.position.set(0, 3.2, 0);
     grp.add(notifLight);
 
-    // Store reference for updating visibility
-    grp.userData.notifPyramid = notifPyramid;
     grp.userData.notifLight = notifLight;
 
     // Initially hidden — will be shown by CodexSystem.hasNew()
     notifPyramid.visible = false;
+    eyeGroup.visible = false;
     notifLight.visible = false;
 
     // Remove any stale indicator from previous scene builds
@@ -2907,6 +2952,7 @@
     const mo = new MutationObserver(() => {
       const visible = indEl.style.display !== 'none';
       notifPyramid.visible = visible;
+      eyeGroup.visible = visible;
       notifLight.visible = visible;
     });
     mo.observe(indEl, { attributes: true, attributeFilter: ['style'] });
@@ -3745,6 +3791,43 @@
           _lakeParticles.geometry.attributes.position.needsUpdate = true;
         }
       }
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Codex Pyramid Animation (Golden Pyramid with Eye of Horus)
+  // ──────────────────────────────────────────────────────────
+  function _updateCodexPyramid(dt) {
+    const codexMesh = _buildingMeshes['codex'];
+    if (!codexMesh) return;
+
+    const pyramid = codexMesh.userData.notifPyramid;
+    const eyeGroup = codexMesh.userData.notifEye;
+    const light = codexMesh.userData.notifLight;
+
+    if (!pyramid || !pyramid.visible) return;
+
+    // Gentle floating animation (up and down)
+    pyramid.position.y = 3.2 + Math.sin(_campTime * 2.0) * 0.08;
+
+    // Slow rotation around Y axis
+    pyramid.rotation.y += dt * 0.5;
+
+    // Pulse the pyramid opacity for glow effect
+    const pulse = 0.85 + 0.15 * Math.sin(_campTime * 3.0);
+    if (pyramid.material) {
+      pyramid.material.emissiveIntensity = 0.95 * pulse;
+      pyramid.material.opacity = 0.95 * pulse;
+    }
+
+    // Sync eye position with pyramid
+    if (eyeGroup) {
+      eyeGroup.position.y = pyramid.position.y - 0.05;
+    }
+
+    // Pulsing light intensity
+    if (light) {
+      light.intensity = 1.8 + 0.4 * Math.sin(_campTime * 3.5);
     }
   }
 
@@ -5750,6 +5833,7 @@
     _updateIncubator(dt);
     _updateAidaIntro(dt);
     _updateCampQuestArrow();
+    _updateCodexPyramid(dt);
     _updateCorruption(dt);
 
     // When a building menu is open, freeze player input/movement but keep
