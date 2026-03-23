@@ -3535,7 +3535,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.85);
       display: none;
       flex-direction: column;
       align-items: center;
@@ -3545,69 +3545,158 @@
     }
 
     .settings-container {
-      background: linear-gradient(to bottom, #2c3e50, #34495e);
-      padding: 30px;
-      border-radius: 20px;
-      max-width: 400px;
+      /* Camp-themed wooden panel background with 3D depth */
+      background: linear-gradient(135deg, #5c3a21 0%, #4a2f1a 50%, #3d2415 100%);
+      padding: 35px;
+      border-radius: 12px;
+      max-width: 450px;
       width: 90%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      /* 3D wooden frame effect */
+      box-shadow:
+        0 0 0 3px #8B5E3C,
+        0 0 0 6px #6B4423,
+        0 0 0 8px #4a2f1a,
+        inset 0 2px 4px rgba(0,0,0,0.3),
+        0 12px 35px rgba(0,0,0,0.8);
+      border: 2px solid #d4a574;
+      position: relative;
+    }
+
+    /* Wooden corner decorations */
+    .settings-container::before,
+    .settings-container::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: radial-gradient(circle, #FFD700 30%, #B8860B 100%);
+      border-radius: 50%;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .settings-container::before {
+      top: 12px;
+      left: 12px;
+    }
+    .settings-container::after {
+      top: 12px;
+      right: 12px;
     }
 
     .settings-title {
-      font-size: 32px;
-      color: #5DADE2;
+      font-size: 36px;
+      color: #FFD700;
       text-align: center;
-      margin-bottom: 20px;
-      text-shadow: 0 0 15px rgba(93,173,226,0.8);
+      margin-bottom: 25px;
+      text-shadow:
+        0 0 20px rgba(255,215,0,0.8),
+        2px 2px 4px rgba(0,0,0,0.8),
+        0 0 30px rgba(255,215,0,0.4);
+      font-weight: bold;
+      letter-spacing: 3px;
+      position: relative;
+    }
+
+    /* Decorative line under title */
+    .settings-title::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      height: 2px;
+      background: linear-gradient(to right, transparent, #FFD700 20%, #FFD700 80%, transparent);
+      box-shadow: 0 0 8px rgba(255,215,0,0.6);
     }
 
     .settings-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 15px 0;
-      color: #ecf0f1;
+      margin: 18px 0;
+      padding: 12px 15px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      border: 1px solid rgba(212,165,116,0.3);
+      color: #f5deb3;
       font-size: 16px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
     }
 
     .settings-item label {
       flex: 1;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+      font-weight: 500;
     }
 
     .settings-item input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       cursor: pointer;
+      accent-color: #FFD700;
     }
 
     .settings-item select {
-      padding: 5px 10px;
-      border-radius: 5px;
-      background: #34495e;
-      color: #ecf0f1;
-      border: 2px solid #5DADE2;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: linear-gradient(to bottom, #3d2415, #2a1810);
+      color: #f5deb3;
+      border: 2px solid #8B5E3C;
       cursor: pointer;
       font-size: 14px;
+      font-weight: 500;
+      box-shadow:
+        inset 0 2px 4px rgba(0,0,0,0.4),
+        0 2px 4px rgba(0,0,0,0.3);
+      transition: all 0.2s ease;
+    }
+
+    .settings-item select:hover {
+      border-color: #d4a574;
+      box-shadow:
+        inset 0 2px 4px rgba(0,0,0,0.4),
+        0 2px 6px rgba(212,165,116,0.4);
     }
 
     .settings-close-btn {
       margin-top: 20px;
       width: 100%;
-      background: linear-gradient(to bottom, #e74c3c, #c0392b);
-      color: white;
+      /* 3D wooden button style */
+      background: linear-gradient(to bottom, #8B5E3C 0%, #6B4423 50%, #5c3a21 100%);
+      color: #FFD700;
       border: none;
-      padding: 12px;
+      padding: 14px;
       font-size: 18px;
-      border-radius: 10px;
+      border-radius: 8px;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 0 4px 0 #a93226;
+      text-shadow: 2px 2px 3px rgba(0,0,0,0.8);
+      /* 3D depth effect */
+      box-shadow:
+        0 0 0 2px #d4a574,
+        0 6px 0 #4a2f1a,
+        0 8px 12px rgba(0,0,0,0.6);
       transition: all 0.15s ease;
+      position: relative;
+      top: 0;
     }
 
     .settings-close-btn:hover {
-      box-shadow: 0 6px 0 #a93226;
-      filter: brightness(1.1);
+      top: 2px;
+      box-shadow:
+        0 0 0 2px #d4a574,
+        0 4px 0 #4a2f1a,
+        0 6px 10px rgba(0,0,0,0.6);
+      filter: brightness(1.15);
+      color: #FFF;
+    }
+
+    .settings-close-btn:active {
+      top: 6px;
+      box-shadow:
+        0 0 0 2px #d4a574,
+        0 0px 0 #4a2f1a,
+        0 2px 6px rgba(0,0,0,0.6);
     }
 
     .settings-close-btn:active {
