@@ -162,6 +162,7 @@ class Engine2Sandbox {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(20, 20);
     texture.anisotropy = 16;
+    texture.needsUpdate = true; // CRITICAL: Force texture upload to GPU
 
     this.textures.diffuse = texture;
 
@@ -171,7 +172,7 @@ class Engine2Sandbox {
       this.groundMesh.material.needsUpdate = true;
     }
 
-    console.log('[Engine2] ✓ Procedural stone texture applied');
+    console.log('[Engine2] ✓ Procedural stone texture applied with needsUpdate=true');
   }
 
   /**
