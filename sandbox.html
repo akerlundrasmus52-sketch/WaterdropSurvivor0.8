@@ -391,45 +391,76 @@
   <div id="progression-shop"      style="display:none;"><div id="shop-gold">GOLD: 0</div><div id="shop-grid"></div></div>
   <!-- Gear stubs -->
   <div id="gear-screen"           style="display:none;"><div id="gear-stats-content"></div><div id="gear-content"></div></div>
-  <!-- Settings modal — Graphics Quality + Return to Camp -->
+  <!-- Settings Modal — Full Camp-themed UI with Auto/Manual Graphics Mode -->
   <div id="settings-modal" class="settings-modal" style="display:none;">
-    <div class="settings-container" style="max-width:420px;width:94vw;padding:24px 20px 20px;background:linear-gradient(160deg,#0d1b2a,#1a2e45);border:1.5px solid #2a5580;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,0.7);">
-      <div class="settings-title" style="font-size:22px;letter-spacing:3px;color:#FFD700;text-shadow:0 0 12px rgba(255,215,0,0.4);margin-bottom:20px;">⚙️ SETTINGS</div>
+    <div class="settings-container">
+      <div class="settings-title">SETTINGS</div>
 
-      <!-- Graphics Quality -->
-      <div class="settings-item" style="margin-bottom:18px;">
-        <div style="font-weight:700;font-size:14px;color:#aac8e8;margin-bottom:6px;letter-spacing:1px;">🖥️ GRAPHICS QUALITY</div>
-        <div style="font-size:11px;color:#7799bb;margin-bottom:10px;">Lower settings improve performance on older devices (e.g. Samsung S10).</div>
-        <select id="graphics-quality-select" style="width:100%;padding:9px 12px;background:#0d1b2a;color:#FFD700;border:1.5px solid #2a5580;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:1px;cursor:pointer;outline:none;appearance:none;">
-          <option value="ultralow">📱 Ultra Low  — S10 / Budget phones</option>
-          <option value="low">🔋 Low         — Mid-range Android</option>
-          <option value="medium" selected>⚖️ Medium      — Balanced (default)</option>
-          <option value="high">🌟 High        — Modern phones</option>
-          <option value="ultra">🍎 Ultra       — iPhone 16 / High-end</option>
+      <div class="settings-item">
+        <label for="auto-aim-checkbox">Auto-Aim <small id="auto-aim-label-tooltip" style="color:#aaa; font-size:11px;">(Unlock in Skill Tree)</small></label>
+        <input type="checkbox" id="auto-aim-checkbox" disabled title="Unlock Auto-Aim in the Skill Tree first">
+      </div>
+
+      <div class="settings-item">
+        <label for="control-type-select">Control Type</label>
+        <select id="control-type-select">
+          <option value="touch">Touch (Joystick)</option>
+          <option value="keyboard">Keyboard</option>
+          <option value="gamepad">Gamepad</option>
         </select>
-        <div id="quality-desc" style="margin-top:7px;font-size:11px;color:#88aac8;min-height:32px;line-height:1.5;padding:6px 10px;background:rgba(0,0,0,0.3);border-radius:6px;border-left:2px solid #2a5580;">Shadows ON · Pixel ratio 1× · Standard tone mapping</div>
-        <button id="apply-quality-btn" style="width:100%;margin-top:10px;padding:10px;background:linear-gradient(to bottom,#1a6e9f,#155a82);color:#FFD700;border:1.5px solid #2a7ec4;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;cursor:pointer;">APPLY QUALITY</button>
       </div>
 
-      <!-- UI Customizer -->
-      <div class="settings-item" style="margin-bottom:18px;">
-        <div style="font-weight:700;font-size:14px;color:#aac8e8;margin-bottom:6px;letter-spacing:1px;">🎛️ HUD LAYOUT</div>
-        <button id="ui-calibration-btn" class="settings-close-btn" style="width:100%;background:linear-gradient(to bottom,#1a6e9f,#155a82);border:1.5px solid #2a7ec4;border-radius:8px;font-family:'Bangers',cursive;font-size:16px;letter-spacing:2px;padding:10px;cursor:pointer;color:#fff;">🎛️ OPEN UI CUSTOMIZER</button>
+      <div class="settings-item">
+        <label for="sound-toggle">Sound Effects</label>
+        <input type="checkbox" id="sound-toggle" checked>
       </div>
 
-      <!-- Return to Camp -->
-      <div class="settings-item" style="margin-bottom:14px;">
-        <button id="return-to-camp-btn" style="width:100%;padding:12px;background:linear-gradient(to bottom,#2d5a1b,#1e3d10);color:#88ff66;border:1.5px solid #4a9e2a;border-radius:8px;font-family:'Bangers',cursive;font-size:18px;letter-spacing:2px;cursor:pointer;text-shadow:0 0 8px rgba(100,255,60,0.4);">⛺ RETURN TO CAMP</button>
+      <div class="settings-item">
+        <label for="music-toggle">Background Music</label>
+        <input type="checkbox" id="music-toggle" checked>
       </div>
 
-      <!-- Hard Reset -->
-      <div class="settings-item" style="margin-bottom:14px;">
-        <div style="font-weight:700;font-size:12px;color:#ff6666;margin-bottom:6px;letter-spacing:1px;">⚠️ DANGER ZONE</div>
-        <button id="hard-reset-btn" style="width:100%;padding:10px;background:linear-gradient(to bottom,#8b0000,#5a0000);color:#ffaaaa;border:1.5px solid #cc2222;border-radius:8px;font-family:'Bangers',cursive;font-size:15px;letter-spacing:2px;cursor:pointer;" onclick="if(typeof window.hardResetGame==='function')window.hardResetGame();">🗑️ HARD RESET ACCOUNT</button>
-        <div style="font-size:10px;color:#996666;margin-top:4px;text-align:center;">Wipes ALL progress — buildings, skills, gear, gold. Fresh start from Level 0.</div>
+      <div class="settings-item">
+        <label for="graphics-mode-select">Graphics Mode</label>
+        <select id="graphics-mode-select">
+          <option value="auto">Auto (Adaptive)</option>
+          <option value="manual">Manual</option>
+        </select>
       </div>
 
-      <button id="settings-close-btn" class="settings-close-btn" style="width:100%;padding:10px;background:rgba(60,60,80,0.6);color:#aaa;border:1px solid #444;border-radius:8px;font-family:'Bangers',cursive;font-size:15px;letter-spacing:2px;cursor:pointer;margin-top:4px;">✕  CLOSE</button>
+      <!-- Manual Graphics Settings Panel (hidden when Auto is selected) -->
+      <div id="manual-graphics-panel" style="display:none; margin: 10px 0; padding: 15px; background: rgba(0,0,0,0.35); border-radius: 8px; border: 1px solid rgba(212,165,116,0.4);">
+        <div class="settings-item" style="margin: 10px 0;">
+          <label for="quality-select">Quality Preset</label>
+          <select id="quality-select">
+            <option value="ultra-low">Ultra Low</option>
+            <option value="very-low">Very Low</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="very-high">Very High</option>
+            <option value="ultra">Ultra</option>
+          </select>
+        </div>
+
+        <div class="settings-item" style="margin: 10px 0;">
+          <label for="particle-effects-toggle">Particle Effects (Blood/Gore)</label>
+          <input type="checkbox" id="particle-effects-toggle" checked>
+        </div>
+
+        <div style="font-size: 11px; color: #d4a574; margin-top: 8px; text-align: center;">
+          Manual mode allows full control over graphics settings, overriding device defaults.
+        </div>
+      </div>
+
+      <div id="fps-booster-status" style="display:none; padding:4px 8px; margin-top:4px; font-size:11px; color:#d4a574; text-align:center;"></div>
+
+      <button id="settings-go-to-camp-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #d4a574, #a67c52); margin-top: 10px;">⛺ GO TO CAMP</button>
+      <button id="settings-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #c0392b, #a93226); margin-top: 10px;">RESET PROGRESS</button>
+      <button id="hard-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #6b0000, #4a0000); border: 1px solid #cc2222; margin-top: 6px;" onclick="if(typeof window.hardResetGame==='function')window.hardResetGame();">🗑️ HARD RESET ACCOUNT</button>
+      <div style="font-size:10px;color:#996666;margin-top:3px;text-align:center;padding:0 8px;">Wipes ALL progress — buildings, skills, gear, gold. Fresh start from Level 0.</div>
+      <button id="ui-calibration-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #1a6e9f, #155a82); margin-top: 6px;">🎛️ UI CUSTOMIZATION (Drag &amp; Resize HUD)</button>
+      <button class="settings-close-btn" id="settings-close-btn">CLOSE</button>
     </div>
   </div>
   <!-- Menu gold (referenced by addGold stub) -->
@@ -490,6 +521,9 @@
 
   <!-- 11. Blood & physics: instanced blood drops, ground stains, wounds -->
   <script src="js/blood-system-v2.js"></script>
+
+  <!-- 11a. Gore simulator: advanced gore chunks, splatter, mesh deformation -->
+  <script src="js/gore-simulator.js"></script>
 
   <!-- 11b. Trauma system: wound decals, gore chunks, stuck arrows, corpse blood pump -->
   <script src="js/trauma-system.js"></script>
@@ -553,6 +587,12 @@
 
   <!-- 23. Quest & companion system (companion UI, skills, quest tracking) -->
   <script src="js/quest-system.js"></script>
+
+  <!-- 23.5. Settings UI — Camp-themed Settings Modal with Auto/Manual Graphics Mode -->
+  <script src="js/settings-ui.js"></script>
+
+  <!-- 23.6. Save System — Settings persistence, achievements, SSB events -->
+  <script src="js/save-system.js"></script>
 
   <!-- ── ENGINE 2.0 ───────────────────────────────────────────────────── -->
 
