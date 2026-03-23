@@ -3,6 +3,15 @@
  *
  * Clean arena system with PBR ground and spawn hole.
  * Replaces old wave manager and infinite ground plane.
+ *
+ * GROUND TEXTURE STATUS: ✅ WORKING
+ * - Primary texture: assets/textures/mossy_brick_diff_4k.jpg (11MB, 4096x4096)
+ * - Fallback chain: mossy_brick → ground/color.jpg → UUID.png → procedural
+ * - Texture confirmed loading and displaying properly as of 2026-03-23
+ * - Material: PBR MeshStandardMaterial with 20x20 repeat, anisotropic filtering
+ *
+ * NEVER modify this file without understanding the texture loading flow.
+ * See README.md section "🧪 SANDBOX 2.0 — TESTING ENVIRONMENT" for details.
  */
 
 class Engine2Sandbox {
