@@ -900,22 +900,7 @@ window.WaterDropRunner = (function () {
     ctx.font = '12px Courier New';
     ctx.fillText(Math.floor(rs.distance) + 'm', 8, 18);
 
-    // Boss health bar
-    const boss = rs.enemies.find(e => e.isBoss && !e.dead);
-    if (boss) {
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(w/4, 10, w/2, 14);
-      ctx.fillStyle = '#ff4444';
-      ctx.fillRect(w/4, 10, (w/2) * (boss.hp / boss.maxHp), 14);
-      ctx.strokeStyle = '#ff8888';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(w/4, 10, w/2, 14);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 10px Courier New';
-      ctx.textAlign = 'center';
-      ctx.fillText('👑 BOSS', w/2, 21);
-      ctx.textAlign = 'left';
-    }
+    // Boss health bar removed
 
     // Click flash effect
     if (rs.clickFlash > 0) {
@@ -1033,14 +1018,7 @@ window.WaterDropRunner = (function () {
       ctx.fill();
     }
 
-    // HP bar
-    const barW = e.size * 2.4;
-    const barX = ex - barW / 2;
-    const barY = ey - e.size - 12;
-    ctx.fillStyle = '#333';
-    ctx.fillRect(barX, barY, barW, 4);
-    ctx.fillStyle = e.isBoss ? '#ff4444' : '#44aa44';
-    ctx.fillRect(barX, barY, barW * Math.max(0, e.hp / e.maxHp), 4);
+    // HP bars removed
   }
 
   function _drawBackground(ctx, rs, w, h, groundY, level) {

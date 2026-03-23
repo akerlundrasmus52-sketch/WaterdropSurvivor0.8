@@ -390,18 +390,7 @@
 
       ctx.shadowBlur = 0;
 
-      // HP bar
-      if (e.hp < e.maxHp || e.type === 'boss') {
-        const bh = e.type === 'boss' ? 8 : 4;
-        const pct = Math.max(0, e.hp / e.maxHp);
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(e.x, e.y - bh - 4, e.w, bh);
-        ctx.fillStyle = pct > 0.6 ? '#44ff44' : pct > 0.3 ? '#ffaa00' : '#ff2222';
-        ctx.fillRect(e.x, e.y - bh - 4, e.w * pct, bh);
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(e.x, e.y - bh - 4, e.w, bh);
-      }
+      // HP bars removed
     }
     ctx.lineWidth = 1;
   }
