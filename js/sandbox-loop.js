@@ -947,6 +947,34 @@
       }
     }
 
+    // ── BULLET HOLE GENERATION: Create a NEW visible bullet hole on slime mesh per shot ──
+    // This ensures EVERY single gun shot dynamically generates a visible bullet hole
+    if (slot.woundPool && slot.woundCount < slot.woundPool.length) {
+      const wound = slot.woundPool[slot.woundCount++];
+      // Make wound darker (bullet hole appearance) - dark brown/red
+      wound.material.color.setHex(0x330000);
+      wound.visible = true;
+
+      // Position bullet hole on surface - randomized around hit point
+      // Calculate hit direction from projectile velocity
+      let hitDirX = 0, hitDirZ = 0;
+      if (projectile && projectile.vx !== undefined && projectile.vz !== undefined) {
+        const vel = Math.sqrt(projectile.vx * projectile.vx + projectile.vz * projectile.vz) || 1;
+        hitDirX = projectile.vx / vel;
+        hitDirZ = projectile.vz / vel;
+      }
+
+      // Place wound at surface impact point
+      const surfaceRadius = 0.5; // Approximate radius of slime body
+      const woundX = hitDirX * surfaceRadius;
+      const woundZ = hitDirZ * surfaceRadius;
+      const woundY = -0.1 + Math.random() * 0.4; // Randomize height slightly
+      wound.position.set(woundX, woundY, woundZ);
+
+      // Scale down for bullet hole size (smaller than normal wounds)
+      wound.scale.setScalar(0.6);
+    }
+
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
     // (hpPercent already declared above before blood system section)
 
@@ -1044,9 +1072,9 @@
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
 
-    // ── GORE: Corpse linger for 5-8 seconds with heartbeat blood pumping ─────────
+    // ── GORE: Corpse linger for 10-15 seconds with heartbeat blood pumping ─────────
     // Remove from active list but keep the mesh visible as a "corpse"
-    const corpseLinger = 5 + Math.random() * 3; // 5-8 seconds
+    const corpseLinger = 10 + Math.random() * 5; // 10-15 seconds
     const idx = _activeSlimes.indexOf(slot);
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
