@@ -2006,9 +2006,9 @@ if (!pos) return { x: 0, y: 0, z: 0 };
 return { x: pos.x || 0, y: pos.y || 0, z: pos.z || 0 };
 }
 
-function *fakeEnemy(pos) {
+function _fakeEnemy(pos) {
 // BloodV2.hit / kill expects an enemy-like object with {mesh.position, alive}
-var p = *pos3(pos);
+var p = _pos3(pos);
 return {
 alive: true,
 enemyType: ‘slime’,

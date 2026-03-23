@@ -646,19 +646,6 @@
         eyePupils.push(pupil); // Store reference for eye tracking
       });
 
-      // HP bar
-      const hpBgGeo  = new THREE.PlaneGeometry(1.4, 0.18);
-      const hpBgMat  = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.DoubleSide, depthWrite: false });
-      const hpBg     = new THREE.Mesh(hpBgGeo, hpBgMat);
-      hpBg.position.set(0, 1.3, 0);
-
-      const hpFillGeo = new THREE.PlaneGeometry(1.4, 0.18);
-      const hpFillMat = new THREE.MeshBasicMaterial({ color: 0x44FF44, side: THREE.DoubleSide, depthWrite: false });
-      const hpFill    = new THREE.Mesh(hpFillGeo, hpFillMat);
-      hpFill.position.set(0, 0, 0.001);
-      hpBg.add(hpFill);
-      mesh.add(hpBg);
-
       // Pre-allocate wound meshes (pooled — no new THREE.Mesh during gameplay)
       const woundPool = [];
       const woundGeos = [
@@ -678,8 +665,6 @@
 
       _enemyPool.push({
         mesh,
-        hpFill,
-        hpFillGeo,
         woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
         woundCount: 0, // number of currently active wound meshes
         eyePupils,   // Store eye pupil references for tracking
@@ -808,8 +793,7 @@
             if (c.slot.woundPool) {
               for (let w = 0; w < c.slot.woundPool.length; w++) c.slot.woundPool[w].visible = false;
             }
-            if (c.slot.hpBar) { c.slot.hpBar.visible = true; }
-            if (c.slot.hpFill) { c.slot.hpFill.visible = true; }
+            // HP bars removed
             _activeCorpses.splice(i, 1);
           }
         } else {
@@ -1081,9 +1065,7 @@
         pupil.position.z = 0.06; // Center position
       });
     }
-    // Hide HP bar
-    if (slot.hpBar) slot.hpBar.visible = false;
-    if (slot.hpFill) slot.hpFill.visible = false;
+    // HP bars removed
     // Growing blood pool under corpse
     const poolGeo = new THREE.CircleGeometry(0.1, 10);
     const poolMat = new THREE.MeshBasicMaterial({
@@ -1122,13 +1104,7 @@
   }
 
   function _updateSlimeHPBar(slot) {
-    const frac = Math.max(0, slot.hp / slot.maxHp);
-    // Scale x from full width (1.4) to 0, keeping left edge fixed
-    slot.hpFill.scale.x = Math.max(0.001, frac);
-    slot.hpFill.position.x = (frac - 1) * SLIME_HP_BAR_HALF_WIDTH;
-    slot.hpFill.material.color.setHex(
-      frac > 0.5 ? 0x44FF44 : frac > 0.25 ? 0xFFAA00 : 0xFF3300
-    );
+    // HP bars removed - function kept for compatibility but does nothing
   }
 
   // ─── 5-PART GORE SYSTEM ───────────────────────────────────────────────────────
@@ -1674,11 +1650,7 @@
     for (let si = 0; si < _activeSlimes.length; si++) {
       const s = _activeSlimes[si];
 
-      // Billboard HP bar toward camera
-      if (camera) {
-        const hpBar = s.mesh.children[2]; // index 2 = hpBg (after 2 eyes)
-        if (hpBar) hpBar.quaternion.copy(camera.quaternion);
-      }
+      // HP bars removed
 
       // Flash on hit
       if (s.flashTimer > 0) {

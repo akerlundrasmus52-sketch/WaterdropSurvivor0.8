@@ -44,39 +44,134 @@ class Engine2Sandbox {
   }
 
   /**
-   * Load ground textures - using procedural grass texture
+   * Load ground textures - uses file-based textures with fallback chain
    */
   _loadTextures(callback) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 512;
-    canvas.height = 512;
-    ctx.fillStyle = '#2d5a27';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = '#3e7d39';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 1000; i++) {
-      ctx.beginPath();
-      ctx.moveTo(Math.random() * 512, Math.random() * 512);
-      ctx.lineTo(Math.random() * 512, Math.random() * 512);
-      ctx.stroke();
-    }
-    const groundTexture = new THREE.CanvasTexture(canvas);
-    groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
-    groundTexture.repeat.set(20, 20);
+    console.log('[Engine2] Loading ground textures...');
+    const loader = new THREE.TextureLoader();
 
-    this.textures.diffuse = groundTexture;
+    // Helper to configure texture properly
+    const configureTexture = (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(20, 20);
+      texture.anisotropy = 16; // High quality filtering
+
+      // Set proper color space for correct display
+      if (THREE.SRGBColorSpace !== undefined) {
+        texture.colorSpace = THREE.SRGBColorSpace;
+      } else if (THREE.sRGBEncoding !== undefined) {
+        texture.encoding = THREE.sRGBEncoding;
+      }
+
+      return texture;
+    };
+
+    // Helper to apply texture to material
+    const applyTexture = (texture) => {
+      this.textures.diffuse = texture;
+      if (this.groundMesh && this.groundMesh.material) {
+        this.groundMesh.material.map = texture;
+        this.groundMesh.material.color.setHex(0xffffff); // White base for natural texture color
+        this.groundMesh.material.needsUpdate = true;
+      }
+      console.log('[Engine2] ✓ Texture applied successfully');
+    };
+
+    // Fallback chain: Try loading textures in order
+    const tryLoadTexture = (paths, index = 0) => {
+      if (index >= paths.length) {
+        console.warn('[Engine2] All texture files failed to load, using procedural fallback');
+        this._createProceduralTexture();
+        this._generateProceduralNormalMap();
+        callback();
+        return;
+      }
+
+      const path = paths[index];
+      console.log(`[Engine2] Attempting to load: ${path}`);
+
+      loader.load(
+        path,
+        (texture) => {
+          console.log(`[Engine2] ✓ Successfully loaded: ${path}`);
+          configureTexture(texture);
+          applyTexture(texture);
+          this._generateProceduralNormalMap();
+          callback();
+        },
+        undefined,
+        (error) => {
+          console.warn(`[Engine2] Failed to load ${path}:`, error);
+          tryLoadTexture(paths, index + 1);
+        }
+      );
+    };
+
+    // Texture fallback paths in priority order
+    const texturePaths = [
+      'assets/textures/mossy_brick_diff_4k.jpg',
+      'assets/textures/ground/color.jpg',
+      '654811F9-1760-4A74-B977-73ECB1A92913.png'
+    ];
+
+    tryLoadTexture(texturePaths);
+  }
+
+  /**
+   * Create procedural texture as fallback when file loading fails
+   */
+  _createProceduralTexture() {
+    console.log('[Engine2] Creating procedural stone texture...');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // Base stone color (warm grey/brown)
+    ctx.fillStyle = '#8B7D6B';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Add stone tile pattern
+    const tileSize = 128;
+    for (let y = 0; y < 1024; y += tileSize) {
+      for (let x = 0; x < 1024; x += tileSize) {
+        // Tile variation
+        const colorVar = Math.floor(Math.random() * 30 - 15);
+        const baseGrey = 139 + colorVar;
+        ctx.fillStyle = `rgb(${baseGrey + 10}, ${baseGrey}, ${baseGrey - 10})`;
+        ctx.fillRect(x, y, tileSize, tileSize);
+
+        // Grout lines
+        ctx.strokeStyle = '#5a4a3a';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, tileSize, tileSize);
+
+        // Surface weathering
+        for (let i = 0; i < 100; i++) {
+          const wx = x + Math.random() * tileSize;
+          const wy = y + Math.random() * tileSize;
+          const brightness = 100 + Math.random() * 80;
+          ctx.fillStyle = `rgba(${brightness}, ${brightness - 10}, ${brightness - 20}, ${Math.random() * 0.3})`;
+          ctx.fillRect(wx, wy, Math.random() * 2 + 1, Math.random() * 2 + 1);
+        }
+      }
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(20, 20);
+    texture.anisotropy = 16;
+
+    this.textures.diffuse = texture;
 
     if (this.groundMesh && this.groundMesh.material) {
-      this.groundMesh.material.map = groundTexture;
+      this.groundMesh.material.map = texture;
       this.groundMesh.material.color.setHex(0xffffff);
       this.groundMesh.material.needsUpdate = true;
     }
-    console.log('[Engine2] Procedural grass texture applied');
 
-    // Generate procedural normal map for depth even without texture
-    this._generateProceduralNormalMap();
-    callback();
+    console.log('[Engine2] ✓ Procedural stone texture applied');
   }
 
   /**

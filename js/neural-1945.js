@@ -1289,15 +1289,7 @@
         ctx.arc(enemy.x, enemy.y, enemy.type.size / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // HP bar
-        if (enemy.hp < enemy.maxHp) {
-          const hpWidth = enemy.type.size;
-          const hpPercent = enemy.hp / enemy.maxHp;
-          ctx.fillStyle = '#333';
-          ctx.fillRect(enemy.x - hpWidth / 2, enemy.y - enemy.type.size / 2 - 8, hpWidth, 4);
-          ctx.fillStyle = '#00ff00';
-          ctx.fillRect(enemy.x - hpWidth / 2, enemy.y - enemy.type.size / 2 - 8, hpWidth * hpPercent, 4);
-        }
+        // HP bars removed
       }
 
       // Draw boss
@@ -1308,13 +1300,7 @@
         ctx.arc(boss.x, boss.y, boss.size / 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Boss HP bar
-        const hpWidth = CANVAS_WIDTH - 40;
-        const hpPercent = boss.hp / boss.maxHp;
-        ctx.fillStyle = '#333';
-        ctx.fillRect(20, 20, hpWidth, 10);
-        ctx.fillStyle = '#ff0000';
-        ctx.fillRect(20, 20, hpWidth * hpPercent, 10);
+        // Boss HP bar removed
 
         // Boss name
         ctx.fillStyle = '#ffffff';
