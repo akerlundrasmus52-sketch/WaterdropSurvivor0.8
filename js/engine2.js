@@ -44,219 +44,39 @@ class Engine2Sandbox {
   }
 
   /**
-   * Load ground PBR textures with enhanced fallbacks
-   * Priority: mossy_brick_diff_4k.jpg > ground/color.jpg > ground_texture.png > procedural texture
-   * CRITICAL FIX: Proper texture loading with comprehensive error logging
+   * Load ground textures - using procedural grass texture
    */
   _loadTextures(callback) {
-    const loader = new THREE.TextureLoader();
-    let loadedCount = 0;
-    const totalTextures = 1;
-
-    const checkComplete = () => {
-      loadedCount++;
-      if (loadedCount >= totalTextures) {
-        // Generate procedural normal map for depth even without texture
-        this._generateProceduralNormalMap();
-        callback();
-      }
-    };
-
-    const applyTexture = (texture, label) => {
-      console.log('='.repeat(60));
-      console.log('[Engine2] ✓✓✓ SUCCESS! Loaded ground texture: ' + label);
-      console.log('[Engine2] Texture dimensions: ' + texture.image.width + 'x' + texture.image.height);
-      console.log('='.repeat(60));
-
-      this.textures.diffuse = texture;
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(40, 40);
-
-      // Apply maximum anisotropic filtering for crisp texture at angles
-      const maxAniso = (typeof renderer !== 'undefined' && renderer && renderer.capabilities &&
-                        typeof renderer.capabilities.getMaxAnisotropy === 'function')
-        ? renderer.capabilities.getMaxAnisotropy()
-        : 16;
-      texture.anisotropy = Math.min(maxAniso, 16);
-      console.log('[Engine2] Applied anisotropic filtering: ' + texture.anisotropy);
-
-      // CRITICAL: Set encoding to sRGB for proper color display
-      if (typeof THREE.SRGBColorSpace !== 'undefined') {
-        texture.colorSpace = THREE.SRGBColorSpace;
-        console.log('[Engine2] Using SRGBColorSpace (modern THREE.js)');
-      } else if (typeof THREE.sRGBEncoding !== 'undefined') {
-        texture.encoding = THREE.sRGBEncoding;
-        console.log('[Engine2] Using sRGBEncoding (legacy THREE.js)');
-      } else {
-        console.warn('[Engine2] WARNING: No sRGB color space available!');
-      }
-
-      texture.needsUpdate = true;
-      checkComplete();
-    };
-
-    // Try loading textures in priority order
-    console.log('='.repeat(60));
-    console.log('[Engine2] LOADING GROUND TEXTURES...');
-    console.log('='.repeat(60));
-
-    // ATTEMPT 1: mossy_brick_diff_4k.jpg (PRIMARY - 4K mossy stone texture)
-    const path1 = 'assets/textures/mossy_brick_diff_4k.jpg';
-    console.log('[Engine2] ATTEMPT 1: ' + path1);
-    loader.load(
-      path1,
-      (texture) => applyTexture(texture, 'mossy_brick_diff_4k.jpg [4K Quality Mossy Stone]'),
-      (progress) => {
-        if (progress.lengthComputable) {
-          const percent = (progress.loaded / progress.total * 100).toFixed(0);
-          console.log('[Engine2] Loading: ' + percent + '% (' + (progress.loaded / 1024 / 1024).toFixed(1) + ' MB)');
-        }
-      },
-      (error1) => {
-        console.error('[Engine2] ✗ FAILED: ' + path1);
-        console.error('[Engine2] Error details:', error1);
-
-        // ATTEMPT 2: ground/color.jpg (FALLBACK 1)
-        const path2 = 'assets/textures/ground/color.jpg';
-        console.log('[Engine2] ATTEMPT 2: ' + path2);
-        loader.load(
-          path2,
-          (texture) => applyTexture(texture, 'ground/color.jpg [Fallback 1]'),
-          undefined,
-          (error2) => {
-            console.error('[Engine2] ✗ FAILED: ' + path2);
-            console.error('[Engine2] Error details:', error2);
-
-            // ATTEMPT 3: UUID texture in root (FALLBACK 2)
-            const path3 = '654811F9-1760-4A74-B977-73ECB1A92913.png';
-            console.log('[Engine2] ATTEMPT 3: ' + path3);
-            loader.load(
-              path3,
-              (texture) => applyTexture(texture, 'UUID Ground Texture [Fallback 2]'),
-              undefined,
-              (error3) => {
-                console.error('[Engine2] ✗ FAILED: ' + path3);
-                console.error('[Engine2] Error details:', error3);
-                console.warn('[Engine2] All texture files failed - generating procedural texture...');
-
-                // FALLBACK: procedural stone color
-                if (this.groundMesh && this.groundMesh.material) {
-                  this.groundMesh.material.color.setHex(0x667755);
-                  this.groundMesh.material.roughness = 0.95;
-                  this.groundMesh.material.needsUpdate = true;
-                  console.log('[Engine2] Using procedural stone color fallback');
-                }
-
-                // FALLBACK 3: Generate procedural texture
-                this._generateProceduralTexture();
-                checkComplete();
-              }
-            );
-          }
-        );
-      }
-    );
-  }
-
-  /**
-   * Generate a beautiful procedural stone/ground texture using canvas
-   * Creates a realistic cobblestone or weathered stone effect
-   */
-  _generateProceduralTexture() {
-    console.log('[Engine2] Generating high-quality procedural ground texture...');
-
     const canvas = document.createElement('canvas');
-    const size = 1024; // High resolution for quality
-    canvas.width = size;
-    canvas.height = size;
     const ctx = canvas.getContext('2d');
-
-    // Base layer - weathered stone color
-    const baseColor = '#5a4a3a'; // Warm brownish-gray stone
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(0, 0, size, size);
-
-    // Add noise for texture variation
-    const imageData = ctx.getImageData(0, 0, size, size);
-    const data = imageData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 40;
-      data[i] += noise;     // R
-      data[i + 1] += noise; // G
-      data[i + 2] += noise; // B
+    canvas.width = 512;
+    canvas.height = 512;
+    ctx.fillStyle = '#2d5a27';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.strokeStyle = '#3e7d39';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 1000; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * 512, Math.random() * 512);
+      ctx.lineTo(Math.random() * 512, Math.random() * 512);
+      ctx.stroke();
     }
-    ctx.putImageData(imageData, 0, 0);
+    const groundTexture = new THREE.CanvasTexture(canvas);
+    groundTexture.wrapS = groundTexture.wrapT = THREE.RepeatWrapping;
+    groundTexture.repeat.set(20, 20);
 
-    // Add stone blocks/tiles pattern
-    const tileSize = 128;
-    const tilesX = Math.ceil(size / tileSize);
-    const tilesY = Math.ceil(size / tileSize);
+    this.textures.diffuse = groundTexture;
 
-    for (let ty = 0; ty < tilesY; ty++) {
-      for (let tx = 0; tx < tilesX; tx++) {
-        const x = tx * tileSize;
-        const y = ty * tileSize;
-        const variation = Math.random() * 30 - 15;
-
-        // Draw tile with slight color variation
-        const tileShade = 90 + variation;
-        ctx.fillStyle = `rgba(${tileShade}, ${tileShade - 10}, ${tileShade - 20}, 0.3)`;
-        ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
-
-        // Add cracks/grout lines between tiles
-        ctx.strokeStyle = 'rgba(40, 30, 20, 0.8)';
-        ctx.lineWidth = 3 + Math.random() * 2;
-        ctx.strokeRect(x, y, tileSize, tileSize);
-      }
+    if (this.groundMesh && this.groundMesh.material) {
+      this.groundMesh.material.map = groundTexture;
+      this.groundMesh.material.color.setHex(0xffffff);
+      this.groundMesh.material.needsUpdate = true;
     }
+    console.log('[Engine2] Procedural grass texture applied');
 
-    // Add moss/dirt patches for realism
-    const patchCount = 50;
-    for (let i = 0; i < patchCount; i++) {
-      const px = Math.random() * size;
-      const py = Math.random() * size;
-      const radius = 20 + Math.random() * 60;
-
-      const gradient = ctx.createRadialGradient(px, py, 0, px, py, radius);
-      gradient.addColorStop(0, 'rgba(60, 80, 40, 0.4)'); // Mossy green
-      gradient.addColorStop(0.5, 'rgba(50, 60, 30, 0.2)');
-      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-      ctx.fillStyle = gradient;
-      ctx.fillRect(px - radius, py - radius, radius * 2, radius * 2);
-    }
-
-    // Add weathering stains
-    const stainCount = 80;
-    for (let i = 0; i < stainCount; i++) {
-      const sx = Math.random() * size;
-      const sy = Math.random() * size;
-      const sRadius = 10 + Math.random() * 30;
-
-      const stainGradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, sRadius);
-      const darkness = Math.random() * 50;
-      stainGradient.addColorStop(0, `rgba(${darkness}, ${darkness}, ${darkness}, 0.3)`);
-      stainGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
-      ctx.fillStyle = stainGradient;
-      ctx.fillRect(sx - sRadius, sy - sRadius, sRadius * 2, sRadius * 2);
-    }
-
-    // Create THREE.js texture from canvas
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(40, 40);
-    texture.anisotropy = 16;
-
-    if (typeof THREE.SRGBColorSpace !== 'undefined') {
-      texture.colorSpace = THREE.SRGBColorSpace;
-    } else {
-      texture.encoding = THREE.sRGBEncoding;
-    }
-
-    this.textures.diffuse = texture;
-    console.log('[Engine2] ✓ Procedural texture generated successfully');
+    // Generate procedural normal map for depth even without texture
+    this._generateProceduralNormalMap();
+    callback();
   }
 
   /**
