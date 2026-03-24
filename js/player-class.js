@@ -449,9 +449,153 @@
         // Store base scale for breathing animation efficiency
         this.baseScale = 1.0;
         this._breathScale = 1.0; // Multiplier from breathing animation, applied on top of spring-damper
+
+        // ─── New Visual Physics Systems — State Variables ──────────────────────
+        // System 1 - Membrane
+        this._membrane = null;
+        this._membraneWobbleX = 0; this._membraneWobbleZ = 0;
+        this._membraneWobbleVX = 0; this._membraneWobbleVZ = 0;
+        this._membraneTension = 1.0;
+        // System 2 - Inner fluid
+        this._innerFluid = null;
+        this._fluidOffsetX = 0; this._fluidOffsetZ = 0; this._fluidOffsetY = 0;
+        this._fluidVX = 0; this._fluidVZ = 0;
+        this._prevVelX = 0; this._prevVelZ = 0;
+        this._prevSpeedMagFluid = 0;
+        // System 3 - Highlights
+        this._highlightMain = null; this._highlightSub = null;
+        // System 4 - Shadow
+        this._dynamicShadow = null;
+        // System 5 - Trail
+        this._trailDropTimer = 0; this._trailPool = [];
+        // System 6 - Enhanced deform
+        this._jiggleVX = 0; this._jiggleVZ = 0;
+        this._breathLean = 0;
+        // System 7 - Damage response
+        this._damagePhase = 0; this._damagePhaseTimer = 0;
+        this._damageImpactDir = {x: 0, z: 0};
+        // System 8 - Idle
+        this._idleDropTimer = 2 + Math.random() * 2;
+        this._gravitySettleY = 0;
+        this._idleTipX = 0; this._idleTipZ = 0;
+        this._eyeMicroTimer = 3 + Math.random() * 3;
+        this._eyeBaseX = null;
+        // Shared time accumulator
+        this._localTime = 0;
+
+        // ─── Create Visual Meshes for New Systems ─────────────────────────────
+        try {
+          const _newSysScene = _getScene();
+
+          // System 1: Surface Tension Membrane Shell
+          const _memGeo = new THREE.SphereGeometry(0.52, 20, 20);
+          const _memPos = _memGeo.attributes.position;
+          for (let _i = 0; _i < _memPos.count; _i++) {
+            const _my = _memPos.getY(_i), _mx = _memPos.getX(_i), _mz = _memPos.getZ(_i);
+            if (_my > 0) {
+              _memPos.setY(_i, _my * 1.35);
+              const _mt = _my / 0.52;
+              const _ms = 1 - _mt * 0.55;
+              _memPos.setX(_i, _mx * _ms);
+              _memPos.setZ(_i, _mz * _ms);
+              if (_mt > 0.5) {
+                const _mb = (_mt - 0.5) * 2.0;
+                _memPos.setX(_i, _memPos.getX(_i) + _mb * 0.18);
+                _memPos.setZ(_i, _memPos.getZ(_i) - _mb * 0.06);
+              }
+            } else {
+              const _mbg = 1 + Math.abs(_my / 0.52) * 0.15;
+              _memPos.setX(_i, _mx * _mbg);
+              _memPos.setZ(_i, _mz * _mbg);
+            }
+          }
+          _memGeo.computeVertexNormals();
+          // Use MeshPhysicalMaterial if available, fall back to MeshPhongMaterial
+          const _memBaseOpts = {
+            color: 0x88ddff, transparent: true, opacity: 0.18,
+            side: THREE.FrontSide, depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            emissive: new THREE.Color(0x1a88cc), emissiveIntensity: 0.08
+          };
+          const _memMat = (typeof THREE.MeshPhysicalMaterial === 'function')
+            ? new THREE.MeshPhysicalMaterial(Object.assign({ roughness: 0.0, metalness: 0.1, shininess: undefined }, _memBaseOpts))
+            : new THREE.MeshPhongMaterial(Object.assign({ shininess: 80 }, _memBaseOpts));
+          this._membrane = new THREE.Mesh(_memGeo, _memMat);
+          this._membrane.position.copy(this.mesh.position);
+          if (_newSysScene) _newSysScene.add(this._membrane);
+
+          // System 2: Inner Fluid Core
+          this._innerFluid = new THREE.Mesh(
+            new THREE.SphereGeometry(0.28, 12, 12),
+            new THREE.MeshBasicMaterial({
+              color: 0xaaeeff, transparent: true, opacity: 0.55,
+              depthWrite: false, blending: THREE.AdditiveBlending
+            })
+          );
+          if (_newSysScene) _newSysScene.add(this._innerFluid);
+
+          // System 3: Specular Highlight Spots
+          this._highlightMain = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65, depthWrite: false })
+          );
+          this._highlightSub = new THREE.Mesh(
+            new THREE.SphereGeometry(0.05, 6, 6),
+            new THREE.MeshBasicMaterial({ color: 0xddeeff, transparent: true, opacity: 0.4, depthWrite: false })
+          );
+          if (_newSysScene) {
+            _newSysScene.add(this._highlightMain);
+            _newSysScene.add(this._highlightSub);
+          }
+
+          // System 4: Dynamic Ground Shadow
+          this._dynamicShadow = new THREE.Mesh(
+            new THREE.CircleGeometry(0.5, 32),
+            new THREE.MeshBasicMaterial({
+              color: 0x001122, transparent: true, opacity: 0.35,
+              depthWrite: false, side: THREE.DoubleSide
+            })
+          );
+          this._dynamicShadow.rotation.x = -Math.PI / 2;
+          this._dynamicShadow.position.set(this.mesh.position.x, 0.01, this.mesh.position.z);
+          if (_newSysScene) _newSysScene.add(this._dynamicShadow);
+
+          // System 5: Build trail ring pool
+          this._buildTrailPool();
+        } catch (_initErr) {
+          console.warn('[Player] Visual physics systems init error:', _initErr);
+        }
+      }
+
+      _buildTrailPool() {
+        try {
+          const _scn = _getScene();
+          if (!_scn) return;
+          for (let _ti = 0; _ti < 12; _ti++) {
+            const _tGeo = new THREE.RingGeometry(0.0, 0.3, 16);
+            const _tMat = new THREE.MeshBasicMaterial({
+              color: 0x44aacc, transparent: true, opacity: 0.0,
+              depthWrite: false, side: THREE.DoubleSide
+            });
+            const _tMesh = new THREE.Mesh(_tGeo, _tMat);
+            _tMesh.rotation.x = -Math.PI / 2;
+            _tMesh.position.y = 0.02;
+            _scn.add(_tMesh);
+            this._trailPool.push({ active: false, life: 0, maxLife: 0.8, mesh: _tMesh });
+          }
+        } catch (_e) {
+          console.warn('[Player] Trail pool build error:', _e);
+        }
       }
 
       update(dt) {
+        // ─── Local time accumulator (used by all new visual systems) ──────────
+        try { this._localTime = (this._localTime || 0) + dt; } catch (_e) {}
+        const _time = this._localTime || 0;
+        // Store previous velocity for fluid inertia simulation (System 2)
+        const _prevVelXStore = this._prevVelX || 0;
+        const _prevVelZStore = this._prevVelZ || 0;
+
         // Update invulnerability timer
         const INVULNERABILITY_FLASH_FREQUENCY = 20; // Flash 20 times per second during invulnerability
         if (this.invulnerable) {
@@ -934,6 +1078,12 @@
           if (dirChange > 0.2) {
             // Over-exaggerate wobble on direction changes for dynamic feel
             this.wobbleIntensity = Math.min(1, this.wobbleIntensity + dirChange * 4.0);
+            // System 6: Jiggle physics on sharp turns — widening body during angular impulses
+            try {
+              if (Math.abs(this.angularVelocity) > 0.5) {
+                this.scaleXZVel += Math.abs(this.angularVelocity) * 0.4;
+              }
+            } catch (_e) {}
             // Full reversal (dot < -0.5): dramatic stretch + water trail
             if (dirDot < -0.5 && speedMag > 0.06) {
               this.postDashSquish = Math.max(this.postDashSquish, 0.9);
@@ -989,15 +1139,16 @@
           targetScaleY = 1.0 + bounce;
           targetScaleXZ = 1.0 - bounce * 0.6;
         } else if (this._stopWobbleInitAmp > 0 && this._stopWobbleTimer < 1.2) {
-          // Dedicated stopping-wobble: damped sine wave simulating water settling.
-          // A = initAmp * exp(-damping * t) * sin(freq * t * 2π)
-          const swDecay = Math.exp(-5.5 * this._stopWobbleTimer);
-          const swSine  = Math.sin(this._stopWobbleTimer * 9.0 * Math.PI * 2);
-          const swAmp   = this._stopWobbleInitAmp * swDecay * swSine;
-          targetScaleY  = 1.0 + swAmp;
-          targetScaleXZ = 1.0 - swAmp * 0.55;
-          // Fade out the wobble once energy is negligible
-          if (swDecay < 0.02) this._stopWobbleInitAmp = 0;
+          // System 6: Upgraded multi-axis stop wobble — XZ 90° out of phase with Y
+          // Creates the "water settling" effect where vertical and horizontal bounce alternate
+          const _sw6Decay = Math.exp(-4.0 * this._stopWobbleTimer);
+          const _sw6Phase = this._stopWobbleTimer * 18;
+          const stopWobbleY  = Math.sin(_sw6Phase) * this._stopWobbleInitAmp * _sw6Decay;
+          const stopWobbleXZ = Math.sin(_sw6Phase + Math.PI / 2) * this._stopWobbleInitAmp * 0.6 * _sw6Decay;
+          targetScaleY  = 1.0 + stopWobbleY;
+          targetScaleXZ = 1.0 - stopWobbleXZ;
+          // Fade out once energy is negligible
+          if (_sw6Decay < 0.02) this._stopWobbleInitAmp = 0;
         } else if (speedMag > 0.05) {
           // Moving: squash Y and expand XZ proportional to speed (stretching in direction of travel),
           // plus a vertical bounce oscillation for a jelly-drop feel.
@@ -1121,7 +1272,246 @@
         this.mesh.scale.y = Math.max(0.1, Math.min(3.0, isNaN(_scaleY) ? 1.0 : _scaleY));
         this.mesh.scale.x = Math.max(0.1, Math.min(3.0, isNaN(_scaleX) ? 1.0 : _scaleX));
         this.mesh.scale.z = Math.max(0.1, Math.min(3.0, isNaN(_scaleZ) ? 1.0 : _scaleZ));
-        
+
+        // ─── New Visual Physics Systems Update ────────────────────────────────
+
+        // System 7: Damage phase multi-phase water response
+        try {
+          if (this._damagePhase > 0) {
+            this._damagePhaseTimer += dt;
+            if (this._damagePhase === 1) {
+              // Phase 1 (0–80 ms): Impact compression — body squashes flat
+              if (this._membrane) {
+                this._membraneWobbleVX += (Math.random() - 0.5) * 6;
+                this._membraneWobbleVZ += (Math.random() - 0.5) * 6;
+              }
+              if (this._innerFluid) this._fluidOffsetY = Math.min(0.18, this._fluidOffsetY + dt * 3.0);
+              if (this._damagePhaseTimer >= 0.08) { this._damagePhase = 2; this._damagePhaseTimer = 0; }
+            } else if (this._damagePhase === 2) {
+              // Phase 2 (80–200 ms): Rebound overshoot — pulse highlights to max
+              if (this._highlightMain && this._highlightMain.material) this._highlightMain.material.opacity = 0.9;
+              if (this._highlightSub  && this._highlightSub.material)  this._highlightSub.material.opacity  = 0.8;
+              if (this._damagePhaseTimer >= 0.12) { this._damagePhase = 3; this._damagePhaseTimer = 0; }
+            } else if (this._damagePhase === 3) {
+              // Phase 3 (200–500 ms): Settling oscillation — let spring-damper handle it
+              if (this._damagePhaseTimer >= 0.3) { this._damagePhase = 0; this._damagePhaseTimer = 0; }
+            }
+          }
+        } catch (_e) {}
+
+        // System 6: Subtle asymmetric breathing lean (additive to existing forward lean)
+        try {
+          const _blTarget = Math.sin(_time * 1.1) * 0.008;
+          this._breathLean = (this._breathLean || 0) + (_blTarget - (this._breathLean || 0)) * Math.min(dt * 5, 1);
+          if (this.mesh && !isNaN(this._breathLean)) this.mesh.rotation.x += this._breathLean;
+        } catch (_e) {}
+
+        // System 1: Fluid Surface Tension Membrane update
+        try {
+          if (this._membrane) {
+            // Spring-damper for independent membrane wobble (k=18, d=4)
+            const _mForceX = -18 * this._membraneWobbleX - 4 * this._membraneWobbleVX;
+            const _mForceZ = -18 * this._membraneWobbleZ - 4 * this._membraneWobbleVZ;
+            this._membraneWobbleVX += _mForceX * dt;
+            this._membraneWobbleVZ += _mForceZ * dt;
+            this._membraneWobbleX  += this._membraneWobbleVX * dt;
+            this._membraneWobbleZ  += this._membraneWobbleVZ * dt;
+            // Direction-change impulse when sliding
+            if (this.slideAmount > 0.3) {
+              const _mSign = this.slideAmount * dt * 20;
+              this._membraneWobbleVX += (this.velocity.x > 0 ? 1 : -1) * _mSign * 0.8;
+              this._membraneWobbleVZ += (this.velocity.z > 0 ? 1 : -1) * _mSign * 0.8;
+            }
+            // Position — offset from body by wobble
+            this._membrane.position.copy(this.mesh.position);
+            this._membrane.position.x += this._membraneWobbleX * 0.06;
+            this._membrane.position.z += this._membraneWobbleZ * 0.06;
+            // Scale with body + independent ripple
+            const _mScaleXZ = this.currentScaleXZ + Math.sin(_time * 8)  * 0.015 * this.wobbleIntensity;
+            const _mScaleY  = this.currentScaleY  + Math.cos(_time * 11) * 0.01  * this.wobbleIntensity;
+            this._membrane.scale.set(
+              Math.max(0.1, _mScaleXZ * this._breathScale),
+              Math.max(0.1, _mScaleY  * this._breathScale),
+              Math.max(0.1, _mScaleXZ * this._breathScale)
+            );
+            // Rotate slightly out of sync with body
+            this._membrane.rotation.y = this.mesh.rotation.y + this._membraneWobbleX * 0.15;
+            // Idle shimmer (System 8 integration)
+            if (this._membrane.material) {
+              this._membrane.material.opacity = (speedMag < 0.02)
+                ? 0.14 + Math.sin(_time * Math.PI * 2) * 0.04
+                : 0.18;
+            }
+          }
+        } catch (_e) {}
+
+        // System 2: Internal Fluid Sloshing Core update
+        try {
+          if (this._innerFluid) {
+            // Acceleration of body this frame (clamped ±5)
+            let _accelX = dt > 0.001 ? (this.velocity.x - _prevVelXStore) / dt : 0;
+            let _accelZ = dt > 0.001 ? (this.velocity.z - _prevVelZStore) / dt : 0;
+            _accelX = Math.max(-5, Math.min(5, _accelX));
+            _accelZ = Math.max(-5, Math.min(5, _accelZ));
+            // Fluid pushed opposite to acceleration (sloshing)
+            this._fluidVX += -_accelX * 0.12;
+            this._fluidVZ += -_accelZ * 0.12;
+            // Spring back to center (k=22, d=5)
+            this._fluidVX += (-22 * this._fluidOffsetX - 5 * this._fluidVX) * dt;
+            this._fluidVZ += (-22 * this._fluidOffsetZ - 5 * this._fluidVZ) * dt;
+            this._fluidOffsetX += this._fluidVX * dt;
+            this._fluidOffsetZ += this._fluidVZ * dt;
+            // Vertical slosh: up when stopping, down when accelerating
+            const _speedChange = speedMag - (this._prevSpeedMagFluid || 0);
+            this._fluidOffsetY = Math.max(-0.12, Math.min(0.18, this._fluidOffsetY - _speedChange * 0.5));
+            this._fluidOffsetY *= 0.92;
+            this._prevSpeedMagFluid = speedMag;
+            // Clamp offset inside body (max radius 0.14)
+            const _fLen = Math.sqrt(this._fluidOffsetX * this._fluidOffsetX + this._fluidOffsetZ * this._fluidOffsetZ);
+            if (_fLen > 0.14) {
+              this._fluidOffsetX = (this._fluidOffsetX / _fLen) * 0.14;
+              this._fluidOffsetZ = (this._fluidOffsetZ / _fLen) * 0.14;
+            }
+            // Apply world position
+            this._innerFluid.position.set(
+              this.mesh.position.x + this._fluidOffsetX,
+              this.mesh.position.y + 0.05 + this._fluidOffsetY,
+              this.mesh.position.z + this._fluidOffsetZ
+            );
+            // Scale: squishes when moving fast, swells when stopping
+            const _fScale = 0.95 + this._fluidOffsetY * 0.8 + speedMag * 0.15;
+            this._innerFluid.scale.setScalar(Math.max(0.6, Math.min(1.4, _fScale)));
+            // Opacity pulses with heartbeat rhythm
+            if (this._innerFluid.material) {
+              this._innerFluid.material.opacity = 0.45 + Math.sin(_time * 2.2) * 0.08 + Math.min(speedMag * 0.15, 0.2);
+            }
+          }
+        } catch (_e) {}
+
+        // System 3: Specular Highlight Simulation update
+        try {
+          if (this._highlightMain && this._highlightSub) {
+            const _hlAngle = _time * 0.4 + (this._membraneWobbleX || 0) * 0.5;
+            this._highlightMain.position.set(
+              this.mesh.position.x - 0.14 + Math.sin(_hlAngle) * 0.04,
+              this.mesh.position.y + 0.22 + this.currentScaleY * 0.08,
+              this.mesh.position.z + 0.32
+            );
+            if (this._damagePhase !== 2) {
+              if (this._highlightMain.material) {
+                this._highlightMain.material.opacity = Math.max(0, Math.min(1, 0.55 + (this._fluidOffsetY || 0) * 0.3));
+              }
+              this._highlightMain.scale.setScalar(Math.max(0.5, 1 + speedMag * 0.3));
+            }
+            this._highlightSub.position.set(
+              this.mesh.position.x - 0.22,
+              this.mesh.position.y + 0.28 + this.currentScaleY * 0.1,
+              this.mesh.position.z + 0.28
+            );
+          }
+        } catch (_e) {}
+
+        // System 4: Gravity-Responsive Ground Shadow update
+        try {
+          if (this._dynamicShadow) {
+            this._dynamicShadow.position.x += (this.mesh.position.x - this._dynamicShadow.position.x) * 0.3;
+            this._dynamicShadow.position.z += (this.mesh.position.z - this._dynamicShadow.position.z) * 0.3;
+            const _shScaleX = Math.max(0.1, this.currentScaleXZ * (1 + this.slideAmount * 0.4));
+            const _shScaleZ = Math.max(0.1, this.currentScaleXZ * (1 + speedMag * 0.2));
+            this._dynamicShadow.scale.set(_shScaleX, 1, _shScaleZ);
+            if (this._dynamicShadow.material) {
+              this._dynamicShadow.material.opacity = Math.max(0, Math.min(0.6, 0.25 + (1 - this.currentScaleY) * 0.3));
+            }
+          }
+        } catch (_e) {}
+
+        // System 5: Water Trail Footprint ripples update
+        try {
+          if (this._trailPool && this._trailPool.length > 0) {
+            // Spawn a new trail ring when moving
+            this._trailDropTimer += dt;
+            if (speedMag > 0.1 && this._trailDropTimer > 0.12) {
+              this._trailDropTimer = 0;
+              for (let _ti = 0; _ti < this._trailPool.length; _ti++) {
+                const _ts = this._trailPool[_ti];
+                if (!_ts.active) {
+                  _ts.active = true;
+                  _ts.life = 0;
+                  _ts.maxLife = 0.8;
+                  _ts.mesh.position.x = this.mesh.position.x;
+                  _ts.mesh.position.z = this.mesh.position.z;
+                  if (_ts.mesh.material) _ts.mesh.material.color.setHex(0x44aacc);
+                  break;
+                }
+              }
+            }
+            // Update all active trail ripples (expand and fade)
+            for (let _ti = 0; _ti < this._trailPool.length; _ti++) {
+              const _ts = this._trailPool[_ti];
+              if (!_ts.active) continue;
+              _ts.life += dt;
+              const _tt = Math.min(_ts.life / _ts.maxLife, 1.0);
+              _ts.mesh.scale.set(Math.max(0.001, _tt * 2), 1, Math.max(0.001, _tt * 2));
+              if (_ts.mesh.material) _ts.mesh.material.opacity = Math.max(0, 0.3 * (1 - _tt));
+              if (_ts.life >= _ts.maxLife) {
+                _ts.active = false;
+                if (_ts.mesh.material) _ts.mesh.material.opacity = 0;
+                _ts.mesh.scale.set(0.001, 1, 0.001);
+              }
+            }
+          }
+        } catch (_e) {}
+
+        // System 8: Idle Ambient Water Animations
+        try {
+          if (speedMag < 0.02) {
+            // Slow gravity settle — water sinks slightly over 2 seconds
+            this._gravitySettleY = Math.min(this._gravitySettleY + dt * 0.01, 0.02);
+            if (this.mesh) this.mesh.position.y = 0.5 - this._gravitySettleY;
+            // Micro-oscillation tipple (very subtle side-to-side)
+            this._idleTipX = Math.sin(_time * 0.7 + 0.3) * 0.005;
+            this._idleTipZ = Math.cos(_time * 0.9) * 0.004;
+            if (this.mesh) {
+              this.mesh.rotation.x += this._idleTipX;
+              this.mesh.rotation.z += this._idleTipZ;
+            }
+            // Random droplet bead falling off the character
+            this._idleDropTimer -= dt;
+            if (this._idleDropTimer <= 0) {
+              this._idleDropTimer = 2 + Math.random() * 2;
+              if (typeof spawnWaterDroplet === 'function' && this.mesh) {
+                const _dropPos = this.mesh.position.clone();
+                _dropPos.y -= 0.3;
+                spawnWaterDroplet(_dropPos);
+              }
+            }
+            // Eye micro-movements — use dedicated timer to avoid frame-rate dependence
+            try {
+              if (this.leftEye && this.rightEye) {
+                if (!this._eyeMicroTimer) this._eyeMicroTimer = 3 + Math.random() * 3;
+                this._eyeMicroTimer -= dt;
+                if (this._eyeMicroTimer <= 0) {
+                  this._eyeMicroTimer = 3 + Math.random() * 3;
+                  // Apply micro-offset relative to original position (bounded ±0.01)
+                  if (!this._eyeBaseX) this._eyeBaseX = this.leftEye.position.x;
+                  const _eyeOff = (Math.random() - 0.5) * 0.01;
+                  this.leftEye.position.x  = this._eyeBaseX + _eyeOff;
+                  this.rightEye.position.x = -this._eyeBaseX - _eyeOff;
+                }
+              }
+            } catch (_e2) {}
+          } else {
+            // Restore position/orientation when moving
+            this._gravitySettleY = Math.max(0, this._gravitySettleY - dt * 0.05);
+            if (this.mesh) {
+              const _targetY = 0.5 - this._gravitySettleY;
+              if (Math.abs(this.mesh.position.y - _targetY) > 0.001) {
+                this.mesh.position.y += (_targetY - this.mesh.position.y) * Math.min(dt * 3, 1);
+              }
+            }
+          }
+        } catch (_e) {}
+
         // Blinking eyes animation
         this.blinkTimer += dt;
         if (this.blinkTimer >= this.nextBlinkTime) {
@@ -1348,6 +1738,12 @@
         // Bounds (Compact map is 240x240, from -120 to 120)
         this.mesh.position.x = Math.max(-120, Math.min(120, this.mesh.position.x));
         this.mesh.position.z = Math.max(-120, Math.min(120, this.mesh.position.z));
+
+        // Persist previous velocity for next frame's fluid inertia calculation (System 2)
+        try {
+          this._prevVelX = this.velocity.x;
+          this._prevVelZ = this.velocity.z;
+        } catch (_e) {}
       }
 
       dash(dx, dz) {
@@ -1364,6 +1760,25 @@
         for(let i=0; i<8; i++) {
           spawnWaterDroplet(this.mesh.position);
         }
+
+        // System 5: Spawn 3 large dash-burst ripples
+        try {
+          if (this._trailPool && this._trailPool.length > 0) {
+            let _spawned = 0;
+            for (let _dti = 0; _dti < this._trailPool.length && _spawned < 3; _dti++) {
+              const _dts = this._trailPool[_dti];
+              if (!_dts.active) {
+                _dts.active = true;
+                _dts.life = 0;
+                _dts.maxLife = 0.5;
+                _dts.mesh.position.x = this.mesh.position.x;
+                _dts.mesh.position.z = this.mesh.position.z;
+                if (_dts.mesh.material) _dts.mesh.material.color.setHex(0x88ddff);
+                _spawned++;
+              }
+            }
+          }
+        } catch (_e) {}
         
         // Direct mapping: Screen coordinates to World coordinates
         // Screen X-axis maps to World X-axis
@@ -1610,6 +2025,18 @@
         this.scaleYVel = 0;
         // Cancel any active stopping-wobble — the hit deformation takes priority
         this._stopWobbleInitAmp = 0;
+
+        // System 7: Trigger multi-phase damage physics response
+        try {
+          this._damagePhase = 1;
+          this._damagePhaseTimer = 0;
+          this._damageImpactDir = { x: 0, z: 0 };
+          if (this._membrane) {
+            this._membraneWobbleVX = (Math.random() - 0.5) * 4;
+            this._membraneWobbleVZ = (Math.random() - 0.5) * 4;
+          }
+          if (this._innerFluid) this._fluidOffsetY = 0.18;
+        } catch (_e) {}
         
         // FRESH IMPLEMENTATION: Screen shake scales with damage amount
         // Cancel any previous shake to prevent stacked RAF loops
