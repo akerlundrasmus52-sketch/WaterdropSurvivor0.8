@@ -545,7 +545,7 @@ this.rot     = new THREE.Vector3();
 this.rotVel  = new THREE.Vector3();
 this.life    = 0;
 this.size    = 0.1;
-this.color   = 0xcc0000;
+this.color   = 0x33cc44;
 this.mesh    = null;
 this.bounces = 0;
 this.groundY = 0.02;
@@ -982,7 +982,7 @@ const wound = gore.addWound(localPos, profile.woundRadius, organHit, {
   depth:      profile.penetration,
   cauterized: profile.cauterizes || false,
   frozen:     profile.freezesBlood || false,
-  color:      (enemy.enemyType === 'slime' && SLIME_ANATOMY[organHit]) ? SLIME_ANATOMY[organHit].color : 0x880000,
+  color:      SLIME_ANATOMY[organHit] ? SLIME_ANATOMY[organHit].color : 0x880000,
 });
 
 // ── SPAWN BLOOD BASED ON WEAPON TYPE ──────

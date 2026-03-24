@@ -473,15 +473,6 @@ guts:     { hp:65,  maxHp:65,  yRange:[-0.3, 0.1], bleedRate:0.60, pumpBlood:fal
 core:     { hp:90,  maxHp:90,  yRange:[-1.0,-0.3], bleedRate:0.80, pumpBlood:false },
 },
 
-// Default anatomy — used for enemies without a specific enemyType
-default: {
-membrane: { hp:35,  maxHp:35,  yRange:[-1.0, 1.0], bleedRate:0.30, pumpBlood:false },
-brain:    { hp:20,  maxHp:20,  yRange:[ 0.5, 1.0], bleedRate:0.15, pumpBlood:false },
-heart:    { hp:45,  maxHp:45,  yRange:[ 0.1, 0.5], bleedRate:1.00, pumpBlood:true  },
-guts:     { hp:65,  maxHp:65,  yRange:[-0.3, 0.1], bleedRate:0.60, pumpBlood:false },
-core:     { hp:90,  maxHp:90,  yRange:[-1.0,-0.3], bleedRate:0.80, pumpBlood:false },
-},
-
 // Add more enemy types here as you build them:
 // bug:   { membrane:{…}, brain:{…}, … },
 // alien: { … },
@@ -559,7 +550,7 @@ rvx:0, rvy:0, rvz:0,
 life:    0,
 size:    0.08,
 bounces: 0,
-color:   0xcc1100,
+color:   0x22aa33,
 };
 }
 
@@ -587,14 +578,14 @@ color:   0xcc0000,
 
 // ── Per-enemy gore ────────────────────────────────────────────────
 function makeGoreState(enemy, enemyType) {
-var profile = ANATOMY[enemyType] || ANATOMY.default;
+var profile = ANATOMY[enemyType] || ANATOMY.slime;
 var organs  = {};
 for (var k in profile) {
 organs[k] = { hp: profile[k].hp, maxHp: profile[k].maxHp };
 }
 return {
 enemy:    enemy,
-type:     enemyType || 'default',
+type:     enemyType || 'slime',
 organs:   organs,
 wounds:   [],        // array of wound objects
 killedBy: null,
@@ -777,7 +768,7 @@ _decals.push(d);
 
 var wp   = WEAPONS[weaponKey] || WEAPONS.pistol;
 var eId  = enemy.id !== undefined ? enemy.id : enemy.uuid;
-var eType = enemy.enemyType || 'default';
+var eType = enemy.enemyType || 'slime';
 var col  = ENEMY_BLOOD[eType] || ENEMY_BLOOD.default;
 
 // Get or create gore state
@@ -842,7 +833,7 @@ _spawnChunks(hx, hy, hz, hitNormal, nc, wp, col);
 
 // Arterial pump on heart hit
 if (organ === 'heart' && wp.pumpOnHeart) {
-var anat = ANATOMY[gs.type] || ANATOMY.default;
+var anat = ANATOMY[gs.type] || ANATOMY.slime;
 if (anat.heart && anat.heart.pumpBlood) {
 var existing = _streams.find(function(s){ return s.alive && s.enemy === enemy; });
 if (!existing) {
@@ -870,7 +861,7 @@ return { organ: organ, organKilled: organKilled };
 
 var wp   = WEAPONS[weaponKey] || WEAPONS.pistol;
 var eId  = enemy.id !== undefined ? enemy.id : enemy.uuid;
-var eType = enemy.enemyType || 'default';
+var eType = enemy.enemyType || 'slime';
 var col  = ENEMY_BLOOD[eType] || ENEMY_BLOOD.default;
 
 var ex = enemy.mesh ? enemy.mesh.position.x : 0;
@@ -1182,7 +1173,7 @@ d.frozen     = false; d.charred = false;
 // ══════════════════════════════════════════
 function _updateWound(w, dt, ex, ey, ez, evx, evz, col) {
 if (!w.alive || w.cauterized || w.frozen) return;
-var anat  = ANATOMY[col._type] || ANATOMY.default;
+var anat  = ANATOMY[col._type] || ANATOMY.slime;
 var oData = anat[w.organ];
 if (!oData) return;
 
@@ -1803,7 +1794,7 @@ _spawnDecal(x, z, size * 1.2, color);
 //  ANATOMY HELPERS
 // ══════════════════════════════════════════
 function _getOrgan(type, localY) {
-var profile = ANATOMY[type] || ANATOMY.default;
+var profile = ANATOMY[type] || ANATOMY.slime;
 for (var k in profile) {
 var o = profile[k];
 if (localY >= o.yRange[0] && localY <= o.yRange[1]) return k;
@@ -2039,7 +2030,7 @@ function _fakeEnemy(pos) {
 var p = _pos3(pos);
 return {
 alive: true,
-enemyType: 'default',
+enemyType: 'slime',
 id: 'shim*' + Date.now() + '*' + Math.random(),
 hp: 100,
 maxHp: 100,
