@@ -3763,11 +3763,7 @@
       // Update action button label based on game state
       const campActionBtn = document.getElementById('camp-action-btn');
       if (campActionBtn) {
-        if (isGameActive) {
-          campActionBtn.textContent = '▶ CONTINUE';
-        } else {
-          campActionBtn.textContent = '▶ START RUN';
-        }
+        campActionBtn.textContent = '▶ NEW RUN';
       }
 
       // ── 3D Camp Hub World ──────────────────────────────────────────────

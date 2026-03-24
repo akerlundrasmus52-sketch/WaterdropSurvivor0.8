@@ -18,8 +18,8 @@
     };
   }
   if (typeof createFloatingText === 'undefined') {
-    // ── Pooled floating-text system: pre-allocates DOM elements, zero new div() during play ──
-    const _FT_POOL_SIZE = 32;
+    // ── Pooled floating-text system: aggressive font, damage-scaled sizing, smooth fly-up ──
+    const _FT_POOL_SIZE = 40;
     const _ftPool  = []; // available elements
     const _ftNDC   = { x: 0, y: 0 }; // reusable NDC projection (no new object)
     // Pre-allocate all floating-text divs once (called lazily on first use)
@@ -28,13 +28,16 @@
       const baseStyle = [
         'position:fixed',
         'pointer-events:none',
-        'font-family:Bangers,cursive',
-        'font-size:22px',
-        'font-weight:bold',
-        'text-shadow:1px 1px 4px #000',
+        'font-family:Impact,"Arial Black",Bangers,sans-serif',
+        'font-weight:900',
+        'letter-spacing:1px',
+        'text-shadow:2px 2px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,0 0 8px rgba(0,0,0,0.7)',
         'z-index:9999',
         'will-change:transform,opacity',
         'display:none',
+        'white-space:nowrap',
+        'text-align:center',
+        'transform-origin:center center',
       ].join(';');
       for (let _i = 0; _i < _FT_POOL_SIZE; _i++) {
         const _el = document.createElement('div');
@@ -45,14 +48,28 @@
     }
     // Reusable Vector3 for world→screen projection (avoids new THREE.Vector3 per call)
     const _ftV3 = { x: 0, y: 0, z: 0, _v3: null }; // _v3 set after THREE loads
-    window.createFloatingText = function (text, pos, color) {
+    /**
+     * @param {string|number} text - Text to display
+     * @param {object} pos - World position {x,y,z}
+     * @param {string} color - CSS color
+     * @param {number} [damageAmount=0] - Damage amount for size scaling (higher = bigger)
+     */
+    window.createFloatingText = function (text, pos, color, damageAmount) {
       _ftInit();
       const el = _ftPool.length ? _ftPool.pop() : null;
-      if (!el) return; // pool exhausted — skip to avoid visual glitch (32 slots is plenty)
+      if (!el) return; // pool exhausted — skip to avoid visual glitch
       el.textContent = text;
       el.style.color = color || '#FFD700';
+
+      // Scale font size with damage: base 18px, sqrt scaling with damage, caps at 42px
+      // sqrt(damage) * scale factor gives perceptible but not excessive growth
+      const _DMG_FONT_SCALE = 1.8;
+      const dmg = typeof damageAmount === 'number' ? damageAmount : 0;
+      const fontSize = Math.min(42, Math.max(18, 18 + Math.sqrt(dmg) * _DMG_FONT_SCALE));
+      el.style.fontSize = fontSize + 'px';
+
       el.style.transition = 'none';
-      el.style.transform  = 'translateY(0)';
+      el.style.transform  = 'translate(-50%,-50%) scale(1.2)';
       el.style.opacity    = '1';
       // Project world→screen using pre-allocated Vector3
       let sx = window.innerWidth / 2, sy = window.innerHeight / 2;
@@ -63,21 +80,23 @@
         sx = (_ftV3._v3.x * 0.5 + 0.5) * window.innerWidth;
         sy = (-_ftV3._v3.y * 0.5 + 0.5) * window.innerHeight;
       }
+      // Add slight horizontal jitter for visual variety
+      sx += (Math.random() - 0.5) * 30;
       el.style.left    = sx + 'px';
       el.style.top     = sy + 'px';
       el.style.display = 'block';
       requestAnimationFrame(function () {
-        el.style.transition = 'transform 1.2s ease-out,opacity 1.2s ease-out';
-        el.style.transform  = 'translateY(-60px)';
+        el.style.transition = 'transform 0.6s cubic-bezier(0.22,1,0.36,1),opacity 0.6s ease-out';
+        el.style.transform  = 'translate(-50%,-50%) translateY(-70px) scale(0.7)';
         el.style.opacity    = '0';
       });
       setTimeout(function () {
         el.style.display    = 'none';
         el.style.transition = 'none';
-        el.style.transform  = 'translateY(0)';
+        el.style.transform  = 'translate(-50%,-50%) scale(1.2)';
         el.style.opacity    = '1';
         _ftPool.push(el); // return to pool
-      }, 1400);
+      }, 650); // slightly after 0.6s transition to ensure animation completes
     };
   }
   if (typeof showYouDiedBanner === 'undefined') {
@@ -902,10 +921,13 @@
     // Floating damage number — reuse pre-allocated _tmpV3 (no new THREE.Vector3 per hit)
     if (isCrit) {
       _tmpV3.set(slot.mesh.position.x, 2.0, slot.mesh.position.z);
-      createFloatingText('⚡' + actualDmg + '!', _tmpV3, '#FFD700');
+      createFloatingText(actualDmg, _tmpV3, '#FFD700', actualDmg);
+      // Show "Critical" text slightly above
+      _tmpV3.set(slot.mesh.position.x, 2.4, slot.mesh.position.z);
+      createFloatingText('Critical', _tmpV3, '#FF4400', 0);
     } else {
       _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
-      createFloatingText('-' + actualDmg, _tmpV3, '#FF4444');
+      createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
     }
 
     // Blood splatter on hit — reuse _reusableBloodPos (no new {} per hit)
@@ -1107,16 +1129,30 @@
 
     // ── EXP star drop: 1 guaranteed star + 15% chance for a bonus star per kill ──
     // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
+    // Stars scatter physically based on the enemy's death velocity and weapon used.
     let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
     if (hitForce > 2.0)      gemEnemyType = 5; // rare (gold)
     else if (hitForce > 1.5) gemEnemyType = 3; // uncommon (blue)
     // Use the pre-allocated pool — no new THREE.Mesh during gameplay
     const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
-    if (_droppedGem) expGems.push(_droppedGem);
+    if (_droppedGem) {
+      // Apply death velocity to scatter XP stars in the kill direction
+      if (killVX || killVZ) {
+        _droppedGem.vx += killVX * 0.04;
+        _droppedGem.vz += killVZ * 0.04;
+      }
+      expGems.push(_droppedGem);
+    }
     // +15% drop rate bonus: 15% chance for an extra star on every kill
     if (Math.random() < BONUS_XP_DROP_RATE) {
       const _bonusGem = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemEnemyType);
-      if (_bonusGem) expGems.push(_bonusGem);
+      if (_bonusGem) {
+        if (killVX || killVZ) {
+          _bonusGem.vx += killVX * 0.03;
+          _bonusGem.vz += killVZ * 0.03;
+        }
+        expGems.push(_bonusGem);
+      }
     }
 
     _tmpV3.set(x, 1.8, z);
@@ -1186,7 +1222,7 @@
       }
     }
     _tmpV3.set(slot.mesh.position.x, 1.6, slot.mesh.position.z);
-    createFloatingText('WOUNDED!', _tmpV3, '#FF8800');
+    // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
 
   // Stage 2: 50% HP - More wounds, flesh chunks start flying
@@ -1223,7 +1259,7 @@
       }
     }
     _tmpV3.set(slot.mesh.position.x, 1.7, slot.mesh.position.z);
-    createFloatingText('HEAVY DAMAGE!', _tmpV3, '#FF4400');
+    // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
 
   // Stage 3: 35% HP - Body parts breaking off, heavy bleeding
@@ -1275,7 +1311,7 @@
       }
     }
     _tmpV3.set(slot.mesh.position.x, 1.8, slot.mesh.position.z);
-    createFloatingText('CRITICAL!', _tmpV3, '#FF0000');
+    // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
 
   // Stage 4: 20% HP - Near death, chunks flying everywhere
@@ -1319,7 +1355,7 @@
       }
     }
     _tmpV3.set(slot.mesh.position.x, 1.9, slot.mesh.position.z);
-    createFloatingText('NEAR DEATH!', _tmpV3, '#DD0000');
+    // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
 
   // ─── Blood ground stain decal pool ───────────────────────────────────────────
@@ -1931,27 +1967,162 @@
   }
 
   function _onLevelUp() {
-    _tmpV3.set(
-      player && player.mesh ? player.mesh.position.x : 0,
-      player && player.mesh ? player.mesh.position.y + 0.5 : 0.5,
-      player && player.mesh ? player.mesh.position.z : 0
-    );
-    createFloatingText('LEVEL UP!', _tmpV3, '#FFD700');
-    // Trigger the level-up upgrade modal if available
-    if (typeof showUpgradeModal === 'function') {
-      // Use direct window.isPaused assignment in sandbox to bypass main.js overlay counter,
-      // which prevents "player freeze" when forceGameUnpause only resets window.isPaused.
-      window.isPaused = true;
-      showUpgradeModal(false, null);
-      // Failsafe: if showUpgradeModal returned without showing the modal
-      // (e.g., isGameActive guard bailed early), unpause immediately.
-      setTimeout(function () {
-        const modal = document.getElementById('levelup-modal');
-        if (window.isPaused && (!modal || modal.style.display !== 'flex')) {
-          window.isPaused = false;
-        }
-      }, 80);
+    // ── Fiery "LEVEL UP" text animation (Grind Survivors style) ──
+    // Spawns a massive burning text above the player before showing the upgrade modal.
+    _spawnFireLevelUpText();
+
+    // Delay before upgrade modal appears so player can enjoy the fiery text animation
+    window.isPaused = true;
+    setTimeout(function () {
+      if (typeof showUpgradeModal === 'function') {
+        showUpgradeModal(false, null);
+        // Failsafe: if showUpgradeModal returned without showing the modal
+        setTimeout(function () {
+          const modal = document.getElementById('levelup-modal');
+          if (window.isPaused && (!modal || modal.style.display !== 'flex')) {
+            window.isPaused = false;
+          }
+        }, 80);
+      } else {
+        window.isPaused = false;
+      }
+    }, 1800); // 1.8s delay to let the fiery text play
+  }
+
+  // ── Fiery LEVEL UP text: massive burning text with ember particles ──
+  function _spawnFireLevelUpText() {
+    const el = document.createElement('div');
+    el.textContent = 'LEVEL UP';
+    el.style.cssText = [
+      'position:fixed',
+      'left:50%',
+      'top:40%',
+      'transform:translate(-50%,-50%) scale(0)',
+      'font-family:Impact,"Arial Black",sans-serif',
+      'font-size:clamp(48px,10vw,90px)',
+      'font-weight:900',
+      'letter-spacing:8px',
+      'color:#FFD700',
+      'text-shadow:0 0 20px #FF4500,0 0 40px #FF6600,0 0 60px #FF8C00,0 0 80px rgba(255,69,0,0.5),2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000',
+      'z-index:10000',
+      'pointer-events:none',
+      'opacity:0',
+      'will-change:transform,opacity',
+      'white-space:nowrap',
+    ].join(';');
+    document.body.appendChild(el);
+
+    // Ember particles container (pooled via DOM reuse)
+    const embers = [];
+    const EMBER_COUNT = 24;
+    for (let i = 0; i < EMBER_COUNT; i++) {
+      const ember = document.createElement('div');
+      const size = 3 + Math.random() * 5;
+      ember.style.cssText = [
+        'position:fixed',
+        'width:' + size + 'px',
+        'height:' + size + 'px',
+        'background:' + (['#FF4500','#FFD700','#FF6600','#FFA500'][Math.floor(Math.random() * 4)]),
+        'border-radius:50%',
+        'pointer-events:none',
+        'z-index:10001',
+        'opacity:0',
+        'will-change:transform,opacity',
+        'box-shadow:0 0 6px 2px rgba(255,100,0,0.6)',
+      ].join(';');
+      document.body.appendChild(ember);
+      embers.push({
+        el: ember,
+        x: 0, y: 0,
+        vx: (Math.random() - 0.5) * 200,
+        vy: -80 - Math.random() * 160,
+        life: 0.5 + Math.random() * 0.8,
+        maxLife: 0,
+      });
     }
+
+    // Animation
+    const startTime = performance.now();
+    let _lastFrameTime = startTime;
+    const totalDuration = 1700; // ms
+
+    function _cleanupLevelUpFX() {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      for (let i = 0; i < embers.length; i++) {
+        if (embers[i].el.parentNode) embers[i].el.parentNode.removeChild(embers[i].el);
+      }
+    }
+
+    function animFrame() {
+      const now = performance.now();
+      const elapsed = now - startTime;
+      const dt = Math.min(0.05, (now - _lastFrameTime) / 1000); // actual dt in seconds, capped
+      _lastFrameTime = now;
+      const t = elapsed / totalDuration;
+
+      if (t < 0.15) {
+        // Phase 1: explosive scale-in
+        const p = t / 0.15;
+        const scale = p * 1.4;
+        el.style.opacity = '' + Math.min(1, p * 2);
+        el.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
+      } else if (t < 0.3) {
+        // Phase 2: bounce settle
+        const p = (t - 0.15) / 0.15;
+        const scale = 1.4 - 0.3 * p;
+        el.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
+        el.style.opacity = '1';
+        // Spawn embers from text center
+        if (p < 0.5) {
+          const cx = window.innerWidth / 2;
+          const cy = window.innerHeight * 0.4;
+          for (let i = 0; i < embers.length; i++) {
+            const em = embers[i];
+            if (em.maxLife === 0) {
+              em.maxLife = em.life;
+              em.x = cx + (Math.random() - 0.5) * 120;
+              em.y = cy + (Math.random() - 0.5) * 40;
+              em.el.style.opacity = '1';
+            }
+          }
+        }
+      } else if (t < 0.7) {
+        // Phase 3: hold with glow pulse
+        const p = (t - 0.3) / 0.4;
+        const pulse = 1.1 + 0.05 * Math.sin(p * Math.PI * 4);
+        el.style.transform = 'translate(-50%,-50%) scale(' + pulse + ')';
+        el.style.opacity = '1';
+      } else if (t < 1) {
+        // Phase 4: fade out upward
+        const p = (t - 0.7) / 0.3;
+        const yOffset = -40 * p;
+        el.style.transform = 'translate(-50%,calc(-50% + ' + yOffset + 'px)) scale(' + (1.1 - 0.3 * p) + ')';
+        el.style.opacity = '' + (1 - p);
+      } else {
+        _cleanupLevelUpFX();
+        return; // stop animation loop
+      }
+
+      // Update ember particles using actual frame dt
+      for (let i = 0; i < embers.length; i++) {
+        const em = embers[i];
+        if (em.maxLife === 0) continue;
+        em.life -= dt;
+        if (em.life <= 0) {
+          em.el.style.opacity = '0';
+          continue;
+        }
+        em.x += em.vx * dt;
+        em.y += em.vy * dt;
+        em.vy += 30 * dt; // slight gravity
+        em.el.style.left = em.x + 'px';
+        em.el.style.top = em.y + 'px';
+        em.el.style.opacity = '' + Math.max(0, em.life / em.maxLife);
+      }
+
+      requestAnimationFrame(animFrame);
+    }
+    requestAnimationFrame(animFrame);
   }
 
   // ─── Sandbox weapon effects (sword, samurai sword, aura) ────────────────────
@@ -1991,7 +2162,7 @@
             s.flashTimer = 0.12;
             s.squishTime = 0.25;
             _tmpV3.set(s.mesh.position.x, 1.4, s.mesh.position.z);
-            createFloatingText('-' + dmg, _tmpV3, '#FF8800');
+            createFloatingText(dmg, _tmpV3, '#FF8800', dmg);
             if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
               _reusableBloodPos.x = s.mesh.position.x;
               _reusableBloodPos.y = s.mesh.position.y + 0.5;
@@ -2014,8 +2185,7 @@
               player.mesh.material.color.setHex(origC);
           }, 100);
         }
-        _tmpV3.set(px, 1.2, pz);
-        createFloatingText('⚔', _tmpV3, '#FF8800');
+        // Sword slash emoji removed — keep only damage numbers
       }
     } else {
       _swordEffectCooldown = 0; // reset if weapon removed
@@ -2039,7 +2209,7 @@
             s.hp -= dmg;
             s.flashTimer = 0.08;
             _tmpV3.set(s.mesh.position.x, 1.3, s.mesh.position.z);
-            createFloatingText('-' + dmg, _tmpV3, '#33AAFF');
+            createFloatingText(dmg, _tmpV3, '#33AAFF', dmg);
             if (s.hp <= 0) {
               _killSlime(s, 1.0, 0, 0);
             } else {
@@ -3113,36 +3283,9 @@
     _initSpatialHash();
   }
 
-  // ─── Sandbox status overlay ───────────────────────────────────────────────────
+  // ─── Sandbox status overlay (disabled — clean screen) ────────────────────────
   function _buildSandboxOverlay() {
-    const el = document.createElement('div');
-    el.id = 'sandbox-overlay';
-    el.style.cssText = [
-      'position:fixed',
-      'top:8px',
-      'left:50%',
-      'transform:translateX(-50%)',
-      'background:rgba(0,0,0,0.65)',
-      'color:#FFD700',
-      'font-family:Bangers,cursive',
-      'font-size:15px',
-      'letter-spacing:1px',
-      'padding:4px 18px',
-      'border-radius:20px',
-      'border:1px solid #FFD700',
-      'z-index:9990',
-      'pointer-events:none',
-      'text-align:center',
-    ].join(';');
-    // Object pooling is active when the global GameObjectPool/ObjectPool system is available
-    // OR when our local projectile pool has been successfully pre-allocated.
-    const poolActive = !!(window.GameObjectPool || window.ObjectPool) || _projPool.length > 0;
-    const poolBadge = poolActive
-      ? '<span style="color:#00FF88">✔ Object Pooling Active</span>'
-      : '<span style="color:#FF4444">✘ Object Pooling Inactive</span>';
-    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Mouse/Right-Joystick to aim &nbsp;|&nbsp; ' + poolBadge;
-    document.body.appendChild(el);
-    console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
+    // Debug/status overlay removed per requirements — screen must be clean
   }
 
   // ─── WaveManager — encapsulates survivor-style wave spawning logic ───────────
