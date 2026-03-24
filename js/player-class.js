@@ -455,7 +455,6 @@
         this._membrane = null;
         this._membraneWobbleX = 0; this._membraneWobbleZ = 0;
         this._membraneWobbleVX = 0; this._membraneWobbleVZ = 0;
-        this._membraneTension = 1.0;
         // System 2 - Inner fluid
         this._innerFluid = null;
         this._fluidOffsetX = 0; this._fluidOffsetZ = 0; this._fluidOffsetY = 0;
@@ -469,11 +468,9 @@
         // System 5 - Trail
         this._trailDropTimer = 0; this._trailPool = [];
         // System 6 - Enhanced deform
-        this._jiggleVX = 0; this._jiggleVZ = 0;
         this._breathLean = 0;
         // System 7 - Damage response
         this._damagePhase = 0; this._damagePhaseTimer = 0;
-        this._damageImpactDir = {x: 0, z: 0};
         // System 8 - Idle
         this._idleDropTimer = 2 + Math.random() * 2;
         this._gravitySettleY = 0;
@@ -518,7 +515,7 @@
             emissive: new THREE.Color(0x1a88cc), emissiveIntensity: 0.08
           };
           const _memMat = (typeof THREE.MeshPhysicalMaterial === 'function')
-            ? new THREE.MeshPhysicalMaterial(Object.assign({ roughness: 0.0, metalness: 0.1, shininess: undefined }, _memBaseOpts))
+            ? new THREE.MeshPhysicalMaterial(Object.assign({ roughness: 0.0, metalness: 0.1 }, _memBaseOpts))
             : new THREE.MeshPhongMaterial(Object.assign({ shininess: 80 }, _memBaseOpts));
           this._membrane = new THREE.Mesh(_memGeo, _memMat);
           this._membrane.position.copy(this.mesh.position);
@@ -1290,8 +1287,22 @@
             } else if (this._damagePhase === 2) {
               // Phase 2 (80–200 ms): Rebound overshoot — pulse highlights to max
               if (this._highlightMain && this._highlightMain.material) this._highlightMain.material.opacity = 0.9;
-              if (this._highlightSub  && this._highlightSub.material)  this._highlightSub.material.opacity  = 0.8;
-              if (this._damagePhaseTimer >= 0.12) { this._damagePhase = 3; this._damagePhaseTimer = 0; }
+              if (this._highlightSub && this._highlightSub.material) {
+                // Cache base opacity once so we can restore it after the damage pulse
+                if (typeof this._highlightSubBaseOpacity !== 'number') {
+                  this._highlightSubBaseOpacity = this._highlightSub.material.opacity;
+                }
+                this._highlightSub.material.opacity = 0.8;
+              }
+              if (this._damagePhaseTimer >= 0.12) {
+                this._damagePhase = 3;
+                this._damagePhaseTimer = 0;
+                // Restore sub highlight opacity when leaving phase 2
+                if (this._highlightSub && this._highlightSub.material &&
+                    typeof this._highlightSubBaseOpacity === 'number') {
+                  this._highlightSub.material.opacity = this._highlightSubBaseOpacity;
+                }
+              }
             } else if (this._damagePhase === 3) {
               // Phase 3 (200–500 ms): Settling oscillation — let spring-damper handle it
               if (this._damagePhaseTimer >= 0.3) { this._damagePhase = 0; this._damagePhaseTimer = 0; }
@@ -1353,9 +1364,9 @@
             let _accelZ = dt > 0.001 ? (this.velocity.z - _prevVelZStore) / dt : 0;
             _accelX = Math.max(-5, Math.min(5, _accelX));
             _accelZ = Math.max(-5, Math.min(5, _accelZ));
-            // Fluid pushed opposite to acceleration (sloshing)
-            this._fluidVX += -_accelX * 0.12;
-            this._fluidVZ += -_accelZ * 0.12;
+            // Fluid pushed opposite to acceleration (sloshing) — scaled by dt for frame-rate independence
+            this._fluidVX += -_accelX * 0.12 * dt;
+            this._fluidVZ += -_accelZ * 0.12 * dt;
             // Spring back to center (k=22, d=5)
             this._fluidVX += (-22 * this._fluidOffsetX - 5 * this._fluidVX) * dt;
             this._fluidVZ += (-22 * this._fluidOffsetZ - 5 * this._fluidVZ) * dt;
@@ -1464,10 +1475,15 @@
 
         // System 8: Idle Ambient Water Animations
         try {
+          // Ground-level check: skip Y settle while spawn intro animates the player up from depth
+          const _nearGround = this.mesh && this.mesh.position.y >= 0.4 && this.mesh.position.y <= 0.7;
           if (speedMag < 0.02) {
             // Slow gravity settle — water sinks slightly over 2 seconds
-            this._gravitySettleY = Math.min(this._gravitySettleY + dt * 0.01, 0.02);
-            if (this.mesh) this.mesh.position.y = 0.5 - this._gravitySettleY;
+            // Only applies when player is already at/near ground (not during spawn intro)
+            if (_nearGround) {
+              this._gravitySettleY = Math.min(this._gravitySettleY + dt * 0.01, 0.02);
+              this.mesh.position.y = 0.5 - this._gravitySettleY;
+            }
             // Micro-oscillation tipple (very subtle side-to-side)
             this._idleTipX = Math.sin(_time * 0.7 + 0.3) * 0.005;
             this._idleTipZ = Math.cos(_time * 0.9) * 0.004;
@@ -1501,9 +1517,9 @@
               }
             } catch (_e2) {}
           } else {
-            // Restore position/orientation when moving
+            // Restore settle offset when moving — only adjust Y when near ground
             this._gravitySettleY = Math.max(0, this._gravitySettleY - dt * 0.05);
-            if (this.mesh) {
+            if (_nearGround && this.mesh) {
               const _targetY = 0.5 - this._gravitySettleY;
               if (Math.abs(this.mesh.position.y - _targetY) > 0.001) {
                 this.mesh.position.y += (_targetY - this.mesh.position.y) * Math.min(dt * 3, 1);
@@ -2030,7 +2046,6 @@
         try {
           this._damagePhase = 1;
           this._damagePhaseTimer = 0;
-          this._damageImpactDir = { x: 0, z: 0 };
           if (this._membrane) {
             this._membraneWobbleVX = (Math.random() - 0.5) * 4;
             this._membraneWobbleVZ = (Math.random() - 0.5) * 4;
