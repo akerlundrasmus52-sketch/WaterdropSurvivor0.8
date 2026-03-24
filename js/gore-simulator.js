@@ -903,6 +903,13 @@ for (const s of this.streams) s.active = false;
 }
 }
 
+// Helper: get anatomy color for enemy type and organ
+function _getAnatomyColor(enemyType, organ) {
+  if (enemyType === 'slime' && SLIME_ANATOMY[organ]) return SLIME_ANATOMY[organ].color;
+  if (enemyType === 'crawler' && CRAWLER_ANATOMY[organ]) return CRAWLER_ANATOMY[organ].color;
+  return 0x880000;
+}
+
 // ─────────────────────────────────────────────
 //  GORE SIMULATOR — MAIN PUBLIC API
 // ─────────────────────────────────────────────
@@ -1022,7 +1029,7 @@ const wound = gore.addWound(localPos, profile.woundRadius, organHit, {
   depth:      profile.penetration,
   cauterized: profile.cauterizes || false,
   frozen:     profile.freezesBlood || false,
-  color:      (enemy.enemyType === 'slime' && SLIME_ANATOMY[organHit]) ? SLIME_ANATOMY[organHit].color : (enemy.enemyType === 'crawler' && CRAWLER_ANATOMY[organHit]) ? CRAWLER_ANATOMY[organHit].color : 0x880000,
+  color:      _getAnatomyColor(enemy.enemyType, organHit),
 });
 
 // ── SPAWN BLOOD BASED ON WEAPON TYPE ──────

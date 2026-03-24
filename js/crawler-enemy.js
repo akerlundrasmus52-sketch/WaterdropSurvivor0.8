@@ -561,8 +561,8 @@ CrawlerEnemy.prototype.update = function(dt, playerPos) {
     }
   }
   
-  // Clamp to arena
-  var AR = 80; // ARENA_RADIUS
+  // Clamp to arena (uses global ARENA_RADIUS if available, else 80)
+  var AR = (typeof ARENA_RADIUS !== 'undefined') ? ARENA_RADIUS : 80;
   this.group.position.x = Math.max(-AR, Math.min(AR, this.group.position.x));
   this.group.position.z = Math.max(-AR, Math.min(AR, this.group.position.z));
 };

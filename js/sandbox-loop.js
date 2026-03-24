@@ -1144,7 +1144,7 @@
 
     // ── GORE: Corpse linger for 15 seconds with heartbeat blood pumping ──────────
     // Remove from active list but keep the mesh visible as a "corpse"
-    const corpseLinger = 15; // fixed 15 seconds per requirement
+    const corpseLinger = 15; // all corpses stay on ground for 15 seconds
     const idx = _activeSlimes.indexOf(slot);
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
@@ -3610,9 +3610,10 @@
         _spawnWave();
       }
 
-      // Crawler spawn: every 8 seconds after first escalation
+      // Crawler spawn: every 8-12 seconds once wave difficulty escalates past initial waves
       this._crawlerSpawnTimer -= dt;
-      if (this._crawlerSpawnTimer <= 0 && _waveSize >= 5) {
+      var CRAWLER_SPAWN_WAVE_THRESHOLD = 5;
+      if (this._crawlerSpawnTimer <= 0 && _waveSize >= CRAWLER_SPAWN_WAVE_THRESHOLD) {
         this._crawlerSpawnTimer = 8 + Math.random() * 4;
         _spawnCrawler();
       }
