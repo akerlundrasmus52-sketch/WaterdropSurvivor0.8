@@ -70,7 +70,7 @@ class Engine2Sandbox {
     const configureTexture = (texture) => {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(6, 6);
-      texture.anisotropy = Math.min(4, texture.anisotropy || 4);
+      texture.anisotropy = 4;
 
       // Set proper color space for correct display
       if (THREE.SRGBColorSpace !== undefined) {
