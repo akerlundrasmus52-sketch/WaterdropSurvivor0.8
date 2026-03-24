@@ -1585,7 +1585,8 @@ return drop;
 _spawnDecal(pos, radius, color) {
 const mesh = this._decalMeshes[this._decalIndex % MAX_DECALS];
 this._decalIndex++;
-mesh.position.set(pos.x, 0.06, pos.z);
+const decalY = (pos && typeof pos.y === 'number') ? pos.y : 0.06;
+mesh.position.set(pos.x, decalY, pos.z);
 mesh.scale.setScalar(radius * 3 + Math.random() * 0.15);
 mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;

@@ -1000,7 +1000,7 @@
     _reusableBloodPos.z = slot.mesh.position.z;
     const _bloodPos = _reusableBloodPos;
     if (window.BloodSystem) {
-      // Reduced from 30 to 10 particles for realistic subtle hit
+      // Reduced from 30 to 5 particles for realistic subtle hit
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bloodPos, 5, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
       }
@@ -1087,7 +1087,7 @@
 
     // ── DEATH EXPLOSION WITH MASSIVE GORE (MATCH OLD MAP: 600 PARTICLES) ─────
     if (window.BloodSystem) {
-      // OLD MAP: 350-600 particle burst for death - we match with 50
+      // OLD MAP: 350-600 particle burst for death - now tuned to 22 here
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst({ x, y, z }, 22, {
           spreadXZ: 3.0,
@@ -1447,7 +1447,7 @@
     const _bPos1 = _reusableBloodPos;
     _bPos1.x = slot.mesh.position.x; _bPos1.y = slot.mesh.position.y + 0.4; _bPos1.z = slot.mesh.position.z;
     if (window.BloodSystem) {
-      // Increased from 8 to 30 to match old map realism
+      // Increased from 8 to 10 to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos1, 10, { spreadXZ: 0.8, spreadY: 0.4, minLife: 50, maxLife: 100 });
       }
@@ -1489,7 +1489,7 @@
     const _bPos2 = _reusableBloodPos;
     _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
     if (window.BloodSystem) {
-      // Increased from 18 to 60 to match old map impact
+      // Tuned burst count to 18 to match old map impact
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos2, 18, { spreadXZ: 1.5, spreadY: 0.6, minLife: 50, maxLife: 100 });
       }
@@ -1524,7 +1524,7 @@
     const _bPos3 = _reusableBloodPos;
     _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
     if (window.BloodSystem) {
-      // Increased from 30 to 100 to match old map's sniper hit intensity
+      // Burst count tuned to 25 to approximate old map's sniper hit intensity
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst(_bPos3, 25, { spreadXZ: 2.0, spreadY: 0.8, minLife: 50, maxLife: 100 });
       }
@@ -1633,7 +1633,7 @@
     if (!slot) return;
     const size = 0.6 + Math.random() * 0.9;
     slot.mesh.scale.set(size, size, size);
-    slot.mesh.position.set(x + (Math.random() - 0.5) * 0.3, 0.02, z + (Math.random() - 0.5) * 0.3);
+    slot.mesh.position.set(x + (Math.random() - 0.5) * 0.3, 0.06, z + (Math.random() - 0.5) * 0.3);
     slot.mesh.rotation.z = Math.random() * Math.PI * 2;
     slot.mesh.material.opacity = 0;
     slot.mesh.visible = true;

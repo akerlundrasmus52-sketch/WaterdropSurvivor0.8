@@ -33,8 +33,8 @@
 - DESIGN PRINCIPLES:
 - — Zero garbage collection: ALL objects are pre-allocated pools
 - — Zero new THREE.Vector3() during gameplay: reuse scratch vectors
-- — InstancedMesh for blood drops (1 draw call for 800 drops)
-- — InstancedMesh for mist particles (1 draw call for 400)
+- — InstancedMesh for blood drops (1 draw call for 500 drops)
+- — InstancedMesh for mist particles (1 draw call for 250)
 - — Ground decals are merged geometry — 1 draw call total
 - — Flesh chunks: pooled regular meshes (cheap, < 30 max)
 - — Wound decals on enemy: projected circle on enemy surface
