@@ -2418,7 +2418,17 @@
   const _camTarget  = new THREE.Vector3();
 
   function _initInput() {
-    document.addEventListener('keydown', function (e) { _keysDown[e.code] = true; });
+    document.addEventListener('keydown', function (e) {
+      _keysDown[e.code] = true;
+      // 'E' key: attempt to gather resources from nearby trees/rocks
+      if (e.code === 'KeyE' && window.WorldObjects && player && player.mesh) {
+        var result = WorldObjects.tryGather(player.mesh.position.x, player.mesh.position.z);
+        if (result) {
+          _tmpV3.set(player.mesh.position.x, player.mesh.position.y + 1.5, player.mesh.position.z);
+          createFloatingText('+' + result.amount + ' ' + result.type, _tmpV3, result.type === 'wood' ? '#8B6B3A' : '#9A9A9A');
+        }
+      }
+    });
     document.addEventListener('keyup',   function (e) { _keysDown[e.code] = false; });
 
     // Mouse: project onto ground plane (y=0) — uses pre-allocated objects (no GC)
@@ -2573,6 +2583,9 @@
     // Ground bounce — subtle warm light from below
     const bounce = new THREE.HemisphereLight(0x88BBAA, 0x445544, 0.3);
     scene.add(bounce);
+
+    // Store light references for WorldObjects day/night cycle
+    window._sandboxLights = { ambient: ambient, sun: sun, fill: fill, hemisphere: bounce };
 
     // Resize handler
     window.addEventListener('resize', function () {
@@ -2886,12 +2899,12 @@
     // Create player using the existing Player class
     if (typeof Player === 'function') {
       player = new Player();
-      player.mesh.position.set(0, -1.5, 0);
+      player.mesh.position.set(0, SPAWN_SHAFT_DEPTH + 0.5, 0); // Deep underground
     } else {
       const geo = new THREE.SphereGeometry(0.5, 12, 12);
       const mat = new THREE.MeshPhongMaterial({ color: 0x3A9FD8, emissive: 0x0A3D5C, emissiveIntensity: 0.35 });
       const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(0, -1.5, 0);
+      mesh.position.set(0, SPAWN_SHAFT_DEPTH + 0.5, 0); // Deep underground
       mesh.castShadow = true;
       scene.add(mesh);
       player = { mesh, invulnerable: false };
@@ -2910,25 +2923,33 @@
   const _spiralDoorParts = []; // { mesh, ring, segment, baseAngle, baseRadius }
   let _elevatorPlatform = null;
   let _spawnLight = null;
+  let _undergroundShaft = null;   // Black cylinder for spawn hole depth
   const SPIRAL_RING_COUNT = 3;    // concentric rings
   const SPIRAL_SEG_COUNT  = 8;    // segments per ring
-  const SPIRAL_RING_RADII = [1.4, 2.2, 3.0]; // inner to outer
-  const SPIRAL_COLORS     = [0xCC8833, 0xAA6622, 0x886611]; // rust/bronze
+  const SPIRAL_RING_RADII = [1.0, 1.8, 2.6]; // inner to outer — clamped within hole radius 3
+  const SPIRAL_COLORS     = [0x555555, 0x444444, 0x333333]; // heavy metal grey tones
+  const SPAWN_SHAFT_DEPTH = -8;   // deep underground start
 
   function _buildSpiralDoor() {
-    // Segment geometry: thin wedge, approximated as BoxGeometry rotated
-    // Each segment fills 360/8 = 45 degrees of its ring
-    const segH = 0.08; // height of door panel
+    // ── Underground shaft: black cylinder visible through the spawn hole ──
+    const shaftGeo = new THREE.CylinderGeometry(2.8, 2.8, Math.abs(SPAWN_SHAFT_DEPTH) * 2, 24);
+    const shaftMat = new THREE.MeshBasicMaterial({ color: 0x050505, side: THREE.DoubleSide });
+    _undergroundShaft = new THREE.Mesh(shaftGeo, shaftMat);
+    _undergroundShaft.position.set(0, SPAWN_SHAFT_DEPTH, 0);
+    scene.add(_undergroundShaft);
+
+    // Segment geometry: heavy metal door panels
+    const segH = 0.12; // thicker door panels for heavy metal feel
     for (let r = 0; r < SPIRAL_RING_COUNT; r++) {
       const ringR = SPIRAL_RING_RADII[r];
-      const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.9; // 90% fill
-      const segGeo = new THREE.BoxGeometry(arcLen, segH, 0.25);
+      const arcLen = (2 * Math.PI * ringR) / SPIRAL_SEG_COUNT * 0.88;
+      const segGeo = new THREE.BoxGeometry(arcLen, segH, 0.3);
       const segMat = new THREE.MeshStandardMaterial({
         color: SPIRAL_COLORS[r],
-        roughness: 0.5,
-        metalness: 0.6,
-        emissive: 0x331100,
-        emissiveIntensity: 0.3,
+        roughness: 0.3,
+        metalness: 0.9,
+        emissive: 0x111111,
+        emissiveIntensity: 0.1,
       });
       for (let s = 0; s < SPIRAL_SEG_COUNT; s++) {
         const mesh = new THREE.Mesh(segGeo, segMat);
@@ -2945,40 +2966,41 @@
       }
     }
 
-    // Elevator platform — simple disc below the player
-    const platGeo = new THREE.CylinderGeometry(1.1, 1.2, 0.12, 20);
+    // Elevator platform — heavy disc below the player
+    const platGeo = new THREE.CylinderGeometry(2.2, 2.4, 0.2, 24);
     const platMat = new THREE.MeshStandardMaterial({
-      color: 0x445566, roughness: 0.4, metalness: 0.7,
-      emissive: 0x112233, emissiveIntensity: 0.4,
+      color: 0x3A3A3A, roughness: 0.3, metalness: 0.85,
+      emissive: 0x111122, emissiveIntensity: 0.3,
     });
     _elevatorPlatform = new THREE.Mesh(platGeo, platMat);
-    _elevatorPlatform.position.set(0, -2.0, 0);
+    _elevatorPlatform.position.set(0, SPAWN_SHAFT_DEPTH, 0);
     _elevatorPlatform.castShadow = true;
     _elevatorPlatform.visible = false;
     scene.add(_elevatorPlatform);
 
     // Spawn light (point light from below, warm amber)
-    _spawnLight = new THREE.PointLight(0xFFAA44, 0, 12);
-    _spawnLight.position.set(0, -1.0, 0);
+    _spawnLight = new THREE.PointLight(0xFFAA44, 0, 15);
+    _spawnLight.position.set(0, SPAWN_SHAFT_DEPTH + 1, 0);
     scene.add(_spawnLight);
   }
 
   /** Place spiral door segments for a given open fraction (0=closed, 1=fully open). */
   function _updateSpiralDoorGeometry(openFrac, spin) {
     const outFrac = Math.max(0, openFrac);
+    const HOLE_LIMIT = 2.8; // door segments must NOT open wider than the hole
     for (let i = 0; i < _spiralDoorParts.length; i++) {
       const part = _spiralDoorParts[i];
       const r = part.ring;
       // Each ring spins in alternating direction
       const dir = r % 2 === 0 ? 1 : -1;
-      const angle = part.baseAngle + dir * spin * (1 + r * 0.3);
-      // Segments start near center (closed: iris covering hole) and spread outward when opened.
-      // closedR: very small so all segments cluster over the hole; openR: fully spread outside hole.
-      const closedR = 0.15 + r * 0.12;
-      const radius = closedR + outFrac * (part.baseRadius - closedR + 2.0 + r * 0.8);
+      const angle = part.baseAngle + dir * spin * (1 + r * 0.2);
+      // Segments start near center (closed iris) and spread to HOLE_LIMIT (not beyond)
+      const closedR = 0.1 + r * 0.1;
+      const openR = Math.min(part.baseRadius, HOLE_LIMIT);
+      const radius = closedR + outFrac * (openR - closedR);
       part.mesh.position.set(
         Math.cos(angle) * radius,
-        0.04 + r * 0.01,
+        0.06 + r * 0.01,
         Math.sin(angle) * radius
       );
       // Rotate segment to face tangent
@@ -2993,6 +3015,7 @@
     }
     if (_elevatorPlatform) _elevatorPlatform.visible = false;
     if (_spawnLight) { _spawnLight.intensity = 0; }
+    if (_undergroundShaft) _undergroundShaft.visible = false;
   }
 
   /** Main spawn intro tick — drives door, elevator, light from timer. */
@@ -3008,18 +3031,19 @@
     const openT = _clamp((t - 0.2) / 0.55, 0, 1);
     const openEased = openT * openT * (3 - 2 * openT); // smoothstep
 
-    // ── Phase 3 (t 0.35→0.85): Player + elevator rises ─────────────────────
+    // ── Phase 3 (t 0.35→0.85): Player + elevator rises from deep underground ──
     const riseT = _clamp((t - 0.35) / 0.5, 0, 1);
     const riseEased = 1 - Math.pow(1 - riseT, 3);
 
-    // ── Phase 4 (t 0.80→1.0): Door closes back, light fades ────────────────
+    // ── Phase 4 (t 0.80→1.0): Door snaps shut, light fades ────────────────
     const closeT = _clamp((t - 0.80) / 0.20, 0, 1);
+    const closeEased = closeT * closeT; // accelerating snap-shut
 
     // Spin speed: fast during open, slows as it closes
-    const spin = (openEased * 1.4 - closeT * 0.8) * 0.6;
+    const spin = (openEased * 1.4 - closeEased * 1.2) * 0.5;
 
-    // Door open fraction: opens then closes back around elevator
-    const doorOpen = openEased * (1 - closeT * 0.5);
+    // Door open fraction: opens then snaps shut realistically
+    const doorOpen = openEased * (1 - closeEased);
 
     // Only render door if it's appeared
     if (doorAppear > 0.01) {
@@ -3032,20 +3056,23 @@
       }
     }
 
-    // Elevator platform: rises from y=-2 to y=0
+    // Underground shaft visible during spawn
+    if (_undergroundShaft) _undergroundShaft.visible = true;
+
+    // Elevator platform: rises from deep underground to y=0
     if (_elevatorPlatform) {
       _elevatorPlatform.visible = riseT > 0;
-      _elevatorPlatform.position.y = -2.0 + riseEased * 2.1;
+      _elevatorPlatform.position.y = SPAWN_SHAFT_DEPTH + riseEased * Math.abs(SPAWN_SHAFT_DEPTH);
     }
 
-    // Player: rises from y=-1.5 to y=0.5 with elevator, staying above platform
-    player.mesh.position.y = -1.5 + riseEased * 2.0;
+    // Player: rises from deep underground to y=0.5 with elevator
+    player.mesh.position.y = SPAWN_SHAFT_DEPTH + 0.5 + riseEased * (Math.abs(SPAWN_SHAFT_DEPTH) + 0.0);
 
     // Spawn light: ramps up early, fades as door closes
     if (_spawnLight) {
-      const lightStrength = _clamp(doorAppear - closeT, 0, 1);
-      _spawnLight.intensity = lightStrength * 5.0;
-      _spawnLight.position.y = -1.5 + riseEased * 1.5;
+      const lightStrength = _clamp(doorAppear - closeEased, 0, 1);
+      _spawnLight.intensity = lightStrength * 6.0;
+      _spawnLight.position.y = SPAWN_SHAFT_DEPTH + 2 + riseEased * Math.abs(SPAWN_SHAFT_DEPTH);
     }
 
     // Completion
@@ -3094,8 +3121,36 @@
 
     // 3. Apply velocity to position
     if (_playerVx !== 0 || _playerVz !== 0) {
-      player.mesh.position.x = _clamp(player.mesh.position.x + _playerVx * dt, -ARENA_RADIUS, ARENA_RADIUS);
-      player.mesh.position.z = _clamp(player.mesh.position.z + _playerVz * dt, -ARENA_RADIUS, ARENA_RADIUS);
+      var _newPx = _clamp(player.mesh.position.x + _playerVx * dt, -ARENA_RADIUS, ARENA_RADIUS);
+      var _newPz = _clamp(player.mesh.position.z + _playerVz * dt, -ARENA_RADIUS, ARENA_RADIUS);
+
+      // World object collision (trees, rocks, fences) + lake detection
+      if (window.WorldObjects && typeof WorldObjects.checkCollision === 'function') {
+        var _colResult = WorldObjects.checkCollision(_newPx, _newPz, 0.5);
+        _newPx = _colResult.x;
+        _newPz = _colResult.z;
+
+        // Lore Lake: sink to neck, slow walk
+        if (_colResult.inLake) {
+          if (!player._inLake) {
+            player._inLake = true;
+            player._swimBobPhase = 0;
+          }
+          // Speed reduction
+          _playerVx *= WorldObjects.LAKE_SLOW_FACTOR;
+          _playerVz *= WorldObjects.LAKE_SLOW_FACTOR;
+          // Sink player based on depth
+          if (!_spawnIntroActive) {
+            player._swimBobPhase = (player._swimBobPhase || 0) + dt * 2.5;
+            player.mesh.position.y = WorldObjects.LAKE_SINK_Y + Math.sin(player._swimBobPhase) * 0.04;
+          }
+        } else {
+          player._inLake = false;
+        }
+      }
+
+      player.mesh.position.x = _clamp(_newPx, -ARENA_RADIUS, ARENA_RADIUS);
+      player.mesh.position.z = _clamp(_newPz, -ARENA_RADIUS, ARENA_RADIUS);
     }
 
     // 4. Visual effects — use actual velocity magnitude, not raw input, for smooth transitions
@@ -3418,6 +3473,11 @@
         window.DopamineSystem.DamageNumbers.update(dt);
       }
 
+      // World objects: day/night cycle, sway physics, ambient animations
+      if (window.WorldObjects && typeof WorldObjects.update === 'function') {
+        WorldObjects.update(dt);
+      }
+
       // ── Engine 2.0 Landmark Animations ───────────────────────────────────────
       // Animate UFO, Obelisk, and Lake features added to Sandbox 2.0
       if (window._engine2Landmarks) {
@@ -3557,6 +3617,13 @@
       console.log('[🎮 SandboxLoop] Initializing ground (Engine2Sandbox)...');
       _initGround();
       console.log('[🎮 SandboxLoop] ✓ Ground initialized');
+
+      // Initialize static world objects (trees, rocks, fences, grass, Stonehenge, Lore Lake, day/night)
+      if (window.WorldObjects && typeof WorldObjects.init === 'function') {
+        console.log('[🎮 SandboxLoop] Initializing WorldObjects (static map)...');
+        WorldObjects.init(scene, window._sandboxLights);
+        console.log('[🎮 SandboxLoop] ✓ WorldObjects initialized');
+      }
 
       console.log('[🎮 SandboxLoop] Initializing blood/gore systems...');
       _initBloodSystem();
