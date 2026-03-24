@@ -3077,11 +3077,11 @@
     try {
       const loader = new THREE.TextureLoader();
       const tex = loader.load(
-        'assets/textures/mossy_brick_diff_4k.jpg',
+        'assets/textures/rocky_terrain_03_diff_2k.jpg',
         function(t) { mat.map = t; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); mat.color.setHex(0xffffff); mat.needsUpdate = true; },
         undefined,
         function() {
-          loader.load('assets/textures/ground/color.jpg',
+          loader.load('assets/textures/mossy_brick_diff_4k.jpg',
             function(t) { mat.map = t; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); mat.color.setHex(0xffffff); mat.needsUpdate = true; },
             undefined,
             function() { /* all textures failed, plain colour is fine */ }
