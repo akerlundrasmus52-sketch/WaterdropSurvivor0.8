@@ -58,7 +58,7 @@ CHUNK_COUNT:      30,    // flesh/slime chunks   (pooled Mesh)
 DECAL_COUNT:      150,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
 STREAM_COUNT:     12,    // arterial pump streams
-GRAVITY:         -0.018,  // game-scale gravity (was -9.81 which made blood fall 545x too fast)
+GRAVITY:         -9.81,
 GROUND_Y:         0.01,
 DECAL_FADE:       25.0,  // seconds before ground decal fades
 DRIP_RATE:        0.22,  // seconds between wound drips (base)
@@ -69,18 +69,14 @@ BOUNCE_DECAL_PROB: 0.25, // probability of spawning a decal on first bounce
 // ══════════════════════════════════════════
 //  COLOURS — per enemy type
 //  Add more when you add more enemy types
-//  REALISTIC: base=oxygenated blood in air (brighter red)
-//             dark=deoxygenated/thick pooled blood (darker)
-//             organ=arterial spray (bright red-pink)
-//             mist=aerosolized (bright due to light scattering)
 // ══════════════════════════════════════════
 var ENEMY_BLOOD = {
-slime:    { base: 0x22cc44, dark: 0x0a4411, organ: 0x00ff88, mist: 0x66ff88 },
-bug:      { base: 0xaadd00, dark: 0x445500, organ: 0xddff00, mist: 0xddff55 },
-human:    { base: 0xdd0000, dark: 0x550000, organ: 0xff2211, mist: 0xff4433 },
-alien:    { base: 0x8800ff, dark: 0x330055, organ: 0xcc44ff, mist: 0xbb55ff },
-robot:    { base: 0x88aaff, dark: 0x223366, organ: 0xccddff, mist: 0xbbccff },
-default:  { base: 0xdd0000, dark: 0x550000, organ: 0xff2211, mist: 0xff4433 },
+slime:    { base: 0x22cc44, dark: 0x117722, organ: 0x00ff88, mist: 0x55ff66 },
+bug:      { base: 0xaadd00, dark: 0x667700, organ: 0xddff00, mist: 0xccee33 },
+human:    { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
+alien:    { base: 0x8800ff, dark: 0x440088, organ: 0xcc44ff, mist: 0xaa33ee },
+robot:    { base: 0x88aaff, dark: 0x334488, organ: 0xffffff, mist: 0xaaccff },
+default:  { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
 };
 
 // ══════════════════════════════════════════
@@ -96,11 +92,11 @@ label:         'Pistol',
 woundR:        0.045,      // wound radius on body
 penetration:   0.40,       // 0=surface 1=full through
 exitWound:     true,
-exitScale:     2.2,        // exit hole bigger than entry (more realistic)
-dropCount:     28,         // increased for realistic blood volume
-dropSpeed:     [0.08, 0.22], // adjusted for game-scale gravity
-mistCount:     20,         // more mist from cavitation
-mistSpeed:     [0.04, 0.12], // adjusted for game-scale gravity
+exitScale:     1.9,        // exit hole bigger than entry
+dropCount:     18,         // blood drops per hit
+dropSpeed:     [2.5, 6.0], // [min,max] m/s
+mistCount:     12,
+mistSpeed:     [1.0, 3.5],
 chunkChance:   0.0,
 chunkCount:    [0,0],
 pushForce:     0.35,
@@ -115,35 +111,35 @@ label:         'Revolver',
 woundR:        0.060,
 penetration:   0.65,
 exitWound:     true,
-exitScale:     3.0,        // larger exit wound (realistic for .357/.44 Magnum)
-dropCount:     42,         // increased blood volume for heavier rounds
-dropSpeed:     [0.12, 0.30], // adjusted for game-scale gravity
-mistCount:     35,         // more cavitation mist
-mistSpeed:     [0.06, 0.18], // adjusted for game-scale gravity
-chunkChance:   0.12,       // slightly more tissue damage
-chunkCount:    [1,3],
+exitScale:     2.6,
+dropCount:     28,
+dropSpeed:     [4.0, 9.0],
+mistCount:     20,
+mistSpeed:     [2.0, 5.0],
+chunkChance:   0.08,
+chunkCount:    [1,2],
 pushForce:     0.8,
 organDmg:      28,
 pumpOnHeart:   true,
 // Hydrostatic shockwave: radial mist burst
 shockwave:     true,
-shockR:        1.2,        // larger shockwave radius
+shockR:        0.8,
 killStyle:     'penetration',
 },
 
 // ── SHOTGUN ────────────────────────────────────────────────────
 shotgun: {
 label:         'Shotgun',
-woundR:        0.25,       // larger wound cavity
+woundR:        0.22,
 penetration:   0.25,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     145,        // MASSIVE blood volume (realistic shotgun devastation)
-dropSpeed:     [0.15, 0.45], // adjusted for game-scale gravity
-mistCount:     95,         // heavy mist cloud
-mistSpeed:     [0.10, 0.30], // adjusted for game-scale gravity
-chunkChance:   0.92,       // very high tissue damage
-chunkCount:    [6,14],     // more chunks
+dropCount:     90,         // MASSIVE blood volume
+dropSpeed:     [5.0, 16.0],
+mistCount:     60,
+mistSpeed:     [3.0, 9.0],
+chunkChance:   0.85,
+chunkCount:    [4,10],
 pushForce:     3.5,
 organDmg:      55,
 pellets:       9,          // spread pattern
@@ -158,11 +154,11 @@ label:         'SMG',
 woundR:        0.032,
 penetration:   0.38,
 exitWound:     true,
-exitScale:     1.6,
-dropCount:     22,         // more blood for realistic 9mm wound
-dropSpeed:     [0.06, 0.18], // adjusted for game-scale gravity
-mistCount:     16,         // more visible mist
-mistSpeed:     [0.04, 0.11], // adjusted for game-scale gravity
+exitScale:     1.4,
+dropCount:     14,
+dropSpeed:     [2.0, 5.5],
+mistCount:     10,
+mistSpeed:     [1.0, 3.0],
 chunkChance:   0.0,
 chunkCount:    [0,0],
 pushForce:     0.20,
@@ -177,18 +173,18 @@ label:         'Sniper Rifle',
 woundR:        0.022,
 penetration:   1.0,        // full through
 exitWound:     true,
-exitScale:     0.90,       // supersonic — exit slightly larger (realistic)
-dropCount:     55,         // more blood from massive energy transfer
-dropSpeed:     [0.22, 0.70], // adjusted for game-scale gravity
-mistCount:     65,         // heavy mist from supersonic shockwave
-mistSpeed:     [0.15, 0.45], // adjusted for game-scale gravity
-chunkChance:   0.28,       // more tissue damage
-chunkCount:    [2,5],      // more chunks from hydrostatic shock
+exitScale:     0.85,       // supersonic — exit nearly same size
+dropCount:     35,
+dropSpeed:     [7.0, 22.0],
+mistCount:     40,
+mistSpeed:     [5.0, 14.0],
+chunkChance:   0.20,
+chunkCount:    [1,3],
 pushForce:     2.0,
 organDmg:      80,
 // Temporary cavity: huge outward burst then blood collapses inward
 supersonicCavity: true,
-cavityR:       2.8,        // larger cavity radius (realistic supersonic)
+cavityR:       2.2,
 pumpOnHeart:   true,
 killStyle:     'supersonic',
 },
@@ -201,9 +197,9 @@ penetration:   0.32,
 exitWound:     true,
 exitScale:     1.2,
 dropCount:     12,
-dropSpeed:     [0.05, 0.13], // adjusted for game-scale gravity
+dropSpeed:     [2.0, 5.0],
 mistCount:     8,
-mistSpeed:     [0.03, 0.08], // adjusted for game-scale gravity
+mistSpeed:     [1.0, 3.0],
 chunkChance:   0.02,
 chunkCount:    [0,1],
 pushForce:     0.18,
@@ -220,9 +216,9 @@ penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     160,
-dropSpeed:     [0.25, 0.70], // adjusted for game-scale gravity
+dropSpeed:     [10.0, 28.0],
 mistCount:     100,
-mistSpeed:     [0.15, 0.45], // adjusted for game-scale gravity
+mistSpeed:     [6.0, 18.0],
 chunkChance:   1.0,
 chunkCount:    [8,18],
 pushForce:     20.0,
@@ -240,9 +236,9 @@ penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     300,
-dropSpeed:     [0.45, 1.10], // adjusted for game-scale gravity
+dropSpeed:     [18.0, 45.0],
 mistCount:     200,
-mistSpeed:     [0.25, 0.62], // adjusted for game-scale gravity
+mistSpeed:     [10.0, 25.0],
 chunkChance:   1.0,
 chunkCount:    [15,30],
 pushForce:     50.0,
@@ -260,7 +256,7 @@ penetration:   1.0,
 exitWound:     true,
 exitScale:     0.7,
 dropCount:     3,          // cauterizes — barely bleeds
-dropSpeed:     [0.008, 0.04], // adjusted for game-scale gravity (minimal blood)
+dropSpeed:     [0.3, 1.5],
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -281,9 +277,9 @@ penetration:   0.70,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     45,
-dropSpeed:     [0.09, 0.25], // adjusted for game-scale gravity
+dropSpeed:     [3.5, 10.0],
 mistCount:     30,
-mistSpeed:     [0.05, 0.18], // adjusted for game-scale gravity
+mistSpeed:     [2.0, 7.0],
 chunkChance:   0.35,
 chunkCount:    [2,5],
 pushForce:     2.5,
@@ -301,7 +297,7 @@ penetration:   0.92,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     22,
-dropSpeed:     [0.005, 0.04], // adjusted for game-scale gravity (low velocity slash)
+dropSpeed:     [0.2, 1.5],
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -322,9 +318,9 @@ penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     50,
-dropSpeed:     [0.012, 0.10], // adjusted for game-scale gravity
+dropSpeed:     [0.5, 4.0],
 mistCount:     5,
-mistSpeed:     [0.012, 0.05], // adjusted for game-scale gravity
+mistSpeed:     [0.5, 2.0],
 chunkChance:   0.15,
 chunkCount:    [1,2],
 pushForce:     1.0,
@@ -343,9 +339,9 @@ penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     70,
-dropSpeed:     [0.025, 0.12], // adjusted for game-scale gravity
+dropSpeed:     [1.0, 5.0],
 mistCount:     8,
-mistSpeed:     [0.012, 0.06], // adjusted for game-scale gravity
+mistSpeed:     [0.5, 2.5],
 chunkChance:   0.50,
 chunkCount:    [2,4],
 pushForce:     2.5,
@@ -364,7 +360,7 @@ penetration:   0.15,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     2,
-dropSpeed:     [0.0025, 0.012], // adjusted for game-scale gravity (minimal due to cauterization)
+dropSpeed:     [0.1, 0.5],
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -386,9 +382,9 @@ penetration:   0.55,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     20,
-dropSpeed:     [0.012, 0.06], // adjusted for game-scale gravity
+dropSpeed:     [0.5, 2.5],
 mistCount:     12,
-mistSpeed:     [0.007, 0.037], // adjusted for game-scale gravity
+mistSpeed:     [0.3, 1.5],
 chunkChance:   0.0,
 chunkCount:    [0,0],
 pushForce:     0.4,
@@ -406,9 +402,9 @@ penetration:   1.0,
 exitWound:     true,
 exitScale:     1.0,
 dropCount:     12,
-dropSpeed:     [0.037, 0.12], // adjusted for game-scale gravity
+dropSpeed:     [1.5, 5.0],
 mistCount:     20,
-mistSpeed:     [0.025, 0.10], // adjusted for game-scale gravity
+mistSpeed:     [1.0, 4.0],
 chunkChance:   0.06,
 chunkCount:    [0,1],
 pushForce:     4.0,
@@ -426,7 +422,7 @@ penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     40,
-dropSpeed:     [0.0025, 0.015], // adjusted for game-scale gravity (low velocity)
+dropSpeed:     [0.1, 0.6],
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -448,9 +444,9 @@ penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     400,
-dropSpeed:     [0.50, 1.35], // adjusted for game-scale gravity (extreme impact)
+dropSpeed:     [20.0, 55.0],
 mistCount:     250,
-mistSpeed:     [0.30, 0.75], // adjusted for game-scale gravity
+mistSpeed:     [12.0, 30.0],
 chunkChance:   1.0,
 chunkCount:    [20,40],
 pushForce:     80.0,
@@ -528,10 +524,6 @@ var _streams  = [];
 // ── Per-enemy gore state ─────────────────────────────────────────
 var _goreMap  = new Map();   // enemyId → EnemyGoreState
 
-// ── Enemy tracking for blood staining ────────────────────────────
-var _nearbyEnemies = [];  // Array of nearby enemies for blood staining
-var _stainCheckFrame = 0; // Throttle enemy stain checks
-
 // ══════════════════════════════════════════
 //  DATA STRUCTURES (plain objects, no classes
 //  to avoid GC from constructor calls)
@@ -543,10 +535,10 @@ alive:    false,
 idx:      0,        // index into InstancedMesh
 px:0, py:0, pz:0,  // position
 vx:0, vy:0, vz:0,  // velocity
-r:        0.0018,   // radius (realistic: 1-6mm blood drops, default ~1.8mm)
+r:        0.015,    // radius
 life:     0,
 maxLife:  0,
-viscosity:0.78,     // increased for realistic blood viscosity (3-4x water)
+viscosity:0.72,
 bounces:  0,
 maxBounces:3,
 onGround: false,
@@ -655,7 +647,7 @@ var mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 _dropIM = new THREE.InstancedMesh(geo, mat, CFG.DROP_COUNT);
 _dropIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 _dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
-new Float32Array(CFG.DROP_COUNT * 3), 3
+  new Float32Array(CFG.DROP_COUNT * 3), 3
 );
 _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
@@ -685,7 +677,7 @@ var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opac
 _mistIM = new THREE.InstancedMesh(geo, mat, CFG.MIST_COUNT);
 _mistIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 _mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
-new Float32Array(CFG.MIST_COUNT * 3), 3
+  new Float32Array(CFG.MIST_COUNT * 3), 3
 );
 _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
@@ -924,8 +916,8 @@ _updateDrop(d, dt, _dropIM, false);
 dirty = true;
 }
 if (dirty) {
-_dropIM.instanceMatrix.needsUpdate = true;
-if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
+  _dropIM.instanceMatrix.needsUpdate = true;
+  if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
 }
 
 // ── Update mist ──────────────────────────
@@ -937,8 +929,8 @@ _updateDrop(d, dt, _mistIM, true);
 mistDirty = true;
 }
 if (mistDirty) {
-_mistIM.instanceMatrix.needsUpdate = true;
-if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
+  _mistIM.instanceMatrix.needsUpdate = true;
+  if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
 }
 
 // ── Update chunks ────────────────────────
@@ -1007,21 +999,13 @@ d.life -= dt;
 if (d.life <= 0) { _killDrop(d, im); return; }
 
 if (d.onGround) {
-// Settled: grow into puddle, no scale shrink (prevents blinking)
-d.r = Math.min(d.r + dt * 0.012, 0.18);  // larger max puddle, faster growth
-var s = d.r * 250;
-_m4.makeScale(s, 0.08, s);
-_m4.setPosition(d.px, CFG.GROUND_Y + 0.001, d.pz);
+// Settled: slowly spread as puddle, fade near end
+d.r = Math.min(d.r + dt * 0.01, 0.05);
+if (d.life < 2.5) {
+var a = d.life / 2.5;
+_m4.makeScale(d.r * 18 * a, 0.04 * a, d.r * 18 * a);
+_m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
 im.setMatrixAt(d.idx, _m4);
-// Fade via color alpha approximation - darken toward black as life ends
-if (d.life < 4.0) {  // longer fade time
-var fade = d.life / 4.0;
-var baseHex = d.color;
-var r = ((baseHex >> 16) & 0xff) * fade;
-var g = ((baseHex >> 8) & 0xff) * fade;
-var b = (baseHex & 0xff) * fade;
-_col.setRGB(r/255, g/255, b/255);
-im.setColorAt(d.idx, _col);
 }
 return;
 }
@@ -1047,33 +1031,29 @@ d.pz += d.vz * dt;
 if (d.py <= CFG.GROUND_Y) {
 d.py = CFG.GROUND_Y;
 if (d.bounces < d.maxBounces && !isMist) {
-// Realistic bounce: lose 65-75% energy, lateral bleeds off faster
-var bounceY = Math.abs(d.vy) * (0.25 - d.viscosity * 0.10);
+// Realistic bounce: lose 60-70% energy, lateral bleeds off
+var bounceY = Math.abs(d.vy) * (0.28 - d.viscosity * 0.12);
 d.vy = bounceY;
-d.vx *= 0.48;  // more energy loss laterally
-d.vz *= 0.48;
+d.vx *= 0.55;
+d.vz *= 0.55;
 d.bounces++;
 if (d.bounces === 1 && Math.random() < CFG.BOUNCE_DECAL_PROB) {
-_spawnDecal(d.px, d.pz, d.r * 2.2, d.color);  // larger initial splatter
-// Check for nearby enemies to stain
-_checkEnemyStaining(d.px, d.py, d.pz, d.color, d.r);
+_spawnDecal(d.px, d.pz, d.r * 1.8, d.color);
 }
 } else {
 d.vy = 0; d.vx = 0; d.vz = 0;
 d.onGround = true;
-_spawnDecal(d.px, d.pz, d.r * 3.2, d.color);  // larger final splatter
-// Check for nearby enemies to stain with blood
-_checkEnemyStaining(d.px, d.py, d.pz, d.color, d.r);
+_spawnDecal(d.px, d.pz, d.r * 2.5, d.color);
 }
 }
 
 // ── Update InstancedMesh matrix ────────
 var spd  = Math.sqrt(speed2);
-var s    = d.r * 250; // increased scale for realistic visibility (1-6mm drops visible)
+var s    = d.r * 5;
 
 if (!d.onGround && spd > 3.5) {
-// Elongate drop along velocity vector at high speed (realistic aerodynamics)
-var stretch = 1.0 + spd * 0.12;  // more stretching at speed
+// Elongate drop along velocity vector at high speed
+var stretch = 1.0 + spd * 0.07;
 _m4.makeScale(s, s * stretch, s);
 // Orient along velocity — approximate with y-axis align
 var len = spd + 0.0001;
@@ -1086,7 +1066,7 @@ Math.sqrt(1 - 0.25 * (d.vx * d.vx + d.vz * d.vz) / (len * len))
 _m4.makeRotationFromQuaternion(_q0);
 _m4.scale(_s0.set(s, s * stretch, s));
 } else if (d.onGround) {
-_m4.makeScale(s, 0.08, s);  // flatter puddles
+_m4.makeScale(s, 0.05, s);
 } else {
 _m4.makeScale(s, s, s);
 }
@@ -1174,23 +1154,23 @@ var ey = s.enemy.mesh ? s.enemy.mesh.position.y : 0;
 var ez = s.enemy.mesh ? s.enemy.mesh.position.z : 0;
 var wx = ex + s.lx, wy = ey + s.ly, wz = ez + s.lz;
 
-var spd   = 4.5 + s.pressure * 12.0;  // increased arterial spray speed
-var count = Math.max(2, Math.ceil(s.pressure * 8));  // more drops per pump
+var spd   = 3.5 + s.pressure * 9.5;
+var count = Math.max(1, Math.ceil(s.pressure * 6));
 
 for (var i = 0; i < count; i++) {
 var d = _getFreeDrop(_dropData);
 if (!d) break;
 d.alive = true;
 d.px = wx; d.py = wy; d.pz = wz;
-d.vx = s.dx * spd + (Math.random()-0.5) * 1.2;
-d.vy = s.dy * spd + Math.random() * 0.8 * s.pressure;
-d.vz = s.dz * spd + (Math.random()-0.5) * 1.2;
-d.r          = 0.0025 * s.pressure + Math.random() * 0.0022;  // larger arterial drops
-d.maxLife    = 2.5 + Math.random()*1.5;
+d.vx = s.dx * spd + (Math.random()-0.5) * 0.8;
+d.vy = s.dy * spd + Math.random() * 0.6 * s.pressure;
+d.vz = s.dz * spd + (Math.random()-0.5) * 0.8;
+d.r          = 0.022 * s.pressure + Math.random() * 0.015;
+d.maxLife    = 1.8 + Math.random();
 d.life       = d.maxLife;
-d.viscosity  = 0.68;  // realistic arterial blood viscosity
+d.viscosity  = 0.55;
 d.bounces    = 0;
-d.maxBounces = 3;  // more bounces for high-pressure blood
+d.maxBounces = 2;
 d.onGround   = false;
 d.color      = s.color;
 d.frozen     = false; d.charred = false;
@@ -1208,54 +1188,26 @@ var oData = anat[w.organ];
 if (!oData) return;
 
 w.dripTimer += dt;
-var rate = CFG.DRIP_RATE / (oData.bleedRate * (0.5 + w.depth));  // adjusted drip rate
+var rate = CFG.DRIP_RATE / (oData.bleedRate * (0.4 + w.depth));
 if (w.dripTimer >= rate) {
 w.dripTimer = 0;
-var wx = ex + w.lx, wy = ey + w.ly, wz = ez + w.lz;
-
-// Main drip drop
 var d = _getFreeDrop(_dropData);
-if (d) {
+if (!d) return;
 d.alive = true;
-d.px = wx; d.py = wy; d.pz = wz;
-d.vx = (Math.random()-0.5)*0.3 + evx*0.15;
-d.vy = -0.6 - Math.random()*1.5;  // faster drip (gravity)
-d.vz = (Math.random()-0.5)*0.3 + evz*0.15;
-d.r = 0.0018 + w.depth * 0.003;  // realistic drip size 1.8-4.8mm
-d.maxLife = 3.0 + Math.random()*1.5;
-d.life = d.maxLife;
-d.viscosity = 0.75;  // thicker dripping blood
-d.bounces = 0; d.maxBounces = 2;
-d.onGround = false;
-d.color = w.color;
-d.frozen = false; d.charred = false;
-}
-
-// Deep wound: arterial spurt shoots sideways-up
-if (w.depth > 0.5 && Math.random() < w.depth * 0.8) {  // more frequent spurts
-var spurtCount = Math.ceil(w.depth * 6);  // more spurts
-for (var si = 0; si < spurtCount; si++) {
-var ds = _getFreeDrop(_dropData);
-if (!ds) break;
-var sa = Math.random() * Math.PI * 2;
-var ss = 2.0 + Math.random() * 4.0 * w.depth;  // stronger spurts
-ds.alive = true;
-ds.px = wx + (Math.random()-0.5)*0.05;
-ds.py = wy;
-ds.pz = wz + (Math.random()-0.5)*0.05;
-ds.vx = Math.cos(sa) * ss * 0.7 + evx * 0.2;
-ds.vy = 1.2 + Math.random() * 3.0 * w.depth;  // higher spurts
-ds.vz = Math.sin(sa) * ss * 0.7 + evz * 0.2;
-ds.r = 0.0015 + Math.random() * 0.0025;  // realistic spurt drops
-ds.maxLife = 2.5 + Math.random() * 2.0;
-ds.life = ds.maxLife;
-ds.viscosity = 0.68;  // arterial blood
-ds.bounces = 0; ds.maxBounces = 3;
-ds.onGround = false;
-ds.color = w.color;
-ds.frozen = false; ds.charred = false;
-}
-}
+d.px = ex + w.lx;
+d.py = ey + w.ly;
+d.pz = ez + w.lz;
+d.vx = (Math.random()-0.5)*0.25 + evx*0.12;
+d.vy = -0.45 - Math.random()*0.9;
+d.vz = (Math.random()-0.5)*0.25 + evz*0.12;
+d.r         = 0.009 + w.depth * 0.012;
+d.maxLife   = 2.2 + Math.random();
+d.life      = d.maxLife;
+d.viscosity = 0.70;
+d.bounces   = 0; d.maxBounces = 2;
+d.onGround  = false;
+d.color     = w.color;
+d.frozen    = false; d.charred = false;
 }
 
 }
@@ -1282,38 +1234,14 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx * spd + (Math.random()-0.5) * sctr * 6;
 d.vy = ny * spd + Math.random() * 1.8;
 d.vz = nz * spd + (Math.random()-0.5) * sctr * 6;
-d.r         = 0.0015 + Math.random()*0.004;  // realistic 1.5-5.5mm drops
-d.maxLife   = 3.0 + Math.random()*2.0;       // longer lifetime for tracking
+d.r         = 0.010 + Math.random()*0.022;
+d.maxLife   = 2.5 + Math.random()*1.5;
 d.life      = d.maxLife;
-d.viscosity = 0.72 + Math.random()*0.08;     // realistic blood viscosity variation
+d.viscosity = 0.60;
 d.bounces   = 0; d.maxBounces = 3;
 d.onGround  = false;
-d.color     = (Math.random() < 0.3) ? col.dark : col.base;  // more dark blood
+d.color     = (Math.random() < 0.15) ? col.dark : col.base;
 d.frozen    = false; d.charred = false;
-}
-
-// Extra micro-droplets spraying sideways (capillary spray)
-var microCount = Math.floor(wp.dropCount * 0.5);  // more micro-droplets
-for (var i = 0; i < microCount; i++) {
-var d = _getFreeDrop(_dropData);
-if (!d) break;
-var a = Math.random() * Math.PI * 2;
-var microSpd = 0.5 + Math.random() * 2.5;
-d.alive = true;
-d.px = hx + (Math.random()-0.5)*0.1;
-d.py = hy;
-d.pz = hz + (Math.random()-0.5)*0.1;
-d.vx = Math.cos(a) * microSpd;
-d.vy = 0.3 + Math.random() * 1.2;
-d.vz = Math.sin(a) * microSpd;
-d.r = 0.0008 + Math.random() * 0.002;  // tiny droplets 0.8-2.8mm
-d.maxLife = 2.0 + Math.random();
-d.life = d.maxLife;
-d.viscosity = 0.65;
-d.bounces = 0; d.maxBounces = 2;
-d.onGround = false;
-d.color = col.base;
-d.frozen = false; d.charred = false;
 }
 
 // Mist
@@ -1326,10 +1254,10 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx*spd + (Math.random()-0.5)*spd*0.8;
 d.vy = ny*spd + Math.random()*0.8;
 d.vz = nz*spd + (Math.random()-0.5)*spd*0.8;
-d.r         = 0.0003 + Math.random()*0.0005;  // fine mist 0.3-0.8mm
-d.maxLife   = 1.2 + Math.random()*0.8;        // mist lasts longer in air
+d.r         = 0.004 + Math.random()*0.007;
+d.maxLife   = 0.8 + Math.random()*0.5;
 d.life      = d.maxLife;
-d.viscosity = 0.18;  // low viscosity for mist
+d.viscosity = 0.20;
 d.bounces   = 0; d.maxBounces = 0;
 d.onGround  = false;
 d.color     = col.mist;
@@ -1338,7 +1266,7 @@ d.frozen    = false; d.charred = false;
 
 // Exit wound
 if (wp.exitWound) {
-var ec = Math.ceil(wp.dropCount * 0.65);  // more exit wound blood
+var ec = Math.ceil(wp.dropCount * 0.55);
 for (var i = 0; i < ec; i++) {
 var d = _getFreeDrop(_dropData);
 if (!d) break;
@@ -1348,13 +1276,13 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = -nx*spd + (Math.random()-0.5)*3.5;
 d.vy = Math.abs(-ny*spd) + Math.random()*2.0;
 d.vz = -nz*spd + (Math.random()-0.5)*3.5;
-d.r         = 0.002 + Math.random()*0.005;  // larger exit drops 2-7mm
-d.maxLife   = 3.0 + Math.random()*2.5;
+d.r         = 0.016 + Math.random()*0.028;
+d.maxLife   = 2.2 + Math.random()*2.0;
 d.life      = d.maxLife;
-d.viscosity = 0.76;  // thicker blood from tissue
+d.viscosity = 0.58;
 d.bounces   = 0; d.maxBounces = 4;
 d.onGround  = false;
-d.color     = col.dark;  // darker blood from deep tissue
+d.color     = col.dark;
 d.frozen    = false; d.charred = false;
 }
 }
@@ -1855,69 +1783,21 @@ _decalIdx++;
 dd.alive   = true;
 dd.life    = CFG.DECAL_FADE;
 dd.maxLife = CFG.DECAL_FADE;
-dd.mesh.position.set(x, CFG.GROUND_Y + 0.005, z);
-// Irregular splat - different x/z for organic look
-var rx = radius * (5 + Math.random() * 4);
-var rz = radius * (3 + Math.random() * 5);
-dd.mesh.scale.set(rx, rz, 1);
+dd.mesh.position.set(x, CFG.GROUND_Y, z);
+// Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
+dd.mesh.scale.set(
+radius * (5 + Math.random() * 2),
+radius * (3 + Math.random() * 2),
+1
+);
 dd.mesh.rotation.z = Math.random() * Math.PI * 2;
-// Darken color = dried blood effect on ground
-var r2 = ((color >> 16) & 0xff) * 0.65;
-var g2 = ((color >> 8) & 0xff) * 0.65;
-var b2 = (color & 0xff) * 0.65;
-var darkened = (Math.floor(r2) << 16) | (Math.floor(g2) << 8) | Math.floor(b2);
-dd.mesh.material.color.setHex(darkened || 0x3a0000);
-dd.mesh.material.opacity = 0.78 + Math.random()*0.18;
+dd.mesh.material.color.setHex(color || 0x880000);
+dd.mesh.material.opacity = 0.70 + Math.random()*0.15;
 dd.mesh.visible = true;
 }
 
 function _spawnSplat(x, z, size, color) {
 _spawnDecal(x, z, size * 1.2, color);
-}
-
-// ══════════════════════════════════════════
-//  ENEMY BLOOD STAINING SYSTEM
-//  Blood splatters on nearby enemies for realism
-// ══════════════════════════════════════════
-function _checkEnemyStaining(bloodX, bloodY, bloodZ, color, radius) {
-// Throttle: only check every 3 frames for performance
-_stainCheckFrame++;
-if (_stainCheckFrame % 3 !== 0) return;
-
-// Check all enemies in gore map for proximity
-_goreMap.forEach(function(gs) {
-if (!gs.enemy || !gs.enemy.alive || !gs.enemy.mesh) return;
-var ex = gs.enemy.mesh.position.x;
-var ey = gs.enemy.mesh.position.y;
-var ez = gs.enemy.mesh.position.z;
-var dx = ex - bloodX;
-var dy = ey - bloodY;
-var dz = ez - bloodZ;
-var dist2 = dx*dx + dy*dy + dz*dz;
-var stainRadius = 1.5;  // stain within 1.5m
-if (dist2 < stainRadius * stainRadius) {
-// Blood landed near this enemy - add a wound/stain
-var localY = (bloodY - ey) / (gs.enemy.mesh.scale ? gs.enemy.mesh.scale.y : 1.0);
-localY = Math.max(-1, Math.min(1, localY));
-var organ = _getOrgan(gs.type, localY);
-// Create a small surface stain (not a deep wound)
-if (gs.wounds.length < CFG.WOUND_PER_ENEMY) {
-gs.wounds.push({
-alive: true,
-lx: dx * 0.5,  // offset from enemy center
-ly: dy * 0.5,
-lz: dz * 0.5,
-radius: radius * 1.5,
-depth: 0.1,  // shallow stain
-organ: organ,
-color: color,
-dripTimer: 0,
-cauterized: false,
-frozen: false,
-});
-}
-}
-});
 }
 
 // ══════════════════════════════════════════
@@ -2175,148 +2055,148 @@ window.BloodSystem = {
 
 // ── lifecycle ─────────────────────────────────────────────────────────────
 init: function (scene) {
-// Guard: BV2.init is called once by sandbox-loop directly too
-// Only init if not already initialized
-if (!BV2._initialized) BV2.init(scene);
+  // Guard: BV2.init is called once by sandbox-loop directly too
+  // Only init if not already initialized
+  if (!BV2._initialized) BV2.init(scene);
 },
 
 update: function (dt) {
-// game-loop.js calls update() with no arg; sandbox-loop.js calls update() with no arg too.
-// BloodV2.update expects deltaTime in seconds.  Default to 1/60 when omitted.
-BV2.update(typeof dt === 'number' ? dt : 1 / 60);
+  // game-loop.js calls update() with no arg; sandbox-loop.js calls update() with no arg too.
+  // BloodV2.update expects deltaTime in seconds.  Default to 1/60 when omitted.
+  BV2.update(typeof dt === 'number' ? dt : 1 / 60);
 },
 
 reset: function () {
-if (typeof BV2.reset === 'function') BV2.reset();
+  if (typeof BV2.reset === 'function') BV2.reset();
 },
 
 // ── burst / spray ─────────────────────────────────────────────────────────
 emitBurst: function (pos, count, opts) {
-var p = _pos3(pos);
-var hp = { x: p.x, y: p.y, z: p.z };
-var cnt = typeof count === 'number' ? count : 30;
-// Use pistol for small bursts, revolver for big - NO chunks (chunkChance=0)
-var wk = cnt > 150 ? 'revolver' : 'pistol';
-var e = _fakeEnemy(pos);
-BV2.hit(e, wk, hp, null);
-// Extra hits for large bursts - still no chunks
-if (cnt > 100) BV2.hit(e, 'pistol', hp, null);
-if (cnt > 250) { BV2.hit(e, 'pistol', hp, null); BV2.hit(e, 'pistol', hp, null); }
+  var p = _pos3(pos);
+  var hp = { x: p.x, y: p.y, z: p.z };
+  var cnt = typeof count === 'number' ? count : 30;
+  // Use pistol for small bursts, revolver for big - NO chunks (chunkChance=0)
+  var wk = cnt > 150 ? 'revolver' : 'pistol';
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, wk, hp, null);
+  // Extra hits for large bursts - still no chunks
+  if (cnt > 100) BV2.hit(e, 'pistol', hp, null);
+  if (cnt > 250) { BV2.hit(e, 'pistol', hp, null); BV2.hit(e, 'pistol', hp, null); }
 },
 
 emitPulse: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-var p = _pos3(pos);
-BV2.hit(e, 'revolver', { x: p.x, y: p.y, z: p.z }, null);
+  var e = _fakeEnemy(pos);
+  var p = _pos3(pos);
+  BV2.hit(e, 'revolver', { x: p.x, y: p.y, z: p.z }, null);
 },
 
 emitDrop: function (x, y, z /*, vx, vy, vz, size */) {
-var e = _fakeEnemy({ x: x, y: y, z: z });
-BV2.hit(e, 'pistol', { x: x, y: y, z: z }, null);
+  var e = _fakeEnemy({ x: x, y: y, z: z });
+  BV2.hit(e, 'pistol', { x: x, y: y, z: z }, null);
 },
 
 // ── gore ──────────────────────────────────────────────────────────────────
 emitGuts: function (pos /*, opts */) {
-// Use pistol kill - no chunk spawning, just blood burst
-var e = _fakeEnemy(pos);
-BV2.kill(e, 'pistol');
+  // Use pistol kill - no chunk spawning, just blood burst
+  var e = _fakeEnemy(pos);
+  BV2.kill(e, 'pistol');
 },
 
 emitHeartbeatWound: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'revolver', e.mesh.position, null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'revolver', e.mesh.position, null);
 },
 
 // ── wounds / drips ────────────────────────────────────────────────────────
 addWound: function (enemy /*, opts */) {
-// BloodV2 manages wounds internally via hit(); no separate wound-tracking call needed.
+  // BloodV2 manages wounds internally via hit(); no separate wound-tracking call needed.
 },
 
 // ── weapon-specific effects (used by enemy-class.js) ─────────────────────
 emitSwordSlash: function (pos, dir, count) {
-var e = _fakeEnemy(pos);
-var p = _pos3(pos);
-BV2.hit(e, 'sword', { x: p.x, y: p.y, z: p.z }, dir || null);
+  var e = _fakeEnemy(pos);
+  var p = _pos3(pos);
+  BV2.hit(e, 'sword', { x: p.x, y: p.y, z: p.z }, dir || null);
 },
 
 emitAuraBurn: function (pos, count) {
-var e = _fakeEnemy(pos);
-var p = _pos3(pos);
-BV2.hit(e, 'aura', { x: p.x, y: p.y, z: p.z }, null);
+  var e = _fakeEnemy(pos);
+  var p = _pos3(pos);
+  BV2.hit(e, 'aura', { x: p.x, y: p.y, z: p.z }, null);
 },
 
 emitHeadBleed: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-var p = _pos3(pos);
-BV2.hit(e, 'pistol', { x: p.x, y: p.y + 0.5, z: p.z }, null);
+  var e = _fakeEnemy(pos);
+  var p = _pos3(pos);
+  BV2.hit(e, 'pistol', { x: p.x, y: p.y + 0.5, z: p.z }, null);
 },
 
 emitExitWound: function (pos, dir, count /*, opts */) {
-var e = _fakeEnemy(pos);
-var p = _pos3(pos);
-BV2.hit(e, 'shotgun', { x: p.x, y: p.y, z: p.z }, dir || null);
+  var e = _fakeEnemy(pos);
+  var p = _pos3(pos);
+  BV2.hit(e, 'shotgun', { x: p.x, y: p.y, z: p.z }, dir || null);
 },
 
 emitDroneMist: function (pos, dir, count) {
-var e = _fakeEnemy(pos);
-var p = _pos3(pos);
-BV2.hit(e, 'pistol', { x: p.x, y: p.y, z: p.z }, dir || null);
+  var e = _fakeEnemy(pos);
+  var p = _pos3(pos);
+  BV2.hit(e, 'pistol', { x: p.x, y: p.y, z: p.z }, dir || null);
 },
 
 // ── water / player effects (player-class.js) ─────────────────────────────
 emitWaterBurst: function (pos /*, count, opts */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'pistol', _pos3(pos), null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'pistol', _pos3(pos), null);
 },
 
 emitWaterPulse: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'revolver', _pos3(pos), null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'revolver', _pos3(pos), null);
 },
 
 // ── trail effects (enemy-class.js) ───────────────────────────────────────
 emitDragTrail: function (pos, dir /*, count */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'pistol', _pos3(pos), dir || null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'pistol', _pos3(pos), dir || null);
 },
 
 emitSpinTrail: function (pos, angle /*, count */) {
-var e = _fakeEnemy(pos);
-var dir = { x: Math.cos(angle || 0), y: 0, z: Math.sin(angle || 0) };
-BV2.hit(e, 'pistol', _pos3(pos), dir);
+  var e = _fakeEnemy(pos);
+  var dir = { x: Math.cos(angle || 0), y: 0, z: Math.sin(angle || 0) };
+  BV2.hit(e, 'pistol', _pos3(pos), dir);
 },
 
 emitCrawlTrail: function (pos, dir /*, count */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'pistol', _pos3(pos), dir || null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'pistol', _pos3(pos), dir || null);
 },
 
 // ── arterial / throat sprays ──────────────────────────────────────────────
 emitArterialSpurt: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'shotgun', _pos3(pos), null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'shotgun', _pos3(pos), null);
 },
 
 emitThroatSpray: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'shotgun', _pos3(pos), null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'shotgun', _pos3(pos), null);
 },
 
 // ── area effects ─────────────────────────────────────────────────────────
 emitMeteorExplosion: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-BV2.kill(e, 'shotgun');
+  var e = _fakeEnemy(pos);
+  BV2.kill(e, 'shotgun');
 },
 
 emitPoolGrow: function (pos /*, opts */) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'pistol', _pos3(pos), null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'pistol', _pos3(pos), null);
 },
 
 // ── catch-all for any future callers ─────────────────────────────────────
 emitSwordSlashFX: function (pos, dir) {
-var e = _fakeEnemy(pos);
-BV2.hit(e, 'sword', _pos3(pos), dir || null);
+  var e = _fakeEnemy(pos);
+  BV2.hit(e, 'sword', _pos3(pos), dir || null);
 }
 
 };
