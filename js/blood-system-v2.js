@@ -63,7 +63,7 @@ GROUND_Y:         0.02,
 DECAL_FADE:       45.0,  // seconds before ground decal fades
 DRIP_RATE:        0.15,  // seconds between wound drips (base)
 PUMP_RATE:        0.05,  // seconds between arterial pumps
-BOUNCE_DECAL_PROB: 0.25, // probability of spawning a decal on first bounce
+BOUNCE_DECAL_PROB: 0.10, // probability of spawning a decal on first bounce
 };
 
 // ══════════════════════════════════════════
@@ -94,9 +94,9 @@ woundR:        0.045,      // wound radius on body
 penetration:   0.40,       // 0=surface 1=full through
 exitWound:     true,
 exitScale:     1.9,        // exit hole bigger than entry
-dropCount:     18,         // blood drops per hit
+dropCount:     10,         // blood drops per hit
 dropSpeed:     [2.5, 6.0], // [min,max] m/s
-mistCount:     12,
+mistCount:     6,
 mistSpeed:     [1.0, 3.5],
 chunkChance:   0.0,
 chunkCount:    [0,0],
@@ -113,9 +113,9 @@ woundR:        0.060,
 penetration:   0.65,
 exitWound:     true,
 exitScale:     2.6,
-dropCount:     28,
+dropCount:     15,
 dropSpeed:     [4.0, 9.0],
-mistCount:     20,
+mistCount:     10,
 mistSpeed:     [2.0, 5.0],
 chunkChance:   0.08,
 chunkCount:    [1,2],
@@ -135,9 +135,9 @@ woundR:        0.22,
 penetration:   0.25,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     90,         // MASSIVE blood volume
+dropCount:     45,         // MASSIVE blood volume
 dropSpeed:     [5.0, 16.0],
-mistCount:     60,
+mistCount:     30,
 mistSpeed:     [3.0, 9.0],
 chunkChance:   0.85,
 chunkCount:    [4,10],
@@ -156,9 +156,9 @@ woundR:        0.032,
 penetration:   0.38,
 exitWound:     true,
 exitScale:     1.4,
-dropCount:     14,
+dropCount:     8,
 dropSpeed:     [2.0, 5.5],
-mistCount:     10,
+mistCount:     5,
 mistSpeed:     [1.0, 3.0],
 chunkChance:   0.0,
 chunkCount:    [0,0],
@@ -175,9 +175,9 @@ woundR:        0.022,
 penetration:   1.0,        // full through
 exitWound:     true,
 exitScale:     0.85,       // supersonic — exit nearly same size
-dropCount:     35,
+dropCount:     18,
 dropSpeed:     [7.0, 22.0],
-mistCount:     40,
+mistCount:     20,
 mistSpeed:     [5.0, 14.0],
 chunkChance:   0.20,
 chunkCount:    [1,3],
@@ -197,9 +197,9 @@ woundR:        0.028,
 penetration:   0.32,
 exitWound:     true,
 exitScale:     1.2,
-dropCount:     12,
+dropCount:     7,
 dropSpeed:     [2.0, 5.0],
-mistCount:     8,
+mistCount:     4,
 mistSpeed:     [1.0, 3.0],
 chunkChance:   0.02,
 chunkCount:    [0,1],
@@ -216,9 +216,9 @@ woundR:        0.55,
 penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     160,
+dropCount:     80,
 dropSpeed:     [10.0, 28.0],
-mistCount:     100,
+mistCount:     50,
 mistSpeed:     [6.0, 18.0],
 chunkChance:   1.0,
 chunkCount:    [8,18],
@@ -236,9 +236,9 @@ woundR:        0.90,
 penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     300,
+dropCount:     150,
 dropSpeed:     [18.0, 45.0],
-mistCount:     200,
+mistCount:     100,
 mistSpeed:     [10.0, 25.0],
 chunkChance:   1.0,
 chunkCount:    [15,30],
@@ -277,9 +277,9 @@ woundR:        0.14,
 penetration:   0.70,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     45,
+dropCount:     22,
 dropSpeed:     [3.5, 10.0],
-mistCount:     30,
+mistCount:     15,
 mistSpeed:     [2.0, 7.0],
 chunkChance:   0.35,
 chunkCount:    [2,5],
@@ -297,7 +297,7 @@ woundR:        0.022,
 penetration:   0.92,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     22,
+dropCount:     12,
 dropSpeed:     [0.2, 1.5],
 mistCount:     0,
 mistSpeed:     [0,0],
@@ -318,9 +318,9 @@ woundR:        0.042,
 penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     50,
+dropCount:     25,
 dropSpeed:     [0.5, 4.0],
-mistCount:     5,
+mistCount:     3,
 mistSpeed:     [0.5, 2.0],
 chunkChance:   0.15,
 chunkCount:    [1,2],
@@ -339,9 +339,9 @@ woundR:        0.09,
 penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     70,
+dropCount:     35,
 dropSpeed:     [1.0, 5.0],
-mistCount:     8,
+mistCount:     4,
 mistSpeed:     [0.5, 2.5],
 chunkChance:   0.50,
 chunkCount:    [2,4],
@@ -382,9 +382,9 @@ woundR:        0.065,
 penetration:   0.55,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     20,
+dropCount:     10,
 dropSpeed:     [0.5, 2.5],
-mistCount:     12,
+mistCount:     6,
 mistSpeed:     [0.3, 1.5],
 chunkChance:   0.0,
 chunkCount:    [0,0],
@@ -402,9 +402,9 @@ woundR:        0.035,
 penetration:   1.0,
 exitWound:     true,
 exitScale:     1.0,
-dropCount:     12,
+dropCount:     7,
 dropSpeed:     [1.5, 5.0],
-mistCount:     20,
+mistCount:     10,
 mistSpeed:     [1.0, 4.0],
 chunkChance:   0.06,
 chunkCount:    [0,1],
@@ -422,7 +422,7 @@ woundR:        0.026,
 penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     40,
+dropCount:     20,
 dropSpeed:     [0.1, 0.6],
 mistCount:     0,
 mistSpeed:     [0,0],
@@ -444,9 +444,9 @@ woundR:        1.20,
 penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     400,
+dropCount:     200,
 dropSpeed:     [20.0, 55.0],
-mistCount:     250,
+mistCount:     125,
 mistSpeed:     [12.0, 30.0],
 chunkChance:   1.0,
 chunkCount:    [20,40],
@@ -1001,10 +1001,10 @@ if (d.life <= 0) { _killDrop(d, im); return; }
 
 if (d.onGround) {
 // Settled: slowly spread as puddle, fade near end
-d.r = Math.min(d.r + dt * 0.01, 0.05);
+d.r = Math.min(d.r + dt * 0.008, 0.025);
 if (d.life < 2.5) {
 var a = d.life / 2.5;
-_m4.makeScale(d.r * 18 * a, 0.04 * a, d.r * 18 * a);
+_m4.makeScale(d.r * 8 * a, 0.04 * a, d.r * 8 * a);
 _m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
 im.setMatrixAt(d.idx, _m4);
 }
@@ -1039,18 +1039,18 @@ d.vx *= 0.55;
 d.vz *= 0.55;
 d.bounces++;
 if (d.bounces === 1 && Math.random() < CFG.BOUNCE_DECAL_PROB) {
-_spawnDecal(d.px, d.pz, d.r * 1.8, d.color);
+_spawnDecal(d.px, d.pz, d.r * 0.8, d.color);
 }
 } else {
 d.vy = 0; d.vx = 0; d.vz = 0;
 d.onGround = true;
-_spawnDecal(d.px, d.pz, d.r * 2.5, d.color);
+_spawnDecal(d.px, d.pz, d.r * 1.2, d.color);
 }
 }
 
 // ── Update InstancedMesh matrix ────────
 var spd  = Math.sqrt(speed2);
-var s    = d.r * 5;
+var s    = d.r * 2;
 
 if (!d.onGround && spd > 3.5) {
 // Elongate drop along velocity vector at high speed
@@ -1067,7 +1067,7 @@ Math.sqrt(1 - 0.25 * (d.vx * d.vx + d.vz * d.vz) / (len * len))
 _m4.makeRotationFromQuaternion(_q0);
 _m4.scale(_s0.set(s, s * stretch, s));
 } else if (d.onGround) {
-_m4.makeScale(s, 0.05, s);
+_m4.makeScale(s, 0.03, s);
 } else {
 _m4.makeScale(s, s, s);
 }
@@ -1787,8 +1787,8 @@ dd.maxLife = CFG.DECAL_FADE;
 dd.mesh.position.set(x, CFG.GROUND_Y, z);
 // Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
-radius * (5 + Math.random() * 2),
-radius * (3 + Math.random() * 2),
+radius * (2 + Math.random() * 1.5),
+radius * (1.5 + Math.random() * 1),
 1
 );
 dd.mesh.rotation.z = Math.random() * Math.PI * 2;
