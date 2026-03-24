@@ -294,6 +294,7 @@
   const GAME_OVER_RELOAD_DELAY_MS = 2000;    // ms to show "YOU DIED" before page reload
   const SLIME_HP            = 80;
   const SLIME_SPEED         = 1.8;           // world units / second
+  const SLIME_DAMAGE        = 22;            // contact damage per hit (brutally hard before upgrades)
   const PICKUP_RANGE        = 3.5;           // world units — magnetism pull starts here
   const MAGNETISM_SPEED     = 6.0;           // units/sec toward player while in range
   const ARENA_RADIUS        = 80;            // half of 200×200 arena
@@ -357,6 +358,7 @@
   let _spawnInterval = 4.0;        // seconds between wave spawns (decreases over time)
   let _escalationTimer = ESCALATION_INTERVAL; // seconds until next difficulty escalation
   let _allFleshChunks = [];        // global flying flesh chunk list (from all pool slots)
+  let _activeCrawlers = [];        // live list of active crawler enemies
   let _projPool = [];              // reusable projectile objects
   let _activeProjList = [];        // currently flying projectiles
   let _animateErrorShown = false;  // prevent spamming error display every frame
@@ -458,6 +460,10 @@
     _enemySpatialHash.clear();
     for (let i = 0; i < _activeSlimes.length; i++) {
       _enemySpatialHash.insert(_activeSlimes[i]);
+    }
+    // Also insert active crawlers into spatial hash for collision detection
+    for (let i = 0; i < _activeCrawlers.length; i++) {
+      _enemySpatialHash.insert(_activeCrawlers[i]);
     }
   }
 
@@ -570,7 +576,7 @@
 
       // Collision with enemies — use spatial hash if available (O(1) per projectile)
       let hitThisFrame = false;
-      if (_enemySpatialHash && _activeSlimes.length > 0) {
+      if (_enemySpatialHash && (_activeSlimes.length > 0 || _activeCrawlers.length > 0)) {
         const nearby = _enemySpatialHash.query(p.mesh.position.x, p.mesh.position.z, COLLISION_QUERY_RADIUS);
         for (let si = 0; si < nearby.length; si++) {
           const s = nearby[si];
@@ -578,7 +584,11 @@
           const ex = p.mesh.position.x - s.mesh.position.x;
           const ez = p.mesh.position.z - s.mesh.position.z;
           if (ex * ex + ez * ez < COLLISION_THRESHOLD_SQ) {
-            _hitSlime(p, s);
+            if (s.enemyType === 'crawler') {
+              _hitCrawler(p, s);
+            } else {
+              _hitSlime(p, s);
+            }
             _releaseProjectile(p, i);
             hitThisFrame = true;
             break;
@@ -596,6 +606,21 @@
             _releaseProjectile(p, i);
             hitThisFrame = true;
             break;
+          }
+        }
+        if (!hitThisFrame) {
+          // Also check crawlers in brute-force mode
+          for (let ci = 0; ci < _activeCrawlers.length; ci++) {
+            const c = _activeCrawlers[ci];
+            if (!c.active || c.dead) continue;
+            const cx = p.mesh.position.x - c.mesh.position.x;
+            const cz = p.mesh.position.z - c.mesh.position.z;
+            if (cx * cx + cz * cz < COLLISION_THRESHOLD_SQ) {
+              _hitCrawler(p, c);
+              _releaseProjectile(p, i);
+              hitThisFrame = true;
+              break;
+            }
           }
         }
       }
@@ -655,14 +680,16 @@
 
       // Eye pair with tracking
       const eyePupils = [];
+      const eyeMeshes = [];
       [-0.22, 0.22].forEach(function (ox) {
-        const eye = new THREE.Mesh(eyeGeo, eyeMat);
+        const eye = new THREE.Mesh(eyeGeo, eyeMat.clone());
         eye.position.set(ox, 0.3, 0.6);
         const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.06, 5, 5), pupilMat);
         pupil.position.set(0, 0, 0.06);
         eye.add(pupil);
         mesh.add(eye);
         eyePupils.push(pupil); // Store reference for eye tracking
+        eyeMeshes.push(eye);   // Store eye mesh for blink animation
       });
 
       // Pre-allocate wound meshes (pooled — no new THREE.Mesh during gameplay)
@@ -687,6 +714,7 @@
         woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
         woundCount: 0, // number of currently active wound meshes
         eyePupils,   // Store eye pupil references for tracking
+        eyeMeshes,  // eye meshes for blinking
         hp: SLIME_HP,
         maxHp: SLIME_HP,
         active: false,
@@ -698,6 +726,10 @@
         knockbackVz: 0,
         lastDamageTime: 0,
         damageStage: 0,
+        // Blinking eyes
+        blinkTimer: 0,
+        nextBlinkTime: 2 + Math.random() * 4,
+        isBlinking: false,
         // Attack lunge animation state
         attackTimer: 0,       // cooldown until next lunge
         lungeTime: 0,         // active lunge duration (0 = idle)
@@ -705,6 +737,7 @@
         lungeDirZ: 0,
         // Properties expected by Player.prototype.update (auto-aim, collision checks)
         id: 'pool-slime-' + i,
+        enemyType: 'slime',
         type: 'slime',
         radius: 0.7,
         isBoss: false,
@@ -969,6 +1002,16 @@
       }
     }
 
+    // ── GORE SIMULATOR: Connect every weapon to gore system ──────────────────
+    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+      _tmpV3.set(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z);
+      var hitNormal = null;
+      if (projectile && projectile.vx !== undefined) {
+        hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
+      }
+      GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
+    }
+
     // ── BULLET HOLE GENERATION: Create a NEW visible bullet hole on slime mesh per shot ──
     // This ensures EVERY single gun shot dynamically generates a visible bullet hole
     if (slot.woundPool && slot.woundCount < slot.woundPool.length) {
@@ -1087,6 +1130,11 @@
       }
     }
 
+    // ── GORE SIMULATOR: Weapon-specific death reaction ──────────────────────
+    if (window.GoreSim && typeof GoreSim.onKill === 'function') {
+      GoreSim.onKill(slot, 'pistol', null);
+    }
+
     // DISABLED: Flying flesh chunks removed for realistic gore (user request)
     // User wants realistic slime death without chunks - just blood and corpse
     // _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 5), true);
@@ -1094,9 +1142,9 @@
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
 
-    // ── GORE: Corpse linger for 10-15 seconds with heartbeat blood pumping ─────────
+    // ── GORE: Corpse linger for 15 seconds with heartbeat blood pumping ──────────
     // Remove from active list but keep the mesh visible as a "corpse"
-    const corpseLinger = 10 + Math.random() * 5; // 10-15 seconds
+    const corpseLinger = 15; // all corpses stay on ground for 15 seconds
     const idx = _activeSlimes.indexOf(slot);
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
@@ -1169,6 +1217,192 @@
 
   function _updateSlimeHPBar(slot) {
     // HP bars removed - function kept for compatibility but does nothing
+  }
+
+  // ─── CRAWLER HIT & KILL ───────────────────────────────────────────────────────
+  function _hitCrawler(projectile, crawler) {
+    if (!crawler || !crawler.active || crawler.dead || crawler.dying) return;
+
+    const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
+    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
+    const isCrit = Math.random() < critChance;
+    const critMultiplier = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
+    const actualDmg = Math.round(damage * hitForce * critMultiplier);
+
+    crawler.hp -= actualDmg;
+    crawler.flashTimer = 0.1;
+    crawler.squishTime = 0.3;
+
+    // Knockback
+    if (projectile && projectile.vx !== undefined) {
+      crawler.knockbackVx = projectile.vx * 0.03 * hitForce;
+      crawler.knockbackVz = projectile.vz * 0.03 * hitForce;
+    }
+
+    // Floating damage text
+    const cx = crawler.mesh.position.x;
+    const cz = crawler.mesh.position.z;
+    if (isCrit) {
+      _tmpV3.set(cx, 2.0, cz);
+      createFloatingText(actualDmg, _tmpV3, '#FFD700', actualDmg);
+      _tmpV3.set(cx, 2.4, cz);
+      createFloatingText('Critical', _tmpV3, '#FF4400', 0);
+    } else {
+      _tmpV3.set(cx, 1.5, cz);
+      createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
+    }
+
+    // Blood from crawler (brown/amber blood)
+    _reusableBloodPos.x = cx;
+    _reusableBloodPos.y = 0.5;
+    _reusableBloodPos.z = cz;
+    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+      BloodSystem.emitBurst(_reusableBloodPos, 20, { spreadXZ: 0.8, spreadY: 0.4, minLife: 40, maxLife: 80 });
+    }
+
+    // Gore simulator
+    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+      _tmpV3.set(cx, 0.4, cz);
+      var hitNormal = null;
+      if (projectile && projectile.vx !== undefined) {
+        hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
+      }
+      GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
+    }
+
+    // Bullet hole on crawler
+    if (crawler.woundPool && crawler.woundCount < crawler.woundPool.length) {
+      const wound = crawler.woundPool[crawler.woundCount++];
+      wound.material.color.setHex(0x441100);
+      wound.visible = true;
+      wound.position.set(
+        (Math.random() - 0.5) * 0.3,
+        0.1 + Math.random() * 0.2,
+        (Math.random() - 0.5) * 0.5
+      );
+      wound.scale.setScalar(0.5);
+    }
+
+    if (crawler.hp <= 0) {
+      _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0);
+    }
+  }
+
+  function _killCrawler(crawler, hitForce, killVX, killVZ) {
+    const x = crawler.mesh.position.x;
+    const y = 0.4;
+    const z = crawler.mesh.position.z;
+
+    _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 1.5);
+    _triggerShake(SHAKE_KILL_BASE * 1.3 + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
+
+    // Crawler explodes into segmented chunks — massive brown/amber blood burst
+    if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst({ x, y, z }, 400, {
+          spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100
+        });
+      }
+      if (typeof BloodSystem.emitGuts === 'function') {
+        BloodSystem.emitGuts({ x, y, z }, 25);
+      }
+    }
+
+    // Gore sim kill
+    if (window.GoreSim && typeof GoreSim.onKill === 'function') {
+      GoreSim.onKill(crawler, 'pistol', null);
+    }
+
+    _placeBloodStain(x, z);
+
+    // Mark as dying (crawler death animation handles fade)
+    crawler.dying = true;
+    crawler.deathTimer = 0;
+    const cidx = _activeCrawlers.indexOf(crawler);
+    if (cidx !== -1) _activeCrawlers.splice(cidx, 1);
+
+    // Corpse stays 15 seconds
+    const poolGeo = new THREE.CircleGeometry(0.1, 10);
+    const poolMat = new THREE.MeshBasicMaterial({
+      color: 0x442200, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false
+    });
+    const poolMesh = new THREE.Mesh(poolGeo, poolMat);
+    poolMesh.rotation.x = -Math.PI / 2;
+    poolMesh.position.set(x, 0.03, z);
+    scene.add(poolMesh);
+    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 15, bloodTimer: 0, poolMesh: poolMesh, poolMat: poolMat, x: x, z: z });
+
+    // Drop XP
+    const gemType = hitForce > 2.0 ? 5 : (hitForce > 1.5 ? 3 : 2);
+    const gem = _acquireExpGem(x, z, 'gun', hitForce, gemType);
+    if (gem) {
+      gem.vx += killVX * 0.04;
+      gem.vz += killVZ * 0.04;
+      expGems.push(gem);
+    }
+    // Bonus drop
+    if (Math.random() < BONUS_XP_DROP_RATE * 1.5) {
+      const bonus = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemType);
+      if (bonus) expGems.push(bonus);
+    }
+
+    playerStats.kills++;
+    if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
+      GameRageCombat.addRage(12);
+    }
+  }
+
+  /** Spawn crawlers alongside slimes during waves */
+  function _spawnCrawler() {
+    if (!window.CrawlerPool || !player || !player.mesh) return;
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = 10 + Math.random() * 8;
+    const px    = player.mesh.position.x;
+    const pz    = player.mesh.position.z;
+    const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    const waveLevel = Math.floor(_waveSize / 4) + 1;
+    const c = CrawlerPool.spawn(rx, rz, waveLevel);
+    if (c) {
+      _activeCrawlers.push(c);
+    }
+  }
+
+  /** Update crawlers: contact damage to player */
+  function _updateCrawlers(dt) {
+    if (!window.CrawlerPool || !player || !player.mesh) return;
+    const playerPos = player.mesh.position;
+    CrawlerPool.update(dt, playerPos);
+
+    // Refresh active list and handle contact damage
+    for (let i = _activeCrawlers.length - 1; i >= 0; i--) {
+      const c = _activeCrawlers[i];
+      if (!c.active || c.dying) {
+        _activeCrawlers.splice(i, 1);
+        continue;
+      }
+      // Contact damage (crawler does more damage than slimes)
+      const dx = playerPos.x - c.mesh.position.x;
+      const dz = playerPos.z - c.mesh.position.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 1.3 && !player.invulnerable) {
+        const now = Date.now();
+        if (now - c.lastDamageTime > 400) {
+          c.lastDamageTime = now;
+          const crawlerDmg = window.CRAWLER_CFG ? window.CRAWLER_CFG.BASE_DAMAGE : 18;
+          if (typeof player.takeDamage === 'function') {
+            player.takeDamage(crawlerDmg, 'crawler', c.mesh.position);
+          } else {
+            playerStats.hp -= crawlerDmg;
+          }
+          if (playerStats && playerStats.hp <= 0) {
+            playerStats.hp = 0;
+            gameOver();
+          }
+        }
+      }
+    }
   }
 
   // ─── 5-PART GORE SYSTEM ───────────────────────────────────────────────────────
@@ -1761,6 +1995,26 @@
         }
       }
 
+      // ── Blinking eyes (feel alive) ──────────────────────────────
+      if (s.eyeMeshes && s.eyeMeshes.length > 0 && !s.dead) {
+        s.blinkTimer += dt;
+        if (s.blinkTimer >= s.nextBlinkTime && !s.isBlinking) {
+          s.isBlinking = true;
+          s.blinkTimer = 0;
+          s.nextBlinkTime = 2 + Math.random() * 4;
+        }
+        if (s.isBlinking) {
+          const bp = Math.min(1, s.blinkTimer / 0.1);
+          const eyeScaleY = bp < 0.5 ? Math.max(0.05, 1 - bp * 2) : Math.max(0.05, (bp - 0.5) * 2);
+          s.eyeMeshes.forEach(eye => { eye.scale.y = eyeScaleY; });
+          if (bp >= 1) {
+            s.isBlinking = false;
+            s.blinkTimer = 0;
+            s.eyeMeshes.forEach(eye => { eye.scale.y = 1; });
+          }
+        }
+      }
+
       // Squish animation on hit
       let squishX = 1.0, squishY = 1.0, squishZ = 1.0;
       if (s.squishTime > 0) {
@@ -1839,15 +2093,15 @@
         }
       }
 
-      // Contact damage to player
+      // Contact damage to player (brutally hard before Camp upgrades)
       if (dist < 1.1 && !player.invulnerable) {
         const now = Date.now();
         if (now - s.lastDamageTime > 500) {
           s.lastDamageTime = now;
           if (typeof player.takeDamage === 'function') {
-            player.takeDamage(8, 'slime', s.mesh.position);
+            player.takeDamage(SLIME_DAMAGE, 'slime', s.mesh.position);
           } else {
-            playerStats.hp -= 8;
+            playerStats.hp -= SLIME_DAMAGE;
           }
           // Sandbox HP guard: always check game-over via playerStats (works even if
           // player.takeDamage doesn't call gameOver() itself in sandbox context)
@@ -3347,12 +3601,21 @@
   // Keeps the core animate loop clean.  Adheres to the pre-allocated pool
   // architecture — all spawns go through _spawnWave / _activateSlime.
   const WaveManager = {
+    _crawlerSpawnTimer: 0,
     /** Tick wave timers and escalation.  Call once per frame from _animate. */
     update: function(dt) {
       _spawnTimer -= dt;
       if (_spawnTimer <= 0) {
         _spawnTimer = _spawnInterval;
         _spawnWave();
+      }
+
+      // Crawler spawn: every 8-12 seconds once wave difficulty escalates past initial waves
+      this._crawlerSpawnTimer -= dt;
+      var CRAWLER_SPAWN_WAVE_THRESHOLD = 5;
+      if (this._crawlerSpawnTimer <= 0 && _waveSize >= CRAWLER_SPAWN_WAVE_THRESHOLD) {
+        this._crawlerSpawnTimer = 8 + Math.random() * 4;
+        _spawnCrawler();
       }
 
       _escalationTimer -= dt;
@@ -3416,6 +3679,7 @@
       _rebuildSpatialHash();
 
       _updateSlime(dt);
+      _updateCrawlers(dt);
       _tryFire(dt);
       _updateProjectiles(dt);
       _updateWeaponEffects(dt); // sword/samurai/aura active weapon effects
@@ -3645,6 +3909,13 @@
       console.log('[🎮 SandboxLoop] Building slime enemy pool...');
       _buildSlimePool();     // Pre-allocate enemy pool (50 slots)
       console.log('[🎮 SandboxLoop] ✓ Slime pool built (50 slots)');
+
+      // Initialize crawler enemy pool
+      if (window.CrawlerPool && typeof CrawlerPool.init === 'function') {
+        console.log('[🎮 SandboxLoop] Building crawler enemy pool...');
+        CrawlerPool.init(scene, 15);
+        console.log('[🎮 SandboxLoop] ✓ Crawler pool built (15 slots)');
+      }
 
       console.log('[🎮 SandboxLoop] Spawning first wave...');
       _spawnWave();          // Spawn first wave immediately
