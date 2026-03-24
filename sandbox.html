@@ -535,14 +535,55 @@
   <!-- 1. Three.js (local copy, same version used by main game) -->
   <script src="js/three.min.js"></script>
 
-  <!-- Post-processing (bloom) — loaded after Three.js, before game scripts -->
-  <!-- These attach to THREE.* namespace; all wrapped in try-catch in sandbox-loop.js -->
-  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <!--
+    Bloom post-processing scripts — loaded dynamically from CDN only when
+    the user opts in via localStorage ("enableBloom" = "1").
+    This avoids an unconditional runtime dependency on unpkg.com and keeps the
+    offline / CDN-outage risk opt-in only.
+
+    Version is pinned to the same THREE.REVISION as the local three.min.js (r155).
+    Scripts are inserted with async=false so they execute in dependency order.
+    If any script fails to load the try-catch in sandbox-loop.js falls back to
+    standard renderer.render() automatically.
+
+    To enable bloom during a session open DevTools and run:
+        localStorage.setItem('enableBloom', '1');  location.reload();
+    To disable:
+        localStorage.removeItem('enableBloom');     location.reload();
+  -->
+  <script>
+    (function () {
+      var bloomEnabled = false;
+      try {
+        if (window.localStorage && window.localStorage.getItem('enableBloom') === '1') {
+          bloomEnabled = true;
+        }
+      } catch (e) {
+        bloomEnabled = false;
+      }
+
+      if (!bloomEnabled) return;
+
+      var base = 'https://unpkg.com/three@0.155.0/examples/js/';
+      var scripts = [
+        base + 'postprocessing/EffectComposer.js',
+        base + 'postprocessing/RenderPass.js',
+        base + 'postprocessing/ShaderPass.js',
+        base + 'shaders/LuminosityHighPassShader.js',
+        base + 'postprocessing/UnrealBloomPass.js',
+        base + 'shaders/CopyShader.js'
+      ];
+
+      var head = document.head || document.getElementsByTagName('head')[0];
+      for (var i = 0; i < scripts.length; i++) {
+        var s = document.createElement('script');
+        s.src = scripts[i];
+        s.async = false;          // preserve execution order
+        s.crossOrigin = 'anonymous';
+        head.appendChild(s);
+      }
+    })();
+  </script>
 
   <script src="js/enemy-class.js"></script>
 

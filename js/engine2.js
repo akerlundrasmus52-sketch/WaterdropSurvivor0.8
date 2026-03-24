@@ -55,7 +55,6 @@ class Engine2Sandbox {
       this._createArena();
       this._applyTerrainDisplacement();
       this._createLandmarks();
-      this._setupLighting();
       this.loaded = true;
       console.log('[Engine2] Engine 2.0 arena initialized successfully');
     });
@@ -844,31 +843,66 @@ class Engine2Sandbox {
            + Math.sin(x * 0.15 + z * 0.12) * 0.25;
     }
 
-    const terrainGeo = new THREE.PlaneGeometry(200, 200, 128, 128);
+    // Build terrain shape matching the arena footprint with a center hole so the
+    // spawn shaft stays visible through the mesh (not occluded by a solid overlay).
+    const halfSize = 100;
+    const groundSize = 200;
+    const holeRadius = 4; // match the flat-zone boundary requested by the spec
+
+    const terrainShape = new THREE.Shape();
+    terrainShape.moveTo(-halfSize, -halfSize);
+    terrainShape.lineTo( halfSize, -halfSize);
+    terrainShape.lineTo( halfSize,  halfSize);
+    terrainShape.lineTo(-halfSize,  halfSize);
+    terrainShape.lineTo(-halfSize, -halfSize);
+
+    const holePath = new THREE.Path();
+    holePath.absarc(0, 0, holeRadius, 0, Math.PI * 2, false);
+    terrainShape.holes.push(holePath);
+
+    // 128 curve-segments gives ~128 vertices around the hole for smooth blending
+    const terrainGeo = new THREE.ShapeGeometry(terrainShape, 128);
+
+    // Normalize UVs from raw shape coords to 0-1 (same as _createArena ground)
+    const uvAttr = terrainGeo.attributes.uv;
+    for (let i = 0; i < uvAttr.count; i++) {
+      uvAttr.setXY(
+        i,
+        (uvAttr.getX(i) + halfSize) / groundSize,
+        (uvAttr.getY(i) + halfSize) / groundSize
+      );
+    }
+    uvAttr.needsUpdate = true;
+
+    // Displace vertices — ShapeGeometry is in the XY plane; setting Z moves
+    // vertices "up" in local space, which becomes world-Y after -PI/2 X rotation.
     const posAttr = terrainGeo.attributes.position;
-    const maxHeight = 2.5;
+    // Drastically reduced max height so players/enemies don't visibly clip
+    // through the terrain (game movement only tracks X/Z, not Y).
+    const maxHeight = 0.6;
 
     for (let i = 0; i < posAttr.count; i++) {
-      const x = posAttr.getX(i);
-      const z = posAttr.getY(i); // PlaneGeometry is in XY before rotation; Y becomes Z after -PI/2 X rotation
+      const x = posAttr.getX(i); // world X (unchanged by rotation)
+      const y = posAttr.getY(i); // shape Y → -world Z after rotation
 
-      // Distance from origin (center hole)
-      const distFromCenter = Math.sqrt(x * x + z * z);
+      // Distance in world XZ — sqrt(x²+y²) is invariant under the Y→-Z flip
+      const distFromCenter = Math.sqrt(x * x + y * y);
 
-      // Smooth falloff near center hole: flat within radius 4, blend 4..8
+      // Smooth falloff from hole edge (r=4) outward to r=8 for clean transition
       let centerFalloff = 1.0;
-      if (distFromCenter < 8) {
-        centerFalloff = distFromCenter < 4 ? 0.0 : (distFromCenter - 4) / 4.0;
+      const flatZoneOuter = 8;
+      if (distFromCenter < flatZoneOuter) {
+        const span = flatZoneOuter - holeRadius;
+        centerFalloff = span > 0 ? (distFromCenter - holeRadius) / span : 0;
+        if (centerFalloff < 0) centerFalloff = 0;
       }
 
-      // Smooth falloff near edges (200x200 so half = 100): flatten within 10 units of edge
-      const edgeDist = Math.min(100 - Math.abs(x), 100 - Math.abs(z));
+      // Flatten within 10 units of outer edge for clean boundary
+      const edgeDist = Math.min(halfSize - Math.abs(x), halfSize - Math.abs(y));
       const edgeFalloff = edgeDist < 10 ? Math.max(0, edgeDist / 10.0) : 1.0;
 
-      const rawNoise = noise2D(x, z);
-      const height = rawNoise * maxHeight * centerFalloff * edgeFalloff;
-
-      posAttr.setZ(i, height); // Z is up in PlaneGeometry local space (before rotation)
+      const height = noise2D(x, y) * maxHeight * centerFalloff * edgeFalloff;
+      posAttr.setZ(i, height);
     }
 
     terrainGeo.computeVertexNormals();
@@ -900,36 +934,7 @@ class Engine2Sandbox {
     this.terrainMesh.receiveShadow = true;
     this.scene.add(this.terrainMesh);
 
-    console.log('[Engine2] ✓ Terrain displacement overlay added (gentle rolling hills)');
-  }
-
-  /**
-   * Set up enhanced lighting: hemisphere + strong directional with shadows.
-   * Called from init() after _createArena() so lights complement the terrain.
-   */
-  _setupLighting() {
-    if (!this.scene) return;
-
-    // Hemisphere light — sky/ground tones for ambient bounce
-    this._hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x362907, 0.3);
-    this.scene.add(this._hemiLight);
-
-    // Directional light — warm sunlight with PCF soft shadows
-    this._dirLight = new THREE.DirectionalLight(0xfff0dd, 1.2);
-    this._dirLight.position.set(50, 80, 30);
-    this._dirLight.castShadow = true;
-    this._dirLight.shadow.mapSize.width  = 2048;
-    this._dirLight.shadow.mapSize.height = 2048;
-    this._dirLight.shadow.camera.left   = -60;
-    this._dirLight.shadow.camera.right  =  60;
-    this._dirLight.shadow.camera.top    =  60;
-    this._dirLight.shadow.camera.bottom = -60;
-    this._dirLight.shadow.camera.near   = 0.5;
-    this._dirLight.shadow.camera.far    = 200;
-    this._dirLight.shadow.bias          = -0.001;
-    this.scene.add(this._dirLight);
-
-    console.log('[Engine2] ✓ Enhanced lighting set up (HemisphereLight + DirectionalLight with shadows)');
+    console.log('[Engine2] ✓ Terrain displacement overlay added (gentle rolling hills, hole preserved)');
   }
 
   /**
@@ -972,18 +977,6 @@ class Engine2Sandbox {
       this.terrainMesh.material.dispose();
     }
     this.terrainMesh = null;
-
-    // Clean up engine-added lights
-    if (this._hemiLight && this.scene) {
-      this.scene.remove(this._hemiLight);
-      this._hemiLight.dispose && this._hemiLight.dispose();
-    }
-    this._hemiLight = null;
-    if (this._dirLight && this.scene) {
-      this.scene.remove(this._dirLight);
-      this._dirLight.dispose && this._dirLight.dispose();
-    }
-    this._dirLight = null;
 
     this.loaded = false;
     console.log('[Engine2] ✓ Cleaned up Engine 2.0 arena and all resources');
