@@ -3113,36 +3113,9 @@
     _initSpatialHash();
   }
 
-  // ─── Sandbox status overlay ───────────────────────────────────────────────────
+  // ─── Sandbox status overlay (disabled — clean screen) ────────────────────────
   function _buildSandboxOverlay() {
-    const el = document.createElement('div');
-    el.id = 'sandbox-overlay';
-    el.style.cssText = [
-      'position:fixed',
-      'top:8px',
-      'left:50%',
-      'transform:translateX(-50%)',
-      'background:rgba(0,0,0,0.65)',
-      'color:#FFD700',
-      'font-family:Bangers,cursive',
-      'font-size:15px',
-      'letter-spacing:1px',
-      'padding:4px 18px',
-      'border-radius:20px',
-      'border:1px solid #FFD700',
-      'z-index:9990',
-      'pointer-events:none',
-      'text-align:center',
-    ].join(';');
-    // Object pooling is active when the global GameObjectPool/ObjectPool system is available
-    // OR when our local projectile pool has been successfully pre-allocated.
-    const poolActive = !!(window.GameObjectPool || window.ObjectPool) || _projPool.length > 0;
-    const poolBadge = poolActive
-      ? '<span style="color:#00FF88">✔ Object Pooling Active</span>'
-      : '<span style="color:#FF4444">✘ Object Pooling Inactive</span>';
-    el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX &nbsp;|&nbsp; WASD/Joystick to move &nbsp;|&nbsp; Mouse/Right-Joystick to aim &nbsp;|&nbsp; ' + poolBadge;
-    document.body.appendChild(el);
-    console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
+    // Debug/status overlay removed per requirements — screen must be clean
   }
 
   // ─── WaveManager — encapsulates survivor-style wave spawning logic ───────────

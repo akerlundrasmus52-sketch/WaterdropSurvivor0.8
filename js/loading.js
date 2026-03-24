@@ -125,18 +125,10 @@
             return;
           }
 
-          // ── First-time player: skip main menu and go directly to the 3D camp ──
-          // A brand-new player has no save progress at all: no tutorial quests and
-          // no prior camp visit. We route them straight into the camp so they
-          // discover the Aida chip / robot intro sequence immediately.
-          var sd = window.saveData;
-          var isNewPlayer = sd &&
-            !sd.hasVisitedCamp &&
-            !(sd.tutorialQuests && sd.tutorialQuests.currentQuest) &&
-            !(sd.tutorialQuests && sd.tutorialQuests.completedQuests && sd.tutorialQuests.completedQuests.length > 0);
-
-          if (isNewPlayer && typeof window.updateCampScreen === 'function') {
-            console.log('[Loading] First-time player -- routing directly to 3D camp');
+          // ── All players: route to camp after loading ──
+          // The flow is: Menu → Loadscreen → Camp. From camp, "New Run" loads Engine 2.0.
+          if (typeof window.updateCampScreen === 'function') {
+            console.log('[Loading] Routing to camp screen');
             var campScreen = document.getElementById('camp-screen');
             var mainMenuEl = document.getElementById('main-menu');
             if (mainMenuEl) mainMenuEl.style.display = 'none';
@@ -148,7 +140,7 @@
             return;
           }
 
-          // Returning player — show main menu as normal
+          // Fallback: show main menu if camp system is unavailable
           var mainMenu = document.getElementById('main-menu');
           if (mainMenu) mainMenu.style.display = 'flex';
         }, 500);
