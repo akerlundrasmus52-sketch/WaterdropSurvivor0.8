@@ -805,9 +805,9 @@
       const lifeRatio = c.timer / c.lingerDuration; // 0 → 1 over linger duration
 
       // Grow blood pool from small to large as corpse bleeds out
-      const poolRadius = 0.1 + lifeRatio * 1.8; // grows from 0.1 to 1.9 units
+      const poolRadius = 0.1 + lifeRatio * 0.6; // grows from 0.1 to 0.7 units (reduced from 1.8)
       if (c.poolMesh) {
-        c.poolMesh.scale.set(poolRadius * 10, poolRadius * 10, 1); // scale the fixed-size geo
+        c.poolMesh.scale.set(poolRadius * 2, poolRadius * 2, 1); // scale the fixed-size geo (reduced from 10)
         // Darken pool as time passes (more blood = darker)
         c.poolMat.opacity = 0.75 * (1 - lifeRatio * 0.3);
       }
@@ -818,10 +818,10 @@
         c.bloodTimer += dt;
         const heartbeat = Math.sin(c.bloodTimer * heartRate * Math.PI * 2);
         if (heartbeat > 0.85 && lifeRatio < 0.85) {
-          const pressure = (1 - lifeRatio) * 0.5; // weakening pressure
+          const pressure = (1 - lifeRatio) * 0.15; // weakening pressure (reduced from 0.5 - 70% reduction)
           BloodSystem.emitBurst(
             { x: c.x, y: 0.3, z: c.z },
-            Math.floor(6 + pressure * 12),
+            Math.floor(2 + pressure * 4), // Reduced from 6 + pressure * 12 (~70% reduction)
             { spreadXZ: 0.4 * pressure, spreadY: 0.25 * pressure, minLife: 15, maxLife: 40 }
           );
         }
@@ -969,14 +969,14 @@
     _reusableBloodPos.z = slot.mesh.position.z;
     const _bloodPos = _reusableBloodPos;
     if (window.BloodSystem) {
-      // Increased from 12 to 30 particles to match old map realism
+      // Reduced from 30 to 10 particles for realistic subtle hit
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bloodPos, 30, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
+        BloodSystem.emitBurst(_bloodPos, 10, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
       }
 
-      // Add blood drop meshes for physical realism (8-10 individual falling drops)
+      // Add blood drop meshes for physical realism (3 individual falling drops)
       if (typeof BloodSystem.emitDrop === 'function' && hpPercent < 0.75) {
-        const dropCount = 6 + Math.floor(Math.random() * 4); // 6-9 drops
+        const dropCount = 3; // Reduced from 6-9 to 3
         for (let d = 0; d < dropCount; d++) {
           const angle = Math.random() * Math.PI * 2;
           const dist = 0.2 + Math.random() * 0.3;
@@ -1076,9 +1076,9 @@
 
     // ── DEATH EXPLOSION WITH MASSIVE GORE (MATCH OLD MAP: 600 PARTICLES) ─────
     if (window.BloodSystem) {
-      // OLD MAP: 350-600 particle burst for death - we match with 500
+      // OLD MAP: 350-600 particle burst for death - we match with 50
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 500, {
+        BloodSystem.emitBurst({ x, y, z }, 50, {
           spreadXZ: 3.0,
           spreadY: 1.2,
           minLife: 50,
@@ -1088,14 +1088,14 @@
         });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x, y, z }, 30); // Increased from 25 to 30
+        BloodSystem.emitGuts({ x, y, z }, 8); // Reduced from 30 to 8
       }
       // Final death throes: heartbeat gushing before going still
       // OLD MAP: 6-10 pulses × 280-500 particles, 180ms interval
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
         BloodSystem.emitHeartbeatWound({ x, y, z }, {
-          pulses: 10, // Increased from 6 to 10 like old map miniboss
-          perPulse: 280, // Increased from 250 to 280
+          pulses: 3, // Reduced from 10 to 3
+          perPulse: 30, // Reduced from 280 to 30
           interval: 180, // Reduced from 200 to 180 to match old map
           woundHeight: 1.4,
           pressure: 1.5
@@ -1104,15 +1104,15 @@
       // OLD MAP: Blood pulse emissions
       if (typeof BloodSystem.emitPulse === 'function') {
         BloodSystem.emitPulse({ x, y, z }, {
-          pulses: 6,
-          perPulse: 400,
+          pulses: 2, // Reduced from 6 to 2
+          perPulse: 40, // Reduced from 400 to 40
           interval: 180,
           spreadXZ: 1.5
         });
       }
-      // ADD: Physical blood drop meshes like old map (18 individual spheres)
+      // ADD: Physical blood drop meshes like old map (5 individual spheres)
       if (typeof BloodSystem.emitDrop === 'function') {
-        for (let d = 0; d < 18; d++) {
+        for (let d = 0; d < 5; d++) { // Reduced from 18 to 5
           const angle = Math.random() * Math.PI * 2;
           const dist = 0.5 + Math.random() * 1.5;
           const dx = Math.cos(angle) * dist;
