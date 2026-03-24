@@ -1127,16 +1127,30 @@
 
     // ── EXP star drop: 1 guaranteed star + 15% chance for a bonus star per kill ──
     // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
+    // Stars scatter physically based on the enemy's death velocity and weapon used.
     let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
     if (hitForce > 2.0)      gemEnemyType = 5; // rare (gold)
     else if (hitForce > 1.5) gemEnemyType = 3; // uncommon (blue)
     // Use the pre-allocated pool — no new THREE.Mesh during gameplay
     const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
-    if (_droppedGem) expGems.push(_droppedGem);
+    if (_droppedGem) {
+      // Apply death velocity to scatter XP stars in the kill direction
+      if (killVX || killVZ) {
+        _droppedGem.vx += killVX * 0.04;
+        _droppedGem.vz += killVZ * 0.04;
+      }
+      expGems.push(_droppedGem);
+    }
     // +15% drop rate bonus: 15% chance for an extra star on every kill
     if (Math.random() < BONUS_XP_DROP_RATE) {
       const _bonusGem = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemEnemyType);
-      if (_bonusGem) expGems.push(_bonusGem);
+      if (_bonusGem) {
+        if (killVX || killVZ) {
+          _bonusGem.vx += killVX * 0.03;
+          _bonusGem.vz += killVZ * 0.03;
+        }
+        expGems.push(_bonusGem);
+      }
     }
 
     _tmpV3.set(x, 1.8, z);
