@@ -1839,9 +1839,12 @@
       const gem = new ExpGem(0, 0, 'gun', 1.0, 0);
       gem._pooled = true;
       gem._returnToPool = function (g) { _expGemFreeList.push(g); };
-      // Bug 3 fix: ensure the mesh is explicitly in the sandbox scene, then hide it.
-      // Only add if not already parented (THREE.js moves mesh between scenes otherwise).
-      if (gem.mesh && scene && !gem.mesh.parent) scene.add(gem.mesh);
+      // Ensure gem mesh belongs to the sandbox scene.
+      // Compare against window.scene rather than checking for any parent, so a gem
+      // that was added to a different scene is correctly re-parented here.
+      if (gem.mesh && window.scene && gem.mesh.parent !== window.scene) {
+        window.scene.add(gem.mesh);
+      }
       gem.deactivate(); // park off-screen (sets active=false, visible=false)
       _expGemPool.push(gem);
       _expGemFreeList.push(gem);
@@ -1855,15 +1858,25 @@
     if (_expGemFreeList.length > 0) {
       const gem = _expGemFreeList.pop();
       gem.reset(x, z, sourceWeapon, hitForce, enemyType);
-      // Bug 3 fix: guarantee visibility in case reset() didn't set it
+      // Re-parent to sandbox scene if necessary (handles scene-switch edge cases)
+      if (gem.mesh && window.scene && gem.mesh.parent !== window.scene) {
+        window.scene.add(gem.mesh);
+      }
       if (gem.mesh) gem.mesh.visible = true;
+      // Start grow timer at 0.15 so the star is already ~15% size on the first
+      // rendered frame — makes it immediately perceptible rather than 1% scale.
+      if (gem._growTimer !== undefined) gem._growTimer = 0.15;
       return gem;
     }
     // Pool exhausted (shouldn't happen with 40 slots in a single-player sandbox)
     if (typeof ExpGem !== 'undefined') {
       const gem = new ExpGem(x, z, sourceWeapon, hitForce, enemyType);
       gem._pooled = false; // not pooled — will be disposed normally on collect
-      if (gem.mesh && scene) scene.add(gem.mesh);
+      // ExpGem constructor already called scene.add; re-parent if needed
+      if (gem.mesh && window.scene && gem.mesh.parent !== window.scene) {
+        window.scene.add(gem.mesh);
+      }
+      if (gem._growTimer !== undefined) gem._growTimer = 0.15;
       return gem;
     }
     return null;
@@ -2198,7 +2211,7 @@
         }
       }
 
-      g.update({ x: px, y: py, z: pz });
+      g.update(player.mesh.position);
     }
   }
 
