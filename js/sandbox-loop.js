@@ -3409,9 +3409,12 @@
     if (_ready) return;
     _ready = true;
 
+    console.log('[🎮 SandboxLoop] Starting Sandbox 2.0 boot sequence...');
+
     // Bug 1 fix: set sandbox mode flag BEFORE any init calls so world-gen.js
     // skips the duplicate ground plane and Engine2Sandbox initialises correctly.
     window._engine2SandboxMode = true;
+    console.log('[🎮 SandboxLoop] ✓ Sandbox mode flag set');
 
     try {
       // Allow showUpgradeModal to run (main.js defaults isGameActive=false for menu).
@@ -3420,26 +3423,60 @@
       if (typeof setGameOver === 'function') setGameOver(false);
       window.isGameActive = true;
       window.isGameOver = false;
+      console.log('[🎮 SandboxLoop] ✓ Game state activated');
 
       // Hide loading screen
       const ls = document.getElementById('loading-screen');
       if (ls) { ls.style.opacity = '0'; setTimeout(function () { ls.style.display = 'none'; }, 400); }
+      console.log('[🎮 SandboxLoop] ✓ Loading screen hidden');
 
       // Show the ui-layer (HUD)
       const uiLayer = document.getElementById('ui-layer');
       if (uiLayer) uiLayer.style.display = 'block';
+      console.log('[🎮 SandboxLoop] ✓ UI layer shown');
 
+      console.log('[🎮 SandboxLoop] Initializing settings...');
       _initSandboxSettings();
+      console.log('[🎮 SandboxLoop] ✓ Settings initialized');
+
       // Init Three.js
+      console.log('[🎮 SandboxLoop] Initializing Three.js scene...');
       _initScene();
+      console.log('[🎮 SandboxLoop] ✓ Scene initialized');
+
+      console.log('[🎮 SandboxLoop] Initializing ground (Engine2Sandbox)...');
       _initGround();
+      console.log('[🎮 SandboxLoop] ✓ Ground initialized');
+
+      console.log('[🎮 SandboxLoop] Initializing blood/gore systems...');
       _initBloodSystem();
+      console.log('[🎮 SandboxLoop] ✓ Blood systems initialized');
+
+      console.log('[🎮 SandboxLoop] Initializing rage combat...');
       _initRageCombat();
+      console.log('[🎮 SandboxLoop] ✓ Rage combat initialized');
+
+      console.log('[🎮 SandboxLoop] Initializing object pools...');
       _initPools();
+      console.log('[🎮 SandboxLoop] ✓ Object pools initialized');
+
+      console.log('[🎮 SandboxLoop] Initializing player (spawn animation will trigger)...');
       _initPlayer();
+      console.log('[🎮 SandboxLoop] ✓ Player initialized at position:', player?.mesh?.position);
+      console.log('[🎮 SandboxLoop] ✓ Spawn intro active:', _spawnIntroActive);
+
+      console.log('[🎮 SandboxLoop] Building slime enemy pool...');
       _buildSlimePool();     // Pre-allocate enemy pool (50 slots)
+      console.log('[🎮 SandboxLoop] ✓ Slime pool built (50 slots)');
+
+      console.log('[🎮 SandboxLoop] Spawning first wave...');
       _spawnWave();          // Spawn first wave immediately
+      console.log('[🎮 SandboxLoop] ✓ First wave spawned');
+
+      console.log('[🎮 SandboxLoop] Initializing input handlers...');
       _initInput();
+      console.log('[🎮 SandboxLoop] ✓ Input initialized');
+
       _buildSandboxOverlay();
       _refreshExpBar();
 
@@ -3457,7 +3494,16 @@
       _lastTime = performance.now();
       _rafId = requestAnimationFrame(_animate);
 
-      console.log('[SandboxLoop] Engine 2.0 Sandbox ready. Pool-enforced game loop started.');
+      console.log('[🎮 SandboxLoop] ✓ Animation loop started');
+      console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
+      console.log('[🎮 SandboxLoop] 🎉 ENGINE 2.0 SANDBOX READY!');
+      console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
+      console.log('[🎮 SandboxLoop] ✓ Spawn animation should be running');
+      console.log('[🎮 SandboxLoop] ✓ Eye of Horus button (𓂀) in top-right');
+      console.log('[🎮 SandboxLoop] ✓ Ground texture loading from Engine2Sandbox');
+      console.log('[🎮 SandboxLoop] ✓ Blood/gore systems ready');
+      console.log('[🎮 SandboxLoop] Type runSandboxDiagnostics() for full report');
+      console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
     } catch (e) {
       _showError('Boot error: ' + (e && e.message ? e.message : String(e)));
       console.error('[SandboxLoop] _boot error:', e);
