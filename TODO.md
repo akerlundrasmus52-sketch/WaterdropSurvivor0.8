@@ -39,15 +39,19 @@
 ✅ Settings UI components: graphics mode, quality presets, particle effects toggle
 ✅ Blood/gore rendering: bullet holes, blood particles, gore chunks
 
+### Sandbox 2.0 Landmarks (Engine 2.0)
+✅ UFO crash site with glowing engine lights at position (-50, 25) — northwest area (IN SANDBOX 2.0 ✓)
+✅ Companion egg near UFO (quest objective) (IN SANDBOX 2.0 ✓)
+✅ Annunaki obelisk at position (25, -35) — southwest region with energy effects (IN SANDBOX 2.0 ✓)
+✅ Lake with waterfall at position (30, -30) — southeast area (IN SANDBOX 2.0 ✓)
+
+All landmarks above are NOW in Sandbox 2.0 via js/engine2.js with full animations in js/sandbox-loop.js
+
 ### World Features (Main Game - index.html)
 These exist in the MAIN game (world-gen.js), NOT in Sandbox 2.0:
-- ✅ UFO crash site with debris at position (-50, 25) — northwest area
-- ✅ Companion egg near UFO (quest objective)
-- ✅ Lake with waterfall at position (30, -30) — southeast area
 - ✅ Enhanced reflective lake with physics material
-- ✅ Annunaki obelisk at position (25, -35) — southwest region near pyramid (IMPLEMENTED 2026-03-24)
-
-**Note**: These world features are in `js/world-gen.js` (the old map file). Sandbox 2.0 does NOT include world generation.
+- ✅ Pyramid structures
+- ✅ Ancient ruins and decorative props
 
 ## ✅ COMPLETED
 - [x] Split `js/main.js` into smaller organized module files

@@ -29,6 +29,9 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
 - **What it includes**:
   - ✅ Engine 2.0 PBR ground with mossy brick texture (`mossy_brick_diff_4k.jpg`)
   - ✅ Central spawn hole with decorative rim (200x200 arena)
+  - ✅ **UFO crash site** at (-50, 25) with glowing engines + companion egg
+  - ✅ **Annunaki Obelisk** at (25, -35) with energy crystal, rings, and pylons
+  - ✅ **Lake with waterfall** at (30, -30) with sparkles and animated water
   - ✅ Full gore/blood systems (BloodV2, GoreSim, TraumaSystem)
   - ✅ Settings UI with Auto/Manual graphics mode
   - ✅ Level-up system with upgrade cards
