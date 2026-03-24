@@ -61,9 +61,11 @@
       el.textContent = text;
       el.style.color = color || '#FFD700';
 
-      // Scale font size with damage: base 18px, grows with damage, caps at 42px
+      // Scale font size with damage: base 18px, sqrt scaling with damage, caps at 42px
+      // sqrt(damage) * scale factor gives perceptible but not excessive growth
+      const _DMG_FONT_SCALE = 1.8;
       const dmg = typeof damageAmount === 'number' ? damageAmount : 0;
-      const fontSize = Math.min(42, Math.max(18, 18 + Math.sqrt(dmg) * 1.8));
+      const fontSize = Math.min(42, Math.max(18, 18 + Math.sqrt(dmg) * _DMG_FONT_SCALE));
       el.style.fontSize = fontSize + 'px';
 
       el.style.transition = 'none';
@@ -94,7 +96,7 @@
         el.style.transform  = 'translate(-50%,-50%) scale(1.2)';
         el.style.opacity    = '1';
         _ftPool.push(el); // return to pool
-      }, 700);
+      }, 650); // slightly after 0.6s transition to ensure animation completes
     };
   }
   if (typeof showYouDiedBanner === 'undefined') {
@@ -2041,9 +2043,21 @@
 
     // Animation
     const startTime = performance.now();
+    let _lastFrameTime = startTime;
     const totalDuration = 1700; // ms
+
+    function _cleanupLevelUpFX() {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      for (let i = 0; i < embers.length; i++) {
+        if (embers[i].el.parentNode) embers[i].el.parentNode.removeChild(embers[i].el);
+      }
+    }
+
     function animFrame() {
-      const elapsed = performance.now() - startTime;
+      const now = performance.now();
+      const elapsed = now - startTime;
+      const dt = Math.min(0.05, (now - _lastFrameTime) / 1000); // actual dt in seconds, capped
+      _lastFrameTime = now;
       const t = elapsed / totalDuration;
 
       if (t < 0.15) {
@@ -2085,16 +2099,11 @@
         el.style.transform = 'translate(-50%,calc(-50% + ' + yOffset + 'px)) scale(' + (1.1 - 0.3 * p) + ')';
         el.style.opacity = '' + (1 - p);
       } else {
-        // Cleanup
-        if (el.parentNode) el.parentNode.removeChild(el);
-        for (let i = 0; i < embers.length; i++) {
-          if (embers[i].el.parentNode) embers[i].el.parentNode.removeChild(embers[i].el);
-        }
+        _cleanupLevelUpFX();
         return; // stop animation loop
       }
 
-      // Update ember particles
-      const dt = 0.016; // ~60fps tick
+      // Update ember particles using actual frame dt
       for (let i = 0; i < embers.length; i++) {
         const em = embers[i];
         if (em.maxLife === 0) continue;
