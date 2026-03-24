@@ -8,7 +8,7 @@
  * - Primary texture: assets/textures/rocky_terrain_03_diff_2k.jpg (3.7MB, 2048x2048)
  * - Fallback chain: rocky_terrain_03_diff → mossy_brick → ground/color.jpg → procedural
  * - Texture confirmed loading and displaying properly as of 2026-03-24
- * - Material: PBR MeshLambertMaterial with 20x20 repeat, anisotropic filtering
+ * - Material: MeshLambertMaterial with 20x20 repeat, anisotropic filtering
  *
  * LANDMARKS STATUS: ✅ ADDED 2026-03-24
  * - UFO crash site at (-50, 25) with glowing engine lights + companion egg
