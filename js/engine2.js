@@ -507,22 +507,23 @@ class Engine2Sandbox {
 
     // ══════════════════════════════════════════════════════════════
     // 2. ANNUNAKI OBELISK — Southwest region (25, -35)
+    // BLACK OBELISK WITH GOLD EYE OF HORUS (55% smaller)
     // ══════════════════════════════════════════════════════════════
     const obeliskGroup = new THREE.Group();
     obeliskGroup.position.set(25, 0, -35);
 
-    // Main obelisk shaft - tapered monolith
-    const obeliskHeight = 18;
-    const obeliskBaseSize = 2.5;
-    const obeliskTopSize = 1.8;
+    // Main obelisk shaft - tapered monolith (55% smaller: 18 * 0.45 = 8.1m)
+    const obeliskHeight = 8.1;
+    const obeliskBaseSize = 1.125; // 2.5 * 0.45
+    const obeliskTopSize = 0.81; // 1.8 * 0.45
 
     const obeliskGeometry = new THREE.CylinderGeometry(obeliskTopSize, obeliskBaseSize, obeliskHeight, 4);
     const obeliskMaterial = new THREE.MeshStandardMaterial({
-      color: 0xD4AF37, // Rich gold
-      metalness: 0.7,
-      roughness: 0.3,
-      emissive: 0xFFD700,
-      emissiveIntensity: 0.3
+      color: 0x1a1a1a, // Deep black
+      metalness: 0.8,
+      roughness: 0.2,
+      emissive: 0x0a0a0a,
+      emissiveIntensity: 0.1
     });
     const obeliskShaft = new THREE.Mesh(obeliskGeometry, obeliskMaterial);
     obeliskShaft.position.y = obeliskHeight / 2;
@@ -530,8 +531,8 @@ class Engine2Sandbox {
     obeliskShaft.receiveShadow = true;
     obeliskGroup.add(obeliskShaft);
 
-    // Pyramidion cap (pointed top)
-    const capGeometry = new THREE.ConeGeometry(obeliskTopSize + 0.3, 3, 4);
+    // Pyramidion cap (pointed top) - Gold
+    const capGeometry = new THREE.ConeGeometry(obeliskTopSize + 0.135, 1.35, 4); // 3 * 0.45
     const capMaterial = new THREE.MeshStandardMaterial({
       color: 0xFFD700, // Bright gold
       metalness: 0.9,
@@ -540,16 +541,16 @@ class Engine2Sandbox {
       emissiveIntensity: 0.5
     });
     const pyramidionCap = new THREE.Mesh(capGeometry, capMaterial);
-    pyramidionCap.position.y = obeliskHeight + 1.5;
+    pyramidionCap.position.y = obeliskHeight + 0.675; // 1.5 * 0.45
     pyramidionCap.castShadow = true;
     obeliskGroup.add(pyramidionCap);
 
-    // Base platform - stepped stone pedestal
+    // Base platform - stepped stone pedestal (scaled down)
     const baseLevels = 3;
     const baseColors = [0xB8956A, 0xA8856A, 0x98754A];
     for (let i = 0; i < baseLevels; i++) {
-      const levelSize = 5 - i * 0.8;
-      const levelHeight = 0.6;
+      const levelSize = (5 - i * 0.8) * 0.45; // Scaled down
+      const levelHeight = 0.27; // 0.6 * 0.45
       const baseGeo = new THREE.BoxGeometry(levelSize, levelHeight, levelSize);
       const baseMat = new THREE.MeshStandardMaterial({
         color: baseColors[i],
@@ -563,35 +564,76 @@ class Engine2Sandbox {
       obeliskGroup.add(baseLevel);
     }
 
-    // Hieroglyphic panels
-    const hieroglyphicMat = new THREE.MeshBasicMaterial({ color: 0x2C1810 });
-    const symbolPositions = [
-      { y: 4, rot: 0 },
-      { y: 7, rot: Math.PI / 4 },
-      { y: 10, rot: 0 },
-      { y: 13, rot: Math.PI / 4 },
-      { y: 16, rot: 0 }
-    ];
+    // ═══════════════════════════════════════════════════════════════
+    // EYE OF HORUS - Golden symbol on the black obelisk
+    // ═══════════════════════════════════════════════════════════════
+    const createEyeOfHorus = (scale = 1) => {
+      const eyeGroup = new THREE.Group();
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xFFD700,
+        metalness: 0.9,
+        roughness: 0.1,
+        emissive: 0xFFD700,
+        emissiveIntensity: 0.8
+      });
 
-    symbolPositions.forEach(pos => {
-      for (let face = 0; face < 4; face++) {
-        const angle = (face / 4) * Math.PI * 2;
-        const distance = obeliskBaseSize - 0.5;
+      // Eye outline (almond shape)
+      const eyeOuterShape = new THREE.Shape();
+      eyeOuterShape.moveTo(-0.5 * scale, 0);
+      eyeOuterShape.bezierCurveTo(-0.5 * scale, 0.25 * scale, -0.25 * scale, 0.35 * scale, 0, 0.35 * scale);
+      eyeOuterShape.bezierCurveTo(0.25 * scale, 0.35 * scale, 0.5 * scale, 0.25 * scale, 0.5 * scale, 0);
+      eyeOuterShape.bezierCurveTo(0.5 * scale, -0.25 * scale, 0.25 * scale, -0.35 * scale, 0, -0.35 * scale);
+      eyeOuterShape.bezierCurveTo(-0.25 * scale, -0.35 * scale, -0.5 * scale, -0.25 * scale, -0.5 * scale, 0);
 
-        const symbolGeo = new THREE.BoxGeometry(0.8, 0.6, 0.05);
-        const symbol = new THREE.Mesh(symbolGeo, hieroglyphicMat);
-        symbol.position.set(
-          Math.cos(angle) * distance,
-          pos.y,
-          Math.sin(angle) * distance
-        );
-        symbol.rotation.y = angle + Math.PI / 2 + pos.rot;
-        obeliskGroup.add(symbol);
-      }
-    });
+      const eyeOuterGeo = new THREE.ShapeGeometry(eyeOuterShape);
+      const eyeOuter = new THREE.Mesh(eyeOuterGeo, goldMat);
+      eyeGroup.add(eyeOuter);
 
-    // Energy crystal at top
-    const crystalGeo = new THREE.OctahedronGeometry(0.8, 0);
+      // Pupil (circle)
+      const pupilGeo = new THREE.CircleGeometry(0.15 * scale, 16);
+      const pupil = new THREE.Mesh(pupilGeo, goldMat);
+      pupil.position.set(0.05 * scale, 0, 0.01);
+      eyeGroup.add(pupil);
+
+      // Eye markings (lower curve)
+      const lowerMarkShape = new THREE.Shape();
+      lowerMarkShape.moveTo(0.5 * scale, 0);
+      lowerMarkShape.bezierCurveTo(0.5 * scale, -0.5 * scale, 0.3 * scale, -0.6 * scale, 0, -0.6 * scale);
+      const lowerMarkGeo = new THREE.ShapeGeometry(lowerMarkShape);
+      const lowerMark = new THREE.Mesh(lowerMarkGeo, goldMat);
+      lowerMark.position.set(0, 0, 0.01);
+      eyeGroup.add(lowerMark);
+
+      // Spiral tail (right side)
+      const spiralCurve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(0.5 * scale, -0.1 * scale, 0),
+        new THREE.Vector3(0.7 * scale, -0.3 * scale, 0),
+        new THREE.Vector3(0.6 * scale, -0.5 * scale, 0)
+      );
+      const spiralGeo = new THREE.TubeGeometry(spiralCurve, 8, 0.03 * scale, 6, false);
+      const spiral = new THREE.Mesh(spiralGeo, goldMat);
+      eyeGroup.add(spiral);
+
+      return eyeGroup;
+    };
+
+    // Add Eye of Horus to each face of the obelisk at mid-height
+    for (let face = 0; face < 4; face++) {
+      const angle = (face / 4) * Math.PI * 2;
+      const distance = obeliskBaseSize * 0.5;
+
+      const eye = createEyeOfHorus(0.4);
+      eye.position.set(
+        Math.cos(angle) * distance,
+        obeliskHeight / 2,
+        Math.sin(angle) * distance
+      );
+      eye.rotation.y = angle + Math.PI / 2;
+      obeliskGroup.add(eye);
+    }
+
+    // Energy crystal at top (scaled down)
+    const crystalGeo = new THREE.OctahedronGeometry(0.36, 0); // 0.8 * 0.45
     const crystalMat = new THREE.MeshPhysicalMaterial({
       color: 0x00FFFF,
       metalness: 0.1,
@@ -602,43 +644,43 @@ class Engine2Sandbox {
       emissiveIntensity: 1.2
     });
     const energyCrystal = new THREE.Mesh(crystalGeo, crystalMat);
-    energyCrystal.position.y = obeliskHeight + 3.2;
+    energyCrystal.position.y = obeliskHeight + 1.44; // (3.2 * 0.45)
     energyCrystal.userData = { isObeliskCrystal: true, phase: 0 };
     obeliskGroup.add(energyCrystal);
 
-    // Energy field rings
+    // Energy field rings (scaled down)
     const energyRings = [];
     for (let ring = 0; ring < 3; ring++) {
-      const ringGeo = new THREE.TorusGeometry(3 + ring * 1.5, 0.15, 8, 24);
+      const ringGeo = new THREE.TorusGeometry((3 + ring * 1.5) * 0.45, 0.0675, 8, 24); // Scaled
       const ringMat = new THREE.MeshBasicMaterial({
         color: 0x00FFFF,
         transparent: true,
         opacity: 0.3 - ring * 0.08
       });
       const energyRing = new THREE.Mesh(ringGeo, ringMat);
-      energyRing.position.y = obeliskHeight / 2 + ring * 2;
+      energyRing.position.y = (obeliskHeight / 2 + ring * 2) * 0.45;
       energyRing.rotation.x = Math.PI / 2;
       energyRing.userData = { isEnergyRing: true, phase: ring * (Math.PI * 2 / 3), speed: 0.5 + ring * 0.2 };
       obeliskGroup.add(energyRing);
       energyRings.push(energyRing);
     }
 
-    // Mystical lights
-    const obeliskTopLight = new THREE.PointLight(0x00FFFF, 3, 30);
-    obeliskTopLight.position.y = obeliskHeight + 3;
+    // Mystical lights (adjusted for smaller size)
+    const obeliskTopLight = new THREE.PointLight(0x00FFFF, 3, 13.5); // 30 * 0.45
+    obeliskTopLight.position.y = obeliskHeight + 1.35; // 3 * 0.45
     obeliskGroup.add(obeliskTopLight);
 
-    const obeliskBaseLight = new THREE.PointLight(0xFFD700, 1.5, 15);
-    obeliskBaseLight.position.y = 2;
+    const obeliskBaseLight = new THREE.PointLight(0xFFD700, 1.5, 6.75); // 15 * 0.45
+    obeliskBaseLight.position.y = 0.9; // 2 * 0.45
     obeliskGroup.add(obeliskBaseLight);
 
-    // Power conduit pylons
+    // Power conduit pylons (scaled down)
     const pylonCrystals = [];
     for (let pylon = 0; pylon < 4; pylon++) {
       const pylonAngle = (pylon / 4) * Math.PI * 2;
-      const pylonDist = 7;
+      const pylonDist = 3.15; // 7 * 0.45
 
-      const pylonGeo = new THREE.CylinderGeometry(0.3, 0.4, 4, 6);
+      const pylonGeo = new THREE.CylinderGeometry(0.135, 0.18, 1.8, 6); // All scaled by 0.45
       const pylonMat = new THREE.MeshStandardMaterial({
         color: 0xB8956A,
         roughness: 0.8,
@@ -649,20 +691,20 @@ class Engine2Sandbox {
       const pylonMesh = new THREE.Mesh(pylonGeo, pylonMat);
       pylonMesh.position.set(
         Math.cos(pylonAngle) * pylonDist,
-        2,
+        0.9, // 2 * 0.45
         Math.sin(pylonAngle) * pylonDist
       );
       pylonMesh.castShadow = true;
       obeliskGroup.add(pylonMesh);
 
-      // Crystal tops on pylons
+      // Crystal tops on pylons (scaled down)
       const pylonCrystal = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.4, 0),
+        new THREE.OctahedronGeometry(0.18, 0), // 0.4 * 0.45
         new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.7 })
       );
       pylonCrystal.position.set(
         Math.cos(pylonAngle) * pylonDist,
-        4.2,
+        1.89, // 4.2 * 0.45
         Math.sin(pylonAngle) * pylonDist
       );
       pylonCrystal.userData = { isPylonCrystal: true, phase: pylon * Math.PI / 2 };
@@ -672,8 +714,8 @@ class Engine2Sandbox {
 
     this.scene.add(obeliskGroup);
 
-    // Obelisk ground marker
-    const obeliskCircleGeo = new THREE.RingGeometry(8, 9, 32);
+    // Obelisk ground marker (scaled down)
+    const obeliskCircleGeo = new THREE.RingGeometry(3.6, 4.05, 32); // 8 * 0.45, 9 * 0.45
     const obeliskCircleMat = new THREE.MeshStandardMaterial({
       color: 0xB8956A,
       roughness: 0.95,
@@ -688,16 +730,16 @@ class Engine2Sandbox {
     obeliskCircle.receiveShadow = true;
     this.scene.add(obeliskCircle);
 
-    // Ancient runes
+    // Ancient runes (scaled down)
     for (let rune = 0; rune < 8; rune++) {
       const runeAngle = (rune / 8) * Math.PI * 2;
-      const runeGeo = new THREE.BoxGeometry(0.6, 0.1, 0.4);
+      const runeGeo = new THREE.BoxGeometry(0.27, 0.045, 0.18); // Scaled by 0.45
       const runeMat = new THREE.MeshBasicMaterial({ color: 0x2C1810 });
       const runeBlock = new THREE.Mesh(runeGeo, runeMat);
       runeBlock.position.set(
-        25 + Math.cos(runeAngle) * 8.5,
+        25 + Math.cos(runeAngle) * 3.825, // 8.5 * 0.45
         0.02,
-        -35 + Math.sin(runeAngle) * 8.5
+        -35 + Math.sin(runeAngle) * 3.825
       );
       runeBlock.rotation.y = runeAngle + Math.PI / 2;
       this.scene.add(runeBlock);
@@ -713,10 +755,10 @@ class Engine2Sandbox {
       pylonCrystals: pylonCrystals
     };
 
-    console.log('[Engine2] ✓ Annunaki Obelisk created at (25, -35)');
+    console.log('[Engine2] ✓ Black Obelisk with gold Eye of Horus created at (25, -35) - 55% smaller');
 
     // ══════════════════════════════════════════════════════════════
-    // 3. LAKE WITH WATERFALL — Southeast area (30, -30)
+    // 3. LAKE (NO WATERFALL) — Southeast area (30, -30)
     // ══════════════════════════════════════════════════════════════
 
     // Reflective lake
@@ -784,71 +826,12 @@ class Engine2Sandbox {
       sparkles.push(sparkle);
     }
 
-    // Waterfall group
-    const waterfallGroup = new THREE.Group();
-
-    // Cliff/rock formation
-    const cliffGeo = new THREE.BoxGeometry(8, 12, 6);
-    const cliffMat = new THREE.MeshToonMaterial({ color: 0x696969 });
-    const cliff = new THREE.Mesh(cliffGeo, cliffMat);
-    cliff.position.set(20, 6, -35);
-    cliff.castShadow = true;
-    waterfallGroup.add(cliff);
-
-    // Waterfall
-    const waterfallGeo = new THREE.PlaneGeometry(3, 12);
-    const waterfallMat = new THREE.MeshBasicMaterial({
-      color: 0x87CEEB,
-      transparent: true,
-      opacity: 0.6,
-      side: THREE.DoubleSide
-    });
-    const waterfall = new THREE.Mesh(waterfallGeo, waterfallMat);
-    waterfall.position.set(20, 6, -29);
-    waterfall.rotation.x = -0.2;
-    waterfall.userData = { isWaterfall: true, phase: 0 };
-    waterfallGroup.add(waterfall);
-
-    // Flowing water particles
-    const waterDrops = [];
-    for (let i = 0; i < 5; i++) {
-      const dropGeo = new THREE.SphereGeometry(0.3, 8, 8);
-      const dropMat = new THREE.MeshBasicMaterial({
-        color: 0x4ECDC4,
-        transparent: true,
-        opacity: 0.7
-      });
-      const drop = new THREE.Mesh(dropGeo, dropMat);
-      drop.position.set(30 + (Math.random() - 0.5) * 2, 12 - i * 2, -39);
-      drop.userData = { isWaterDrop: true, speed: 0.1 + Math.random() * 0.1, startY: 12 - i * 2 };
-      waterfallGroup.add(drop);
-      waterDrops.push(drop);
-    }
-
-    // Splash at bottom
-    const splashGeo = new THREE.CircleGeometry(2, 16);
-    const splashMat = new THREE.MeshBasicMaterial({
-      color: 0xFFFFFF,
-      transparent: true,
-      opacity: 0.4
-    });
-    const splash = new THREE.Mesh(splashGeo, splashMat);
-    splash.rotation.x = -Math.PI / 2;
-    splash.position.set(20, 0.1, -23);
-    splash.userData = { isSplash: true, phase: 0 };
-    waterfallGroup.add(splash);
-
-    this.scene.add(waterfallGroup);
-
-    // Store lake/waterfall references for animation
+    // Store lake references for animation (no waterfall)
     window._engine2Landmarks.lake = {
-      sparkles: sparkles,
-      waterfall: waterfall,
-      waterDrops: waterDrops,
-      splash: splash
+      sparkles: sparkles
     };
 
-    console.log('[Engine2] ✓ Lake with waterfall created at (30, -30)');
+    console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
     console.log('[Engine2] ✓ All landmarks created successfully');
   }
 

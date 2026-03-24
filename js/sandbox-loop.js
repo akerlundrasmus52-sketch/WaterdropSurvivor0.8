@@ -3371,7 +3371,7 @@
           }
         }
 
-        // Lake sparkles animation
+        // Lake sparkles animation (waterfall removed)
         if (landmarks.lake && landmarks.lake.sparkles) {
           landmarks.lake.sparkles.forEach(sparkle => {
             sparkle.userData.phase = (sparkle.userData.phase || 0) + 0.02 * sparkle.userData.speed;
@@ -3382,30 +3382,6 @@
               1 + Math.sin(sparkle.userData.phase * 2) * 0.5
             );
           });
-        }
-
-        // Waterfall animations
-        if (landmarks.lake) {
-          if (landmarks.lake.waterfall) {
-            landmarks.lake.waterfall.userData.phase = (landmarks.lake.waterfall.userData.phase || 0) + 0.05;
-            landmarks.lake.waterfall.material.opacity = 0.6 + Math.sin(landmarks.lake.waterfall.userData.phase) * 0.1;
-          }
-
-          if (landmarks.lake.waterDrops) {
-            landmarks.lake.waterDrops.forEach(drop => {
-              drop.position.y -= drop.userData.speed;
-              if (drop.position.y < 0) {
-                drop.position.y = drop.userData.startY;
-              }
-            });
-          }
-
-          if (landmarks.lake.splash) {
-            landmarks.lake.splash.userData.phase = (landmarks.lake.splash.userData.phase || 0) + 0.1;
-            const scale = 1 + Math.sin(landmarks.lake.splash.userData.phase) * 0.3;
-            landmarks.lake.splash.scale.set(scale, 1, scale);
-            landmarks.lake.splash.material.opacity = 0.4 + Math.sin(landmarks.lake.splash.userData.phase) * 0.2;
-          }
         }
       }
 
