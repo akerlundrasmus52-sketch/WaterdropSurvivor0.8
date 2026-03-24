@@ -63,6 +63,7 @@ GROUND_Y:         0.01,
 DECAL_FADE:       25.0,  // seconds before ground decal fades
 DRIP_RATE:        0.22,  // seconds between wound drips (base)
 PUMP_RATE:        0.06,  // seconds between arterial pumps
+BOUNCE_DECAL_PROB: 0.25, // probability of spawning a decal on first bounce
 };
 
 // ══════════════════════════════════════════
@@ -1002,7 +1003,7 @@ if (d.onGround) {
 d.r = Math.min(d.r + dt * 0.01, 0.05);
 if (d.life < 2.5) {
 var a = d.life / 2.5;
-_m4.makeScale(d.r * 18, 0.04, d.r * 18);
+_m4.makeScale(d.r * 18 * a, 0.04 * a, d.r * 18 * a);
 _m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
 im.setMatrixAt(d.idx, _m4);
 }
@@ -1036,7 +1037,7 @@ d.vy = bounceY;
 d.vx *= 0.55;
 d.vz *= 0.55;
 d.bounces++;
-if (d.bounces === 1 && Math.random() < 0.25) {
+if (d.bounces === 1 && Math.random() < CFG.BOUNCE_DECAL_PROB) {
 _spawnDecal(d.px, d.pz, d.r * 1.8, d.color);
 }
 } else {
@@ -1783,11 +1784,11 @@ dd.alive   = true;
 dd.life    = CFG.DECAL_FADE;
 dd.maxLife = CFG.DECAL_FADE;
 dd.mesh.position.set(x, CFG.GROUND_Y, z);
-// Irregular shape: vary x and z scale separately
+// Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
 radius * (5 + Math.random() * 2),
-1,
-radius * (3 + Math.random() * 2)
+radius * (3 + Math.random() * 2),
+1
 );
 dd.mesh.rotation.z = Math.random() * Math.PI * 2;
 dd.mesh.material.color.setHex(color || 0x880000);
