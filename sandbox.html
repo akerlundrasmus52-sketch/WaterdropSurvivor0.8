@@ -59,7 +59,7 @@
     /* Keep ui-layer visible once sandbox boots */
     #ui-layer { display: none; }
 
-    <!-- ── Settings button (Eye of Horus) ────────────────────────────────────── -->
+    /* ── Settings button (Eye of Horus) ────────────────────────────────────── */
     #settings-btn {
       position: fixed !important;
       top: 12px !important;
@@ -73,7 +73,7 @@
       color: #FFD700;
       font-size: 24px;
       cursor: pointer;
-      display: flex;
+      display: flex !important;
       align-items: center;
       justify-content: center;
       transition: background 0.2s, border-color 0.2s, transform 0.2s;
@@ -168,6 +168,26 @@
   </style>
 </head>
 <body>
+
+  <!-- ── ENGINE 2.0 DIAGNOSTIC OVERLAY — Always visible proof of architecture ── -->
+  <div id="engine2-overlay" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.85);
+    color: #00FF00;
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-bottom: 2px solid #00FF00;
+    border-right: 2px solid #00FF00;
+    border-bottom-right-radius: 8px;
+    pointer-events: none;
+    text-shadow: 0 0 8px #00FF00;
+    letter-spacing: 2px;
+  ">ENGINE 2.0 - ARCHITECTURE FIXED</div>
 
   <!-- ── Loading Screen ─────────────────────────────────────────────────── -->
   <div id="loading-screen">
@@ -624,6 +644,52 @@
 
   <!-- Debug helper for diagnosing initialization issues -->
   <script src="js/sandbox-debug.js"></script>
+
+  <!-- ── ENGINE 2.0 ARCHITECTURE VERIFICATION ─────────────────────────────── -->
+  <script>
+  (function () {
+    var overlay = document.getElementById('engine2-overlay');
+    var status = [];
+
+    // Check BloodV2
+    if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
+      status.push('BloodV2:OK');
+      console.log('!!! ENGINE 2.0 CHECK: BloodV2 LOADED !!!');
+    } else {
+      status.push('BloodV2:MISSING');
+      console.error('!!! ENGINE 2.0 CHECK: BloodV2 NOT FOUND !!!');
+    }
+
+    // Check GoreSim
+    if (window.GoreSim && typeof window.GoreSim.init === 'function') {
+      status.push('GoreSim:OK');
+      console.log('!!! ENGINE 2.0 CHECK: GoreSim LOADED !!!');
+    } else {
+      status.push('GoreSim:MISSING');
+      console.error('!!! ENGINE 2.0 CHECK: GoreSim NOT FOUND !!!');
+    }
+
+    // Check TraumaSystem
+    if (window.TraumaSystem && typeof window.TraumaSystem.init === 'function') {
+      status.push('Trauma:OK');
+      console.log('!!! ENGINE 2.0 CHECK: TraumaSystem LOADED !!!');
+    } else {
+      status.push('Trauma:MISSING');
+      console.error('!!! ENGINE 2.0 CHECK: TraumaSystem NOT FOUND !!!');
+    }
+
+    // Update overlay with status
+    if (overlay) {
+      var statusLine = document.createElement('span');
+      statusLine.style.cssText = 'font-size:12px;color:#FFD700;';
+      statusLine.textContent = status.join(' | ');
+      overlay.appendChild(document.createElement('br'));
+      overlay.appendChild(statusLine);
+    }
+
+    console.log('!!! ENGINE 2.0 ARCHITECTURE VERIFICATION COMPLETE: ' + status.join(' | ') + ' !!!');
+  })();
+  </script>
 
   <!-- Revolver ammo UI -->
   <div id="revolver-ui" style="position:fixed;bottom:80px;right:20px;z-index:9999;background:rgba(0,0,0,0.7);border:1px solid #FFD700;border-radius:12px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;">

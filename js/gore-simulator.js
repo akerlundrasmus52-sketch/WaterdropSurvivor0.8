@@ -892,7 +892,7 @@ this.scene  = scene;
 this.camera = camera;
 this._buildPools();
 this._initialized = true;
-console.log('[GoreSim] Initialized — Realistic Gore Simulator v1.0 ready.');
+console.log('!!! GORE SIMULATOR IS ALIVE !!! Realistic Gore Simulator v1.0 ready.');
 },
 
 _buildPools() {
