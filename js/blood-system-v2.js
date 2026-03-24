@@ -959,12 +959,14 @@ _updateWound(gs.wounds[j], dt, ex, ey, ez, evx, evz, col);
 });
 
 // ── Fade decals ──────────────────────────
-// Throttle: only check 10 decals per frame to save CPU
+// Throttle: only check 10 decals per frame to save CPU.
+// Scale dt by (DECAL_COUNT/10) so that DECAL_FADE matches real seconds regardless of pool size.
+var _decalDt = dt * (CFG.DECAL_COUNT / 10);
 var startD = (_frame * 10) % CFG.DECAL_COUNT;
 for (var i = 0; i < 10; i++) {
 var dd = _decals[(startD + i) % CFG.DECAL_COUNT];
 if (!dd.alive) continue;
-dd.life -= dt;
+dd.life -= _decalDt;
 if (dd.life <= 0) {
 dd.alive = false;
 dd.mesh.visible = false;
