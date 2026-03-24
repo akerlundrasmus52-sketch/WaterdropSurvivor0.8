@@ -1142,7 +1142,7 @@
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
 
-    // ── GORE: Corpse linger for 15 seconds with heartbeat blood pumping ──────────
+    // ── GORE: Corpse linger for 45 seconds with heartbeat blood pumping ──────────
     // Remove from active list but keep the mesh visible as a "corpse"
     const corpseLinger = 45; // all corpses stay on ground for 45 seconds
     const idx = _activeSlimes.indexOf(slot);
