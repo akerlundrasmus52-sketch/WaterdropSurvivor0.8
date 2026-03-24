@@ -1985,6 +1985,40 @@ addAnatomy: function(enemyType, anatomyProfile) {
 ANATOMY[enemyType] = anatomyProfile;
 },
 
+// Direct particle burst — bypasses hit/weapon logic, spawns exactly `count` drops radially.
+// opts: { spdMin, spdMax, rMin, rMax, life, visc, color }
+rawBurst: function(ox, oy, oz, count, opts) {
+if (!_ready) return;
+var o = opts || {};
+_burstRadial(ox, oy, oz,
+  typeof count === 'number' ? count : 20,
+  o.color  !== undefined ? o.color  : 0xcc1100,
+  o.spdMin !== undefined ? o.spdMin : 1.5,
+  o.spdMax !== undefined ? o.spdMax : 6.0,
+  o.rMin   !== undefined ? o.rMin   : 0.007,
+  o.rMax   !== undefined ? o.rMax   : 0.016,
+  o.life   !== undefined ? o.life   : 2.5,
+  o.visc   !== undefined ? o.visc   : 0.60
+);
+},
+
+// Direct upward particle burst — spawns exactly `count` drops in an upward cone.
+// opts: { spdMin, spdMax, rMin, rMax, life, visc, color }
+rawBurstUpward: function(ox, oy, oz, count, opts) {
+if (!_ready) return;
+var o = opts || {};
+_burstUpward(ox, oy, oz,
+  typeof count === 'number' ? count : 15,
+  o.color  !== undefined ? o.color  : 0xcc1100,
+  o.spdMin !== undefined ? o.spdMin : 1.5,
+  o.spdMax !== undefined ? o.spdMax : 5.5,
+  o.rMin   !== undefined ? o.rMin   : 0.007,
+  o.rMax   !== undefined ? o.rMax   : 0.016,
+  o.life   !== undefined ? o.life   : 2.5,
+  o.visc   !== undefined ? o.visc   : 0.60
+);
+},
+
 };
 
 // Print integration guide
@@ -2074,21 +2108,35 @@ reset: function () {
 // ── burst / spray ─────────────────────────────────────────────────────────
 emitBurst: function (pos, count, opts) {
   var p = _pos3(pos);
-  var hp = { x: p.x, y: p.y, z: p.z };
   var cnt = typeof count === 'number' ? count : 30;
-  // Use pistol for small bursts, revolver for big - NO chunks (chunkChance=0)
-  var wk = cnt > 150 ? 'revolver' : 'pistol';
-  var e = _fakeEnemy(pos);
-  BV2.hit(e, wk, hp, null);
-  // Extra hits for large bursts - still no chunks
-  if (cnt > 100) BV2.hit(e, 'pistol', hp, null);
-  if (cnt > 250) { BV2.hit(e, 'pistol', hp, null); BV2.hit(e, 'pistol', hp, null); }
+  // Directly spawn exactly `cnt` drops using rawBurst — no threshold mapping
+  BV2.rawBurst(p.x, p.y, p.z, cnt, {
+    spdMin: 1.5, spdMax: 6.0,
+    rMin: 0.007, rMax: 0.016,
+    life: 2.5, visc: 0.60,
+    color: 0xcc1100
+  });
 },
 
-emitPulse: function (pos /*, opts */) {
-  var e = _fakeEnemy(pos);
+emitPulse: function (pos, opts) {
+  var o = opts || {};
+  var pulses   = typeof o.pulses   === 'number' ? o.pulses   : 1;
+  var perPulse = typeof o.perPulse === 'number' ? o.perPulse : 30;
+  var interval = typeof o.interval === 'number' ? o.interval : 200;
   var p = _pos3(pos);
-  BV2.hit(e, 'revolver', { x: p.x, y: p.y, z: p.z }, null);
+  for (var i = 0; i < pulses; i++) {
+    (function (idx) {
+      setTimeout(function () {
+        if (!BV2.rawBurst) return;
+        BV2.rawBurst(p.x, p.y, p.z, perPulse, {
+          spdMin: 2.0, spdMax: 7.0,
+          rMin: 0.007, rMax: 0.016,
+          life: 2.0, visc: 0.55,
+          color: 0xcc1100
+        });
+      }, idx * interval);
+    })(i);
+  }
 },
 
 emitDrop: function (x, y, z /*, vx, vy, vz, size */) {
@@ -2103,9 +2151,28 @@ emitGuts: function (pos /*, opts */) {
   BV2.kill(e, 'pistol');
 },
 
-emitHeartbeatWound: function (pos /*, opts */) {
-  var e = _fakeEnemy(pos);
-  BV2.hit(e, 'revolver', e.mesh.position, null);
+emitHeartbeatWound: function (pos, opts) {
+  var o = opts || {};
+  var pulses      = typeof o.pulses      === 'number' ? o.pulses      : 2;
+  var perPulse    = typeof o.perPulse    === 'number' ? o.perPulse    : 20;
+  var interval    = typeof o.interval    === 'number' ? o.interval    : 300;
+  var pressure    = typeof o.pressure    === 'number' ? o.pressure    : 1.0;
+  var woundHeight = typeof o.woundHeight === 'number' ? o.woundHeight : 0.5;
+  var p = _pos3(pos);
+  var yOffset = woundHeight * 0.5;
+  for (var i = 0; i < pulses; i++) {
+    (function (idx) {
+      setTimeout(function () {
+        if (!BV2.rawBurstUpward) return;
+        BV2.rawBurstUpward(p.x, p.y + yOffset, p.z, perPulse, {
+          spdMin: 1.5 * pressure, spdMax: 5.5 * pressure,
+          rMin: 0.007, rMax: 0.016,
+          life: 2.2, visc: 0.60,
+          color: 0xcc1100
+        });
+      }, idx * interval);
+    })(i);
+  }
 },
 
 // ── wounds / drips ────────────────────────────────────────────────────────
