@@ -52,17 +52,17 @@
 //  Change these if you need more / less
 // ══════════════════════════════════════════
 var CFG = {
-DROP_COUNT:       800,   // blood drop instances (InstancedMesh)
-MIST_COUNT:       400,   // fine mist instances  (InstancedMesh)
-CHUNK_COUNT:      30,    // flesh/slime chunks   (pooled Mesh)
-DECAL_COUNT:      150,   // ground blood decals  (pooled Mesh)
+DROP_COUNT:       1200,  // blood drop instances (InstancedMesh)
+MIST_COUNT:       600,   // fine mist instances  (InstancedMesh)
+CHUNK_COUNT:      40,    // flesh/slime chunks   (pooled Mesh)
+DECAL_COUNT:      200,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
-STREAM_COUNT:     12,    // arterial pump streams
+STREAM_COUNT:     16,    // arterial pump streams
 GRAVITY:         -9.81,
-GROUND_Y:         0.01,
-DECAL_FADE:       25.0,  // seconds before ground decal fades
-DRIP_RATE:        0.22,  // seconds between wound drips (base)
-PUMP_RATE:        0.06,  // seconds between arterial pumps
+GROUND_Y:         0.02,
+DECAL_FADE:       45.0,  // seconds before ground decal fades
+DRIP_RATE:        0.15,  // seconds between wound drips (base)
+PUMP_RATE:        0.05,  // seconds between arterial pumps
 BOUNCE_DECAL_PROB: 0.25, // probability of spawning a decal on first bounce
 };
 
@@ -737,7 +737,7 @@ var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
 mesh.position.y = CFG.GROUND_Y;
 mesh.visible    = false;
-mesh.renderOrder = -1;
+mesh.renderOrder = 1;
 _scene.add(mesh);
 var d = makeDecal();
 d.mesh = mesh;

@@ -30,18 +30,18 @@
 // ─────────────────────────────────────────────
 //  CONSTANTS
 // ─────────────────────────────────────────────
-const MAX_BLOOD_DROPS      = 600;   // pooled rigid-body blood drops
-const MAX_DECALS           = 200;   // pooled ground blood decals
+const MAX_BLOOD_DROPS      = 800;   // pooled rigid-body blood drops
+const MAX_DECALS           = 250;   // pooled ground blood decals
 const MAX_WOUNDS           = 12;    // max wounds per enemy simultaneously
-const MAX_MIST_PARTICLES   = 300;   // fine blood mist particles
-const MAX_CHUNKS           = 60;    // flying flesh/slime chunks
-const MAX_STREAMS          = 20;    // pumping arterial streams
+const MAX_MIST_PARTICLES   = 500;   // fine blood mist particles
+const MAX_CHUNKS           = 80;    // flying flesh/slime chunks
+const MAX_STREAMS          = 25;    // pumping arterial streams
 const GRAVITY              = -9.8;
 const BLOOD_VISCOSITY      = 0.72;  // 0=water, 1=honey — slime blood is thick
 const SLIME_VISCOSITY      = 0.55;
 const DRIP_INTERVAL        = 0.18;  // seconds between wound drips
 const PUMP_INTERVAL        = 0.08;  // arterial pump rate
-const DECAL_FADE_TIME      = 22.0;  // seconds before decal fades
+const DECAL_FADE_TIME      = 40.0;  // seconds before decal fades
 
 // ─────────────────────────────────────────────
 //  WEAPON GORE PROFILES
@@ -886,7 +886,7 @@ const GoreSim = {
 
   _buildPools() {
     // Blood drop pool
-    const dropGeo  = new THREE.SphereGeometry(0.5, 4, 3); // low-poly sphere, scaled per drop
+    const dropGeo  = new THREE.SphereGeometry(0.5, 6, 5); // low-poly sphere, scaled per drop
     const dropMat  = new THREE.MeshBasicMaterial({ color: 0xaa0000, transparent: true, opacity: 0.9 });
     for (let i = 0; i < MAX_BLOOD_DROPS; i++) {
       const mesh   = new THREE.Mesh(dropGeo, dropMat.clone());
@@ -910,7 +910,7 @@ const GoreSim = {
     }
 
     // Ground decal pool
-    const decalGeo = new THREE.CircleGeometry(0.5, 8);
+    const decalGeo = new THREE.CircleGeometry(0.5, 16);
     const decalMat = new THREE.MeshBasicMaterial({
       color:       0x880000,
       transparent: true,
@@ -920,7 +920,8 @@ const GoreSim = {
     for (let i = 0; i < MAX_DECALS; i++) {
       const mesh   = new THREE.Mesh(decalGeo, decalMat.clone());
       mesh.rotation.x = -Math.PI / 2;
-      mesh.position.y = 0.012;
+      mesh.position.y = 0.02;
+      mesh.renderOrder = 1;
       mesh.visible = false;
       this.scene.add(mesh);
       this._decalMeshes.push(mesh);
