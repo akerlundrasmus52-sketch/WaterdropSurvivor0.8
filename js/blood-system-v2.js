@@ -60,7 +60,7 @@ WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
 STREAM_COUNT:     16,    // arterial pump streams
 GRAVITY:         -9.81,
 GROUND_Y:         0.02,
-DECAL_FADE:       45.0,  // seconds before ground decal fades
+DECAL_FADE:       300.0,  // seconds before ground decal fades
 DRIP_RATE:        0.15,  // seconds between wound drips (base)
 PUMP_RATE:        0.05,  // seconds between arterial pumps
 BOUNCE_DECAL_PROB: 0.10, // probability of spawning a decal on first bounce
@@ -95,7 +95,7 @@ penetration:   0.40,       // 0=surface 1=full through
 exitWound:     true,
 exitScale:     1.9,        // exit hole bigger than entry
 dropCount:     10,         // blood drops per hit
-dropSpeed:     [2.5, 6.0], // [min,max] m/s
+dropSpeed:     [3.5, 8.0], // [min,max] m/s
 mistCount:     6,
 mistSpeed:     [1.0, 3.5],
 chunkChance:   0.0,
@@ -114,7 +114,7 @@ penetration:   0.65,
 exitWound:     true,
 exitScale:     2.6,
 dropCount:     15,
-dropSpeed:     [4.0, 9.0],
+dropSpeed:     [5.5, 12.0],
 mistCount:     10,
 mistSpeed:     [2.0, 5.0],
 chunkChance:   0.08,
@@ -136,7 +136,7 @@ penetration:   0.25,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     45,         // MASSIVE blood volume
-dropSpeed:     [5.0, 16.0],
+dropSpeed:     [7.0, 20.0],
 mistCount:     30,
 mistSpeed:     [3.0, 9.0],
 chunkChance:   0.85,
@@ -157,7 +157,7 @@ penetration:   0.38,
 exitWound:     true,
 exitScale:     1.4,
 dropCount:     8,
-dropSpeed:     [2.0, 5.5],
+dropSpeed:     [3.0, 7.0],
 mistCount:     5,
 mistSpeed:     [1.0, 3.0],
 chunkChance:   0.0,
@@ -176,7 +176,7 @@ penetration:   1.0,        // full through
 exitWound:     true,
 exitScale:     0.85,       // supersonic — exit nearly same size
 dropCount:     18,
-dropSpeed:     [7.0, 22.0],
+dropSpeed:     [10.0, 28.0],
 mistCount:     20,
 mistSpeed:     [5.0, 14.0],
 chunkChance:   0.20,
@@ -198,7 +198,7 @@ penetration:   0.32,
 exitWound:     true,
 exitScale:     1.2,
 dropCount:     7,
-dropSpeed:     [2.0, 5.0],
+dropSpeed:     [3.0, 6.5],
 mistCount:     4,
 mistSpeed:     [1.0, 3.0],
 chunkChance:   0.02,
@@ -217,7 +217,7 @@ penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     80,
-dropSpeed:     [10.0, 28.0],
+dropSpeed:     [14.0, 35.0],
 mistCount:     50,
 mistSpeed:     [6.0, 18.0],
 chunkChance:   1.0,
@@ -237,7 +237,7 @@ penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     150,
-dropSpeed:     [18.0, 45.0],
+dropSpeed:     [22.0, 55.0],
 mistCount:     100,
 mistSpeed:     [10.0, 25.0],
 chunkChance:   1.0,
@@ -278,7 +278,7 @@ penetration:   0.70,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     22,
-dropSpeed:     [3.5, 10.0],
+dropSpeed:     [5.0, 14.0],
 mistCount:     15,
 mistSpeed:     [2.0, 7.0],
 chunkChance:   0.35,
@@ -298,7 +298,7 @@ penetration:   0.92,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     12,
-dropSpeed:     [0.2, 1.5],
+dropSpeed:     [0.5, 2.5],
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -319,7 +319,7 @@ penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     25,
-dropSpeed:     [0.5, 4.0],
+dropSpeed:     [1.0, 6.0],
 mistCount:     3,
 mistSpeed:     [0.5, 2.0],
 chunkChance:   0.15,
@@ -340,7 +340,7 @@ penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     35,
-dropSpeed:     [1.0, 5.0],
+dropSpeed:     [1.5, 7.5],
 mistCount:     4,
 mistSpeed:     [0.5, 2.5],
 chunkChance:   0.50,
@@ -383,7 +383,7 @@ penetration:   0.55,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     10,
-dropSpeed:     [0.5, 2.5],
+dropSpeed:     [1.0, 4.0],
 mistCount:     6,
 mistSpeed:     [0.3, 1.5],
 chunkChance:   0.0,
@@ -403,7 +403,7 @@ penetration:   1.0,
 exitWound:     true,
 exitScale:     1.0,
 dropCount:     7,
-dropSpeed:     [1.5, 5.0],
+dropSpeed:     [2.0, 7.0],
 mistCount:     10,
 mistSpeed:     [1.0, 4.0],
 chunkChance:   0.06,
@@ -423,7 +423,7 @@ penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     20,
-dropSpeed:     [0.1, 0.6],
+dropSpeed:     [0.3, 1.5],
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -445,7 +445,7 @@ penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     200,
-dropSpeed:     [20.0, 55.0],
+dropSpeed:     [25.0, 65.0],
 mistCount:     125,
 mistSpeed:     [12.0, 30.0],
 chunkChance:   1.0,
@@ -959,12 +959,14 @@ _updateWound(gs.wounds[j], dt, ex, ey, ez, evx, evz, col);
 });
 
 // ── Fade decals ──────────────────────────
-// Throttle: only check 10 decals per frame to save CPU
+// Throttle: only check 10 decals per frame to save CPU.
+// Scale dt by (DECAL_COUNT/10) so that DECAL_FADE matches real seconds regardless of pool size.
+var _decalDt = dt * (CFG.DECAL_COUNT / 10);
 var startD = (_frame * 10) % CFG.DECAL_COUNT;
 for (var i = 0; i < 10; i++) {
 var dd = _decals[(startD + i) % CFG.DECAL_COUNT];
 if (!dd.alive) continue;
-dd.life -= dt;
+dd.life -= _decalDt;
 if (dd.life <= 0) {
 dd.alive = false;
 dd.mesh.visible = false;
@@ -1004,7 +1006,7 @@ if (d.onGround) {
 d.r = Math.min(d.r + dt * 0.008, 0.025);
 if (d.life < 2.5) {
 var a = d.life / 2.5;
-_m4.makeScale(d.r * 8 * a, 0.04 * a, d.r * 8 * a);
+_m4.makeScale(d.r * 5 * a, 0.04 * a, d.r * 5 * a);
 _m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
 im.setMatrixAt(d.idx, _m4);
 }
@@ -1050,7 +1052,7 @@ _spawnDecal(d.px, d.pz, d.r * 1.2, d.color);
 
 // ── Update InstancedMesh matrix ────────
 var spd  = Math.sqrt(speed2);
-var s    = d.r * 2;
+var s    = d.r * 1.5;
 
 if (!d.onGround && spd > 3.5) {
 // Elongate drop along velocity vector at high speed
@@ -1787,8 +1789,8 @@ dd.maxLife = CFG.DECAL_FADE;
 dd.mesh.position.set(x, CFG.GROUND_Y, z);
 // Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
-radius * (2 + Math.random() * 1.5),
-radius * (1.5 + Math.random() * 1),
+radius * (1.5 + Math.random() * 1.5),
+radius * (1.0 + Math.random() * 1.0),
 1
 );
 dd.mesh.rotation.z = Math.random() * Math.PI * 2;
@@ -1985,6 +1987,40 @@ addAnatomy: function(enemyType, anatomyProfile) {
 ANATOMY[enemyType] = anatomyProfile;
 },
 
+// Direct particle burst — bypasses hit/weapon logic, spawns exactly `count` drops radially.
+// opts: { spdMin, spdMax, rMin, rMax, life, visc, color }
+rawBurst: function(ox, oy, oz, count, opts) {
+if (!_ready) return;
+var o = opts || {};
+_burstRadial(ox, oy, oz,
+  typeof count === 'number' ? count : 20,
+  o.color  !== undefined ? o.color  : 0xcc1100,
+  o.spdMin !== undefined ? o.spdMin : 1.5,
+  o.spdMax !== undefined ? o.spdMax : 6.0,
+  o.rMin   !== undefined ? o.rMin   : 0.007,
+  o.rMax   !== undefined ? o.rMax   : 0.016,
+  o.life   !== undefined ? o.life   : 2.5,
+  o.visc   !== undefined ? o.visc   : 0.60
+);
+},
+
+// Direct upward particle burst — spawns exactly `count` drops in an upward cone.
+// opts: { spdMin, spdMax, rMin, rMax, life, visc, color }
+rawBurstUpward: function(ox, oy, oz, count, opts) {
+if (!_ready) return;
+var o = opts || {};
+_burstUpward(ox, oy, oz,
+  typeof count === 'number' ? count : 15,
+  o.color  !== undefined ? o.color  : 0xcc1100,
+  o.spdMin !== undefined ? o.spdMin : 1.5,
+  o.spdMax !== undefined ? o.spdMax : 5.5,
+  o.rMin   !== undefined ? o.rMin   : 0.007,
+  o.rMax   !== undefined ? o.rMax   : 0.016,
+  o.life   !== undefined ? o.life   : 2.5,
+  o.visc   !== undefined ? o.visc   : 0.60
+);
+},
+
 };
 
 // Print integration guide
@@ -2074,21 +2110,35 @@ reset: function () {
 // ── burst / spray ─────────────────────────────────────────────────────────
 emitBurst: function (pos, count, opts) {
   var p = _pos3(pos);
-  var hp = { x: p.x, y: p.y, z: p.z };
   var cnt = typeof count === 'number' ? count : 30;
-  // Use pistol for small bursts, revolver for big - NO chunks (chunkChance=0)
-  var wk = cnt > 150 ? 'revolver' : 'pistol';
-  var e = _fakeEnemy(pos);
-  BV2.hit(e, wk, hp, null);
-  // Extra hits for large bursts - still no chunks
-  if (cnt > 100) BV2.hit(e, 'pistol', hp, null);
-  if (cnt > 250) { BV2.hit(e, 'pistol', hp, null); BV2.hit(e, 'pistol', hp, null); }
+  // Directly spawn exactly `cnt` drops using rawBurst — no threshold mapping
+  BV2.rawBurst(p.x, p.y, p.z, cnt, {
+    spdMin: 1.5, spdMax: 6.0,
+    rMin: 0.007, rMax: 0.016,
+    life: 2.5, visc: 0.60,
+    color: 0xcc1100
+  });
 },
 
-emitPulse: function (pos /*, opts */) {
-  var e = _fakeEnemy(pos);
+emitPulse: function (pos, opts) {
+  var o = opts || {};
+  var pulses   = typeof o.pulses   === 'number' ? o.pulses   : 1;
+  var perPulse = typeof o.perPulse === 'number' ? o.perPulse : 30;
+  var interval = typeof o.interval === 'number' ? o.interval : 200;
   var p = _pos3(pos);
-  BV2.hit(e, 'revolver', { x: p.x, y: p.y, z: p.z }, null);
+  for (var i = 0; i < pulses; i++) {
+    (function (idx) {
+      setTimeout(function () {
+        if (!BV2.rawBurst) return;
+        BV2.rawBurst(p.x, p.y, p.z, perPulse, {
+          spdMin: 2.0, spdMax: 7.0,
+          rMin: 0.007, rMax: 0.016,
+          life: 2.0, visc: 0.55,
+          color: 0xcc1100
+        });
+      }, idx * interval);
+    })(i);
+  }
 },
 
 emitDrop: function (x, y, z /*, vx, vy, vz, size */) {
@@ -2103,9 +2153,28 @@ emitGuts: function (pos /*, opts */) {
   BV2.kill(e, 'pistol');
 },
 
-emitHeartbeatWound: function (pos /*, opts */) {
-  var e = _fakeEnemy(pos);
-  BV2.hit(e, 'revolver', e.mesh.position, null);
+emitHeartbeatWound: function (pos, opts) {
+  var o = opts || {};
+  var pulses      = typeof o.pulses      === 'number' ? o.pulses      : 2;
+  var perPulse    = typeof o.perPulse    === 'number' ? o.perPulse    : 20;
+  var interval    = typeof o.interval    === 'number' ? o.interval    : 300;
+  var pressure    = typeof o.pressure    === 'number' ? o.pressure    : 1.0;
+  var woundHeight = typeof o.woundHeight === 'number' ? o.woundHeight : 0.5;
+  var p = _pos3(pos);
+  var yOffset = woundHeight * 0.5;
+  for (var i = 0; i < pulses; i++) {
+    (function (idx) {
+      setTimeout(function () {
+        if (!BV2.rawBurstUpward) return;
+        BV2.rawBurstUpward(p.x, p.y + yOffset, p.z, perPulse, {
+          spdMin: 1.5 * pressure, spdMax: 5.5 * pressure,
+          rMin: 0.007, rMax: 0.016,
+          life: 2.2, visc: 0.60,
+          color: 0xcc1100
+        });
+      }, idx * interval);
+    })(i);
+  }
 },
 
 // ── wounds / drips ────────────────────────────────────────────────────────

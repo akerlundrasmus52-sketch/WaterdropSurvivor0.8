@@ -1300,7 +1300,7 @@
     // Crawler explodes into segmented chunks — massive brown/amber blood burst
     if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 400, {
+        BloodSystem.emitBurst({ x, y, z }, 60, {
           spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100
         });
       }
@@ -1331,7 +1331,7 @@
     poolMesh.rotation.x = -Math.PI / 2;
     poolMesh.position.set(x, 0.03, z);
     scene.add(poolMesh);
-    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 15, bloodTimer: 0, poolMesh: poolMesh, poolMat: poolMat, x: x, z: z });
+    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: poolMesh, poolMat: poolMat, x: x, z: z });
 
     // Drop XP
     const gemType = hitForce > 2.0 ? 5 : (hitForce > 1.5 ? 3 : 2);
@@ -1484,12 +1484,12 @@
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos2, 6);
       }
-      // Reduced pulse intervals from 300ms to 200ms to match old map's 180ms speed
+      // Reduced pulse intervals
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos2, { pulses: 3, perPulse: 300, interval: 200 });
+        BloodSystem.emitPulse(_bPos2, { pulses: 2, perPulse: 40, interval: 200 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 5, perPulse: 120, interval: 200, woundHeight: 0.8 });
+        BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 3, perPulse: 25, interval: 200, woundHeight: 0.8 });
       }
     }
     _tmpV3.set(slot.mesh.position.x, 1.7, slot.mesh.position.z);
@@ -1523,12 +1523,12 @@
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos3, 12);
       }
-      // Speed up to 180ms interval like old map
+      // Speed up to 180ms interval
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos3, { pulses: 5, perPulse: 400, interval: 180 });
+        BloodSystem.emitPulse(_bPos3, { pulses: 3, perPulse: 50, interval: 180 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 7, perPulse: 180, interval: 180, woundHeight: 1.0 });
+        BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 4, perPulse: 30, interval: 180, woundHeight: 1.0 });
       }
       if (typeof BloodSystem.emitExitWound === 'function') {
         const a = Math.random() * Math.PI * 2;
@@ -1576,10 +1576,10 @@
         BloodSystem.emitGuts(_bPos4, 18);
       }
       if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos4, { pulses: 6, perPulse: 500, interval: 500 });
+        BloodSystem.emitPulse(_bPos4, { pulses: 3, perPulse: 60, interval: 300 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos4, { pulses: 8, perPulse: 220, interval: 260, woundHeight: 1.2, pressure: 1.3 });
+        BloodSystem.emitHeartbeatWound(_bPos4, { pulses: 4, perPulse: 35, interval: 200, woundHeight: 1.2, pressure: 1.3 });
       }
       if (typeof BloodSystem.emitExitWound === 'function') {
         for (let i = 0; i < 2; i++) {
