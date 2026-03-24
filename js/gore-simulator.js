@@ -921,7 +921,7 @@ for (let i = 0; i < MAX_CHUNKS; i++) {
 }
 
 // Ground decal pool
-const decalGeo = new THREE.CircleGeometry(0.5, 8);
+const decalGeo = new THREE.CircleGeometry(0.5, 16);
 const decalMat = new THREE.MeshBasicMaterial({
   color:       0x880000,
   transparent: true,

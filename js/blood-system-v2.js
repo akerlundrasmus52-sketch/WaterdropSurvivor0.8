@@ -640,7 +640,7 @@ CFG.DECAL_COUNT + ' decals'
 // ══════════════════════════════════════════
 
 function _buildDropPool() {
-var geo = new THREE.SphereGeometry(1.0, 4, 3); // unit sphere, scaled per instance
+var geo = new THREE.SphereGeometry(1.0, 8, 6); // unit sphere, scaled per instance
 var mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
 _dropIM = new THREE.InstancedMesh(geo, mat, CFG.DROP_COUNT);
@@ -670,7 +670,7 @@ _dropIM.instanceColor.needsUpdate  = true;
 }
 
 function _buildMistPool() {
-var geo = new THREE.SphereGeometry(1.0, 3, 2);
+var geo = new THREE.SphereGeometry(1.0, 6, 4);
 var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 });
 
 _mistIM = new THREE.InstancedMesh(geo, mat, CFG.MIST_COUNT);
@@ -722,7 +722,7 @@ _chunks.push(c);
 
 function _buildDecalPool() {
 // Ground blood splatter decals
-var geo = new THREE.CircleGeometry(1.0, 7);
+var geo = new THREE.CircleGeometry(1.0, 16);
 var mat = new THREE.MeshBasicMaterial({
 transparent: true,
 opacity:     0.80,

@@ -1330,7 +1330,7 @@
   let _bloodStainHead = 0; // ring-buffer index
 
   function _buildBloodStainPool() {
-    const stainGeo = new THREE.CircleGeometry(0.8, 12);
+    const stainGeo = new THREE.CircleGeometry(0.8, 16);
     for (let i = 0; i < BLOOD_STAIN_POOL_SIZE; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: 0x550000,
