@@ -98,11 +98,12 @@
       position: fixed !important;
       top: 0; left: 0; right: 0; bottom: 0;
       display: none;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.75);
+      background: radial-gradient(ellipse at center, rgba(8,8,20,0.92) 0%, rgba(0,0,0,0.97) 100%) !important;
       z-index: 9998 !important;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
       pointer-events: auto;
     }
 
@@ -421,78 +422,117 @@
   <div id="progression-shop"      style="display:none;"><div id="shop-gold">GOLD: 0</div><div id="shop-grid"></div></div>
   <!-- Gear stubs -->
   <div id="gear-screen"           style="display:none;"><div id="gear-stats-content"></div><div id="gear-content"></div></div>
-  <!-- Settings Modal — Full Camp-themed UI with Auto/Manual Graphics Mode -->
+  <!-- Settings Modal — Dark Egyptian/Obsidian Theme with 3D Depth -->
   <div id="settings-modal" class="settings-modal" style="display:none;">
     <div class="settings-container">
-      <div class="settings-title">SETTINGS</div>
+      <div class="settings-title">⚙ SETTINGS</div>
+      <div class="settings-scroll">
+
+      <div class="settings-section-label">GAMEPLAY</div>
 
       <div class="settings-item">
-        <label for="auto-aim-checkbox">Auto-Aim <small id="auto-aim-label-tooltip" style="color:#aaa; font-size:11px;">(Unlock in Skill Tree)</small></label>
-        <input type="checkbox" id="auto-aim-checkbox" disabled title="Unlock Auto-Aim in the Skill Tree first">
+        <label for="auto-aim-checkbox">Auto-Aim <small id="auto-aim-label-tooltip" style="color:#666; font-size:10px;">(Unlock in Skill Tree)</small></label>
+        <label class="settings-toggle">
+          <input type="checkbox" id="auto-aim-checkbox" disabled title="Unlock Auto-Aim in the Skill Tree first">
+          <span class="toggle-track"><span class="toggle-knob"></span></span>
+        </label>
       </div>
 
       <div class="settings-item">
         <label for="control-type-select">Control Type</label>
-        <select id="control-type-select">
-          <option value="touch">Touch (Joystick)</option>
-          <option value="keyboard">Keyboard</option>
-          <option value="gamepad">Gamepad</option>
-        </select>
+        <div class="select-wrapper">
+          <select id="control-type-select">
+            <option value="touch">Touch (Joystick)</option>
+            <option value="keyboard">Keyboard</option>
+            <option value="gamepad">Gamepad</option>
+          </select>
+        </div>
       </div>
+
+      <div class="settings-section-label">AUDIO</div>
 
       <div class="settings-item">
         <label for="sound-toggle">Sound Effects</label>
-        <input type="checkbox" id="sound-toggle" checked>
+        <label class="settings-toggle">
+          <input type="checkbox" id="sound-toggle" checked>
+          <span class="toggle-track"><span class="toggle-knob"></span></span>
+        </label>
       </div>
 
       <div class="settings-item">
         <label for="music-toggle">Background Music</label>
-        <input type="checkbox" id="music-toggle" checked>
+        <label class="settings-toggle">
+          <input type="checkbox" id="music-toggle" checked>
+          <span class="toggle-track"><span class="toggle-knob"></span></span>
+        </label>
       </div>
+
+      <div class="settings-section-label">GRAPHICS</div>
 
       <div class="settings-item">
         <label for="graphics-mode-select">Graphics Mode</label>
-        <select id="graphics-mode-select">
-          <option value="auto">Auto (Adaptive)</option>
-          <option value="manual">Manual</option>
-        </select>
+        <div class="select-wrapper">
+          <select id="graphics-mode-select">
+            <option value="auto">Auto (Adaptive)</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
       </div>
 
       <!-- Manual Graphics Settings Panel (hidden when Auto is selected) -->
-      <div id="manual-graphics-panel" style="display:none; margin: 10px 0; padding: 15px; background: rgba(0,0,0,0.35); border-radius: 8px; border: 1px solid rgba(212,165,116,0.4);">
-        <div class="settings-item" style="margin: 10px 0;">
+      <div id="manual-graphics-panel" style="display:none;">
+        <div class="settings-item" style="margin: 8px 0;">
           <label for="quality-select">Quality Preset</label>
-          <select id="quality-select">
-            <option value="ultra-low">Ultra Low</option>
-            <option value="very-low">Very Low</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="very-high">Very High</option>
-            <option value="ultra">Ultra</option>
-          </select>
+          <div class="select-wrapper">
+            <select id="quality-select">
+              <option value="ultra-low">Ultra Low</option>
+              <option value="very-low">Very Low</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="very-high">Very High</option>
+              <option value="ultra">Ultra</option>
+            </select>
+          </div>
         </div>
 
-        <div class="settings-item" style="margin: 10px 0;">
-          <label for="particle-effects-toggle">Particle Effects (Blood/Gore)</label>
-          <input type="checkbox" id="particle-effects-toggle" checked>
+        <div class="settings-item" style="margin: 8px 0;">
+          <label for="particle-effects-toggle">Particle Effects</label>
+          <label class="settings-toggle">
+            <input type="checkbox" id="particle-effects-toggle" checked>
+            <span class="toggle-track"><span class="toggle-knob"></span></span>
+          </label>
         </div>
 
-        <div style="font-size: 11px; color: #d4a574; margin-top: 8px; text-align: center;">
-          Manual mode allows full control over graphics settings, overriding device defaults.
-        </div>
+        <div class="settings-manual-hint">Manual mode overrides adaptive performance scaling.</div>
       </div>
 
-      <div id="fps-booster-status" style="display:none; padding:4px 8px; margin-top:4px; font-size:11px; color:#d4a574; text-align:center;"></div>
+      <div id="fps-booster-status" style="display:none; padding:4px 8px; margin-top:4px; font-size:10px; color:#5af; text-align:center;"></div>
 
-      <button id="settings-go-to-camp-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #d4a574, #a67c52); margin-top: 10px;">⛺ GO TO CAMP</button>
-      <button id="settings-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #c0392b, #a93226); margin-top: 10px;">RESET PROGRESS</button>
-      <button id="hard-reset-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #6b0000, #4a0000); border: 1px solid #cc2222; margin-top: 6px;" onclick="if(typeof window.hardResetGame==='function')window.hardResetGame();">🗑️ HARD RESET ACCOUNT</button>
-      <div style="font-size:10px;color:#996666;margin-top:3px;text-align:center;padding:0 8px;">Wipes ALL progress — buildings, skills, gear, gold. Fresh start from Level 0.</div>
-      <button id="ui-calibration-btn" class="settings-close-btn" style="background: linear-gradient(to bottom, #1a6e9f, #155a82); margin-top: 6px;">🎛️ UI CUSTOMIZATION (Drag &amp; Resize HUD)</button>
-      <button class="settings-close-btn" id="settings-close-btn">CLOSE</button>
+      </div><!-- end settings-scroll -->
+
+      <div class="settings-buttons">
+        <button id="settings-close-btn" class="settings-btn-3d settings-btn-back">⬅ BACK TO GAME</button>
+        <button id="settings-go-to-camp-btn" class="settings-btn-3d settings-btn-camp">⛺ GO TO CAMP</button>
+        <button id="ui-calibration-btn" class="settings-btn-3d settings-btn-ui">🎛️ UI CUSTOMIZATION</button>
+        <button id="settings-reset-btn" class="settings-btn-3d settings-btn-danger">⚠ RESET PROGRESS</button>
+      </div>
     </div>
   </div>
+
+  <!-- Comic-book style game dialog (replaces browser confirm/alert) -->
+  <div id="game-dialog-overlay" style="display:none;">
+    <div class="game-dialog-bubble">
+      <div class="game-dialog-tail"></div>
+      <div class="game-dialog-title"></div>
+      <div class="game-dialog-text"></div>
+      <div class="game-dialog-buttons">
+        <button class="game-dialog-btn game-dialog-confirm">YES</button>
+        <button class="game-dialog-btn game-dialog-cancel">NO</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Menu gold (referenced by addGold stub) -->
   <div id="menu-gold" style="display:none;">GOLD: 0</div>
   <!-- Achievements stub -->

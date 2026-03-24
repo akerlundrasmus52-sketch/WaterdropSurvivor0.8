@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════════════════════
-// Settings UI - Camp-themed Settings Modal with Auto/Manual Graphics Mode
+// Settings UI - Dark-themed Settings Modal with Custom Dialogs
 // ══════════════════════════════════════════════════════════════════════════════
 
 (function() {
@@ -38,6 +38,12 @@
     // Also allow Escape key to open/close settings
     document.addEventListener('keydown', function(e) {
       if (e.code === 'Escape') {
+        // Close dialog first if open
+        const dialogOverlay = document.getElementById('game-dialog-overlay');
+        if (dialogOverlay && dialogOverlay.style.display === 'flex') {
+          dialogOverlay.style.display = 'none';
+          return;
+        }
         if (settingsModal.style.display === 'flex') {
           closeSettings();
         } else if (window.gameSettings && !window.isPaused) {
@@ -56,7 +62,7 @@
       settingsModal.style.display = 'flex';
     }
 
-    // ─── Close Settings Modal ───
+    // ─── Close Settings / Back to Game ───
     closeBtn.addEventListener('click', closeSettings);
 
     // ─── Go to Camp Button ───
@@ -81,6 +87,30 @@
       window.isPaused = false;
     }
 
+    // ─── Reset Progress Button (uses comic-book dialog) ───
+    const resetBtn = document.getElementById('settings-reset-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        showGameDialog(
+          '⚠ RESET PROGRESS',
+          'This will wipe ALL your progress — buildings, skills, gear, gold, and stats. You will start fresh from Level 0.\n\nAre you sure?',
+          function() {
+            // Confirmed — perform the reset
+            if (typeof window.hardResetGame === 'function') {
+              window.hardResetGame();
+            } else {
+              // Fallback: clear localStorage and reload
+              try {
+                localStorage.removeItem('waterDropSurvivorSave');
+                localStorage.removeItem('waterDropSurvivorSettings');
+              } catch (e) { /* ignore */ }
+              window.location.reload();
+            }
+          }
+        );
+      });
+    }
+
     // ─── Graphics Mode (Auto/Manual) Toggle ───
     if (graphicsModeSelect && manualGraphicsPanel) {
       graphicsModeSelect.addEventListener('change', function() {
@@ -100,9 +130,7 @@
             }
 
             // FORCE FULL BLOOD/GORE RENDERING IN MANUAL MODE
-            // Manual mode overrides all performance throttles for Blood/Gore simulators
             if (window.gameSettings.particleEffects !== false) {
-              // Enable full particle effects
               if (window.BloodV2 && typeof window.BloodV2.setParticleEffects === 'function') {
                 window.BloodV2.setParticleEffects(true);
               }
@@ -348,5 +376,44 @@
       console.log('[SettingsUI] Auto-aim unlocked and enabled in settings');
     }
   };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMIC-BOOK GAME DIALOG SYSTEM
+  // Replaces browser confirm() and alert() with styled in-game dialogs
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function showGameDialog(title, message, onConfirm, onCancel) {
+    const overlay = document.getElementById('game-dialog-overlay');
+    if (!overlay) return;
+
+    const titleEl = overlay.querySelector('.game-dialog-title');
+    const textEl = overlay.querySelector('.game-dialog-text');
+    const confirmBtn = overlay.querySelector('.game-dialog-confirm');
+    const cancelBtn = overlay.querySelector('.game-dialog-cancel');
+
+    if (titleEl) titleEl.textContent = title || '';
+    if (textEl) textEl.textContent = message || '';
+
+    overlay.style.display = 'flex';
+
+    // Clone buttons to remove old listeners
+    const newConfirm = confirmBtn.cloneNode(true);
+    const newCancel = cancelBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+    newConfirm.addEventListener('click', function() {
+      overlay.style.display = 'none';
+      if (typeof onConfirm === 'function') onConfirm();
+    });
+
+    newCancel.addEventListener('click', function() {
+      overlay.style.display = 'none';
+      if (typeof onCancel === 'function') onCancel();
+    });
+  }
+
+  // Expose dialog system globally
+  window.showGameDialog = showGameDialog;
 
 })();
