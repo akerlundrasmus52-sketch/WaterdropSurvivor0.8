@@ -2099,7 +2099,7 @@
           const stainCount = hpRatio < 0.25 ? 3 : (hpRatio < 0.5 ? 2 : 1);
           // Lazy-init shared stain geometry (unit-size, scale per instance)
           if (!_sharedBloodStainGeo && typeof THREE !== 'undefined') {
-            _sharedBloodStainGeo = new THREE.CircleGeometry(1, 6);
+            _sharedBloodStainGeo = new THREE.CircleGeometry(1, 16);
           }
           for (let s = 0; s < stainCount && this._bloodStains.length < MAX_BODY_BLOOD_STAINS; s++) {
             const stainSize = 0.08 + Math.random() * 0.15;

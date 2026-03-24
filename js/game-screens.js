@@ -1693,7 +1693,7 @@ const BLOOD_DECAL_FADE_MS = 12000;
 
 function _ensureBloodDecalIM() {
   if (_bloodDecalIM || !scene || typeof THREE === 'undefined') return;
-  const geo = new THREE.CircleGeometry(1, 8);
+  const geo = new THREE.CircleGeometry(1, 16);
   const mat = new THREE.MeshStandardMaterial({
     color: 0x6B0000, transparent: true, opacity: 0.7, depthWrite: false,
     roughness: 0.15, metalness: 0.6, emissive: 0x3A0000, emissiveIntensity: 0.15,
