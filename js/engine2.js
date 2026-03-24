@@ -69,7 +69,7 @@ class Engine2Sandbox {
     // Helper to configure texture properly
     const configureTexture = (texture) => {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(6, 6);
+      texture.repeat.set(20, 20);
       texture.anisotropy = 4;
 
       // Set proper color space for correct display
@@ -176,7 +176,7 @@ class Engine2Sandbox {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(6, 6);
+    texture.repeat.set(20, 20);
     texture.anisotropy = 4;
     texture.needsUpdate = true; // CRITICAL: Force texture upload to GPU
 
