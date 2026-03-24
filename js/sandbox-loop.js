@@ -1002,27 +1002,7 @@
     if (window.BloodSystem) {
       // Reduced from 30 to 10 particles for realistic subtle hit
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bloodPos, 10, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
-      }
-
-      // Add blood drop meshes for physical realism (3 individual falling drops)
-      if (typeof BloodSystem.emitDrop === 'function' && hpPercent < 0.75) {
-        const dropCount = 3; // Reduced from 6-9 to 3
-        for (let d = 0; d < dropCount; d++) {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 0.2 + Math.random() * 0.3;
-          const dx = Math.cos(angle) * dist;
-          const dz = Math.sin(angle) * dist;
-          BloodSystem.emitDrop(
-            _bloodPos.x + dx * 0.05,
-            _bloodPos.y + 0.3,
-            _bloodPos.z + dz * 0.05,
-            dx * 0.15, // velocity X
-            0.15 + Math.random() * 0.10, // velocity Y (upward)
-            dz * 0.15, // velocity Z
-            0.03 + Math.random() * 0.05 // size
-          );
-        }
+        BloodSystem.emitBurst(_bloodPos, 5, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
       }
 
       // Register wound for heartbeat spurts (like old map at 75% HP)
@@ -1109,7 +1089,7 @@
     if (window.BloodSystem) {
       // OLD MAP: 350-600 particle burst for death - we match with 50
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 50, {
+        BloodSystem.emitBurst({ x, y, z }, 22, {
           spreadXZ: 3.0,
           spreadY: 1.2,
           minLife: 50,
@@ -1198,11 +1178,12 @@
     // Growing blood pool under corpse
     const poolGeo = new THREE.CircleGeometry(0.1, 10);
     const poolMat = new THREE.MeshBasicMaterial({
-      color: 0x550000, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false
+      color: 0x550000, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     });
     const poolMesh = new THREE.Mesh(poolGeo, poolMat);
     poolMesh.rotation.x = -Math.PI / 2;
-    poolMesh.position.set(x, 0.03, z);
+    poolMesh.position.set(x, 0.06, z);
     scene.add(poolMesh);
     _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh, poolMat, x, z });
 
@@ -1468,7 +1449,7 @@
     if (window.BloodSystem) {
       // Increased from 8 to 30 to match old map realism
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos1, 30, { spreadXZ: 0.8, spreadY: 0.4, minLife: 50, maxLife: 100 });
+        BloodSystem.emitBurst(_bPos1, 10, { spreadXZ: 0.8, spreadY: 0.4, minLife: 50, maxLife: 100 });
       }
       // Start pulsing heartbeat bleed (arterial spurts from wound)
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
@@ -1510,14 +1491,10 @@
     if (window.BloodSystem) {
       // Increased from 18 to 60 to match old map impact
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos2, 60, { spreadXZ: 1.5, spreadY: 0.6, minLife: 50, maxLife: 100 });
+        BloodSystem.emitBurst(_bPos2, 18, { spreadXZ: 1.5, spreadY: 0.6, minLife: 50, maxLife: 100 });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos2, 6);
-      }
-      // Reduced pulse intervals
-      if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos2, { pulses: 2, perPulse: 40, interval: 200 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
         BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 3, perPulse: 25, interval: 200, woundHeight: 0.8 });
@@ -1549,14 +1526,10 @@
     if (window.BloodSystem) {
       // Increased from 30 to 100 to match old map's sniper hit intensity
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos3, 100, { spreadXZ: 2.0, spreadY: 0.8, minLife: 50, maxLife: 100 });
+        BloodSystem.emitBurst(_bPos3, 25, { spreadXZ: 2.0, spreadY: 0.8, minLife: 50, maxLife: 100 });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos3, 12);
-      }
-      // Speed up to 180ms interval
-      if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos3, { pulses: 3, perPulse: 50, interval: 180 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
         BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 4, perPulse: 30, interval: 180, woundHeight: 1.0 });
@@ -1601,13 +1574,10 @@
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
     if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos4, 45, { spreadXZ: 2.5, spreadY: 1.0 });
+        BloodSystem.emitBurst(_bPos4, 15, { spreadXZ: 2.5, spreadY: 1.0 });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts(_bPos4, 18);
-      }
-      if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse(_bPos4, { pulses: 3, perPulse: 60, interval: 300 });
       }
       if (typeof BloodSystem.emitHeartbeatWound === 'function') {
         BloodSystem.emitHeartbeatWound(_bPos4, { pulses: 4, perPulse: 35, interval: 200, woundHeight: 1.2, pressure: 1.3 });
@@ -1639,11 +1609,15 @@
         opacity: 0,
         depthWrite: false,
         side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
       });
       const mesh = new THREE.Mesh(stainGeo, mat);
       mesh.rotation.x = -Math.PI / 2;
-      mesh.position.set(0, 0.02, 0);
+      mesh.position.set(0, 0.06, 0);
       mesh.visible = false;
+      mesh.renderOrder = 2;
       scene.add(mesh);
       _bloodStainPool.push({ mesh, fadeTimer: 0 });
     }

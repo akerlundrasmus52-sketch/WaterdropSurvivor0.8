@@ -474,7 +474,7 @@ this.groundY    = options.groundY   || 0.01;
 this.isMist     = options.isMist    || false;
 this.frozen     = options.frozen    || false;
 this.charred    = options.charred   || false;
-this.size       = this.radius * 60;
+this.size       = this.radius * 1.5;
 if (this.mesh) {
 this.mesh.visible = true;
 this.mesh.scale.setScalar(this.size);
@@ -944,7 +944,7 @@ console.log('!!! GORE SIMULATOR IS ALIVE !!! Realistic Gore Simulator v1.0 ready
 
 _buildPools() {
 // Blood drop pool
-const dropGeo  = new THREE.SphereGeometry(0.5, 6, 5); // low-poly sphere, scaled per drop
+const dropGeo  = new THREE.SphereGeometry(1.0, 6, 5); // low-poly sphere, scaled per drop
 const dropMat  = new THREE.MeshBasicMaterial({ color: 0xaa0000, transparent: true, opacity: 0.9 });
 for (let i = 0; i < MAX_BLOOD_DROPS; i++) {
 const mesh   = new THREE.Mesh(dropGeo, dropMat.clone());
@@ -974,6 +974,9 @@ const decalMat = new THREE.MeshBasicMaterial({
   transparent: true,
   opacity:     0.75,
   depthWrite:  false,
+  polygonOffset: true,
+  polygonOffsetFactor: -1,
+  polygonOffsetUnits: -1,
 });
 for (let i = 0; i < MAX_DECALS; i++) {
   const mesh   = new THREE.Mesh(decalGeo, decalMat.clone());
@@ -1582,8 +1585,8 @@ return drop;
 _spawnDecal(pos, radius, color) {
 const mesh = this._decalMeshes[this._decalIndex % MAX_DECALS];
 this._decalIndex++;
-mesh.position.set(pos.x, 0.012, pos.z);
-mesh.scale.setScalar(radius * 8 + Math.random() * 0.3);
+mesh.position.set(pos.x, 0.06, pos.z);
+mesh.scale.setScalar(radius * 3 + Math.random() * 0.15);
 mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;
 mesh.visible = true;

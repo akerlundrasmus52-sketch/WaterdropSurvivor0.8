@@ -52,14 +52,14 @@
 //  Change these if you need more / less
 // ══════════════════════════════════════════
 var CFG = {
-DROP_COUNT:       1200,  // blood drop instances (InstancedMesh)
-MIST_COUNT:       600,   // fine mist instances  (InstancedMesh)
+DROP_COUNT:       500,   // blood drop instances (InstancedMesh)
+MIST_COUNT:       250,   // fine mist instances  (InstancedMesh)
 CHUNK_COUNT:      40,    // flesh/slime chunks   (pooled Mesh)
 DECAL_COUNT:      200,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
 STREAM_COUNT:     16,    // arterial pump streams
-GRAVITY:         -9.81,
-GROUND_Y:         0.02,
+GRAVITY:         -16.0,
+GROUND_Y:         0.06,
 DECAL_FADE:       300.0,  // seconds before ground decal fades
 DRIP_RATE:        0.15,  // seconds between wound drips (base)
 PUMP_RATE:        0.05,  // seconds between arterial pumps
@@ -729,6 +729,9 @@ var mat = new THREE.MeshBasicMaterial({
 transparent: true,
 opacity:     0.80,
 depthWrite:  false,
+polygonOffset: true,
+polygonOffsetFactor: -1,
+polygonOffsetUnits: -1,
 });
 
 _decals = [];
@@ -737,7 +740,7 @@ var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
 mesh.position.y = CFG.GROUND_Y;
 mesh.visible    = false;
-mesh.renderOrder = 1;
+mesh.renderOrder = 2;
 _scene.add(mesh);
 var d = makeDecal();
 d.mesh = mesh;
@@ -1235,7 +1238,7 @@ var sctr = wp.woundR * 5;
 d.alive  = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx * spd + (Math.random()-0.5) * sctr * 6;
-d.vy = ny * spd + Math.random() * 1.8;
+d.vy = ny * spd * 0.2 - Math.random() * 0.6;
 d.vz = nz * spd + (Math.random()-0.5) * sctr * 6;
 d.r         = 0.010 + Math.random()*0.022;
 d.maxLife   = 2.5 + Math.random()*1.5;
@@ -1255,7 +1258,7 @@ var spd = wp.mistSpeed[0] + Math.random()*(wp.mistSpeed[1]-wp.mistSpeed[0]);
 d.alive = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx*spd + (Math.random()-0.5)*spd*0.8;
-d.vy = ny*spd + Math.random()*0.8;
+d.vy = ny*spd*0.1 - Math.random()*0.2;
 d.vz = nz*spd + (Math.random()-0.5)*spd*0.8;
 d.r         = 0.004 + Math.random()*0.007;
 d.maxLife   = 0.8 + Math.random()*0.5;
@@ -1277,7 +1280,7 @@ var spd = (sMin + Math.random()*(sMax-sMin)) * wp.exitScale;
 d.alive = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = -nx*spd + (Math.random()-0.5)*3.5;
-d.vy = Math.abs(-ny*spd) + Math.random()*2.0;
+d.vy = 0.2 + Math.random()*0.5;
 d.vz = -nz*spd + (Math.random()-0.5)*3.5;
 d.r         = 0.016 + Math.random()*0.028;
 d.maxLife   = 2.2 + Math.random()*2.0;
@@ -1354,7 +1357,7 @@ if (!d) break;
 d.alive = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = Math.cos(arc) * (1.0 + Math.random() * 2.5);
-d.vy = 1.2 + Math.random() * 2.8;
+d.vy = 0.4 + Math.random() * 0.8;
 d.vz = Math.sin(arc) * (1.0 + Math.random() * 2.5);
 d.r         = 0.013 + Math.random()*0.028;
 d.maxLife   = 2.8 + Math.random()*1.5;
@@ -1732,7 +1735,7 @@ if (!d) break;
 d.alive = true;
 d.px = ox; d.py = oy; d.pz = oz;
 d.vx = Math.cos(a)*(0.5+Math.random()*1.5);
-d.vy = s;
+d.vy = s * 0.35;
 d.vz = Math.sin(a)*(0.5+Math.random()*1.5);
 d.r         = rMin + Math.random()*(rMax-rMin);
 d.maxLife   = life + Math.random()*1.0;
