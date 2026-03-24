@@ -27,7 +27,7 @@
 - ║  RESET between runs:                                            ║
 - ║          window.BloodV2.reset()                                  ║
 - ║                                                                  ║
-- ║  That’s it. Everything else is automatic.                       ║
+- ║  That's it. Everything else is automatic.                       ║
 - ╚══════════════════════════════════════════════════════════════════╝
 - 
 - DESIGN PRINCIPLES:
@@ -45,7 +45,7 @@
   */
 
 ;(function (global) {
-‘use strict’;
+'use strict';
 
 // ══════════════════════════════════════════
 //  POOL SIZES — tuned for mobile performance
@@ -88,7 +88,7 @@ var WEAPONS = {
 
 // ── PISTOL ─────────────────────────────────────────────────────
 pistol: {
-label:         ‘Pistol’,
+label:         'Pistol',
 woundR:        0.045,      // wound radius on body
 penetration:   0.40,       // 0=surface 1=full through
 exitWound:     true,
@@ -102,12 +102,12 @@ chunkCount:    [0,0],
 pushForce:     0.35,
 organDmg:      18,
 pumpOnHeart:   true,
-killStyle:     ‘penetration’,
+killStyle:     'penetration',
 },
 
 // ── REVOLVER ───────────────────────────────────────────────────
 revolver: {
-label:         ‘Revolver’,
+label:         'Revolver',
 woundR:        0.060,
 penetration:   0.65,
 exitWound:     true,
@@ -124,12 +124,12 @@ pumpOnHeart:   true,
 // Hydrostatic shockwave: radial mist burst
 shockwave:     true,
 shockR:        0.8,
-killStyle:     ‘penetration’,
+killStyle:     'penetration',
 },
 
 // ── SHOTGUN ────────────────────────────────────────────────────
 shotgun: {
-label:         ‘Shotgun’,
+label:         'Shotgun',
 woundR:        0.22,
 penetration:   0.25,
 exitWound:     false,
@@ -145,12 +145,12 @@ organDmg:      55,
 pellets:       9,          // spread pattern
 pelletAngle:   28,         // degrees
 pumpOnHeart:   true,
-killStyle:     ‘devastation’,
+killStyle:     'devastation',
 },
 
 // ── SMG ────────────────────────────────────────────────────────
 smg: {
-label:         ‘SMG’,
+label:         'SMG',
 woundR:        0.032,
 penetration:   0.38,
 exitWound:     true,
@@ -164,12 +164,12 @@ chunkCount:    [0,0],
 pushForce:     0.20,
 organDmg:      12,
 pumpOnHeart:   true,
-killStyle:     ‘perforation’,
+killStyle:     'perforation',
 },
 
 // ── SNIPER ─────────────────────────────────────────────────────
 sniper: {
-label:         ‘Sniper Rifle’,
+label:         'Sniper Rifle',
 woundR:        0.022,
 penetration:   1.0,        // full through
 exitWound:     true,
@@ -186,12 +186,12 @@ organDmg:      80,
 supersonicCavity: true,
 cavityR:       2.2,
 pumpOnHeart:   true,
-killStyle:     ‘supersonic’,
+killStyle:     'supersonic',
 },
 
 // ── MINIGUN ────────────────────────────────────────────────────
 minigun: {
-label:         ‘Minigun’,
+label:         'Minigun',
 woundR:        0.028,
 penetration:   0.32,
 exitWound:     true,
@@ -205,12 +205,12 @@ chunkCount:    [0,1],
 pushForce:     0.18,
 organDmg:      10,
 pumpOnHeart:   true,
-killStyle:     ‘saturation’,
+killStyle:     'saturation',
 },
 
 // ── GRENADE ────────────────────────────────────────────────────
 grenade: {
-label:         ‘Grenade’,
+label:         'Grenade',
 woundR:        0.55,
 penetration:   0.85,
 exitWound:     false,
@@ -225,12 +225,12 @@ pushForce:     20.0,
 organDmg:      200,
 isExplosive:   true,
 blastR:        3.5,
-killStyle:     ‘explosion’,
+killStyle:     'explosion',
 },
 
 // ── ROCKET ─────────────────────────────────────────────────────
 rocket: {
-label:         ‘Rocket Launcher’,
+label:         'Rocket Launcher',
 woundR:        0.90,
 penetration:   1.0,
 exitWound:     false,
@@ -245,12 +245,12 @@ pushForce:     50.0,
 organDmg:      9999,
 isExplosive:   true,
 blastR:        6.0,
-killStyle:     ‘vaporize’,
+killStyle:     'vaporize',
 },
 
 // ── LASER ──────────────────────────────────────────────────────
 laser: {
-label:         ‘Laser’,
+label:         'Laser',
 woundR:        0.018,
 penetration:   1.0,
 exitWound:     true,
@@ -266,12 +266,12 @@ organDmg:      45,
 cauterizes:    true,
 smokeCount:    10,
 pumpOnHeart:   false,
-killStyle:     ‘cauterize’,
+killStyle:     'cauterize',
 },
 
 // ── PLASMA ─────────────────────────────────────────────────────
 plasma: {
-label:         ‘Plasma Cannon’,
+label:         'Plasma Cannon',
 woundR:        0.14,
 penetration:   0.70,
 exitWound:     false,
@@ -286,12 +286,12 @@ pushForce:     2.5,
 organDmg:      60,
 charEffect:    true,
 pumpOnHeart:   true,
-killStyle:     ‘melt’,
+killStyle:     'melt',
 },
 
 // ── KNIFE ──────────────────────────────────────────────────────
 knife: {
-label:         ‘Knife’,
+label:         'Knife',
 woundR:        0.022,
 penetration:   0.92,
 exitWound:     false,
@@ -307,12 +307,12 @@ organDmg:      35,
 isSlash:       true,
 slashArc:      0.35,       // blood arc width
 pumpOnHeart:   true,
-killStyle:     ‘slash’,
+killStyle:     'slash',
 },
 
 // ── SWORD ──────────────────────────────────────────────────────
 sword: {
-label:         ‘Sword’,
+label:         'Sword',
 woundR:        0.042,
 penetration:   0.85,
 exitWound:     false,
@@ -328,12 +328,12 @@ organDmg:      50,
 isSlash:       true,
 slashArc:      0.80,
 pumpOnHeart:   true,
-killStyle:     ‘sever’,
+killStyle:     'sever',
 },
 
 // ── AXE ────────────────────────────────────────────────────────
 axe: {
-label:         ‘Axe’,
+label:         'Axe',
 woundR:        0.09,
 penetration:   0.98,
 exitWound:     false,
@@ -349,12 +349,12 @@ organDmg:      70,
 isSlash:       true,
 slashArc:      0.55,
 pumpOnHeart:   true,
-killStyle:     ‘cleave’,
+killStyle:     'cleave',
 },
 
 // ── FLAMETHROWER ───────────────────────────────────────────────
 flame: {
-label:         ‘Flamethrower’,
+label:         'Flamethrower',
 woundR:        0.18,
 penetration:   0.15,
 exitWound:     false,
@@ -371,12 +371,12 @@ cauterizes:    true,
 smokeCount:    18,
 burnsEnemy:    true,
 pumpOnHeart:   false,
-killStyle:     ‘combust’,
+killStyle:     'combust',
 },
 
 // ── ICE SPEAR ──────────────────────────────────────────────────
 ice: {
-label:         ‘Ice Spear’,
+label:         'Ice Spear',
 woundR:        0.065,
 penetration:   0.55,
 exitWound:     false,
@@ -391,12 +391,12 @@ pushForce:     0.4,
 organDmg:      30,
 freezesBlood:  true,
 pumpOnHeart:   false,
-killStyle:     ‘shatter’,
+killStyle:     'shatter',
 },
 
 // ── LIGHTNING ──────────────────────────────────────────────────
 lightning: {
-label:         ‘Lightning’,
+label:         'Lightning',
 woundR:        0.035,
 penetration:   1.0,
 exitWound:     true,
@@ -411,12 +411,12 @@ pushForce:     4.0,
 organDmg:      40,
 electricEffect: true,
 pumpOnHeart:   false,
-killStyle:     ‘electrocute’,
+killStyle:     'electrocute',
 },
 
 // ── KNIFE TAKEDOWN (your existing special) ─────────────────────
 knife_takedown: {
-label:         ‘Knife Takedown’,
+label:         'Knife Takedown',
 woundR:        0.026,
 penetration:   0.98,
 exitWound:     false,
@@ -433,12 +433,12 @@ isSlash:       true,
 slashArc:      0.20,
 pumpOnHeart:   true,
 isTakedown:    true,      // triggers execution sequence
-killStyle:     ‘execution’,
+killStyle:     'execution',
 },
 
 // ── METEOR ─────────────────────────────────────────────────────
 meteor: {
-label:         ‘Meteor’,
+label:         'Meteor',
 woundR:        1.20,
 penetration:   1.0,
 exitWound:     false,
@@ -453,7 +453,7 @@ pushForce:     80.0,
 organDmg:      9999,
 isExplosive:   true,
 blastR:        8.0,
-killStyle:     ‘vaporize’,
+killStyle:     'vaporize',
 },
 
 };
@@ -595,7 +595,7 @@ organs[k] = { hp: profile[k].hp, maxHp: profile[k].maxHp };
 }
 return {
 enemy:    enemy,
-type:     enemyType || ‘default’,
+type:     enemyType || 'default',
 organs:   organs,
 wounds:   [],        // array of wound objects
 killedBy: null,
@@ -610,7 +610,7 @@ lx:0, ly:0, lz:0,   // local position on enemy
 radius:     0.04,
 depth:      0.0,
 hits:       0,
-organ:      ‘membrane’,
+organ:      'membrane',
 dripTimer:  0,
 cauterized: false,
 frozen:     false,
@@ -628,11 +628,11 @@ _buildMistPool();
 _buildChunkPool();
 _buildDecalPool();
 _ready = true;
-console.log(’!!! BLOOD V2 IS ALIVE !!! Pools: ’ +
-CFG.DROP_COUNT + ’ drops, ’ +
-CFG.MIST_COUNT + ’ mist, ’ +
-CFG.CHUNK_COUNT + ’ chunks, ’ +
-CFG.DECAL_COUNT + ’ decals’
+console.log('!!! BLOOD V2 IS ALIVE !!! Pools: ' +
+CFG.DROP_COUNT + ' drops, ' +
+CFG.MIST_COUNT + ' mist, ' +
+CFG.CHUNK_COUNT + ' chunks, ' +
+CFG.DECAL_COUNT + ' decals'
 );
 }
 
@@ -778,7 +778,7 @@ _decals.push(d);
 
 var wp   = WEAPONS[weaponKey] || WEAPONS.pistol;
 var eId  = enemy.id !== undefined ? enemy.id : enemy.uuid;
-var eType = enemy.enemyType || ‘default’;
+var eType = enemy.enemyType || 'default';
 var col  = ENEMY_BLOOD[eType] || ENEMY_BLOOD.default;
 
 // Get or create gore state
@@ -842,7 +842,7 @@ _spawnChunks(hx, hy, hz, hitNormal, nc, wp, col);
 }
 
 // Arterial pump on heart hit
-if (organ === ‘heart’ && wp.pumpOnHeart) {
+if (organ === 'heart' && wp.pumpOnHeart) {
 var anat = ANATOMY[gs.type] || ANATOMY.default;
 if (anat.heart && anat.heart.pumpBlood) {
 var existing = _streams.find(function(s){ return s.alive && s.enemy === enemy; });
@@ -871,7 +871,7 @@ return { organ: organ, organKilled: organKilled };
 
 var wp   = WEAPONS[weaponKey] || WEAPONS.pistol;
 var eId  = enemy.id !== undefined ? enemy.id : enemy.uuid;
-var eType = enemy.enemyType || ‘default’;
+var eType = enemy.enemyType || 'default';
 var col  = ENEMY_BLOOD[eType] || ENEMY_BLOOD.default;
 
 var ex = enemy.mesh ? enemy.mesh.position.x : 0;
@@ -879,7 +879,7 @@ var ey = enemy.mesh ? enemy.mesh.position.y : 0;
 var ez = enemy.mesh ? enemy.mesh.position.z : 0;
 
 var gs = _goreMap.get(eId);
-var killedBy = gs ? gs.killedBy : ‘core’;
+var killedBy = gs ? gs.killedBy : 'core';
 
 // Stop all streams for this enemy
 for (var i = 0; i < _streams.length; i++) {
@@ -988,7 +988,7 @@ dd.mesh.material.opacity = (dd.life / 4.0) * 0.80;
   _streams = [];
   if (_dropIM) _dropIM.instanceMatrix.needsUpdate = true;
   if (_mistIM) _mistIM.instanceMatrix.needsUpdate = true;
-  console.log(’[BloodV2] Reset complete.’);
+  console.log('[BloodV2] Reset complete.');
   }
 
 // ══════════════════════════════════════════
@@ -1598,12 +1598,12 @@ d.color = col.base; d.frozen = false; d.charred = false;
 function _organDeathFX(gs, organ, hx, hy, hz, wp, col) {
 switch (organ) {
 
-case ‘brain’:
+case 'brain':
 // Neural fluid eruption from top — greenish mist burst
 _burstRadial(hx, hy+0.15, hz, 30, col.organ, 2.5, 6.0, 0.006, 0.010, 1.0, 0.2);
 break;
 
-case ‘heart’:
+case 'heart':
 // 3 massive arterial pulses then silence
 for (var p = 0; p < 3; p++) {
 (function(pulse) {
@@ -1615,7 +1615,7 @@ _burstUpward(hx, hy+0.1, hz, 22, 0xff0000, 3.5+pulse, 7.0+pulse, 0.025, 0.04, 3.
 }
 break;
 
-case ‘guts’:
+case 'guts':
 // Slow deflation — timed drip stream downward
 for (var t = 0; t < 45; t++) {
 (function(tick) {
@@ -1638,12 +1638,12 @@ d.color = 0x44cc22; d.frozen = false; d.charred = false;
 }
 break;
 
-case ‘membrane’:
+case 'membrane':
 // Outward burst of gel
 _burstRadial(hx, hy, hz, 40, col.base, 2.0, 8.0, 0.014, 0.034, 3.0, 0.58);
 break;
 
-case ‘core’:
+case 'core':
 _burstRadial(hx, hy, hz, 55, col.organ, 2.5, 9.0, 0.014, 0.032, 3.5, 0.55);
 break;
 }
@@ -1655,13 +1655,13 @@ break;
 // ══════════════════════════════════════════
 function _killExplosion(ex, ey, ez, wp, col, killedBy, enemy) {
 
-if (wp.killStyle === ‘vaporize’) {
+if (wp.killStyle === 'vaporize') {
 _fxExplosion(ex, ey, ez, wp, col);
 _spawnChunks(ex, ey, ez, null, wp.chunkCount[1], wp, col);
 return;
 }
 
-if (wp.killStyle === ‘combust’) {
+if (wp.killStyle === 'combust') {
 for (var i = 0; i < 50; i++) {
 var d = _getFreeDrop(_mistData);
 if (!d) break;
@@ -1675,14 +1675,14 @@ d.color = (Math.random()<0.4) ? 0xff4400 : 0x111111; d.frozen = false; d.charred
 return;
 }
 
-if (wp.killStyle === ‘shatter’) {
+if (wp.killStyle === 'shatter') {
 // ICE SHATTER — blue chunks + crystal mist
 _spawnChunks(ex, ey, ez, null, 14, wp, col);
 _burstRadial(ex, ey, ez, 40, 0x88ccff, 3.0, 10.0, 0.006, 0.012, 3.5, 0.92);
 return;
 }
 
-if (wp.killStyle === ‘electrocute’) {
+if (wp.killStyle === 'electrocute') {
 // Lightning death — body spasms then collapses
 _burstRadial(ex, ey, ez, 20, 0xffee00, 2.0, 8.0, 0.005, 0.009, 0.5, 0.05);
 setTimeout(function() {
@@ -1692,13 +1692,13 @@ _burstRadial(ex, ey, ez, 50, col.base, 1.0, 5.0, 0.012, 0.025, 3.0, 0.60);
 return;
 }
 
-if (wp.killStyle === ‘cauterize’) {
+if (wp.killStyle === 'cauterize') {
 // Laser — tiny ember shower, no real blood
 _burstRadial(ex, ey, ez, 20, 0x111111, 0.5, 2.0, 0.008, 0.014, 1.5, 0.90);
 return;
 }
 
-if (wp.killStyle === ‘execution’) {
+if (wp.killStyle === 'execution') {
 // Knife takedown — dramatic slow bleed then gush
 for (var p = 0; p < 5; p++) {
 (function(pulse) {
@@ -1713,11 +1713,11 @@ return;
 
 // DEFAULT — based on organ that killed
 switch (killedBy) {
-case ‘brain’:
+case 'brain':
 _burstUpward(ex, ey+0.2, ez, 35, col.organ, 2.0, 7.0, 0.008, 0.018, 2.5, 0.30);
 _burstRadial(ex, ey, ez, 25, col.base, 1.5, 5.0, 0.012, 0.025, 2.5, 0.60);
 break;
-case ‘heart’:
+case 'heart':
 for (var p = 0; p < 4; p++) {
 (function(pulse) {
 setTimeout(function() {
@@ -1727,7 +1727,7 @@ _burstUpward(ex, ey+0.05, ez, 18, 0xff0000, 3.5, 8.0, 0.024, 0.040, 3.0, 0.55);
 })(p);
 }
 break;
-case ‘guts’:
+case 'guts':
 // Slow deflation
 for (var t = 0; t < 80; t++) {
 (function(tick) {
@@ -1872,7 +1872,7 @@ for (var k in profile) {
 var o = profile[k];
 if (localY >= o.yRange[0] && localY <= o.yRange[1]) return k;
 }
-return ‘membrane’;
+return 'membrane';
 }
 
 function _damageOrgan(gs, organ, amount) {
@@ -2019,16 +2019,16 @@ CFG:         CFG,
 // Utility: get kill description text for UI/AI narration
 getKillText: function(weaponKey, organ) {
 var desc = {
-brain:    ‘Neural fluid erupts. Cross-eyed wobble. Melts top-down.’,
-heart:    ‘Pumping core bursts. Three massive spurts. Collapse.’,
-guts:     ‘Digestive sac deflates. Slow. Wet. Inevitable.’,
-membrane: ‘Outer gel explodes outward. Raw tissue exposed.’,
-core:     ‘Vital fluid drains. Sags. Shrinks. Gone.’,
+brain:    'Neural fluid erupts. Cross-eyed wobble. Melts top-down.',
+heart:    'Pumping core bursts. Three massive spurts. Collapse.',
+guts:     'Digestive sac deflates. Slow. Wet. Inevitable.',
+membrane: 'Outer gel explodes outward. Raw tissue exposed.',
+core:     'Vital fluid drains. Sags. Shrinks. Gone.',
 };
 return {
 weapon: (WEAPONS[weaponKey] || WEAPONS.pistol).label,
 organ:  organ,
-death:  desc[organ] || ‘It dies.’,
+death:  desc[organ] || 'It dies.',
 };
 },
 
@@ -2051,31 +2051,31 @@ ANATOMY[enemyType] = anatomyProfile;
 
 // Print integration guide
 console.log([
-‘’,
-‘╔══════════════════════════════════════════════════════╗’,
-‘║  BloodV2 — Realistic Gore System — LOADED           ║’,
-‘╠══════════════════════════════════════════════════════╣’,
-‘║  Step 1  sandbox.html:                              ║’,
-‘║    <script src="js/blood-system-v2.js"></script>    ║’,
-‘║    (after three.js, before enemy-class.js)          ║’,
-‘║                                                      ║’,
-‘║  Step 2  game-screens.js  init():                   ║’,
-‘║    window.BloodV2.init(scene);                      ║’,
-‘║                                                      ║’,
-‘║  Step 3  game-loop.js  animate():                   ║’,
-‘║    window.BloodV2.update(delta);                    ║’,
-‘║                                                      ║’,
-‘║  Step 4  combat.js  on bullet hit:                  ║’,
-‘║    window.BloodV2.hit(enemy,                        ║’,
-‘║      “shotgun”, hitPoint, hitNormal);               ║’,
-‘║                                                      ║’,
-‘║  Step 5  enemy-class.js  on death:                  ║’,
-‘║    window.BloodV2.kill(enemy, “shotgun”);           ║’,
-‘║                                                      ║’,
-‘║  Reset:  window.BloodV2.reset();                    ║’,
-‘╚══════════════════════════════════════════════════════╝’,
-‘’,
-].join(’\n’));
+'',
+'╔══════════════════════════════════════════════════════╗',
+'║  BloodV2 — Realistic Gore System — LOADED           ║',
+'╠══════════════════════════════════════════════════════╣',
+'║  Step 1  sandbox.html:                              ║',
+'║    <script src="js/blood-system-v2.js"></script>    ║',
+'║    (after three.js, before enemy-class.js)          ║',
+'║                                                      ║',
+'║  Step 2  game-screens.js  init():                   ║',
+'║    window.BloodV2.init(scene);                      ║',
+'║                                                      ║',
+'║  Step 3  game-loop.js  animate():                   ║',
+'║    window.BloodV2.update(delta);                    ║',
+'║                                                      ║',
+'║  Step 4  combat.js  on bullet hit:                  ║',
+'║    window.BloodV2.hit(enemy,                        ║',
+'║      "shotgun", hitPoint, hitNormal);               ║',
+'║                                                      ║',
+'║  Step 5  enemy-class.js  on death:                  ║',
+'║    window.BloodV2.kill(enemy, "shotgun");           ║',
+'║                                                      ║',
+'║  Reset:  window.BloodV2.reset();                    ║',
+'╚══════════════════════════════════════════════════════╝',
+'',
+].join('\n'));
 
 })(window);
 
@@ -2086,10 +2086,10 @@ console.log([
 //  no other file needs to change.  BloodV2 is the single source of truth.
 // ─────────────────────────────────────────────────────────────────────────────
 (function () {
-‘use strict’;
+'use strict';
 
 var BV2 = window.BloodV2;
-if (!BV2) { console.warn(’[BloodV2 shim] window.BloodV2 not found — shim skipped’); return; }
+if (!BV2) { console.warn('[BloodV2 shim] window.BloodV2 not found — shim skipped'); return; }
 
 // — tiny helpers used by several shim methods —
 function _pos3(pos) {
@@ -2103,8 +2103,8 @@ function _fakeEnemy(pos) {
 var p = _pos3(pos);
 return {
 alive: true,
-enemyType: ‘default’,
-id: ‘shim*’ + Date.now() + ‘*’ + Math.random(),
+enemyType: 'default',
+id: 'shim*' + Date.now() + '*' + Math.random(),
 hp: 100,
 maxHp: 100,
 mesh: {
@@ -2126,48 +2126,48 @@ if (!BV2._initialized) BV2.init(scene);
 update: function (dt) {
 // game-loop.js calls update() with no arg; sandbox-loop.js calls update() with no arg too.
 // BloodV2.update expects deltaTime in seconds.  Default to 1/60 when omitted.
-BV2.update(typeof dt === ‘number’ ? dt : 1 / 60);
+BV2.update(typeof dt === 'number' ? dt : 1 / 60);
 },
 
 reset: function () {
-if (typeof BV2.reset === ‘function’) BV2.reset();
+if (typeof BV2.reset === 'function') BV2.reset();
 },
 
 // ── burst / spray ─────────────────────────────────────────────────────────
 emitBurst: function (pos, count, opts) {
 var p = _pos3(pos);
 var hp = { x: p.x, y: p.y, z: p.z };
-var cnt = typeof count === ‘number’ ? count : 30;
+var cnt = typeof count === 'number' ? count : 30;
 // Use pistol for small bursts, revolver for big - NO chunks (chunkChance=0)
-var wk = cnt > 150 ? ‘revolver’ : ‘pistol’;
+var wk = cnt > 150 ? 'revolver' : 'pistol';
 var e = _fakeEnemy(pos);
 BV2.hit(e, wk, hp, null);
 // Extra hits for large bursts - still no chunks
-if (cnt > 100) BV2.hit(e, ‘pistol’, hp, null);
-if (cnt > 250) { BV2.hit(e, ‘pistol’, hp, null); BV2.hit(e, ‘pistol’, hp, null); }
+if (cnt > 100) BV2.hit(e, 'pistol', hp, null);
+if (cnt > 250) { BV2.hit(e, 'pistol', hp, null); BV2.hit(e, 'pistol', hp, null); }
 },
 
 emitPulse: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
 var p = _pos3(pos);
-BV2.hit(e, ‘revolver’, { x: p.x, y: p.y, z: p.z }, null);
+BV2.hit(e, 'revolver', { x: p.x, y: p.y, z: p.z }, null);
 },
 
 emitDrop: function (x, y, z /*, vx, vy, vz, size */) {
 var e = _fakeEnemy({ x: x, y: y, z: z });
-BV2.hit(e, ‘pistol’, { x: x, y: y, z: z }, null);
+BV2.hit(e, 'pistol', { x: x, y: y, z: z }, null);
 },
 
 // ── gore ──────────────────────────────────────────────────────────────────
 emitGuts: function (pos /*, opts */) {
 // Use pistol kill - no chunk spawning, just blood burst
 var e = _fakeEnemy(pos);
-BV2.kill(e, ‘pistol’);
+BV2.kill(e, 'pistol');
 },
 
 emitHeartbeatWound: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘revolver’, e.mesh.position, null);
+BV2.hit(e, 'revolver', e.mesh.position, null);
 },
 
 // ── wounds / drips ────────────────────────────────────────────────────────
@@ -2179,90 +2179,90 @@ addWound: function (enemy /*, opts */) {
 emitSwordSlash: function (pos, dir, count) {
 var e = _fakeEnemy(pos);
 var p = _pos3(pos);
-BV2.hit(e, ‘sword’, { x: p.x, y: p.y, z: p.z }, dir || null);
+BV2.hit(e, 'sword', { x: p.x, y: p.y, z: p.z }, dir || null);
 },
 
 emitAuraBurn: function (pos, count) {
 var e = _fakeEnemy(pos);
 var p = _pos3(pos);
-BV2.hit(e, ‘aura’, { x: p.x, y: p.y, z: p.z }, null);
+BV2.hit(e, 'aura', { x: p.x, y: p.y, z: p.z }, null);
 },
 
 emitHeadBleed: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
 var p = _pos3(pos);
-BV2.hit(e, ‘pistol’, { x: p.x, y: p.y + 0.5, z: p.z }, null);
+BV2.hit(e, 'pistol', { x: p.x, y: p.y + 0.5, z: p.z }, null);
 },
 
 emitExitWound: function (pos, dir, count /*, opts */) {
 var e = _fakeEnemy(pos);
 var p = _pos3(pos);
-BV2.hit(e, ‘shotgun’, { x: p.x, y: p.y, z: p.z }, dir || null);
+BV2.hit(e, 'shotgun', { x: p.x, y: p.y, z: p.z }, dir || null);
 },
 
 emitDroneMist: function (pos, dir, count) {
 var e = _fakeEnemy(pos);
 var p = _pos3(pos);
-BV2.hit(e, ‘pistol’, { x: p.x, y: p.y, z: p.z }, dir || null);
+BV2.hit(e, 'pistol', { x: p.x, y: p.y, z: p.z }, dir || null);
 },
 
 // ── water / player effects (player-class.js) ─────────────────────────────
 emitWaterBurst: function (pos /*, count, opts */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘pistol’, _pos3(pos), null);
+BV2.hit(e, 'pistol', _pos3(pos), null);
 },
 
 emitWaterPulse: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘revolver’, _pos3(pos), null);
+BV2.hit(e, 'revolver', _pos3(pos), null);
 },
 
 // ── trail effects (enemy-class.js) ───────────────────────────────────────
 emitDragTrail: function (pos, dir /*, count */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘pistol’, _pos3(pos), dir || null);
+BV2.hit(e, 'pistol', _pos3(pos), dir || null);
 },
 
 emitSpinTrail: function (pos, angle /*, count */) {
 var e = _fakeEnemy(pos);
 var dir = { x: Math.cos(angle || 0), y: 0, z: Math.sin(angle || 0) };
-BV2.hit(e, ‘pistol’, _pos3(pos), dir);
+BV2.hit(e, 'pistol', _pos3(pos), dir);
 },
 
 emitCrawlTrail: function (pos, dir /*, count */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘pistol’, _pos3(pos), dir || null);
+BV2.hit(e, 'pistol', _pos3(pos), dir || null);
 },
 
 // ── arterial / throat sprays ──────────────────────────────────────────────
 emitArterialSpurt: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘shotgun’, _pos3(pos), null);
+BV2.hit(e, 'shotgun', _pos3(pos), null);
 },
 
 emitThroatSpray: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘shotgun’, _pos3(pos), null);
+BV2.hit(e, 'shotgun', _pos3(pos), null);
 },
 
 // ── area effects ─────────────────────────────────────────────────────────
 emitMeteorExplosion: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
-BV2.kill(e, ‘shotgun’);
+BV2.kill(e, 'shotgun');
 },
 
 emitPoolGrow: function (pos /*, opts */) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘pistol’, _pos3(pos), null);
+BV2.hit(e, 'pistol', _pos3(pos), null);
 },
 
 // ── catch-all for any future callers ─────────────────────────────────────
 emitSwordSlashFX: function (pos, dir) {
 var e = _fakeEnemy(pos);
-BV2.hit(e, ‘sword’, _pos3(pos), dir || null);
+BV2.hit(e, 'sword', _pos3(pos), dir || null);
 }
 
 };
 
-console.log(’[BloodV2] BloodSystem shim installed — all BloodSystem.* calls now route to BloodV2’);
+console.log('[BloodV2] BloodSystem shim installed — all BloodSystem.* calls now route to BloodV2');
 }());
