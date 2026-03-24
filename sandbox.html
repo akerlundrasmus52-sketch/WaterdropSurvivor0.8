@@ -680,7 +680,11 @@
 
     // Update overlay with status
     if (overlay) {
-      overlay.innerHTML = 'ENGINE 2.0 - ARCHITECTURE FIXED<br><span style="font-size:12px;color:#FFD700;">' + status.join(' | ') + '</span>';
+      var statusLine = document.createElement('span');
+      statusLine.style.cssText = 'font-size:12px;color:#FFD700;';
+      statusLine.textContent = status.join(' | ');
+      overlay.appendChild(document.createElement('br'));
+      overlay.appendChild(statusLine);
     }
 
     console.log('!!! ENGINE 2.0 ARCHITECTURE VERIFICATION COMPLETE: ' + status.join(' | ') + ' !!!');
