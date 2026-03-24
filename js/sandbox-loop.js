@@ -3042,7 +3042,7 @@
     const settingsModal = document.getElementById('settings-modal');
     const closeBtn      = document.getElementById('settings-close-btn');
     const uiCalBtn      = document.getElementById('ui-calibration-btn');
-    const campBtn       = document.getElementById('return-to-camp-btn');
+    const campBtn       = document.getElementById('settings-go-to-camp-btn');
     const qualitySelect = document.getElementById('graphics-quality-select');
     const qualityDesc   = document.getElementById('quality-desc');
     const applyQualBtn  = document.getElementById('apply-quality-btn');
