@@ -53,7 +53,9 @@ class Engine2Sandbox {
     // Load textures and create arena
     this._loadTextures(() => {
       this._createArena();
+      this._applyTerrainDisplacement();
       this._createLandmarks();
+      this._setupLighting();
       this.loaded = true;
       console.log('[Engine2] Engine 2.0 arena initialized successfully');
     });
@@ -325,6 +327,7 @@ class Engine2Sandbox {
     this.scene.add(this.groundMesh);
 
     console.log('[Engine2] Created 200x200 ground with center hole (radius 3)');
+    // Terrain displacement is applied separately after arena creation
 
     // Add rim around the hole for visual clarity
     this._createHoleRim(holeRadius);
@@ -828,6 +831,108 @@ class Engine2Sandbox {
   }
 
   /**
+   * Apply terrain height variation as a second mesh overlay on top of the flat ground.
+   * Uses a sine-combination pseudo-noise for gentle rolling hills.
+   */
+  _applyTerrainDisplacement() {
+    if (!this.scene) return;
+
+    // Inline pseudo-noise: sine-combination based, no external libraries
+    function noise2D(x, z) {
+      return Math.sin(x * 0.03 + z * 0.02) * Math.cos(z * 0.04 - x * 0.01)
+           + Math.sin(x * 0.07 - z * 0.05) * 0.5
+           + Math.sin(x * 0.15 + z * 0.12) * 0.25;
+    }
+
+    const terrainGeo = new THREE.PlaneGeometry(200, 200, 128, 128);
+    const posAttr = terrainGeo.attributes.position;
+    const maxHeight = 2.5;
+
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i);
+      const z = posAttr.getY(i); // PlaneGeometry is in XY before rotation; Y becomes Z after -PI/2 X rotation
+
+      // Distance from origin (center hole)
+      const distFromCenter = Math.sqrt(x * x + z * z);
+
+      // Smooth falloff near center hole: flat within radius 4, blend 4..8
+      let centerFalloff = 1.0;
+      if (distFromCenter < 8) {
+        centerFalloff = distFromCenter < 4 ? 0.0 : (distFromCenter - 4) / 4.0;
+      }
+
+      // Smooth falloff near edges (200x200 so half = 100): flatten within 10 units of edge
+      const edgeDist = Math.min(100 - Math.abs(x), 100 - Math.abs(z));
+      const edgeFalloff = edgeDist < 10 ? Math.max(0, edgeDist / 10.0) : 1.0;
+
+      const rawNoise = noise2D(x, z);
+      const height = rawNoise * maxHeight * centerFalloff * edgeFalloff;
+
+      posAttr.setZ(i, height); // Z is up in PlaneGeometry local space (before rotation)
+    }
+
+    terrainGeo.computeVertexNormals();
+
+    // Build material — use same diffuse texture as ground if available
+    let terrainMat;
+    if (this.textures.diffuse) {
+      terrainMat = new THREE.MeshStandardMaterial({
+        map: this.textures.diffuse,
+        color: 0xFFFFFF,
+        roughness: 0.75,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.95
+      });
+    } else {
+      terrainMat = new THREE.MeshStandardMaterial({
+        color: 0x6B5A4A,
+        roughness: 0.75,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.95
+      });
+    }
+
+    this.terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    this.terrainMesh.rotation.x = -Math.PI / 2;
+    this.terrainMesh.position.set(0, 0.05, 0);
+    this.terrainMesh.receiveShadow = true;
+    this.scene.add(this.terrainMesh);
+
+    console.log('[Engine2] ✓ Terrain displacement overlay added (gentle rolling hills)');
+  }
+
+  /**
+   * Set up enhanced lighting: hemisphere + strong directional with shadows.
+   * Called from init() after _createArena() so lights complement the terrain.
+   */
+  _setupLighting() {
+    if (!this.scene) return;
+
+    // Hemisphere light — sky/ground tones for ambient bounce
+    this._hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x362907, 0.3);
+    this.scene.add(this._hemiLight);
+
+    // Directional light — warm sunlight with PCF soft shadows
+    this._dirLight = new THREE.DirectionalLight(0xfff0dd, 1.2);
+    this._dirLight.position.set(50, 80, 30);
+    this._dirLight.castShadow = true;
+    this._dirLight.shadow.mapSize.width  = 2048;
+    this._dirLight.shadow.mapSize.height = 2048;
+    this._dirLight.shadow.camera.left   = -60;
+    this._dirLight.shadow.camera.right  =  60;
+    this._dirLight.shadow.camera.top    =  60;
+    this._dirLight.shadow.camera.bottom = -60;
+    this._dirLight.shadow.camera.near   = 0.5;
+    this._dirLight.shadow.camera.far    = 200;
+    this._dirLight.shadow.bias          = -0.001;
+    this.scene.add(this._dirLight);
+
+    console.log('[Engine2] ✓ Enhanced lighting set up (HemisphereLight + DirectionalLight with shadows)');
+  }
+
+  /**
    * Cleanup method - disposes all arena resources
    */
   dispose() {
@@ -859,6 +964,26 @@ class Engine2Sandbox {
     if (this.textures.diffuse) this.textures.diffuse.dispose();
     if (this.textures.normal) this.textures.normal.dispose();
     if (this.textures.roughness) this.textures.roughness.dispose();
+
+    // Clean up terrain displacement mesh
+    if (this.terrainMesh && this.scene) {
+      this.scene.remove(this.terrainMesh);
+      this.terrainMesh.geometry.dispose();
+      this.terrainMesh.material.dispose();
+    }
+    this.terrainMesh = null;
+
+    // Clean up engine-added lights
+    if (this._hemiLight && this.scene) {
+      this.scene.remove(this._hemiLight);
+      this._hemiLight.dispose && this._hemiLight.dispose();
+    }
+    this._hemiLight = null;
+    if (this._dirLight && this.scene) {
+      this.scene.remove(this._dirLight);
+      this._dirLight.dispose && this._dirLight.dispose();
+    }
+    this._dirLight = null;
 
     this.loaded = false;
     console.log('[Engine2] ✓ Cleaned up Engine 2.0 arena and all resources');

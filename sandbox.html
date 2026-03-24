@@ -534,6 +534,16 @@
 
   <!-- 1. Three.js (local copy, same version used by main game) -->
   <script src="js/three.min.js"></script>
+
+  <!-- Post-processing (bloom) — loaded after Three.js, before game scripts -->
+  <!-- These attach to THREE.* namespace; all wrapped in try-catch in sandbox-loop.js -->
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+
   <script src="js/enemy-class.js"></script>
 
   <!-- 2. Game state namespace + enemy instancing flag -->
