@@ -280,6 +280,18 @@ class Engine2Sandbox {
     // Create geometry from shape
     const groundGeometry = new THREE.ShapeGeometry(shape, 64); // 64 segments for smooth hole
 
+    // ShapeGeometry UVs are raw shape coordinates (-100 to 100 for a 200-unit shape).
+    // Normalize them to 0-1 so texture repeat values work correctly (like PlaneGeometry).
+    const uvAttr = groundGeometry.attributes.uv;
+    for (let i = 0; i < uvAttr.count; i++) {
+      uvAttr.setXY(
+        i,
+        (uvAttr.getX(i) + halfSize) / groundSize,
+        (uvAttr.getY(i) + halfSize) / groundSize
+      );
+    }
+    uvAttr.needsUpdate = true;
+
     // Create material with enhanced PBR properties for realistic lighting
     const materialOptions = {
       color: 0xFFFFFF, // White base - allows texture colors to show naturally
