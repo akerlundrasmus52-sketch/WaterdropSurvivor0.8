@@ -13,19 +13,19 @@
   }
 
   function initSettingsUI() {
-    var settingsBtn = document.getElementById('settings-btn');
-    var settingsModal = document.getElementById('settings-modal');
-    var closeBtn = document.getElementById('settings-close-btn');
-    var graphicsModeSelect = document.getElementById('graphics-mode-select');
-    var manualGraphicsPanel = document.getElementById('manual-graphics-panel');
-    var qualitySelect = document.getElementById('quality-select');
-    var particleToggle = document.getElementById('particle-effects-toggle');
-    var autoAimCheckbox = document.getElementById('auto-aim-checkbox');
-    var autoAimTooltip = document.getElementById('auto-aim-label-tooltip');
-    var controlTypeSelect = document.getElementById('control-type-select');
-    var soundToggle = document.getElementById('sound-toggle');
-    var musicToggle = document.getElementById('music-toggle');
-    var fpsBoosterStatus = document.getElementById('fps-booster-status');
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeBtn = document.getElementById('settings-close-btn');
+    const graphicsModeSelect = document.getElementById('graphics-mode-select');
+    const manualGraphicsPanel = document.getElementById('manual-graphics-panel');
+    const qualitySelect = document.getElementById('quality-select');
+    const particleToggle = document.getElementById('particle-effects-toggle');
+    const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
+    const autoAimTooltip = document.getElementById('auto-aim-label-tooltip');
+    const controlTypeSelect = document.getElementById('control-type-select');
+    const soundToggle = document.getElementById('sound-toggle');
+    const musicToggle = document.getElementById('music-toggle');
+    const fpsBoosterStatus = document.getElementById('fps-booster-status');
 
     if (!settingsBtn || !settingsModal || !closeBtn) {
       console.warn('[SettingsUI] Required elements not found');
@@ -39,7 +39,7 @@
     document.addEventListener('keydown', function(e) {
       if (e.code === 'Escape') {
         // Close dialog first if open
-        var dialogOverlay = document.getElementById('game-dialog-overlay');
+        const dialogOverlay = document.getElementById('game-dialog-overlay');
         if (dialogOverlay && dialogOverlay.style.display === 'flex') {
           dialogOverlay.style.display = 'none';
           return;
@@ -66,7 +66,7 @@
     closeBtn.addEventListener('click', closeSettings);
 
     // ─── Go to Camp Button ───
-    var goToCampBtn = document.getElementById('settings-go-to-camp-btn');
+    const goToCampBtn = document.getElementById('settings-go-to-camp-btn');
     if (goToCampBtn) {
       goToCampBtn.addEventListener('click', function() {
         closeSettings();
@@ -88,7 +88,7 @@
     }
 
     // ─── Reset Progress Button (uses comic-book dialog) ───
-    var resetBtn = document.getElementById('settings-reset-btn');
+    const resetBtn = document.getElementById('settings-reset-btn');
     if (resetBtn) {
       resetBtn.addEventListener('click', function() {
         showGameDialog(
@@ -114,7 +114,7 @@
     // ─── Graphics Mode (Auto/Manual) Toggle ───
     if (graphicsModeSelect && manualGraphicsPanel) {
       graphicsModeSelect.addEventListener('change', function() {
-        var mode = this.value;
+        const mode = this.value;
 
         if (mode === 'manual') {
           // Show manual panel
@@ -174,7 +174,7 @@
     // ─── Quality Preset Select (Manual Mode) ───
     if (qualitySelect) {
       qualitySelect.addEventListener('change', function() {
-        var quality = this.value;
+        const quality = this.value;
 
         // Only apply if in manual mode
         if (window.gameSettings && window.gameSettings.graphicsMode === 'manual') {
@@ -191,7 +191,7 @@
     // ─── Particle Effects Toggle (Manual Mode) ───
     if (particleToggle) {
       particleToggle.addEventListener('change', function() {
-        var enabled = this.checked;
+        const enabled = this.checked;
 
         if (window.gameSettings) {
           window.gameSettings.particleEffects = enabled;
@@ -268,11 +268,11 @@
     function loadSettingsIntoUI() {
       if (!window.gameSettings) return;
 
-      var settings = window.gameSettings;
+      const settings = window.gameSettings;
 
       // Graphics Mode
       if (graphicsModeSelect) {
-        var mode = settings.graphicsMode || 'auto';
+        const mode = settings.graphicsMode || 'auto';
         graphicsModeSelect.value = mode;
 
         // Show/hide manual panel based on mode
@@ -302,7 +302,7 @@
 
         // Check if auto-aim is unlocked in skill tree
         if (window.saveData && window.saveData.skillTree && window.saveData.skillTree.autoAim) {
-          var unlocked = window.saveData.skillTree.autoAim.unlocked;
+          const unlocked = window.saveData.skillTree.autoAim.unlocked;
           autoAimCheckbox.disabled = !unlocked;
 
           if (autoAimTooltip) {
@@ -332,7 +332,7 @@
       if (!window.gameSettings) return;
 
       try {
-        var settingsToSave = {
+        const settingsToSave = {
           graphicsMode: window.gameSettings.graphicsMode || 'auto',
           graphicsQuality: window.gameSettings.graphicsQuality || 'auto',
           particleEffects: window.gameSettings.particleEffects !== false,
@@ -361,8 +361,8 @@
 
   // ─── Update Auto-Aim UI when unlocked via Skill Tree ───
   window.updateAutoAimUI = function(unlocked) {
-    var autoAimCheckbox = document.getElementById('auto-aim-checkbox');
-    var autoAimTooltip = document.getElementById('auto-aim-label-tooltip');
+    const autoAimCheckbox = document.getElementById('auto-aim-checkbox');
+    const autoAimTooltip = document.getElementById('auto-aim-label-tooltip');
 
     if (autoAimCheckbox) {
       autoAimCheckbox.disabled = !unlocked;
@@ -383,13 +383,13 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function showGameDialog(title, message, onConfirm, onCancel) {
-    var overlay = document.getElementById('game-dialog-overlay');
+    const overlay = document.getElementById('game-dialog-overlay');
     if (!overlay) return;
 
-    var titleEl = overlay.querySelector('.game-dialog-title');
-    var textEl = overlay.querySelector('.game-dialog-text');
-    var confirmBtn = overlay.querySelector('.game-dialog-confirm');
-    var cancelBtn = overlay.querySelector('.game-dialog-cancel');
+    const titleEl = overlay.querySelector('.game-dialog-title');
+    const textEl = overlay.querySelector('.game-dialog-text');
+    const confirmBtn = overlay.querySelector('.game-dialog-confirm');
+    const cancelBtn = overlay.querySelector('.game-dialog-cancel');
 
     if (titleEl) titleEl.textContent = title || '';
     if (textEl) textEl.textContent = message || '';
@@ -397,8 +397,8 @@
     overlay.style.display = 'flex';
 
     // Clone buttons to remove old listeners
-    var newConfirm = confirmBtn.cloneNode(true);
-    var newCancel = cancelBtn.cloneNode(true);
+    const newConfirm = confirmBtn.cloneNode(true);
+    const newCancel = cancelBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
     cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
 
