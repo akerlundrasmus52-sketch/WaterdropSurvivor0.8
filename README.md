@@ -30,17 +30,30 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
   - ✅ Engine 2.0 PBR ground with mossy brick texture (`mossy_brick_diff_4k.jpg`)
   - ✅ Central spawn hole with decorative rim (200x200 arena)
   - ✅ **UFO crash site** at (-50, 25) with glowing engines + companion egg
-  - ✅ **Annunaki Obelisk** at (25, -35) with energy crystal, rings, and pylons
-  - ✅ **Lake with waterfall** at (30, -30) with sparkles and animated water
+  - ✅ **Black Annunaki Obelisk with gold Eye of Horus** at (25, -35) - 55% smaller (8.1m height)
+    - Black shaft with gold pyramidion cap
+    - Golden Eye of Horus symbols on all 4 faces
+    - Cyan energy crystal at apex with rotating rings
+    - 4 surrounding power pylons with crystals
+    - Fully animated (crystal rotation, ring pulsing, light effects)
+  - ✅ **Reflective Lake** at (30, -30) with animated sun sparkles
   - ✅ Full gore/blood systems (BloodV2, GoreSim, TraumaSystem)
-  - ✅ Settings UI with Auto/Manual graphics mode
+  - ✅ Settings UI with Auto/Manual graphics mode and Eye of Horus button
   - ✅ Level-up system with upgrade cards
   - ✅ Player + single enemy respawn for testing
 - **What it does NOT include**:
-  - ❌ World generation (world-gen.js)
-  - ❌ Wave spawning system
+  - ❌ World generation (world-gen.js) - DO NOT USE FOR SANDBOX 2.0
+  - ❌ Wave spawning system from old map
   - ❌ Camp world integration
   - ❌ Quest system (stubbed for compatibility)
+  - ❌ Waterfall (removed as requested)
+
+**IMPORTANT STRUCTURE RULES:**
+1. **Sandbox 2.0 uses its own files**: `sandbox.html`, `js/engine2.js`, `js/sandbox-loop.js`
+2. **Old map files** (`world-gen.js`, `game-loop.js`) are ONLY for `index.html` (full game)
+3. **NEVER add features to old map files** unless specifically for the full game
+4. **All Sandbox 2.0 changes** go into `js/engine2.js` (landmarks) and `js/sandbox-loop.js` (animation)
+5. Camp world (`js/camp-world.js`) is separate and should not be touched unless modifying camp
 
 **Testing Workflow for AI Agents:**
 1. Make changes to relevant systems (e.g., blood, weapons, UI)
@@ -48,6 +61,7 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
 3. Verify feature works in isolation
 4. Then test in `index.html` (full game) to ensure compatibility
 5. **NEVER modify old map files (world-gen.js) without explicit instructions**
+6. **All new Sandbox 2.0 features go in new files/sections**, not old map code
 
 ### 🩸 THE SIMULATORS — DO NOT REPLACE, ONLY TUNE
 
