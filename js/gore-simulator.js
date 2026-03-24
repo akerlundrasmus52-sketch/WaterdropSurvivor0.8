@@ -40,7 +40,7 @@ const MAX_WOUNDS           = 12;    // max wounds per enemy simultaneously
 const MAX_MIST_PARTICLES   = 300;   // fine blood mist particles
 const MAX_CHUNKS           = 60;    // flying flesh/slime chunks
 const MAX_STREAMS          = 20;    // pumping arterial streams
-const GRAVITY              = -9.8;
+const GRAVITY              = -0.018; // game-scale gravity (was -9.8 which made blood fall 545x too fast)
 const BLOOD_VISCOSITY      = 0.72;  // 0=water, 1=honey — slime blood is thick
 const SLIME_VISCOSITY      = 0.55;
 const DRIP_INTERVAL        = 0.18;  // seconds between wound drips
@@ -60,7 +60,7 @@ penetration:    0.45,
 exitWound:      true,
 exitScale:      1.8,       // exit wound bigger than entry
 bloodVolume:    0.6,
-bloodVelocity:  { min: 2.0, max: 5.0 },
+bloodVelocity:  { min: 0.05, max: 0.12 }, // adjusted for game-scale gravity
 mistDensity:    0.7,       // fine mist on entry
 chunkChance:    0.0,
 pushForce:      0.3,
@@ -74,7 +74,7 @@ penetration:    0.65,
 exitWound:      true,
 exitScale:      2.4,
 bloodVolume:    0.9,
-bloodVelocity:  { min: 3.5, max: 7.0 },
+bloodVelocity:  { min: 0.09, max: 0.17 }, // adjusted for game-scale gravity
 mistDensity:    1.0,
 chunkChance:    0.05,
 pushForce:      0.6,
@@ -88,7 +88,7 @@ penetration:    0.3,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    3.5,
-bloodVelocity:  { min: 4.0, max: 12.0 },
+bloodVelocity:  { min: 0.10, max: 0.30 }, // adjusted for game-scale gravity
 mistDensity:    2.5,
 chunkChance:    0.7,       // 70% chance of flesh chunks
 chunkCount:     { min: 4, max: 9 },
@@ -105,7 +105,7 @@ penetration:    0.4,
 exitWound:      true,
 exitScale:      1.5,
 bloodVolume:    0.5,
-bloodVelocity:  { min: 2.5, max: 6.0 },
+bloodVelocity:  { min: 0.06, max: 0.15 }, // adjusted for game-scale gravity
 mistDensity:    0.9,
 chunkChance:    0.0,
 pushForce:      0.25,
@@ -119,7 +119,7 @@ penetration:    1.0,       // full penetration, exits clean
 exitWound:      true,
 exitScale:      0.9,       // exit nearly same size — supersonic
 bloodVolume:    1.2,
-bloodVelocity:  { min: 6.0, max: 18.0 }, // supersonic mist explosion
+bloodVelocity:  { min: 0.15, max: 0.45 }, // adjusted for game-scale gravity (supersonic mist explosion)
 mistDensity:    2.0,
 chunkChance:    0.15,
 pushForce:      1.5,
@@ -133,7 +133,7 @@ penetration:    0.35,
 exitWound:      true,
 exitScale:      1.3,
 bloodVolume:    0.4,
-bloodVelocity:  { min: 2.0, max: 5.5 },
+bloodVelocity:  { min: 0.05, max: 0.14 }, // adjusted for game-scale gravity
 mistDensity:    0.8,
 chunkChance:    0.02,
 pushForce:      0.2,
@@ -149,7 +149,7 @@ penetration:    0.8,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    8.0,
-bloodVelocity:  { min: 8.0, max: 25.0 },
+bloodVelocity:  { min: 0.20, max: 0.62 }, // adjusted for game-scale gravity
 mistDensity:    5.0,
 chunkChance:    1.0,       // always chunks
 chunkCount:     { min: 8, max: 20 },
@@ -166,7 +166,7 @@ penetration:    1.0,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    15.0,
-bloodVelocity:  { min: 15.0, max: 40.0 },
+bloodVelocity:  { min: 0.37, max: 1.00 }, // adjusted for game-scale gravity
 mistDensity:    10.0,
 chunkChance:    1.0,
 chunkCount:     { min: 15, max: 35 },
@@ -185,7 +185,7 @@ penetration:    1.0,
 exitWound:      true,
 exitScale:      0.8,
 bloodVolume:    0.2,       // cauterizes — less blood
-bloodVelocity:  { min: 0.5, max: 2.0 },
+bloodVelocity:  { min: 0.012, max: 0.05 }, // adjusted for game-scale gravity
 mistDensity:    0.1,
 chunkChance:    0.0,
 pushForce:      0.1,
@@ -201,7 +201,7 @@ penetration:    0.7,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    1.5,
-bloodVelocity:  { min: 3.0, max: 8.0 },
+bloodVelocity:  { min: 0.075, max: 0.20 }, // adjusted for game-scale gravity
 mistDensity:    1.5,
 chunkChance:    0.3,
 pushForce:      2.0,
@@ -219,7 +219,7 @@ penetration:    0.9,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    1.8,
-bloodVelocity:  { min: 0.3, max: 1.5 },
+bloodVelocity:  { min: 0.0075, max: 0.037 }, // adjusted for game-scale gravity
 mistDensity:    0.0,
 chunkChance:    0.0,
 pushForce:      0.1,
@@ -236,7 +236,7 @@ penetration:    0.8,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    3.0,
-bloodVelocity:  { min: 0.5, max: 3.0 },
+bloodVelocity:  { min: 0.012, max: 0.075 }, // adjusted for game-scale gravity
 mistDensity:    0.1,
 chunkChance:    0.1,
 pushForce:      0.8,
@@ -253,7 +253,7 @@ penetration:    0.95,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    4.5,
-bloodVelocity:  { min: 1.0, max: 4.0 },
+bloodVelocity:  { min: 0.025, max: 0.10 }, // adjusted for game-scale gravity
 mistDensity:    0.3,
 chunkChance:    0.4,
 chunkCount:     { min: 1, max: 3 },
@@ -273,7 +273,7 @@ penetration:    0.2,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    0.3,
-bloodVelocity:  { min: 0.2, max: 1.0 },
+bloodVelocity:  { min: 0.005, max: 0.025 }, // adjusted for game-scale gravity (minimal due to cauterization)
 mistDensity:    0.0,
 chunkChance:    0.0,
 pushForce:      0.5,
@@ -290,7 +290,7 @@ penetration:    0.5,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    0.8,
-bloodVelocity:  { min: 0.5, max: 2.0 },
+bloodVelocity:  { min: 0.012, max: 0.05 }, // adjusted for game-scale gravity
 mistDensity:    0.2,
 chunkChance:    0.0,
 pushForce:      0.3,
@@ -305,7 +305,7 @@ penetration:    1.0,
 exitWound:      true,
 exitScale:      1.0,
 bloodVolume:    0.4,
-bloodVelocity:  { min: 1.0, max: 4.0 },
+bloodVelocity:  { min: 0.025, max: 0.10 }, // adjusted for game-scale gravity
 mistDensity:    0.3,
 chunkChance:    0.05,
 pushForce:      3.0,
@@ -322,7 +322,7 @@ penetration:    0.95,
 exitWound:      false,
 exitScale:      1.0,
 bloodVolume:    2.5,
-bloodVelocity:  { min: 0.2, max: 0.8 },
+bloodVelocity:  { min: 0.005, max: 0.020 }, // adjusted for game-scale gravity
 mistDensity:    0.0,
 chunkChance:    0.0,
 pushForce:      0.05,
