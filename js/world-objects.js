@@ -1149,6 +1149,15 @@
   /** Get current day/night time (0-1) */
   WorldObjects.getDayTime = function () { return _dayTime; };
 
+  /**
+   * Enable or disable the built-in day/night cycle.
+   * Pass false when an external sky-cycle system (e.g. sandbox _updateSkyCycle)
+   * takes ownership of scene.background, fog.color, and light intensities so the
+   * two systems don't fight each other.
+   * @param {boolean} enabled
+   */
+  WorldObjects.setDayNightEnabled = function (enabled) { _dayNightEnabled = !!enabled; };
+
   // ═══════════════════════════════════════════════════════════════════════════
   // HIDDEN ENVIRONMENTAL EVENTS
   // Two deeply hidden, undocumented atmospheric surprises
