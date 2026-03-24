@@ -775,7 +775,7 @@
     // Color palette
     var COL_NIGHT   = 0x0A0A1A;
     var COL_DAWN    = 0x2A1510;
-    var COL_MORNING = 0x1a1a2e;
+    var COL_MORNING = 0x1A1A2E;
     var COL_DAY     = 0x4488AA;
     var COL_DUSK    = 0x2A1A10;
 
