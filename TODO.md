@@ -9,6 +9,50 @@
 - `js/main.js` was 1.09MB and has been split into modules (this PR)
 - The game uses global scope (no ES modules) — all functions/vars are on window
 
+## 🧪 SANDBOX 2.0 TESTING ENVIRONMENT
+**MANDATORY: All future development and testing MUST use `sandbox.html`, NOT the old map.**
+
+### What is Sandbox 2.0?
+- **File**: `sandbox.html` — Clean, isolated testing environment
+- **Engine**: Engine 2.0 with PBR rendering (`js/engine2.js`)
+- **Ground**: 200x200 arena with center spawn hole + mossy brick texture (WORKING ✅)
+- **Systems**: Full gore/blood systems, settings UI, level-up modal
+- **Purpose**: Fast iteration without loading the full game world
+
+### Why Sandbox 2.0?
+1. **Faster testing** — No world-gen.js (saves 2-3 seconds load time)
+2. **Cleaner environment** — Single enemy, no wave spawning complexity
+3. **Engine 2.0 features** — PBR ground, spawn animations, modern rendering
+4. **Isolated testing** — Changes don't affect main game until ready
+
+### Ground Texture Status
+✅ **CONFIRMED WORKING** as of 2026-03-23:
+- Texture file exists: `assets/textures/mossy_brick_diff_4k.jpg` (11MB, 4096x4096)
+- Fallback chain working: Primary → `ground/color.jpg` → UUID fallback → procedural
+- Engine 2.0 successfully loads and applies texture
+- Console confirms: `[Engine2] ✓ Successfully loaded: assets/textures/mossy_brick_diff_4k.jpg`
+- Material configured with 20x20 repeat, anisotropic filtering, sRGB color space
+
+### Features from PR #725 (Merged)
+✅ Settings modal structure with Camp-themed UI
+✅ gore-simulator.js script loading (fixed missing script)
+✅ Settings UI components: graphics mode, quality presets, particle effects toggle
+✅ Blood/gore rendering: bullet holes, blood particles, gore chunks
+
+### Sandbox 2.0 Landmarks (Engine 2.0)
+✅ UFO crash site with glowing engine lights at position (-50, 25) — northwest area (IN SANDBOX 2.0 ✓)
+✅ Companion egg near UFO (quest objective) (IN SANDBOX 2.0 ✓)
+✅ Annunaki obelisk at position (25, -35) — southwest region with energy effects (IN SANDBOX 2.0 ✓)
+✅ Lake with waterfall at position (30, -30) — southeast area (IN SANDBOX 2.0 ✓)
+
+All landmarks above are NOW in Sandbox 2.0 via js/engine2.js with full animations in js/sandbox-loop.js
+
+### World Features (Main Game - index.html)
+These exist in the MAIN game (world-gen.js), NOT in Sandbox 2.0:
+- ✅ Enhanced reflective lake with physics material
+- ✅ Pyramid structures
+- ✅ Ancient ruins and decorative props
+
 ## ✅ COMPLETED
 - [x] Split `js/main.js` into smaller organized module files
 - [x] Move .md clutter files to `docs/` folder

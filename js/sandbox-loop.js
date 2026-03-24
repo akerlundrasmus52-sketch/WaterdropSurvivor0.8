@@ -3308,6 +3308,107 @@
         window.DopamineSystem.DamageNumbers.update(dt);
       }
 
+      // ── Engine 2.0 Landmark Animations ───────────────────────────────────────
+      // Animate UFO, Obelisk, and Lake features added to Sandbox 2.0
+      if (window._engine2Landmarks) {
+        const landmarks = window._engine2Landmarks;
+
+        // UFO engine lights pulsing
+        if (landmarks.ufo) {
+          if (landmarks.ufo.engineLights) {
+            landmarks.ufo.engineLights.forEach((light, idx) => {
+              light.userData.phase = (light.userData.phase || 0) + dt * 2;
+              const pulseFactor = 0.7 + Math.sin(light.userData.phase) * 0.3;
+              light.material.opacity = pulseFactor;
+              light.scale.setScalar(0.8 + pulseFactor * 0.4);
+            });
+          }
+          if (landmarks.ufo.enginePointLights) {
+            landmarks.ufo.enginePointLights.forEach((light, idx) => {
+              light.userData.phase = (light.userData.phase || 0) + dt * 2;
+              light.intensity = 2.0 + Math.sin(light.userData.phase) * 1.0;
+            });
+          }
+        }
+
+        // Annunaki Obelisk crystal rotation + energy rings
+        if (landmarks.obelisk) {
+          // Rotate and pulse the top energy crystal
+          if (landmarks.obelisk.crystal) {
+            landmarks.obelisk.crystal.userData.phase = (landmarks.obelisk.crystal.userData.phase || 0) + dt * 1.5;
+            landmarks.obelisk.crystal.rotation.y += dt * 0.8;
+            landmarks.obelisk.crystal.rotation.x = Math.sin(landmarks.obelisk.crystal.userData.phase) * 0.3;
+            landmarks.obelisk.crystal.material.emissiveIntensity = 1.0 + Math.sin(landmarks.obelisk.crystal.userData.phase * 2) * 0.4;
+          }
+
+          // Rotate energy rings at different speeds
+          if (landmarks.obelisk.rings && landmarks.obelisk.rings.length > 0) {
+            landmarks.obelisk.rings.forEach((ring, idx) => {
+              ring.userData.phase = (ring.userData.phase || 0) + dt * ring.userData.speed;
+              ring.rotation.z = ring.userData.phase;
+              ring.material.opacity = (0.3 - idx * 0.08) + Math.sin(ring.userData.phase * 1.5) * 0.1;
+            });
+          }
+
+          // Pulse the top and base lights
+          const obeliskPhase = (window._obeliskLightPhase || 0) + dt * 2.0;
+          window._obeliskLightPhase = obeliskPhase;
+
+          if (landmarks.obelisk.topLight) {
+            landmarks.obelisk.topLight.intensity = 2.5 + Math.sin(obeliskPhase) * 0.8;
+          }
+          if (landmarks.obelisk.baseLight) {
+            landmarks.obelisk.baseLight.intensity = 1.3 + Math.sin(obeliskPhase * 1.3) * 0.5;
+          }
+
+          // Pulse pylon crystals
+          if (landmarks.obelisk.pylonCrystals && landmarks.obelisk.pylonCrystals.length > 0) {
+            landmarks.obelisk.pylonCrystals.forEach(crystal => {
+              crystal.userData.phase = (crystal.userData.phase || 0) + dt * 2.5;
+              crystal.rotation.y += dt * 1.2;
+              crystal.material.opacity = 0.6 + Math.sin(obeliskPhase * 2 + crystal.userData.phase) * 0.2;
+            });
+          }
+        }
+
+        // Lake sparkles animation
+        if (landmarks.lake && landmarks.lake.sparkles) {
+          landmarks.lake.sparkles.forEach(sparkle => {
+            sparkle.userData.phase = (sparkle.userData.phase || 0) + 0.02 * sparkle.userData.speed;
+            sparkle.material.opacity = 0.3 + Math.abs(Math.sin(sparkle.userData.phase)) * 0.7;
+            sparkle.scale.set(
+              1 + Math.sin(sparkle.userData.phase * 2) * 0.5,
+              1,
+              1 + Math.sin(sparkle.userData.phase * 2) * 0.5
+            );
+          });
+        }
+
+        // Waterfall animations
+        if (landmarks.lake) {
+          if (landmarks.lake.waterfall) {
+            landmarks.lake.waterfall.userData.phase = (landmarks.lake.waterfall.userData.phase || 0) + 0.05;
+            landmarks.lake.waterfall.material.opacity = 0.6 + Math.sin(landmarks.lake.waterfall.userData.phase) * 0.1;
+          }
+
+          if (landmarks.lake.waterDrops) {
+            landmarks.lake.waterDrops.forEach(drop => {
+              drop.position.y -= drop.userData.speed;
+              if (drop.position.y < 0) {
+                drop.position.y = drop.userData.startY;
+              }
+            });
+          }
+
+          if (landmarks.lake.splash) {
+            landmarks.lake.splash.userData.phase = (landmarks.lake.splash.userData.phase || 0) + 0.1;
+            const scale = 1 + Math.sin(landmarks.lake.splash.userData.phase) * 0.3;
+            landmarks.lake.splash.scale.set(scale, 1, scale);
+            landmarks.lake.splash.material.opacity = 0.4 + Math.sin(landmarks.lake.splash.userData.phase) * 0.2;
+          }
+        }
+      }
+
       // Camera shake & pooled flash updates
       _updateCameraShake(dt);
       _updateFlashPool(dt);

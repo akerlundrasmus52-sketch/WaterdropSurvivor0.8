@@ -304,6 +304,9 @@
 
       // 7. Road to Eiffel Tower (-32, 35) - Northwest edge
       createStonePath(-rondelRadius * 0.5, rondelRadius * 0.866, -32, 35);
+
+      // 8. Road to Annunaki Obelisk (25, -35) - Southwest region, near pyramid/desert
+      createStonePath(rondelRadius * 0.6, -rondelRadius * 0.8, 25, -35);
       
       // Initialise fountain/lightning spawn sequence (replaces old circle portal)
       if (window.SpawnSequence) window.SpawnSequence.init(scene);
@@ -914,6 +917,211 @@
         sMesh.receiveShadow = true;
         scene.add(sMesh);
       });
+
+      // ── ANNUNAKI OBELISK — Ancient alien monument with hieroglyphics and energy field ──
+      // Towering golden obelisk from the Annunaki civilization
+      // Position: Between Pyramid and desert region for lore connection
+      const obeliskGroup = new THREE.Group();
+      obeliskGroup.position.set(25, 0, -35); // Southwest region, near pyramid
+
+      // Main obelisk shaft - tapered monolith
+      const obeliskHeight = 18;
+      const obeliskBaseSize = 2.5;
+      const obeliskTopSize = 1.8;
+
+      // Create 4 faces of the obelisk with slight taper
+      const obeliskGeometry = new THREE.CylinderGeometry(obeliskTopSize, obeliskBaseSize, obeliskHeight, 4);
+      const obeliskMaterial = new THREE.MeshStandardMaterial({
+        color: 0xD4AF37, // Rich gold
+        metalness: 0.7,
+        roughness: 0.3,
+        emissive: 0xFFD700,
+        emissiveIntensity: 0.3
+      });
+      const obeliskShaft = new THREE.Mesh(obeliskGeometry, obeliskMaterial);
+      obeliskShaft.position.y = obeliskHeight / 2;
+      obeliskShaft.castShadow = true;
+      obeliskShaft.receiveShadow = true;
+      obeliskGroup.add(obeliskShaft);
+
+      // Pyramidion cap (pointed top)
+      const capGeometry = new THREE.ConeGeometry(obeliskTopSize + 0.3, 3, 4);
+      const capMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFFD700, // Bright gold
+        metalness: 0.9,
+        roughness: 0.1,
+        emissive: 0xFFD700,
+        emissiveIntensity: 0.5
+      });
+      const pyramidionCap = new THREE.Mesh(capGeometry, capMaterial);
+      pyramidionCap.position.y = obeliskHeight + 1.5;
+      pyramidionCap.castShadow = true;
+      obeliskGroup.add(pyramidionCap);
+
+      // Base platform - stepped stone pedestal
+      const baseLevels = 3;
+      const baseColors = [0xB8956A, 0xA8856A, 0x98754A]; // Sandstone gradients
+      for (let i = 0; i < baseLevels; i++) {
+        const levelSize = 5 - i * 0.8;
+        const levelHeight = 0.6;
+        const baseGeo = new THREE.BoxGeometry(levelSize, levelHeight, levelSize);
+        const baseMat = new THREE.MeshStandardMaterial({
+          color: baseColors[i],
+          roughness: 0.95,
+          metalness: 0.0
+        });
+        const baseLevel = new THREE.Mesh(baseGeo, baseMat);
+        baseLevel.position.y = i * levelHeight + levelHeight / 2;
+        baseLevel.castShadow = true;
+        baseLevel.receiveShadow = true;
+        obeliskGroup.add(baseLevel);
+      }
+
+      // Hieroglyphic panels - ancient symbols etched on faces
+      const hieroglyphicMat = new THREE.MeshBasicMaterial({ color: 0x2C1810 }); // Dark brown
+      const symbolPositions = [
+        { y: 4, rot: 0 },           // Lower symbols
+        { y: 7, rot: Math.PI / 4 },  // Mid-lower with rotation
+        { y: 10, rot: 0 },          // Middle
+        { y: 13, rot: Math.PI / 4 }, // Mid-upper with rotation
+        { y: 16, rot: 0 }           // Upper
+      ];
+
+      symbolPositions.forEach(pos => {
+        for (let face = 0; face < 4; face++) {
+          const angle = (face / 4) * Math.PI * 2;
+          const distance = obeliskBaseSize - 0.5;
+
+          // Create small rectangular hieroglyphic "panels"
+          const symbolGeo = new THREE.BoxGeometry(0.8, 0.6, 0.05);
+          const symbol = new THREE.Mesh(symbolGeo, hieroglyphicMat);
+          symbol.position.set(
+            Math.cos(angle) * distance,
+            pos.y,
+            Math.sin(angle) * distance
+          );
+          symbol.rotation.y = angle + Math.PI / 2 + pos.rot;
+          obeliskGroup.add(symbol);
+        }
+      });
+
+      // Energy crystal at top - pulsing alien power source
+      const crystalGeo = new THREE.OctahedronGeometry(0.8, 0);
+      const crystalMat = new THREE.MeshPhysicalMaterial({
+        color: 0x00FFFF, // Cyan energy
+        metalness: 0.1,
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.85,
+        emissive: 0x00FFFF,
+        emissiveIntensity: 1.2
+      });
+      const energyCrystal = new THREE.Mesh(crystalGeo, crystalMat);
+      energyCrystal.position.y = obeliskHeight + 3.2;
+      energyCrystal.userData = { isObeliskCrystal: true, phase: 0 };
+      obeliskGroup.add(energyCrystal);
+
+      // Energy field rings - rotating ethereal barriers
+      for (let ring = 0; ring < 3; ring++) {
+        const ringGeo = new THREE.TorusGeometry(3 + ring * 1.5, 0.15, 8, 24);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0x00FFFF,
+          transparent: true,
+          opacity: 0.3 - ring * 0.08
+        });
+        const energyRing = new THREE.Mesh(ringGeo, ringMat);
+        energyRing.position.y = obeliskHeight / 2 + ring * 2;
+        energyRing.rotation.x = Math.PI / 2;
+        energyRing.userData = { isEnergyRing: true, phase: ring * (Math.PI * 2 / 3), speed: 0.5 + ring * 0.2 };
+        obeliskGroup.add(energyRing);
+      }
+
+      // Mystical point lights for atmosphere
+      const obeliskTopLight = new THREE.PointLight(0x00FFFF, 3, 30);
+      obeliskTopLight.position.y = obeliskHeight + 3;
+      obeliskGroup.add(obeliskTopLight);
+
+      const obeliskBaseLight = new THREE.PointLight(0xFFD700, 1.5, 15);
+      obeliskBaseLight.position.y = 2;
+      obeliskGroup.add(obeliskBaseLight);
+
+      // Surrounding power conduits - energy pylons
+      for (let pylon = 0; pylon < 4; pylon++) {
+        const pylonAngle = (pylon / 4) * Math.PI * 2;
+        const pylonDist = 7;
+        const pylonGeo = new THREE.CylinderGeometry(0.3, 0.4, 4, 6);
+        const pylonMat = new THREE.MeshStandardMaterial({
+          color: 0xB8956A,
+          roughness: 0.8,
+          metalness: 0.2,
+          emissive: 0x00AAAA,
+          emissiveIntensity: 0.2
+        });
+        const pylonMesh = new THREE.Mesh(pylonGeo, pylonMat);
+        pylonMesh.position.set(
+          Math.cos(pylonAngle) * pylonDist,
+          2,
+          Math.sin(pylonAngle) * pylonDist
+        );
+        pylonMesh.castShadow = true;
+        obeliskGroup.add(pylonMesh);
+
+        // Crystal tops on pylons
+        const pylonCrystal = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.4, 0),
+          new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.7 })
+        );
+        pylonCrystal.position.set(
+          Math.cos(pylonAngle) * pylonDist,
+          4.2,
+          Math.sin(pylonAngle) * pylonDist
+        );
+        pylonCrystal.userData = { isPylonCrystal: true, phase: pylon * Math.PI / 2 };
+        obeliskGroup.add(pylonCrystal);
+      }
+
+      // Store references for animation
+      window._annunakiObelisk = {
+        group: obeliskGroup,
+        crystal: energyCrystal,
+        topLight: obeliskTopLight,
+        baseLight: obeliskBaseLight,
+        rings: obeliskGroup.children.filter(c => c.userData.isEnergyRing),
+        pylonCrystals: obeliskGroup.children.filter(c => c.userData.isPylonCrystal)
+      };
+
+      scene.add(obeliskGroup);
+
+      // Obelisk ground marker - ancient stone circle
+      const obeliskCircleGeo = new THREE.RingGeometry(8, 9, 32);
+      const obeliskCircleMat = new THREE.MeshStandardMaterial({
+        color: 0xB8956A,
+        roughness: 0.95,
+        metalness: 0,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+      const obeliskCircle = new THREE.Mesh(obeliskCircleGeo, obeliskCircleMat);
+      obeliskCircle.rotation.x = -Math.PI / 2;
+      obeliskCircle.position.set(25, 0.01, -35);
+      obeliskCircle.receiveShadow = true;
+      scene.add(obeliskCircle);
+
+      // Ancient runes carved in circle pattern
+      for (let rune = 0; rune < 8; rune++) {
+        const runeAngle = (rune / 8) * Math.PI * 2;
+        const runeGeo = new THREE.BoxGeometry(0.6, 0.1, 0.4);
+        const runeMat = new THREE.MeshBasicMaterial({ color: 0x2C1810 });
+        const runeBlock = new THREE.Mesh(runeGeo, runeMat);
+        runeBlock.position.set(
+          25 + Math.cos(runeAngle) * 8.5,
+          0.02,
+          -35 + Math.sin(runeAngle) * 8.5
+        );
+        runeBlock.rotation.y = runeAngle + Math.PI / 2;
+        scene.add(runeBlock);
+      }
 
       // Phase 4: Illuminati Pyramid - Pyramid with All-Seeing Eye, Fences, and Men in Black guards
       // OPTIMIZED: Repositioned for ultra-compact 80x80 map (optional discovery landmark)
@@ -1878,6 +2086,7 @@
         if (distToSegment(x, z, r * 0.5,   -r * 0.866, 30, -30)    < PATH_WIDTH) return true; // → Lake
         if (distToSegment(x, z, -r * 0.866, r * 0.5, -50, 25)      < PATH_WIDTH) return true; // → UFO Crash Site
         if (distToSegment(x, z, -r * 0.5, r * 0.866, -32, 35)      < PATH_WIDTH) return true; // → Eiffel Tower
+        if (distToSegment(x, z, r * 0.6, -r * 0.8, 25, -35)        < PATH_WIDTH) return true; // → Annunaki Obelisk
 
         // Building exclusion zones
         if (Math.sqrt((x - 20) ** 2 + (z - 20) ** 2)   < 8)  return true; // Windmill (OPTIMIZED for ultra-compact: was 18, 18; before 25, 25)
@@ -1889,6 +2098,7 @@
         if (Math.sqrt((x - 32) ** 2 + (z + 28) ** 2)   < 22) return true; // Pyramid (OPTIMIZED for ultra-compact: was 25, -20; before 35, -35)
         if (Math.sqrt((x + 32) ** 2 + (z + 28) ** 2)   < 27) return true; // Tesla Tower (OPTIMIZED for ultra-compact: was -30, -30; before -50, -50)
         if (Math.sqrt((x + 32) ** 2 + (z - 35) ** 2)   < 20) return true; // Eiffel Tower (OPTIMIZED for ultra-compact: was -50, 90)
+        if (Math.sqrt((x - 25) ** 2 + (z + 35) ** 2)   < 15) return true; // Annunaki Obelisk
 
         return false;
       }

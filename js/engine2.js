@@ -1,8 +1,23 @@
 /**
  * ENGINE 2.0 SANDBOX
  *
- * Clean arena system with PBR ground and spawn hole.
+ * Clean arena system with PBR ground, spawn hole, and world landmarks.
  * Replaces old wave manager and infinite ground plane.
+ *
+ * GROUND TEXTURE STATUS: ✅ WORKING
+ * - Primary texture: assets/textures/mossy_brick_diff_4k.jpg (11MB, 4096x4096)
+ * - Fallback chain: mossy_brick → ground/color.jpg → UUID.png → procedural
+ * - Texture confirmed loading and displaying properly as of 2026-03-23
+ * - Material: PBR MeshStandardMaterial with 20x20 repeat, anisotropic filtering
+ *
+ * LANDMARKS STATUS: ✅ ADDED 2026-03-24
+ * - UFO crash site at (-50, 25) with glowing engine lights + companion egg
+ * - Annunaki Obelisk at (25, -35) with energy crystal, rotating rings, pylons
+ * - Lake with waterfall at (30, -30) with sparkles and animated water
+ * - All landmarks animated in sandbox-loop.js
+ *
+ * NEVER modify this file without understanding the texture loading flow.
+ * See README.md section "🧪 SANDBOX 2.0 — TESTING ENVIRONMENT" for details.
  */
 
 class Engine2Sandbox {
@@ -38,6 +53,7 @@ class Engine2Sandbox {
     // Load textures and create arena
     this._loadTextures(() => {
       this._createArena();
+      this._createLandmarks();
       this.loaded = true;
       console.log('[Engine2] Engine 2.0 arena initialized successfully');
     });
@@ -367,6 +383,473 @@ class Engine2Sandbox {
     this.rimMeshes.push(innerRing);
 
     console.log('[Engine2] ✓ Created enhanced hole rim with depth detail');
+  }
+
+  /**
+   * Create world landmarks (UFO, Obelisk, Lake) for Sandbox 2.0
+   * These are the key landmarks from the old map, ported to Engine 2.0
+   */
+  _createLandmarks() {
+    if (!this.scene) return;
+
+    console.log('[Engine2] Creating world landmarks...');
+
+    // Store references for animation
+    if (!window._engine2Landmarks) window._engine2Landmarks = {};
+
+    // ══════════════════════════════════════════════════════════════
+    // 1. UFO CRASH SITE — Northwest area (-50, 25)
+    // ══════════════════════════════════════════════════════════════
+    const shipGroup = new THREE.Group();
+    shipGroup.position.set(-50, 0, 25);
+    shipGroup.rotation.y = 0.8;
+
+    // Disc body (saucer shape)
+    const discGeo = new THREE.SphereGeometry(8, 16, 8);
+    const discMat = new THREE.MeshPhysicalMaterial({
+      color: 0x778899, metalness: 0.8, roughness: 0.3,
+      emissive: 0x002244, emissiveIntensity: 0.2
+    });
+    const disc = new THREE.Mesh(discGeo, discMat);
+    disc.scale.set(1, 0.3, 1); // Flatten into disc
+    disc.position.y = 1.5;
+    disc.castShadow = true;
+    shipGroup.add(disc);
+
+    // Dome on top
+    const domeGeo = new THREE.SphereGeometry(3.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const domeMat = new THREE.MeshPhysicalMaterial({
+      color: 0x88CCFF, transparent: true, opacity: 0.6,
+      metalness: 0.1, roughness: 0.1
+    });
+    const dome = new THREE.Mesh(domeGeo, domeMat);
+    dome.position.y = 2.4;
+    dome.castShadow = true;
+    shipGroup.add(dome);
+
+    // Damage / cracked section
+    const damagedGeo = new THREE.BoxGeometry(4, 0.8, 3);
+    const damagedMat = new THREE.MeshToonMaterial({ color: 0x445566 });
+    const damaged = new THREE.Mesh(damagedGeo, damagedMat);
+    damaged.position.set(6, 1.2, 2);
+    damaged.rotation.z = 0.3;
+    damaged.castShadow = true;
+    shipGroup.add(damaged);
+
+    // Glowing engine lights around disc edge
+    const engineColors = [0x00FFCC, 0x00FF88, 0x44FFAA];
+    const engineLights = [];
+    const enginePointLights = [];
+
+    for (let e = 0; e < 6; e++) {
+      const eAngle = (e / 6) * Math.PI * 2;
+
+      // Engine light mesh
+      const engineLight = new THREE.Mesh(
+        new THREE.SphereGeometry(0.6, 8, 8),
+        new THREE.MeshBasicMaterial({ color: engineColors[e % 3] })
+      );
+      engineLight.position.set(Math.cos(eAngle) * 7.5, 1.5, Math.sin(eAngle) * 7.5);
+      engineLight.userData = { isEngineLight: true, phase: (e / 6) * Math.PI * 2 };
+      shipGroup.add(engineLight);
+      engineLights.push(engineLight);
+
+      // Point light for real glow
+      const enginePointLight = new THREE.PointLight(engineColors[e % 3], 2.5, 12);
+      enginePointLight.position.set(Math.cos(eAngle) * 7.5, 1.5, Math.sin(eAngle) * 7.5);
+      enginePointLight.userData = { isEngineLight: true, phase: (e / 6) * Math.PI * 2 };
+      shipGroup.add(enginePointLight);
+      enginePointLights.push(enginePointLight);
+    }
+
+    // Tilt the ship (crashed angle)
+    shipGroup.rotation.x = 0.25;
+    shipGroup.rotation.z = -0.15;
+
+    // Crash crater under ship
+    const crashGeo = new THREE.RingGeometry(6, 10, 16);
+    const crashMat = new THREE.MeshBasicMaterial({ color: 0x4A3728, transparent: true, opacity: 0.7 });
+    const crashCrater = new THREE.Mesh(crashGeo, crashMat);
+    crashCrater.rotation.x = -Math.PI / 2;
+    crashCrater.position.set(-50, 0.01, 25);
+    this.scene.add(crashCrater);
+    this.scene.add(shipGroup);
+
+    // Companion Egg near UFO (quest objective)
+    const eggGroup = new THREE.Group();
+    eggGroup.position.set(-32, 0, 25);
+    const eggGeo = new THREE.SphereGeometry(0.7, 12, 10);
+    eggGeo.scale(1, 1.3, 1);
+    const eggMat = new THREE.MeshPhysicalMaterial({
+      color: 0x00FFB4, emissive: 0x00CC88, emissiveIntensity: 0.6,
+      transparent: true, opacity: 0.9, metalness: 0.2, roughness: 0.3
+    });
+    const eggMesh = new THREE.Mesh(eggGeo, eggMat);
+    eggMesh.position.y = 0.9;
+    eggMesh.castShadow = true;
+    eggGroup.add(eggMesh);
+
+    const eggLight = new THREE.PointLight(0x00FFB4, 3, 8);
+    eggLight.position.y = 1;
+    eggGroup.add(eggLight);
+    eggGroup.userData = { isCompanionEgg: true, pickupRadius: 4 };
+    this.scene.add(eggGroup);
+    window.companionEggObject = eggGroup;
+
+    // Store UFO references for animation
+    window._engine2Landmarks.ufo = {
+      group: shipGroup,
+      engineLights: engineLights,
+      enginePointLights: enginePointLights
+    };
+
+    console.log('[Engine2] ✓ UFO crash site created at (-50, 25)');
+
+    // ══════════════════════════════════════════════════════════════
+    // 2. ANNUNAKI OBELISK — Southwest region (25, -35)
+    // ══════════════════════════════════════════════════════════════
+    const obeliskGroup = new THREE.Group();
+    obeliskGroup.position.set(25, 0, -35);
+
+    // Main obelisk shaft - tapered monolith
+    const obeliskHeight = 18;
+    const obeliskBaseSize = 2.5;
+    const obeliskTopSize = 1.8;
+
+    const obeliskGeometry = new THREE.CylinderGeometry(obeliskTopSize, obeliskBaseSize, obeliskHeight, 4);
+    const obeliskMaterial = new THREE.MeshStandardMaterial({
+      color: 0xD4AF37, // Rich gold
+      metalness: 0.7,
+      roughness: 0.3,
+      emissive: 0xFFD700,
+      emissiveIntensity: 0.3
+    });
+    const obeliskShaft = new THREE.Mesh(obeliskGeometry, obeliskMaterial);
+    obeliskShaft.position.y = obeliskHeight / 2;
+    obeliskShaft.castShadow = true;
+    obeliskShaft.receiveShadow = true;
+    obeliskGroup.add(obeliskShaft);
+
+    // Pyramidion cap (pointed top)
+    const capGeometry = new THREE.ConeGeometry(obeliskTopSize + 0.3, 3, 4);
+    const capMaterial = new THREE.MeshStandardMaterial({
+      color: 0xFFD700, // Bright gold
+      metalness: 0.9,
+      roughness: 0.1,
+      emissive: 0xFFD700,
+      emissiveIntensity: 0.5
+    });
+    const pyramidionCap = new THREE.Mesh(capGeometry, capMaterial);
+    pyramidionCap.position.y = obeliskHeight + 1.5;
+    pyramidionCap.castShadow = true;
+    obeliskGroup.add(pyramidionCap);
+
+    // Base platform - stepped stone pedestal
+    const baseLevels = 3;
+    const baseColors = [0xB8956A, 0xA8856A, 0x98754A];
+    for (let i = 0; i < baseLevels; i++) {
+      const levelSize = 5 - i * 0.8;
+      const levelHeight = 0.6;
+      const baseGeo = new THREE.BoxGeometry(levelSize, levelHeight, levelSize);
+      const baseMat = new THREE.MeshStandardMaterial({
+        color: baseColors[i],
+        roughness: 0.95,
+        metalness: 0.0
+      });
+      const baseLevel = new THREE.Mesh(baseGeo, baseMat);
+      baseLevel.position.y = i * levelHeight + levelHeight / 2;
+      baseLevel.castShadow = true;
+      baseLevel.receiveShadow = true;
+      obeliskGroup.add(baseLevel);
+    }
+
+    // Hieroglyphic panels
+    const hieroglyphicMat = new THREE.MeshBasicMaterial({ color: 0x2C1810 });
+    const symbolPositions = [
+      { y: 4, rot: 0 },
+      { y: 7, rot: Math.PI / 4 },
+      { y: 10, rot: 0 },
+      { y: 13, rot: Math.PI / 4 },
+      { y: 16, rot: 0 }
+    ];
+
+    symbolPositions.forEach(pos => {
+      for (let face = 0; face < 4; face++) {
+        const angle = (face / 4) * Math.PI * 2;
+        const distance = obeliskBaseSize - 0.5;
+
+        const symbolGeo = new THREE.BoxGeometry(0.8, 0.6, 0.05);
+        const symbol = new THREE.Mesh(symbolGeo, hieroglyphicMat);
+        symbol.position.set(
+          Math.cos(angle) * distance,
+          pos.y,
+          Math.sin(angle) * distance
+        );
+        symbol.rotation.y = angle + Math.PI / 2 + pos.rot;
+        obeliskGroup.add(symbol);
+      }
+    });
+
+    // Energy crystal at top
+    const crystalGeo = new THREE.OctahedronGeometry(0.8, 0);
+    const crystalMat = new THREE.MeshPhysicalMaterial({
+      color: 0x00FFFF,
+      metalness: 0.1,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.85,
+      emissive: 0x00FFFF,
+      emissiveIntensity: 1.2
+    });
+    const energyCrystal = new THREE.Mesh(crystalGeo, crystalMat);
+    energyCrystal.position.y = obeliskHeight + 3.2;
+    energyCrystal.userData = { isObeliskCrystal: true, phase: 0 };
+    obeliskGroup.add(energyCrystal);
+
+    // Energy field rings
+    const energyRings = [];
+    for (let ring = 0; ring < 3; ring++) {
+      const ringGeo = new THREE.TorusGeometry(3 + ring * 1.5, 0.15, 8, 24);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x00FFFF,
+        transparent: true,
+        opacity: 0.3 - ring * 0.08
+      });
+      const energyRing = new THREE.Mesh(ringGeo, ringMat);
+      energyRing.position.y = obeliskHeight / 2 + ring * 2;
+      energyRing.rotation.x = Math.PI / 2;
+      energyRing.userData = { isEnergyRing: true, phase: ring * (Math.PI * 2 / 3), speed: 0.5 + ring * 0.2 };
+      obeliskGroup.add(energyRing);
+      energyRings.push(energyRing);
+    }
+
+    // Mystical lights
+    const obeliskTopLight = new THREE.PointLight(0x00FFFF, 3, 30);
+    obeliskTopLight.position.y = obeliskHeight + 3;
+    obeliskGroup.add(obeliskTopLight);
+
+    const obeliskBaseLight = new THREE.PointLight(0xFFD700, 1.5, 15);
+    obeliskBaseLight.position.y = 2;
+    obeliskGroup.add(obeliskBaseLight);
+
+    // Power conduit pylons
+    const pylonCrystals = [];
+    for (let pylon = 0; pylon < 4; pylon++) {
+      const pylonAngle = (pylon / 4) * Math.PI * 2;
+      const pylonDist = 7;
+
+      const pylonGeo = new THREE.CylinderGeometry(0.3, 0.4, 4, 6);
+      const pylonMat = new THREE.MeshStandardMaterial({
+        color: 0xB8956A,
+        roughness: 0.8,
+        metalness: 0.2,
+        emissive: 0x00AAAA,
+        emissiveIntensity: 0.2
+      });
+      const pylonMesh = new THREE.Mesh(pylonGeo, pylonMat);
+      pylonMesh.position.set(
+        Math.cos(pylonAngle) * pylonDist,
+        2,
+        Math.sin(pylonAngle) * pylonDist
+      );
+      pylonMesh.castShadow = true;
+      obeliskGroup.add(pylonMesh);
+
+      // Crystal tops on pylons
+      const pylonCrystal = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.4, 0),
+        new THREE.MeshBasicMaterial({ color: 0x00FFFF, transparent: true, opacity: 0.7 })
+      );
+      pylonCrystal.position.set(
+        Math.cos(pylonAngle) * pylonDist,
+        4.2,
+        Math.sin(pylonAngle) * pylonDist
+      );
+      pylonCrystal.userData = { isPylonCrystal: true, phase: pylon * Math.PI / 2 };
+      obeliskGroup.add(pylonCrystal);
+      pylonCrystals.push(pylonCrystal);
+    }
+
+    this.scene.add(obeliskGroup);
+
+    // Obelisk ground marker
+    const obeliskCircleGeo = new THREE.RingGeometry(8, 9, 32);
+    const obeliskCircleMat = new THREE.MeshStandardMaterial({
+      color: 0xB8956A,
+      roughness: 0.95,
+      metalness: 0,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
+    const obeliskCircle = new THREE.Mesh(obeliskCircleGeo, obeliskCircleMat);
+    obeliskCircle.rotation.x = -Math.PI / 2;
+    obeliskCircle.position.set(25, 0.01, -35);
+    obeliskCircle.receiveShadow = true;
+    this.scene.add(obeliskCircle);
+
+    // Ancient runes
+    for (let rune = 0; rune < 8; rune++) {
+      const runeAngle = (rune / 8) * Math.PI * 2;
+      const runeGeo = new THREE.BoxGeometry(0.6, 0.1, 0.4);
+      const runeMat = new THREE.MeshBasicMaterial({ color: 0x2C1810 });
+      const runeBlock = new THREE.Mesh(runeGeo, runeMat);
+      runeBlock.position.set(
+        25 + Math.cos(runeAngle) * 8.5,
+        0.02,
+        -35 + Math.sin(runeAngle) * 8.5
+      );
+      runeBlock.rotation.y = runeAngle + Math.PI / 2;
+      this.scene.add(runeBlock);
+    }
+
+    // Store obelisk references for animation
+    window._engine2Landmarks.obelisk = {
+      group: obeliskGroup,
+      crystal: energyCrystal,
+      topLight: obeliskTopLight,
+      baseLight: obeliskBaseLight,
+      rings: energyRings,
+      pylonCrystals: pylonCrystals
+    };
+
+    console.log('[Engine2] ✓ Annunaki Obelisk created at (25, -35)');
+
+    // ══════════════════════════════════════════════════════════════
+    // 3. LAKE WITH WATERFALL — Southeast area (30, -30)
+    // ══════════════════════════════════════════════════════════════
+
+    // Reflective lake
+    const enhancedLakeGeo = new THREE.CircleGeometry(8, 48);
+    const enhancedLakeMat = new THREE.MeshPhysicalMaterial({
+      color: 0x4ECDC4,
+      metalness: 0.5,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.85,
+      reflectivity: 0.9,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1,
+      depthWrite: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2
+    });
+    const enhancedLake = new THREE.Mesh(enhancedLakeGeo, enhancedLakeMat);
+    enhancedLake.rotation.x = -Math.PI / 2;
+    enhancedLake.position.set(30, 0.03, -30);
+    enhancedLake.receiveShadow = true;
+    this.scene.add(enhancedLake);
+
+    // Sandy shore ring
+    const shoreGeo = new THREE.RingGeometry(7.5, 10, 48);
+    const shoreMat = new THREE.MeshStandardMaterial({
+      color: 0xC2B280,
+      roughness: 0.9,
+      metalness: 0,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
+    const shore = new THREE.Mesh(shoreGeo, shoreMat);
+    shore.rotation.x = -Math.PI / 2;
+    shore.position.set(30, 0.02, -30);
+    shore.receiveShadow = true;
+    this.scene.add(shore);
+
+    // Sun sparkles on lake
+    const sparkles = [];
+    for (let i = 0; i < 10; i++) {
+      const sparkleGeo = new THREE.CircleGeometry(0.3, 6);
+      const sparkleMat = new THREE.MeshBasicMaterial({
+        color: 0xFFFFFF,
+        transparent: true,
+        opacity: 0.8
+      });
+      const sparkle = new THREE.Mesh(sparkleGeo, sparkleMat);
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 7;
+      sparkle.position.set(
+        30 + Math.cos(angle) * dist,
+        0.02,
+        -30 + Math.sin(angle) * dist
+      );
+      sparkle.rotation.x = -Math.PI / 2;
+      sparkle.userData = {
+        isSparkle: true,
+        phase: Math.random() * Math.PI * 2,
+        speed: 1 + Math.random() * 2
+      };
+      this.scene.add(sparkle);
+      sparkles.push(sparkle);
+    }
+
+    // Waterfall group
+    const waterfallGroup = new THREE.Group();
+
+    // Cliff/rock formation
+    const cliffGeo = new THREE.BoxGeometry(8, 12, 6);
+    const cliffMat = new THREE.MeshToonMaterial({ color: 0x696969 });
+    const cliff = new THREE.Mesh(cliffGeo, cliffMat);
+    cliff.position.set(20, 6, -35);
+    cliff.castShadow = true;
+    waterfallGroup.add(cliff);
+
+    // Waterfall
+    const waterfallGeo = new THREE.PlaneGeometry(3, 12);
+    const waterfallMat = new THREE.MeshBasicMaterial({
+      color: 0x87CEEB,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide
+    });
+    const waterfall = new THREE.Mesh(waterfallGeo, waterfallMat);
+    waterfall.position.set(20, 6, -29);
+    waterfall.rotation.x = -0.2;
+    waterfall.userData = { isWaterfall: true, phase: 0 };
+    waterfallGroup.add(waterfall);
+
+    // Flowing water particles
+    const waterDrops = [];
+    for (let i = 0; i < 5; i++) {
+      const dropGeo = new THREE.SphereGeometry(0.3, 8, 8);
+      const dropMat = new THREE.MeshBasicMaterial({
+        color: 0x4ECDC4,
+        transparent: true,
+        opacity: 0.7
+      });
+      const drop = new THREE.Mesh(dropGeo, dropMat);
+      drop.position.set(30 + (Math.random() - 0.5) * 2, 12 - i * 2, -39);
+      drop.userData = { isWaterDrop: true, speed: 0.1 + Math.random() * 0.1, startY: 12 - i * 2 };
+      waterfallGroup.add(drop);
+      waterDrops.push(drop);
+    }
+
+    // Splash at bottom
+    const splashGeo = new THREE.CircleGeometry(2, 16);
+    const splashMat = new THREE.MeshBasicMaterial({
+      color: 0xFFFFFF,
+      transparent: true,
+      opacity: 0.4
+    });
+    const splash = new THREE.Mesh(splashGeo, splashMat);
+    splash.rotation.x = -Math.PI / 2;
+    splash.position.set(20, 0.1, -23);
+    splash.userData = { isSplash: true, phase: 0 };
+    waterfallGroup.add(splash);
+
+    this.scene.add(waterfallGroup);
+
+    // Store lake/waterfall references for animation
+    window._engine2Landmarks.lake = {
+      sparkles: sparkles,
+      waterfall: waterfall,
+      waterDrops: waterDrops,
+      splash: splash
+    };
+
+    console.log('[Engine2] ✓ Lake with waterfall created at (30, -30)');
+    console.log('[Engine2] ✓ All landmarks created successfully');
   }
 
   /**

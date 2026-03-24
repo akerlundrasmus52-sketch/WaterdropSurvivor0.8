@@ -21,6 +21,34 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
 - **No ES Modules**: Everything runs via `<script>` tags in global scope. Script load order in `index.html` and `sandbox.html` is critical.
 - **THREE.js v0.176.0** loaded from CDN.
 
+### 🧪 SANDBOX 2.0 — TESTING ENVIRONMENT
+**CRITICAL: All agents MUST use `sandbox.html` for testing new features, NOT the old map (index.html/world-gen.js).**
+
+- **File Location**: `/sandbox.html` — Clean Engine 2.0 test environment
+- **Purpose**: Isolated testing arena with Engine 2.0 features (PBR ground, spawn hole, gore systems)
+- **What it includes**:
+  - ✅ Engine 2.0 PBR ground with mossy brick texture (`mossy_brick_diff_4k.jpg`)
+  - ✅ Central spawn hole with decorative rim (200x200 arena)
+  - ✅ **UFO crash site** at (-50, 25) with glowing engines + companion egg
+  - ✅ **Annunaki Obelisk** at (25, -35) with energy crystal, rings, and pylons
+  - ✅ **Lake with waterfall** at (30, -30) with sparkles and animated water
+  - ✅ Full gore/blood systems (BloodV2, GoreSim, TraumaSystem)
+  - ✅ Settings UI with Auto/Manual graphics mode
+  - ✅ Level-up system with upgrade cards
+  - ✅ Player + single enemy respawn for testing
+- **What it does NOT include**:
+  - ❌ World generation (world-gen.js)
+  - ❌ Wave spawning system
+  - ❌ Camp world integration
+  - ❌ Quest system (stubbed for compatibility)
+
+**Testing Workflow for AI Agents:**
+1. Make changes to relevant systems (e.g., blood, weapons, UI)
+2. Test in `sandbox.html` first — faster load, cleaner environment
+3. Verify feature works in isolation
+4. Then test in `index.html` (full game) to ensure compatibility
+5. **NEVER modify old map files (world-gen.js) without explicit instructions**
+
 ### 🩸 THE SIMULATORS — DO NOT REPLACE, ONLY TUNE
 
 This game contains **HIGHLY ADVANCED, TUNABLE SIMULATORS** for:
