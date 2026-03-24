@@ -2546,7 +2546,7 @@ setTimeout(() => {
 
 }
 
-function *applyGraphicsQuality(quality) {
+function _applyGraphicsQuality(quality) {
 if (!renderer) return;
 switch (quality) {
 case 'ultralow':
