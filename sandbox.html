@@ -79,6 +79,7 @@
       transition: background 0.2s, border-color 0.2s, transform 0.2s;
       padding: 0;
       font-family: 'Segoe UI Symbol', 'DejaVu Sans', sans-serif;
+      pointer-events: auto;
     }
     #settings-btn:hover {
       background: rgba(40,40,70,0.9);
@@ -93,15 +94,16 @@
     }
 
     /* ── Enhanced settings modal ─────────────────────────────────────────────── */
-    .settings-modal {
+    #settings-modal {
       position: fixed !important;
       top: 0; left: 0; right: 0; bottom: 0;
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       background: rgba(0,0,0,0.75);
-      z-index: 9998;
+      z-index: 9998 !important;
       backdrop-filter: blur(4px);
+      pointer-events: auto;
     }
 
     /* ── Sandbox: Level-Up modal enhancements ───────────────────────────────
