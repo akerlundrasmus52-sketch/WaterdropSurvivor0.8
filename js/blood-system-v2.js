@@ -58,7 +58,7 @@ CHUNK_COUNT:      30,    // flesh/slime chunks   (pooled Mesh)
 DECAL_COUNT:      150,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body
 STREAM_COUNT:     12,    // arterial pump streams
-GRAVITY:         -9.81,
+GRAVITY:         -0.018,  // game-scale gravity (was -9.81 which made blood fall 545x too fast)
 GROUND_Y:         0.01,
 DECAL_FADE:       25.0,  // seconds before ground decal fades
 DRIP_RATE:        0.22,  // seconds between wound drips (base)
@@ -98,9 +98,9 @@ penetration:   0.40,       // 0=surface 1=full through
 exitWound:     true,
 exitScale:     2.2,        // exit hole bigger than entry (more realistic)
 dropCount:     28,         // increased for realistic blood volume
-dropSpeed:     [3.0, 8.5], // faster initial velocity (realistic ballistic impact)
+dropSpeed:     [0.08, 0.22], // adjusted for game-scale gravity
 mistCount:     20,         // more mist from cavitation
-mistSpeed:     [1.5, 5.0], // faster mist spray
+mistSpeed:     [0.04, 0.12], // adjusted for game-scale gravity
 chunkChance:   0.0,
 chunkCount:    [0,0],
 pushForce:     0.35,
@@ -117,9 +117,9 @@ penetration:   0.65,
 exitWound:     true,
 exitScale:     3.0,        // larger exit wound (realistic for .357/.44 Magnum)
 dropCount:     42,         // increased blood volume for heavier rounds
-dropSpeed:     [5.0, 12.0], // higher velocity impact spray
+dropSpeed:     [0.12, 0.30], // adjusted for game-scale gravity
 mistCount:     35,         // more cavitation mist
-mistSpeed:     [2.5, 7.0], // faster mist dispersion
+mistSpeed:     [0.06, 0.18], // adjusted for game-scale gravity
 chunkChance:   0.12,       // slightly more tissue damage
 chunkCount:    [1,3],
 pushForce:     0.8,
@@ -139,9 +139,9 @@ penetration:   0.25,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     145,        // MASSIVE blood volume (realistic shotgun devastation)
-dropSpeed:     [6.0, 18.0], // high energy transfer
+dropSpeed:     [0.15, 0.45], // adjusted for game-scale gravity
 mistCount:     95,         // heavy mist cloud
-mistSpeed:     [4.0, 12.0], // fast aerosol dispersion
+mistSpeed:     [0.10, 0.30], // adjusted for game-scale gravity
 chunkChance:   0.92,       // very high tissue damage
 chunkCount:    [6,14],     // more chunks
 pushForce:     3.5,
@@ -160,9 +160,9 @@ penetration:   0.38,
 exitWound:     true,
 exitScale:     1.6,
 dropCount:     22,         // more blood for realistic 9mm wound
-dropSpeed:     [2.5, 7.0], // faster spray
+dropSpeed:     [0.06, 0.18], // adjusted for game-scale gravity
 mistCount:     16,         // more visible mist
-mistSpeed:     [1.5, 4.5], // increased mist speed
+mistSpeed:     [0.04, 0.11], // adjusted for game-scale gravity
 chunkChance:   0.0,
 chunkCount:    [0,0],
 pushForce:     0.20,
@@ -179,9 +179,9 @@ penetration:   1.0,        // full through
 exitWound:     true,
 exitScale:     0.90,       // supersonic — exit slightly larger (realistic)
 dropCount:     55,         // more blood from massive energy transfer
-dropSpeed:     [9.0, 28.0], // very high velocity spray
+dropSpeed:     [0.22, 0.70], // adjusted for game-scale gravity
 mistCount:     65,         // heavy mist from supersonic shockwave
-mistSpeed:     [6.0, 18.0], // fast mist expansion
+mistSpeed:     [0.15, 0.45], // adjusted for game-scale gravity
 chunkChance:   0.28,       // more tissue damage
 chunkCount:    [2,5],      // more chunks from hydrostatic shock
 pushForce:     2.0,
@@ -201,9 +201,9 @@ penetration:   0.32,
 exitWound:     true,
 exitScale:     1.2,
 dropCount:     12,
-dropSpeed:     [2.0, 5.0],
+dropSpeed:     [0.05, 0.13], // adjusted for game-scale gravity
 mistCount:     8,
-mistSpeed:     [1.0, 3.0],
+mistSpeed:     [0.03, 0.08], // adjusted for game-scale gravity
 chunkChance:   0.02,
 chunkCount:    [0,1],
 pushForce:     0.18,
@@ -220,9 +220,9 @@ penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     160,
-dropSpeed:     [10.0, 28.0],
+dropSpeed:     [0.25, 0.70], // adjusted for game-scale gravity
 mistCount:     100,
-mistSpeed:     [6.0, 18.0],
+mistSpeed:     [0.15, 0.45], // adjusted for game-scale gravity
 chunkChance:   1.0,
 chunkCount:    [8,18],
 pushForce:     20.0,
@@ -240,9 +240,9 @@ penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     300,
-dropSpeed:     [18.0, 45.0],
+dropSpeed:     [0.45, 1.10], // adjusted for game-scale gravity
 mistCount:     200,
-mistSpeed:     [10.0, 25.0],
+mistSpeed:     [0.25, 0.62], // adjusted for game-scale gravity
 chunkChance:   1.0,
 chunkCount:    [15,30],
 pushForce:     50.0,
@@ -260,7 +260,7 @@ penetration:   1.0,
 exitWound:     true,
 exitScale:     0.7,
 dropCount:     3,          // cauterizes — barely bleeds
-dropSpeed:     [0.3, 1.5],
+dropSpeed:     [0.008, 0.04], // adjusted for game-scale gravity (minimal blood)
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -281,9 +281,9 @@ penetration:   0.70,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     45,
-dropSpeed:     [3.5, 10.0],
+dropSpeed:     [0.09, 0.25], // adjusted for game-scale gravity
 mistCount:     30,
-mistSpeed:     [2.0, 7.0],
+mistSpeed:     [0.05, 0.18], // adjusted for game-scale gravity
 chunkChance:   0.35,
 chunkCount:    [2,5],
 pushForce:     2.5,
@@ -301,7 +301,7 @@ penetration:   0.92,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     22,
-dropSpeed:     [0.2, 1.5],
+dropSpeed:     [0.005, 0.04], // adjusted for game-scale gravity (low velocity slash)
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -322,9 +322,9 @@ penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     50,
-dropSpeed:     [0.5, 4.0],
+dropSpeed:     [0.012, 0.10], // adjusted for game-scale gravity
 mistCount:     5,
-mistSpeed:     [0.5, 2.0],
+mistSpeed:     [0.012, 0.05], // adjusted for game-scale gravity
 chunkChance:   0.15,
 chunkCount:    [1,2],
 pushForce:     1.0,
@@ -343,9 +343,9 @@ penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     70,
-dropSpeed:     [1.0, 5.0],
+dropSpeed:     [0.025, 0.12], // adjusted for game-scale gravity
 mistCount:     8,
-mistSpeed:     [0.5, 2.5],
+mistSpeed:     [0.012, 0.06], // adjusted for game-scale gravity
 chunkChance:   0.50,
 chunkCount:    [2,4],
 pushForce:     2.5,
@@ -364,7 +364,7 @@ penetration:   0.15,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     2,
-dropSpeed:     [0.1, 0.5],
+dropSpeed:     [0.0025, 0.012], // adjusted for game-scale gravity (minimal due to cauterization)
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -386,9 +386,9 @@ penetration:   0.55,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     20,
-dropSpeed:     [0.5, 2.5],
+dropSpeed:     [0.012, 0.06], // adjusted for game-scale gravity
 mistCount:     12,
-mistSpeed:     [0.3, 1.5],
+mistSpeed:     [0.007, 0.037], // adjusted for game-scale gravity
 chunkChance:   0.0,
 chunkCount:    [0,0],
 pushForce:     0.4,
@@ -406,9 +406,9 @@ penetration:   1.0,
 exitWound:     true,
 exitScale:     1.0,
 dropCount:     12,
-dropSpeed:     [1.5, 5.0],
+dropSpeed:     [0.037, 0.12], // adjusted for game-scale gravity
 mistCount:     20,
-mistSpeed:     [1.0, 4.0],
+mistSpeed:     [0.025, 0.10], // adjusted for game-scale gravity
 chunkChance:   0.06,
 chunkCount:    [0,1],
 pushForce:     4.0,
@@ -426,7 +426,7 @@ penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     40,
-dropSpeed:     [0.1, 0.6],
+dropSpeed:     [0.0025, 0.015], // adjusted for game-scale gravity (low velocity)
 mistCount:     0,
 mistSpeed:     [0,0],
 chunkChance:   0.0,
@@ -448,9 +448,9 @@ penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
 dropCount:     400,
-dropSpeed:     [20.0, 55.0],
+dropSpeed:     [0.50, 1.35], // adjusted for game-scale gravity (extreme impact)
 mistCount:     250,
-mistSpeed:     [12.0, 30.0],
+mistSpeed:     [0.30, 0.75], // adjusted for game-scale gravity
 chunkChance:   1.0,
 chunkCount:    [20,40],
 pushForce:     80.0,
