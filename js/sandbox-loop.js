@@ -2877,7 +2877,27 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      if (window._bloomComposer) window._bloomComposer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    // Bloom post-processing — graceful fallback if CDN scripts didn't load
+    try {
+      if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
+        const composer = new THREE.EffectComposer(renderer);
+        composer.addPass(new THREE.RenderPass(scene, camera));
+        const bloomPass = new THREE.UnrealBloomPass(
+          new THREE.Vector2(window.innerWidth, window.innerHeight),
+          0.4,   // strength (subtle)
+          0.6,   // radius
+          0.85   // threshold (only bright things bloom)
+        );
+        composer.addPass(bloomPass);
+        window._bloomComposer = composer;
+        console.log('[SandboxLoop] Bloom post-processing enabled');
+      }
+    } catch(e) {
+      console.warn('[SandboxLoop] Bloom setup failed, using standard rendering:', e);
+    }
 
     // Apply saved quality after renderer is set up
     _applyGraphicsQuality(_savedQuality);
@@ -3683,7 +3703,11 @@
       if (_hitStopRemaining > 0) {
         _hitStopRemaining -= rawDt * 1000;
         if (_hitStopRemaining < 0) _hitStopRemaining = 0;
-        renderer.render(scene, camera); // keep drawing; only physics is frozen
+        if (window._bloomComposer) {
+          window._bloomComposer.render();
+        } else {
+          renderer.render(scene, camera); // keep drawing; only physics is frozen
+        }
         return;
       }
 
@@ -3693,7 +3717,11 @@
       _trackFPS(dt);
 
       if (window.isPaused) {
-        renderer.render(scene, camera);
+        if (window._bloomComposer) {
+          window._bloomComposer.render();
+        } else {
+          renderer.render(scene, camera);
+        }
         return;
       }
 
@@ -3863,7 +3891,11 @@
       // Tick player status effects (StatusBar depletion)
       if (typeof window._tickPlayerStatus === 'function') window._tickPlayerStatus(dt);
 
-      renderer.render(scene, camera);
+      if (window._bloomComposer) {
+        window._bloomComposer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
     } catch (e) {
       if (!_animateErrorShown) {
         _animateErrorShown = true;

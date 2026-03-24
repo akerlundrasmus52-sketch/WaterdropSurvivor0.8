@@ -53,6 +53,7 @@ class Engine2Sandbox {
     // Load textures and create arena
     this._loadTextures(() => {
       this._createArena();
+      this._applyTerrainDisplacement();
       this._createLandmarks();
       this.loaded = true;
       console.log('[Engine2] Engine 2.0 arena initialized successfully');
@@ -325,6 +326,7 @@ class Engine2Sandbox {
     this.scene.add(this.groundMesh);
 
     console.log('[Engine2] Created 200x200 ground with center hole (radius 3)');
+    // Terrain displacement is applied separately after arena creation
 
     // Add rim around the hole for visual clarity
     this._createHoleRim(holeRadius);
@@ -828,6 +830,114 @@ class Engine2Sandbox {
   }
 
   /**
+   * Apply terrain height variation as a second mesh overlay on top of the flat ground.
+   * Uses a sine-combination pseudo-noise for gentle rolling hills.
+   */
+  _applyTerrainDisplacement() {
+    if (!this.scene) return;
+
+    // Inline pseudo-noise: sine-combination based, no external libraries
+    function noise2D(x, z) {
+      return Math.sin(x * 0.03 + z * 0.02) * Math.cos(z * 0.04 - x * 0.01)
+           + Math.sin(x * 0.07 - z * 0.05) * 0.5
+           + Math.sin(x * 0.15 + z * 0.12) * 0.25;
+    }
+
+    // Build terrain shape matching the arena footprint with a center hole so the
+    // spawn shaft stays visible through the mesh (not occluded by a solid overlay).
+    const halfSize = 100;
+    const groundSize = 200;
+    const holeRadius = 4; // match the flat-zone boundary requested by the spec
+
+    const terrainShape = new THREE.Shape();
+    terrainShape.moveTo(-halfSize, -halfSize);
+    terrainShape.lineTo( halfSize, -halfSize);
+    terrainShape.lineTo( halfSize,  halfSize);
+    terrainShape.lineTo(-halfSize,  halfSize);
+    terrainShape.lineTo(-halfSize, -halfSize);
+
+    const holePath = new THREE.Path();
+    holePath.absarc(0, 0, holeRadius, 0, Math.PI * 2, false);
+    terrainShape.holes.push(holePath);
+
+    // 128 curve-segments gives ~128 vertices around the hole for smooth blending
+    const terrainGeo = new THREE.ShapeGeometry(terrainShape, 128);
+
+    // Normalize UVs from raw shape coords to 0-1 (same as _createArena ground)
+    const uvAttr = terrainGeo.attributes.uv;
+    for (let i = 0; i < uvAttr.count; i++) {
+      uvAttr.setXY(
+        i,
+        (uvAttr.getX(i) + halfSize) / groundSize,
+        (uvAttr.getY(i) + halfSize) / groundSize
+      );
+    }
+    uvAttr.needsUpdate = true;
+
+    // Displace vertices — ShapeGeometry is in the XY plane; setting Z moves
+    // vertices "up" in local space, which becomes world-Y after -PI/2 X rotation.
+    const posAttr = terrainGeo.attributes.position;
+    // Drastically reduced max height so players/enemies don't visibly clip
+    // through the terrain (game movement only tracks X/Z, not Y).
+    const maxHeight = 0.6;
+
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i); // world X (unchanged by rotation)
+      const y = posAttr.getY(i); // shape Y → -world Z after rotation
+
+      // Distance in world XZ — sqrt(x²+y²) is invariant under the Y→-Z flip
+      const distFromCenter = Math.sqrt(x * x + y * y);
+
+      // Smooth falloff from hole edge (r=4) outward to r=8 for clean transition
+      let centerFalloff = 1.0;
+      const flatZoneOuter = 8;
+      if (distFromCenter < flatZoneOuter) {
+        const span = flatZoneOuter - holeRadius;
+        centerFalloff = span > 0 ? (distFromCenter - holeRadius) / span : 0;
+        if (centerFalloff < 0) centerFalloff = 0;
+      }
+
+      // Flatten within 10 units of outer edge for clean boundary
+      const edgeDist = Math.min(halfSize - Math.abs(x), halfSize - Math.abs(y));
+      const edgeFalloff = edgeDist < 10 ? Math.max(0, edgeDist / 10.0) : 1.0;
+
+      const height = noise2D(x, y) * maxHeight * centerFalloff * edgeFalloff;
+      posAttr.setZ(i, height);
+    }
+
+    terrainGeo.computeVertexNormals();
+
+    // Build material — use same diffuse texture as ground if available
+    let terrainMat;
+    if (this.textures.diffuse) {
+      terrainMat = new THREE.MeshStandardMaterial({
+        map: this.textures.diffuse,
+        color: 0xFFFFFF,
+        roughness: 0.75,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.95
+      });
+    } else {
+      terrainMat = new THREE.MeshStandardMaterial({
+        color: 0x6B5A4A,
+        roughness: 0.75,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.95
+      });
+    }
+
+    this.terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    this.terrainMesh.rotation.x = -Math.PI / 2;
+    this.terrainMesh.position.set(0, 0.05, 0);
+    this.terrainMesh.receiveShadow = true;
+    this.scene.add(this.terrainMesh);
+
+    console.log('[Engine2] ✓ Terrain displacement overlay added (gentle rolling hills, hole preserved)');
+  }
+
+  /**
    * Cleanup method - disposes all arena resources
    */
   dispose() {
@@ -859,6 +969,14 @@ class Engine2Sandbox {
     if (this.textures.diffuse) this.textures.diffuse.dispose();
     if (this.textures.normal) this.textures.normal.dispose();
     if (this.textures.roughness) this.textures.roughness.dispose();
+
+    // Clean up terrain displacement mesh
+    if (this.terrainMesh && this.scene) {
+      this.scene.remove(this.terrainMesh);
+      this.terrainMesh.geometry.dispose();
+      this.terrainMesh.material.dispose();
+    }
+    this.terrainMesh = null;
 
     this.loaded = false;
     console.log('[Engine2] ✓ Cleaned up Engine 2.0 arena and all resources');
