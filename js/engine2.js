@@ -5,10 +5,10 @@
  * Replaces old wave manager and infinite ground plane.
  *
  * GROUND TEXTURE STATUS: ✅ WORKING
- * - Primary texture: assets/textures/mossy_brick_diff_4k.jpg (11MB, 4096x4096)
- * - Fallback chain: mossy_brick → ground/color.jpg → UUID.png → procedural
- * - Texture confirmed loading and displaying properly as of 2026-03-23
- * - Material: PBR MeshStandardMaterial with 20x20 repeat, anisotropic filtering
+ * - Primary texture: assets/textures/rocky_terrain_03_diff_2k.jpg (3.7MB, 2048x2048)
+ * - Fallback chain: rocky_terrain_03_diff → mossy_brick → ground/color.jpg → procedural
+ * - Texture confirmed loading and displaying properly as of 2026-03-24
+ * - Material: MeshLambertMaterial with 20x20 repeat, anisotropic filtering
  *
  * LANDMARKS STATUS: ✅ ADDED 2026-03-24
  * - UFO crash site at (-50, 25) with glowing engine lights + companion egg
@@ -125,9 +125,9 @@ class Engine2Sandbox {
 
     // Texture fallback paths in priority order
     const texturePaths = [
+      'assets/textures/rocky_terrain_03_diff_2k.jpg',
       'assets/textures/mossy_brick_diff_4k.jpg',
-      'assets/textures/ground/color.jpg',
-      '654811F9-1760-4A74-B977-73ECB1A92913.png'
+      'assets/textures/ground/color.jpg'
     ];
 
     tryLoadTexture(texturePaths);

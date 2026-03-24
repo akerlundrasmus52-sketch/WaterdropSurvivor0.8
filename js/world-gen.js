@@ -7,8 +7,8 @@
       // Exclusion zones: each entry is { x, z, r } — no prop spawns within r units of (x,z)
       const exclusionZones = [];
 
-      // Ground — load mossy-brick PBR texture via TextureLoader for realistic appearance.
-      // Fallback chain: mossy_brick_diff_4k.jpg > ground/color.jpg > UUID PNG > procedural texture
+      // Ground — load rocky terrain PBR texture via TextureLoader for realistic appearance.
+      // Fallback chain: rocky_terrain_03_diff_2k.jpg > mossy_brick_diff_4k.jpg > ground/color.jpg > procedural texture
       // ENGINE 2.0: Skip old ground plane if Engine 2.0 Sandbox mode is active
       if (!window._engine2SandboxMode) {
         const _wgLoader = new THREE.TextureLoader();
@@ -42,30 +42,30 @@
           console.log('[WorldGen] ✓ Ground mesh created with texture');
         };
 
-        // Attempt 1: mossy brick 4k diffuse in assets/textures (PRIMARY)
+        // Attempt 1: rocky terrain 2k diffuse in assets/textures (PRIMARY)
         console.log('[WorldGen] Loading ground textures...');
         _wgLoader.load(
-          'assets/textures/mossy_brick_diff_4k.jpg',
-          (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'mossy_brick_diff_4k.jpg [4K Quality]')); },
+          'assets/textures/rocky_terrain_03_diff_2k.jpg',
+          (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'rocky_terrain_03_diff_2k.jpg [2K Quality]')); },
           undefined,
           (err1) => {
-            console.error('[WorldGen] Failed to load mossy_brick_diff_4k.jpg:', err1);
+            console.error('[WorldGen] Failed to load rocky_terrain_03_diff_2k.jpg:', err1);
 
-            // Attempt 2: ground/color.jpg (FALLBACK 1)
+            // Attempt 2: mossy brick 4k (FALLBACK 1)
             _wgLoader.load(
-              'assets/textures/ground/color.jpg',
-              (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'ground/color.jpg [Fallback 1]')); },
+              'assets/textures/mossy_brick_diff_4k.jpg',
+              (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'mossy_brick_diff_4k.jpg [Fallback 1]')); },
               undefined,
               (err2) => {
-                console.error('[WorldGen] Failed to load ground/color.jpg:', err2);
+                console.error('[WorldGen] Failed to load mossy_brick_diff_4k.jpg:', err2);
 
-                // Attempt 3: UUID-named PNG in root (FALLBACK 2)
+                // Attempt 3: ground/color.jpg (FALLBACK 2)
                 _wgLoader.load(
-                  '654811F9-1760-4A74-B977-73ECB1A92913.png',
-                  (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'UUID Ground Texture [Fallback 2]')); },
+                  'assets/textures/ground/color.jpg',
+                  (tex) => { _buildGroundMesh(_applyGroundTexture(tex, 'ground/color.jpg [Fallback 2]')); },
                   undefined,
                   (err3) => {
-                    console.error('[WorldGen] Failed to load UUID texture:', err3);
+                    console.error('[WorldGen] Failed to load ground/color.jpg:', err3);
 
                     // Fallback 3: procedural canvas grass texture
                     console.log('[WorldGen] All textures failed - generating procedural texture...');
