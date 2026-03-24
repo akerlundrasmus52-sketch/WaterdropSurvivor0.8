@@ -69,8 +69,8 @@ class Engine2Sandbox {
     // Helper to configure texture properly
     const configureTexture = (texture) => {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(20, 20);
-      texture.anisotropy = 16; // High quality filtering
+      texture.repeat.set(6, 6);
+      texture.anisotropy = Math.min(4, texture.anisotropy || 4);
 
       // Set proper color space for correct display
       if (THREE.SRGBColorSpace !== undefined) {
@@ -176,8 +176,8 @@ class Engine2Sandbox {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(20, 20);
-    texture.anisotropy = 16;
+    texture.repeat.set(6, 6);
+    texture.anisotropy = 4;
     texture.needsUpdate = true; // CRITICAL: Force texture upload to GPU
 
     this.textures.diffuse = texture;
@@ -278,7 +278,7 @@ class Engine2Sandbox {
     shape.holes.push(holePath);
 
     // Create geometry from shape
-    const groundGeometry = new THREE.ShapeGeometry(shape, 64); // 64 segments for smooth hole
+    const groundGeometry = new THREE.ShapeGeometry(shape, 24); // 24 segments for smooth hole
 
     // ShapeGeometry UVs are raw shape coordinates (-100 to 100 for a 200-unit shape).
     // Normalize them to 0-1 so texture repeat values work correctly (like PlaneGeometry).
@@ -292,43 +292,23 @@ class Engine2Sandbox {
     }
     uvAttr.needsUpdate = true;
 
-    // Create material with enhanced PBR properties for realistic lighting
+    // Create material — use MeshLambertMaterial for much better mobile performance
     const materialOptions = {
       color: 0xFFFFFF, // White base - allows texture colors to show naturally
-      roughness: 0.85, // Slightly rough for stone/concrete feel
-      metalness: 0.02, // Minimal metalness for natural stone
-      envMapIntensity: 0.6, // Subtle environment reflections
-      flatShading: false, // Smooth shading for better appearance
+      flatShading: false,
     };
 
     // Apply color/albedo texture
     if (this.textures.diffuse) {
       materialOptions.map = this.textures.diffuse;
-      console.log('[Engine2] ========================================');
-      console.log('[Engine2] ✓✓✓ APPLYING TEXTURE TO MATERIAL ✓✓✓');
-      console.log('[Engine2] Texture object:', this.textures.diffuse);
-      console.log('[Engine2] Material will use WHITE base color (0xFFFFFF) to show texture naturally');
-      console.log('[Engine2] ========================================');
+      console.log('[Engine2] ✓ APPLYING TEXTURE TO MATERIAL');
     } else {
       // Fallback: warm stone color
       materialOptions.color = 0x6B5A4A;
       console.log('[Engine2] ⚠ WARNING: Using fallback stone color (no texture loaded)');
     }
 
-    // Apply normal map for surface depth
-    if (this.textures.normal) {
-      materialOptions.normalMap = this.textures.normal;
-      materialOptions.normalScale = new THREE.Vector2(0.5, 0.5); // Subtle depth
-      console.log('[Engine2] ✓ Using normal map for enhanced depth and lighting');
-    }
-
-    // Apply roughness if available
-    if (this.textures.roughness) {
-      materialOptions.roughnessMap = this.textures.roughness;
-      console.log('[Engine2] ✓ Using roughness map');
-    }
-
-    const groundMaterial = new THREE.MeshStandardMaterial(materialOptions);
+    const groundMaterial = new THREE.MeshLambertMaterial(materialOptions);
 
     // Enable shadow receiving for atmospheric lighting
     groundMaterial.shadowSide = THREE.FrontSide;

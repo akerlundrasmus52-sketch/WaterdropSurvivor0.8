@@ -2563,41 +2563,8 @@
 
     settingsBtn.style.display = 'block';
 
-    // Open settings (also accessible via Escape key)
-    settingsBtn.addEventListener('click', function () {
-      window.isPaused = true;
-      // Sync select to current quality
-      if (qualitySelect) {
-        let cur = DEFAULT_QUALITY;
-        try { cur = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
-        qualitySelect.value = cur;
-        if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[cur] || '';
-      }
-      settingsModal.style.display = 'flex';
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.code === 'Escape') {
-        if (settingsModal.style.display === 'flex') {
-          settingsModal.style.display = 'none';
-          window.isPaused = false;
-        } else if (!window.isPaused) {
-          // Only open settings if game is not paused for level-up etc.
-          window.isPaused = true;
-          if (qualitySelect) {
-            let cur = DEFAULT_QUALITY;
-            try { cur = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
-            qualitySelect.value = cur;
-            if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[cur] || '';
-          }
-          settingsModal.style.display = 'flex';
-        }
-      }
-    });
-
-    closeBtn.addEventListener('click', function () {
-      settingsModal.style.display = 'none';
-      window.isPaused = false;
-    });
+    // NOTE: Open/close/Escape handlers are managed by settings-ui.js.
+    // Do NOT add duplicate listeners here — they conflict and break the modal.
 
     // Return to Camp
     if (campBtn) {

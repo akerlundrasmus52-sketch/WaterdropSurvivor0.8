@@ -493,6 +493,7 @@ var _s1 = new THREE.Vector3();
 var _s2 = new THREE.Vector3();
 var _m4 = new THREE.Matrix4();
 var _q0 = new THREE.Quaternion();
+var _col = new THREE.Color(); // scratch colour for setColorAt
 
 // ── Blood drop InstancedMesh ──────────────────────────────────────
 var _dropIM   = null;   // InstancedMesh for regular drops
@@ -631,10 +632,14 @@ CFG.DECAL_COUNT + ' decals'
 
 function _buildDropPool() {
 var geo = new THREE.SphereGeometry(1.0, 4, 3); // unit sphere, scaled per instance
-var mat = new THREE.MeshBasicMaterial({ vertexColors: false });
+var mat = new THREE.MeshBasicMaterial({ color: 0xcc1100 });
 
 _dropIM = new THREE.InstancedMesh(geo, mat, CFG.DROP_COUNT);
 _dropIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+_dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
+  new Float32Array(CFG.DROP_COUNT * 3), 3
+);
+_dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
 _dropIM.count = CFG.DROP_COUNT;
 _scene.add(_dropIM);
@@ -648,17 +653,23 @@ _dropData.push(d);
 // Hide all instances initially
 _m4.makeScale(0, 0, 0);
 _dropIM.setMatrixAt(i, _m4);
+_dropIM.setColorAt(i, _col.setHex(0xcc1100));
 }
 _dropIM.instanceMatrix.needsUpdate = true;
+_dropIM.instanceColor.needsUpdate  = true;
 
 }
 
 function _buildMistPool() {
 var geo = new THREE.SphereGeometry(1.0, 3, 2);
-var mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55 });
+var mat = new THREE.MeshBasicMaterial({ color: 0xcc1100, transparent: true, opacity: 0.55 });
 
 _mistIM = new THREE.InstancedMesh(geo, mat, CFG.MIST_COUNT);
 _mistIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+_mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
+  new Float32Array(CFG.MIST_COUNT * 3), 3
+);
+_mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
 _mistIM.count = CFG.MIST_COUNT;
 _scene.add(_mistIM);
@@ -671,8 +682,10 @@ d.isMist = true;
 _mistData.push(d);
 _m4.makeScale(0, 0, 0);
 _mistIM.setMatrixAt(i, _m4);
+_mistIM.setColorAt(i, _col.setHex(0xcc1100));
 }
 _mistIM.instanceMatrix.needsUpdate = true;
+_mistIM.instanceColor.needsUpdate  = true;
 
 }
 
@@ -892,7 +905,10 @@ if (!d.alive) continue;
 _updateDrop(d, dt, _dropIM, false);
 dirty = true;
 }
-if (dirty) _dropIM.instanceMatrix.needsUpdate = true;
+if (dirty) {
+  _dropIM.instanceMatrix.needsUpdate = true;
+  if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
+}
 
 // ── Update mist ──────────────────────────
 var mistDirty = false;
@@ -902,7 +918,10 @@ if (!d.alive) continue;
 _updateDrop(d, dt, _mistIM, true);
 mistDirty = true;
 }
-if (mistDirty) _mistIM.instanceMatrix.needsUpdate = true;
+if (mistDirty) {
+  _mistIM.instanceMatrix.needsUpdate = true;
+  if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
+}
 
 // ── Update chunks ────────────────────────
 for (var i = 0; i < _chunks.length; i++) {
@@ -1044,6 +1063,7 @@ _m4.makeScale(s, s, s);
 
 _m4.setPosition(d.px, d.py, d.pz);
 im.setMatrixAt(d.idx, _m4);
+im.setColorAt(d.idx, _col.setHex(d.color));
 
 }
 
