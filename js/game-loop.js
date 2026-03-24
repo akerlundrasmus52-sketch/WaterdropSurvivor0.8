@@ -3738,6 +3738,19 @@
     }
 
     // Init Game
+    // Safety pre-check: THREE.js must be loaded before we attempt init
+    if (typeof THREE === 'undefined') {
+      console.error('[GameLoop] THREE.js not loaded — cannot initialize');
+      var noThreeDiv = document.createElement('div');
+      noThreeDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:rgba(200,0,0,0.95);color:#fff;padding:10px;font-family:monospace;font-size:13px;z-index:99999;text-align:center;';
+      noThreeDiv.textContent = '⚠️ THREE.js failed to load. Please refresh or try Sandbox Mode.';
+      var noThreeSandboxLink = document.createElement('div');
+      noThreeSandboxLink.style.cssText = 'margin-top:6px;color:#0ff;text-decoration:underline;cursor:pointer;font-size:13px;';
+      noThreeSandboxLink.textContent = '→ Try Sandbox Mode instead';
+      noThreeSandboxLink.onclick = function() { window.location.href = 'sandbox.html'; };
+      noThreeDiv.appendChild(noThreeSandboxLink);
+      document.body.appendChild(noThreeDiv);
+    } else {
     try { init(); } catch(e) {
       console.error('[Game Error]', e);
       console.error('[Game] Initialization failed - game cannot start');
@@ -3755,12 +3768,17 @@
       var messageDiv = document.createElement('div');
       messageDiv.style.cssText = 'white-space:pre-wrap;word-break:break-all;max-height:12vh;overflow-y:auto;';
       messageDiv.textContent = (e && e.stack) ? String(e.stack) : String(e);
+      var sandboxLink = document.createElement('div');
+      sandboxLink.style.cssText = 'margin-top:6px;color:#0ff;text-decoration:underline;cursor:pointer;font-size:13px;';
+      sandboxLink.textContent = '→ Try Sandbox Mode instead';
+      sandboxLink.onclick = function() { window.location.href = 'sandbox.html'; };
       errorDiv.appendChild(headerDiv);
       errorDiv.appendChild(messageDiv);
+      errorDiv.appendChild(sandboxLink);
       errorDiv.onclick = function() { errorDiv.style.display = 'none'; };
       document.body.appendChild(errorDiv);
-      // Auto-dismiss after 8 seconds so it doesn't permanently block buttons
-      setTimeout(function() { if (errorDiv) errorDiv.style.display = 'none'; }, 8000);
+      // Auto-dismiss after 4 seconds so it doesn't permanently block buttons
+      setTimeout(function() { if (errorDiv) errorDiv.style.display = 'none'; }, 4000);
 
       // Show main menu
       var mainMenu = document.getElementById('main-menu');
@@ -3770,6 +3788,7 @@
       // These provide basic functionality even when init() failed
       _attachFallbackMenuHandlers();
     }
+    } // end THREE check
 
     // Fallback menu handlers — attached when init() fails
     // These try to re-init or at least give the user some options
@@ -3784,46 +3803,77 @@
 
       if (startBtn && !startBtn._hasFallback) {
         startBtn._hasFallback = true;
+        var _retryCount = 0;
+        var _maxRetries = 3;
         startBtn.addEventListener('click', function() {
-          // Try to re-initialize the game
+          // Try to re-initialize the game with retry counter and delay
           var errorDisplay = document.getElementById('init-error-display');
           if (errorDisplay) errorDisplay.style.display = 'none';
 
-          try {
-            init();
-            // If init succeeds this time, hide menu and start
-            var mainMenuEl = document.getElementById('main-menu');
-            if (mainMenuEl) mainMenuEl.style.display = 'none';
-            if (typeof resetGame === 'function') resetGame();
-            if (typeof startCountdown === 'function') startCountdown();
-          } catch(e2) {
-            console.error('[Retry] Init failed again:', e2);
-            // Show updated error
+          if (_retryCount >= _maxRetries) {
+            // All retries exhausted — redirect to sandbox
             var errDiv = document.getElementById('init-error-display');
+            var msg = 'Game failed to load. Tap here to try Sandbox mode';
             if (errDiv) {
               errDiv.style.display = 'block';
               var errContent = errDiv.querySelector('div:nth-child(2)');
-              if (errContent) errContent.textContent = 'RETRY FAILED: ' + (e2 && e2.stack ? e2.stack : String(e2));
-            } else {
-              alert('Game failed to start: ' + String(e2));
+              if (errContent) errContent.textContent = msg;
             }
+            // Navigate on next tap or after short delay
+            setTimeout(function() { window.location.href = 'sandbox.html'; }, 1500);
+            return;
           }
+
+          _retryCount++;
+          setTimeout(function() {
+            try {
+              init();
+              // If init succeeds, hide menu and start
+              var mainMenuEl = document.getElementById('main-menu');
+              if (mainMenuEl) mainMenuEl.style.display = 'none';
+              if (typeof resetGame === 'function') resetGame();
+              if (typeof startCountdown === 'function') startCountdown();
+            } catch(e2) {
+              console.error('[Retry ' + _retryCount + '] Init failed again:', e2);
+              var errDiv2 = document.getElementById('init-error-display');
+              if (_retryCount >= _maxRetries) {
+                // Final retry failed — offer sandbox redirect
+                var failMsg = 'Game failed to load. Tap here to try Sandbox mode';
+                if (errDiv2) {
+                  errDiv2.style.display = 'block';
+                  var errContent2 = errDiv2.querySelector('div:nth-child(2)');
+                  if (errContent2) errContent2.textContent = failMsg;
+                  errDiv2.onclick = function() { window.location.href = 'sandbox.html'; };
+                } else {
+                  if (confirm(failMsg)) window.location.href = 'sandbox.html';
+                }
+              } else {
+                if (errDiv2) {
+                  errDiv2.style.display = 'block';
+                  var errContent3 = errDiv2.querySelector('div:nth-child(2)');
+                  if (errContent3) errContent3.textContent = 'RETRY ' + _retryCount + '/' + _maxRetries + ' FAILED: ' + (e2 && e2.stack ? e2.stack : String(e2));
+                }
+              }
+            }
+          }, 500); // 500ms delay between retries
         });
       }
 
       if (campBtn && !campBtn._hasFallback) {
         campBtn._hasFallback = true;
         campBtn.addEventListener('click', function() {
-          // Try to show camp screen
-          var campScreen = document.getElementById('camp-screen');
-          if (campScreen) {
-            var mainMenuEl = document.getElementById('main-menu');
-            if (mainMenuEl) mainMenuEl.style.display = 'none';
-            campScreen.style.display = 'flex';
-            if (typeof updateCampScreen === 'function') {
-              try { updateCampScreen(); } catch(e) { console.error('[Fallback] Camp error:', e); }
+          // Camp uses its own Three.js scene (camp-world.js) and can work independently
+          try {
+            var campScreen = document.getElementById('camp-screen');
+            if (campScreen) {
+              var mainMenuEl = document.getElementById('main-menu');
+              if (mainMenuEl) mainMenuEl.style.display = 'none';
+              campScreen.style.display = 'flex';
+              if (typeof updateCampScreen === 'function') {
+                try { updateCampScreen(); } catch(campErr) { console.error('[Fallback] Camp update error:', campErr); }
+              }
             }
-          }
+          } catch(e) { console.error('[Fallback] Camp error:', e); }
         });
       }
     }

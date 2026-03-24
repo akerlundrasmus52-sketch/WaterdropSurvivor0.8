@@ -412,6 +412,31 @@
   // Mouse aim state (desktop)
   const _mouse = { worldX: 0, worldZ: 0 };
 
+  // ─── Weather Particle System ──────────────────────────────────────────────────
+  var _weatherParticles = null;
+  var _weatherGeo = null;
+  var _weatherMat = null;
+  var _weatherPositions = null;
+  var _weatherVelocities = [];
+  var _weatherActive = true;
+  var WEATHER_COUNT = 800;
+  var _weatherFrameCounter = 0;
+
+  // ─── Sky Color Day/Night Cycle ────────────────────────────────────────────────
+  var _skyTime = 0.25; // Start at "morning" (0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset)
+  var _skySpeed = 0.008; // Full day cycle in ~125 seconds
+  var _skyColors = [
+    { time: 0.0,  sky: 0x0a0a1a, fog: 0x0a0a1a, ambInt: 0.15, sunInt: 0.2  },  // Midnight
+    { time: 0.2,  sky: 0x1a1025, fog: 0x1a1025, ambInt: 0.2,  sunInt: 0.4  },  // Pre-dawn
+    { time: 0.3,  sky: 0xff7744, fog: 0x553322, ambInt: 0.35, sunInt: 0.8  },  // Sunrise
+    { time: 0.4,  sky: 0x5588cc, fog: 0x334466, ambInt: 0.4,  sunInt: 1.0  },  // Morning
+    { time: 0.5,  sky: 0x4499ee, fog: 0x2a4466, ambInt: 0.45, sunInt: 1.2  },  // Noon
+    { time: 0.65, sky: 0x5588cc, fog: 0x334466, ambInt: 0.4,  sunInt: 1.0  },  // Afternoon
+    { time: 0.75, sky: 0xff6633, fog: 0x442211, ambInt: 0.3,  sunInt: 0.6  },  // Sunset
+    { time: 0.85, sky: 0x1a1030, fog: 0x1a1030, ambInt: 0.2,  sunInt: 0.3  },  // Dusk
+    { time: 1.0,  sky: 0x0a0a1a, fog: 0x0a0a1a, ambInt: 0.15, sunInt: 0.2  },  // Midnight (loop)
+  ];
+
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   function _lerp(a, b, t) { return a + (b - a) * t; }
   function _clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -3742,6 +3767,10 @@
         WorldObjects.update(dt);
       }
 
+      // Atmospheric weather particles and dynamic sky cycle
+      try { if (_weatherActive) _updateWeatherSystem(dt, nowMs); } catch(e) {}
+      try { _updateSkyCycle(dt); } catch(e) {}
+
       // ── Engine 2.0 Landmark Animations ───────────────────────────────────────
       // Animate UFO, Obelisk, and Lake features added to Sandbox 2.0
       if (window._engine2Landmarks) {
@@ -3839,6 +3868,131 @@
   }
 
   // ─── Boot sequence ────────────────────────────────────────────────────────────
+
+  // ─── Weather Particle System ──────────────────────────────────────────────────
+  function _initWeatherSystem() {
+    try {
+      if (typeof THREE === 'undefined' || !scene) return;
+      _weatherGeo = new THREE.BufferGeometry();
+      var positions = new Float32Array(WEATHER_COUNT * 3);
+      _weatherVelocities = [];
+      for (var i = 0; i < WEATHER_COUNT; i++) {
+        positions[i * 3]     = (Math.random() - 0.5) * 200;
+        positions[i * 3 + 1] = Math.random() * 60 - 5;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+        _weatherVelocities.push(-2 - Math.random() * 3); // downward Y velocity: -2 to -5
+      }
+      _weatherPositions = positions;
+      _weatherGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      _weatherMat = new THREE.PointsMaterial({
+        color: 0xccddff,
+        size: 0.15,
+        transparent: true,
+        opacity: 0.4,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      _weatherParticles = new THREE.Points(_weatherGeo, _weatherMat);
+      scene.add(_weatherParticles);
+      // Weather toggle exposed globally
+      window._toggleWeather = function() {
+        _weatherActive = !_weatherActive;
+        if (_weatherParticles) _weatherParticles.visible = _weatherActive;
+      };
+    } catch(e) {
+      console.warn('[SandboxLoop] Weather system init failed (non-fatal):', e);
+    }
+  }
+
+  function _updateWeatherSystem(dt, nowMs) {
+    if (!_weatherParticles || !_weatherPositions || !_weatherGeo) return;
+    var px = (player && player.mesh) ? player.mesh.position.x : 0;
+    var pz = (player && player.mesh) ? player.mesh.position.z : 0;
+    var pos = _weatherPositions;
+    _weatherFrameCounter++;
+    // Re-center particle cloud around player every 60 frames
+    var recenter = (_weatherFrameCounter % 60 === 0);
+    for (var i = 0; i < WEATHER_COUNT; i++) {
+      var idx = i * 3;
+      // Downward movement
+      pos[idx + 1] += _weatherVelocities[i] * dt;
+      // Horizontal drift (sin-wave swaying)
+      pos[idx]     += Math.sin(nowMs * 0.001 + i) * 0.02;
+      pos[idx + 2] += Math.cos(nowMs * 0.0008 + i * 0.5) * 0.015;
+      // Respawn particle when it falls below floor
+      if (pos[idx + 1] < -2) {
+        pos[idx]     = px + (Math.random() - 0.5) * 200;
+        pos[idx + 1] = 40 + Math.random() * 20;
+        pos[idx + 2] = pz + (Math.random() - 0.5) * 200;
+      }
+      // Periodically re-center around player
+      if (recenter) {
+        var dx = pos[idx]     - px;
+        var dz = pos[idx + 2] - pz;
+        if (Math.abs(dx) > 100) pos[idx]     = px + (Math.random() - 0.5) * 200;
+        if (Math.abs(dz) > 100) pos[idx + 2] = pz + (Math.random() - 0.5) * 200;
+      }
+    }
+    _weatherGeo.attributes.position.needsUpdate = true;
+  }
+
+  // ─── Sky Color Day/Night Cycle ────────────────────────────────────────────────
+  function _updateSkyCycle(dt) {
+    if (typeof THREE === 'undefined' || !scene) return;
+    // Advance time
+    _skyTime += _skySpeed * dt;
+    if (_skyTime >= 1.0) _skyTime -= 1.0;
+
+    // Find bracketing keyframes
+    var colors = _skyColors;
+    var a = colors[0], b = colors[1];
+    for (var i = 0; i < colors.length - 1; i++) {
+      if (_skyTime >= colors[i].time && _skyTime < colors[i + 1].time) {
+        a = colors[i];
+        b = colors[i + 1];
+        break;
+      }
+    }
+    var span = b.time - a.time;
+    var t = span > 0 ? (_skyTime - a.time) / span : 0;
+
+    // Lerp sky and fog colors
+    var skyCol = new THREE.Color(a.sky).lerp(new THREE.Color(b.sky), t);
+    var fogCol = new THREE.Color(a.fog).lerp(new THREE.Color(b.fog), t);
+    var ambInt = a.ambInt + (b.ambInt - a.ambInt) * t;
+    var sunInt = a.sunInt + (b.sunInt - a.sunInt) * t;
+
+    // Apply sky color
+    if (scene.background) scene.background.set(skyCol);
+    else scene.background = skyCol.clone();
+    if (scene.fog) scene.fog.color.set(fogCol);
+
+    // Apply lighting (guarded)
+    if (window._sandboxLights) {
+      if (window._sandboxLights.ambient) window._sandboxLights.ambient.intensity = ambInt;
+      // Sun position follows the cycle; suppress when below horizon
+      if (window._sandboxLights.sun) {
+        var sunAngle = _skyTime * Math.PI * 2;
+        var sunY = Math.sin(sunAngle) * 40 + 10;
+        window._sandboxLights.sun.position.set(Math.cos(sunAngle) * 60, sunY, 20);
+        window._sandboxLights.sun.intensity = sunY < 0 ? 0 : sunInt;
+      }
+    }
+
+    // Adjust weather particle appearance based on time of day
+    if (_weatherMat) {
+      var isNight = (_skyTime >= 0.8 || _skyTime < 0.2);
+      if (isNight) {
+        _weatherMat.color.setHex(0x4466aa);
+        _weatherMat.opacity = 0.2;
+      } else {
+        _weatherMat.color.setHex(0xccddff);
+        _weatherMat.opacity = 0.4;
+      }
+    }
+  }
+
+  // ─── Boot sequence ────────────────────────────────────────────────────────────
   function _boot() {
     if (_ready) return;
     _ready = true;
@@ -3900,6 +4054,9 @@
       console.log('[🎮 SandboxLoop] Initializing object pools...');
       _initPools();
       console.log('[🎮 SandboxLoop] ✓ Object pools initialized');
+
+      // Initialize atmospheric weather particle system (non-fatal if it fails)
+      try { _initWeatherSystem(); } catch(e) { console.warn('[SandboxLoop] Weather init failed:', e); }
 
       console.log('[🎮 SandboxLoop] Initializing player (spawn animation will trigger)...');
       _initPlayer();
