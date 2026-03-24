@@ -3805,27 +3805,37 @@
         startBtn._hasFallback = true;
         var _retryCount = 0;
         var _maxRetries = 3;
+        var _retryInFlight = false; // guard: prevents overlapping retries on rapid taps
         startBtn.addEventListener('click', function() {
+          // Ignore if a retry is already pending
+          if (_retryInFlight) return;
+
           // Try to re-initialize the game with retry counter and delay
           var errorDisplay = document.getElementById('init-error-display');
           if (errorDisplay) errorDisplay.style.display = 'none';
 
           if (_retryCount >= _maxRetries) {
-            // All retries exhausted — redirect to sandbox
+            // All retries exhausted — show tappable redirect to sandbox
             var errDiv = document.getElementById('init-error-display');
             var msg = 'Game failed to load. Tap here to try Sandbox mode';
             if (errDiv) {
               errDiv.style.display = 'block';
               var errContent = errDiv.querySelector('div:nth-child(2)');
               if (errContent) errContent.textContent = msg;
+              // Clicking the overlay now navigates to sandbox
+              errDiv.onclick = function() { window.location.href = 'sandbox.html'; };
+            } else {
+              if (confirm(msg)) window.location.href = 'sandbox.html';
             }
-            // Navigate on next tap or after short delay
-            setTimeout(function() { window.location.href = 'sandbox.html'; }, 1500);
             return;
           }
 
           _retryCount++;
+          _retryInFlight = true;
+          startBtn.disabled = true; // visually prevent double-tap
           setTimeout(function() {
+            _retryInFlight = false;
+            startBtn.disabled = false;
             try {
               init();
               // If init succeeds, hide menu and start
@@ -3837,7 +3847,7 @@
               console.error('[Retry ' + _retryCount + '] Init failed again:', e2);
               var errDiv2 = document.getElementById('init-error-display');
               if (_retryCount >= _maxRetries) {
-                // Final retry failed — offer sandbox redirect
+                // Final retry failed — show tappable sandbox redirect
                 var failMsg = 'Game failed to load. Tap here to try Sandbox mode';
                 if (errDiv2) {
                   errDiv2.style.display = 'block';

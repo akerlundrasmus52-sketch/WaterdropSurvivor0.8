@@ -436,6 +436,12 @@
     { time: 0.85, sky: 0x1a1030, fog: 0x1a1030, ambInt: 0.2,  sunInt: 0.3  },  // Dusk
     { time: 1.0,  sky: 0x0a0a1a, fog: 0x0a0a1a, ambInt: 0.15, sunInt: 0.2  },  // Midnight (loop)
   ];
+  // Reusable THREE.Color instances to avoid per-frame allocations in _updateSkyCycle.
+  // Initialized lazily on first call so THREE is guaranteed to be loaded.
+  var _skyColA = null;  // lerp source sky color
+  var _skyColB = null;  // lerp target sky color
+  var _fogColA = null;  // lerp source fog color
+  var _fogColB = null;  // lerp target fog color
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   function _lerp(a, b, t) { return a + (b - a) * t; }
@@ -3873,6 +3879,11 @@
   function _initWeatherSystem() {
     try {
       if (typeof THREE === 'undefined' || !scene) return;
+      // Disable WorldObjects' built-in day/night so _updateSkyCycle is the sole
+      // controller of scene.background, fog.color, and light intensities.
+      if (window.WorldObjects && typeof WorldObjects.setDayNightEnabled === 'function') {
+        WorldObjects.setDayNightEnabled(false);
+      }
       _weatherGeo = new THREE.BufferGeometry();
       var positions = new Float32Array(WEATHER_COUNT * 3);
       _weatherVelocities = [];
@@ -3962,16 +3973,29 @@
     var span = b.time - a.time;
     var t = span > 0 ? (_skyTime - a.time) / span : 0;
 
-    // Lerp sky and fog colors
-    var skyCol = new THREE.Color(a.sky).lerp(new THREE.Color(b.sky), t);
-    var fogCol = new THREE.Color(a.fog).lerp(new THREE.Color(b.fog), t);
+    // Lazy-init reusable THREE.Color instances (avoids allocations every frame)
+    if (!_skyColA) {
+      _skyColA = new THREE.Color();
+      _skyColB = new THREE.Color();
+      _fogColA = new THREE.Color();
+      _fogColB = new THREE.Color();
+    }
+
+    // Lerp sky and fog colors using cached instances (zero allocations per frame)
+    _skyColA.setHex(a.sky);
+    _skyColB.setHex(b.sky);
+    _fogColA.setHex(a.fog);
+    _fogColB.setHex(b.fog);
+    _skyColA.lerp(_skyColB, t); // _skyColA now holds the interpolated sky color
+    _fogColA.lerp(_fogColB, t); // _fogColA now holds the interpolated fog color
+
     var ambInt = a.ambInt + (b.ambInt - a.ambInt) * t;
     var sunInt = a.sunInt + (b.sunInt - a.sunInt) * t;
 
     // Apply sky color
-    if (scene.background) scene.background.set(skyCol);
-    else scene.background = skyCol.clone();
-    if (scene.fog) scene.fog.color.set(fogCol);
+    if (scene.background) scene.background.set(_skyColA);
+    else scene.background = _skyColA.clone();
+    if (scene.fog) scene.fog.color.set(_fogColA);
 
     // Apply lighting (guarded)
     if (window._sandboxLights) {
