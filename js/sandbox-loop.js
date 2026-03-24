@@ -5,11 +5,11 @@
 // Loaded LAST in sandbox.html, after all dependency scripts.
 
 (function () {
-‘use strict’;
+'use strict';
 
 // ─── Minimal stubs for functions from game-screens.js / game-loop.js ────────
 // These are only called optionally (e.g., evaporation effect, void gem FX).
-if (typeof spawnParticles === ‘undefined’) {
+if (typeof spawnParticles === 'undefined') {
 window.spawnParticles = function (pos, color, count) {
 // Lightweight fallback: create tiny instanced spheres via dopamine if available
 if (window.DopamineSystem && window.DopamineSystem.spawnBurst) {
@@ -17,7 +17,7 @@ window.DopamineSystem.spawnBurst(pos, color, count);
 }
 };
 }
-if (typeof createFloatingText === ‘undefined’) {
+if (typeof createFloatingText === 'undefined') {
 // ── Pooled floating-text system: pre-allocates DOM elements, zero new div() during play ──
 const _FT_POOL_SIZE = 32;
 const _ftPool  = []; // available elements
@@ -26,18 +26,18 @@ const _ftNDC   = { x: 0, y: 0 }; // reusable NDC projection (no new object)
 function _ftInit() {
 if (_ftPool.length) return;
 const baseStyle = [
-‘position:fixed’,
-‘pointer-events:none’,
-‘font-family:Bangers,cursive’,
-‘font-size:22px’,
-‘font-weight:bold’,
-‘text-shadow:1px 1px 4px #000’,
-‘z-index:9999’,
-‘will-change:transform,opacity’,
-‘display:none’,
-].join(’;’);
+'position:fixed',
+'pointer-events:none',
+'font-family:Bangers,cursive',
+'font-size:22px',
+'font-weight:bold',
+'text-shadow:1px 1px 4px #000',
+'z-index:9999',
+'will-change:transform,opacity',
+'display:none',
+].join(';');
 for (let _i = 0; _i < _FT_POOL_SIZE; _i++) {
-const _el = document.createElement(‘div’);
+const _el = document.createElement('div');
 _el.style.cssText = baseStyle;
 document.body.appendChild(_el);
 _ftPool.push(_el);
@@ -50,10 +50,10 @@ _ftInit();
 const el = _ftPool.length ? _ftPool.pop() : null;
 if (!el) return; // pool exhausted — skip to avoid visual glitch (32 slots is plenty)
 el.textContent = text;
-el.style.color = color || ‘#FFD700’;
-el.style.transition = ‘none’;
-el.style.transform  = ‘translateY(0)’;
-el.style.opacity    = ‘1’;
+el.style.color = color || '#FFD700';
+el.style.transition = 'none';
+el.style.transform  = 'translateY(0)';
+el.style.opacity    = '1';
 // Project world→screen using pre-allocated Vector3
 let sx = window.innerWidth / 2, sy = window.innerHeight / 2;
 if (camera && renderer) {
@@ -63,30 +63,30 @@ _ftV3._v3.project(camera);
 sx = (_ftV3._v3.x * 0.5 + 0.5) * window.innerWidth;
 sy = (-_ftV3._v3.y * 0.5 + 0.5) * window.innerHeight;
 }
-el.style.left    = sx + ‘px’;
-el.style.top     = sy + ‘px’;
-el.style.display = ‘block’;
+el.style.left    = sx + 'px';
+el.style.top     = sy + 'px';
+el.style.display = 'block';
 requestAnimationFrame(function () {
-el.style.transition = ‘transform 1.2s ease-out,opacity 1.2s ease-out’;
-el.style.transform  = ‘translateY(-60px)’;
-el.style.opacity    = ‘0’;
+el.style.transition = 'transform 1.2s ease-out,opacity 1.2s ease-out';
+el.style.transform  = 'translateY(-60px)';
+el.style.opacity    = '0';
 });
 setTimeout(function () {
-el.style.display    = ‘none’;
-el.style.transition = ‘none’;
-el.style.transform  = ‘translateY(0)’;
-el.style.opacity    = ‘1’;
-*ftPool.push(el); // return to pool
+el.style.display    = 'none';
+el.style.transition = 'none';
+el.style.transform  = 'translateY(0)';
+el.style.opacity    = '1';
+_ftPool.push(el); // return to pool
 }, 1400);
 };
 }
-if (typeof showYouDiedBanner === ‘undefined’) {
+if (typeof showYouDiedBanner === 'undefined') {
 window.showYouDiedBanner = function () {
-const b = document.getElementById(‘you-died-banner’);
-if (b) { b.style.display = ‘block’; setTimeout(function () { b.style.display = ‘none’; }, 2000); }
+const b = document.getElementById('you-died-banner');
+if (b) { b.style.display = 'block'; setTimeout(function () { b.style.display = 'none'; }, 2000); }
 };
 }
-if (typeof setGamePaused === ‘undefined’) {
+if (typeof setGamePaused === 'undefined') {
 window.setGamePaused = function (p) { window.isPaused = !!p; };
 }
 // Always override forceGameUnpause in sandbox: game-screens.js is not loaded here,
@@ -94,55 +94,55 @@ window.setGamePaused = function (p) { window.isPaused = !!p; };
 window.forceGameUnpause = function () {
 window.isPaused = false;
 // Also reset main.js overlay counter (accessible as global let in same page scope)
-try { pauseOverlayCount = 0; window.pauseOverlayCount = 0; } catch (*) {}
-if (typeof _syncJoystickZone === ‘function’) _syncJoystickZone();
+try { pauseOverlayCount = 0; window.pauseOverlayCount = 0; } catch (_e) {}
+if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
 };
-// ── Quest & companion stubs (quest system loads but quests aren’t used yet) ──
-if (typeof progressTutorialQuest === ‘undefined’) {
+// ── Quest & companion stubs (quest system loads but quests aren't used yet) ──
+if (typeof progressTutorialQuest === 'undefined') {
 window.progressTutorialQuest = function () {}; // no-op: quests not active yet
 }
-if (typeof droneTurrets === ‘undefined’) {
+if (typeof droneTurrets === 'undefined') {
 window.droneTurrets = [];
 }
-if (typeof startDroneHum === ‘undefined’) {
+if (typeof startDroneHum === 'undefined') {
 window.startDroneHum = function () {};
 }
-if (typeof DroneTurret === ‘undefined’) {
+if (typeof DroneTurret === 'undefined') {
 window.DroneTurret = function () { this.update = function(){}; };
 }
-if (typeof saveSaveData === ‘undefined’) {
+if (typeof saveSaveData === 'undefined') {
 window.saveSaveData = function () {}; // no-op: no save system in sandbox
 }
-if (typeof loadSaveData === ‘undefined’) {
+if (typeof loadSaveData === 'undefined') {
 window.loadSaveData = function () {};
 }
-if (typeof showUpgradeModal === ‘undefined’) {
-window.showUpgradeModal = function () {}; // fallback if level-up-system didn’t load
+if (typeof showUpgradeModal === 'undefined') {
+window.showUpgradeModal = function () {}; // fallback if level-up-system didn't load
 }
-if (typeof updateGoldDisplays === ‘undefined’) {
+if (typeof updateGoldDisplays === 'undefined') {
 window.updateGoldDisplays = function () {};
 }
-if (typeof showNarratorLine === ‘undefined’) {
+if (typeof showNarratorLine === 'undefined') {
 window.showNarratorLine = function () {};
 }
-if (typeof pushSuperStatEvent === ‘undefined’) {
+if (typeof pushSuperStatEvent === 'undefined') {
 window.pushSuperStatEvent = function () {};
 }
-if (typeof showResourceToast === ‘undefined’) {
+if (typeof showResourceToast === 'undefined') {
 window.showResourceToast = function () {};
 }
-if (typeof updateHUD === ‘undefined’) {
+if (typeof updateHUD === 'undefined') {
 window.updateHUD = function () {};
 }
-if (typeof showLiveStatNotification === ‘undefined’) {
+if (typeof showLiveStatNotification === 'undefined') {
 window.showLiveStatNotification = function () {};
 }
-if (typeof playSound === ‘undefined’) {
+if (typeof playSound === 'undefined') {
 window.playSound = function () {};
 }
 // ── Player Status Effect API ──────────────────────────────────────────────────
 // window.setPlayerStatusEffect(type, duration) — call from any damage system.
-// type: ‘fire’ | ‘poison’ | ‘ice’ | ‘shock’
+// type: 'fire' | 'poison' | 'ice' | 'shock'
 // Updates the StatusBar CSS class and depletes the bar over `duration` seconds.
 (function () {
 var _statusContainer = null;
@@ -151,23 +151,23 @@ var _statusType = null;
 var _statusTimer = 0;
 var _statusDuration = 0;
 window.setPlayerStatusEffect = function (type, duration) {
-_statusContainer = document.getElementById(‘rage-bar-container’);
-_statusFill = document.getElementById(‘rage-unified-fill’);
+_statusContainer = document.getElementById('rage-bar-container');
+_statusFill = document.getElementById('rage-unified-fill');
 if (!_statusContainer) return;
 // Remove old effect class
-_statusContainer.classList.remove(‘status-fire’,‘status-poison’,‘status-ice’,‘status-shock’);
+_statusContainer.classList.remove('status-fire','status-poison','status-ice','status-shock');
 _statusType = type;
 _statusTimer = duration;
 _statusDuration = duration;
-if (type) _statusContainer.classList.add(‘status-’ + type);
+if (type) _statusContainer.classList.add('status-' + type);
 };
 window.clearPlayerStatusEffect = function () {
 _statusType = null;
 _statusTimer = 0;
-var c = document.getElementById(‘rage-bar-container’);
-if (c) c.classList.remove(‘status-fire’,‘status-poison’,‘status-ice’,‘status-shock’);
-var f = document.getElementById(‘rage-unified-fill’);
-if (f) f.style.width = ‘’;
+var c = document.getElementById('rage-bar-container');
+if (c) c.classList.remove('status-fire','status-poison','status-ice','status-shock');
+var f = document.getElementById('rage-unified-fill');
+if (f) f.style.width = '';
 };
 // Tick is called from the game loop (via addExp/updateHUD path) every frame
 window._tickPlayerStatus = function (dt) {
@@ -177,14 +177,14 @@ if (_statusTimer <= 0) {
 window.clearPlayerStatusEffect();
 } else {
 var pct = (_statusTimer / _statusDuration) * 100;
-var f = _statusFill || document.getElementById(‘rage-unified-fill’);
-if (f) f.style.width = Math.max(0, pct) + ‘%’;
+var f = _statusFill || document.getElementById('rage-unified-fill');
+if (f) f.style.width = Math.max(0, pct) + '%';
 }
 };
 }());
 // addExp — called by gem-classes.js ExpGem.collect() when a gem is picked up.
 // Handles EXP gain, HUD refresh, and level-up trigger.
-if (typeof window.addExp === ‘undefined’) {
+if (typeof window.addExp === 'undefined') {
 window.addExp = function (amount) {
 playerStats.exp += amount;
 _refreshExpBar();
@@ -204,10 +204,10 @@ _onLevelUp();
 }
 // spawnWaterDroplet — called by player-class.js when HP < 25-30% (water bleed)
 // or during the dash ability.  Falls back to a simple one-frame particle burst.
-if (typeof spawnWaterDroplet === ‘undefined’) {
+if (typeof spawnWaterDroplet === 'undefined') {
 window.spawnWaterDroplet = function (pos) {
 if (!pos) return;
-if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === ‘function’) {
+if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === 'function') {
 BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3, spreadY: 0.2 });
 }
 };
@@ -215,17 +215,17 @@ BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3,
 // gameOver — called by player-class.js when the player dies.  In the sandbox
 // we simply reload the page so the user can test again without a full game-over
 // screen from the main game (which requires systems not loaded here).
-if (typeof gameOver === ‘undefined’) {
+if (typeof gameOver === 'undefined') {
 window.gameOver = function () {
 // Reset all new v2 systems before unloading
-if (window.BloodV2 && typeof window.BloodV2.reset === ‘function’) window.BloodV2.reset();
-if (window.GoreSim && typeof window.GoreSim.reset === ‘function’) window.GoreSim.reset();
-if (window.SlimePool && typeof window.SlimePool.reset === ‘function’) window.SlimePool.reset();
-if (window.WaveSpawner && typeof window.WaveSpawner.reset === ‘function’) window.WaveSpawner.reset();
-if (window.HitDetection && typeof window.HitDetection.reset === ‘function’) window.HitDetection.reset();
-const b = document.getElementById(‘you-died-banner’);
+if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
+if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
+if (window.SlimePool && typeof window.SlimePool.reset === 'function') window.SlimePool.reset();
+if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
+if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
+const b = document.getElementById('you-died-banner');
 if (b) {
-b.style.display = ‘block’;
+b.style.display = 'block';
 setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
 } else {
 location.reload();
@@ -241,17 +241,17 @@ cutGems: [],
 rawGems: {},
 weaponGemSlots: {},
 companionGemSlots: {},
-equippedGear: { weapon: ‘gun’ },
+equippedGear: { weapon: 'gun' },
 companions: {},
 selectedCompanion: null,
 tutorialQuests: { currentQuest: null, readyToClaim: [], firstDeathShown: false, pendingBuildQuest: null, landmarksFound: null, mysteriousEggFound: false },
-tutorial: { completed: true, currentStep: ‘completed’ },
+tutorial: { completed: true, currentStep: 'completed' },
 upgrades: { goldEarned: 0 },
 resources: { magicEssence: 0 },
 // Rage combat system
 rageMeter: 0,
-equippedSpecials: [‘knifeTakedown’], // Currently equipped special attacks
-specialAttacksLoadout: [‘knifeTakedown’], // Starting special attack (legacy)
+equippedSpecials: ['knifeTakedown'], // Currently equipped special attacks
+specialAttacksLoadout: ['knifeTakedown'], // Starting special attack (legacy)
 specialAttackLevels: { knifeTakedown: 1 },
 skillTree: {
 specialKnifeTakedown: { level: 1 } // Starting attack is unlocked
@@ -260,19 +260,19 @@ specialKnifeTakedown: { level: 1 } // Starting attack is unlocked
 hasCompanionEgg: false,
 companionEggHatched: false,
 companionEggHatchProgress: 0,
-companionGrowthStage: ‘newborn’,
+companionGrowthStage: 'newborn',
 companionSkillPoints: 0,
 };
 
 window.gameSettings = window.gameSettings || {
 soundEnabled: false,
 musicEnabled: false,
-controlType: ‘keyboard’,
-quality: ‘medium’,
+controlType: 'keyboard',
+quality: 'medium',
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const GAME_OVER_RELOAD_DELAY_MS = 2000;    // ms to show “YOU DIED” before page reload
+const GAME_OVER_RELOAD_DELAY_MS = 2000;    // ms to show "YOU DIED" before page reload
 const SLIME_HP            = 80;
 const SLIME_SPEED         = 1.8;           // world units / second
 const PICKUP_RANGE        = 3.5;           // world units — magnetism pull starts here
@@ -309,7 +309,7 @@ let magnetRange = 4.0; // Base magnetism range (world units)
 const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
 const SHAKE_DURATION_SCALE       = 0.2;  // intensity × this = shake duration in seconds
 const SHAKE_FADE_RATE            = 6;    // amplitude fade multiplier (higher = faster fade)
-const SHAKE_HEAVY_HP_THRESHOLD   = 0.25; // hp fraction below which hits count as “heavy”
+const SHAKE_HEAVY_HP_THRESHOLD   = 0.25; // hp fraction below which hits count as "heavy"
 const SHAKE_MID_HP_THRESHOLD     = 0.5;  // hp fraction for mid-tier shake
 const SHAKE_HEAVY_INTENSITY      = 0.28; // world-unit shake radius for heavy hits
 const SHAKE_MID_INTENSITY        = 0.18; // world-unit shake radius for mid hits
@@ -369,7 +369,7 @@ let _enemySpatialHash = null;
 
 // ─── Hit-Stop (Time Freeze) ───────────────────────────────────────────────────
 // When >0, the simulation is frozen for this many milliseconds.
-// The renderer still draws so the visual “freeze frame” is visible.
+// The renderer still draws so the visual "freeze frame" is visible.
 let _hitStopRemaining = 0;
 
 // ─── Screen Shake ─────────────────────────────────────────────────────────────
@@ -397,25 +397,25 @@ function _clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 // Display an error message on-screen so mobile users can see what went wrong.
 function _showError(msg) {
-console.error(’[SandboxLoop]’, msg);
+console.error('[SandboxLoop]', msg);
 // Try #status-message first, then #tutorial-text as fallback
-const el = document.getElementById(‘status-message’) || document.getElementById(‘tutorial-text’);
+const el = document.getElementById('status-message') || document.getElementById('tutorial-text');
 if (el) {
-el.style.display = ‘block’;
-el.style.color   = ‘#FF4444’;
-el.style.background = ‘rgba(0,0,0,0.85)’;
-el.style.padding = ‘8px 12px’;
-el.style.borderRadius = ‘8px’;
-el.style.zIndex = ‘99999’;
-el.style.position = ‘fixed’;
-el.style.top = ‘50%’;
-el.style.left = ‘50%’;
-el.style.transform = ‘translate(-50%,-50%)’;
-el.style.maxWidth = ‘90vw’;
-el.style.fontSize = ‘14px’;
-el.style.fontFamily = ‘monospace’;
-el.style.wordBreak = ‘break-word’;
-el.textContent = ’⚠ Sandbox Error: ’ + msg;
+el.style.display = 'block';
+el.style.color   = '#FF4444';
+el.style.background = 'rgba(0,0,0,0.85)';
+el.style.padding = '8px 12px';
+el.style.borderRadius = '8px';
+el.style.zIndex = '99999';
+el.style.position = 'fixed';
+el.style.top = '50%';
+el.style.left = '50%';
+el.style.transform = 'translate(-50%,-50%)';
+el.style.maxWidth = '90vw';
+el.style.fontSize = '14px';
+el.style.fontFamily = 'monospace';
+el.style.wordBreak = 'break-word';
+el.textContent = '⚠ Sandbox Error: ' + msg;
 }
 }
 
@@ -425,7 +425,7 @@ el.textContent = ’⚠ Sandbox Error: ’ + msg;
 function _initSpatialHash() {
 if (window.GamePerformance && window.GamePerformance.SpatialHash) {
 _enemySpatialHash = new window.GamePerformance.SpatialHash(4); // 4-unit cells
-console.log(’[SandboxLoop] Spatial hash initialized (cell size: 4)’);
+console.log('[SandboxLoop] Spatial hash initialized (cell size: 4)');
 }
 }
 
@@ -519,11 +519,10 @@ _activeProjList.push(p);
 }
 
 function _updateProjectiles(dt) {
-for (let i = _activeProjList.length - 1; i >= 0; i–) {
+for (let i = _activeProjList.length - 1; i >= 0; i--) {
 const p = _activeProjList[i];
 if (!p.active) { _activeProjList.splice(i, 1); continue; }
 
-```
   p.mesh.position.x += p.vx * dt;
   p.mesh.position.z += p.vz * dt;
 
@@ -586,7 +585,6 @@ if (!p.active) { _activeProjList.splice(i, 1); continue; }
   }
   if (hitThisFrame) continue;
 }
-```
 
 }
 
@@ -617,7 +615,6 @@ pos.setXYZ(i, x, y, z);
 }
 _slimeBaseGeo.computeVertexNormals();
 
-```
 const eyeGeo   = new THREE.SphereGeometry(0.1, 6, 6);
 const eyeMat   = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
 const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
@@ -700,7 +697,6 @@ for (let i = 0; i < MAX_SLIMES; i++) {
     set isDead(value) { this.dead = value; },
   });
 }
-```
 
 }
 
@@ -756,12 +752,11 @@ if (idx !== -1) _activeSlimes.splice(idx, 1);
 
 /** Update lingering corpses: heartbeat blood pumping, growing blood pool, eventual cleanup. */
 function _updateCorpses(dt) {
-for (let i = _activeCorpses.length - 1; i >= 0; i–) {
+for (let i = _activeCorpses.length - 1; i >= 0; i--) {
 const c = _activeCorpses[i];
 c.timer += dt;
 const lifeRatio = c.timer / c.lingerDuration; // 0 → 1 over linger duration
 
-```
   // Grow blood pool from small to large as corpse bleeds out
   const poolRadius = 0.1 + lifeRatio * 1.8; // grows from 0.1 to 1.9 units
   if (c.poolMesh) {
@@ -813,7 +808,6 @@ const lifeRatio = c.timer / c.lingerDuration; // 0 → 1 over linger duration
     }
   }
 }
-```
 
 }
 
@@ -880,7 +874,6 @@ return closest;
 function _hitSlime(projectile, slot) {
 if (!slot || !slot.active || slot.dead) return;
 
-```
 // Determine hit force from weapon (gun = 1.0)
 const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
 const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
@@ -1026,7 +1019,6 @@ if (slot.hp <= 0) {
 } else {
   _updateSlimeHPBar(slot);
 }
-```
 
 }
 
@@ -1035,7 +1027,6 @@ const x = slot.mesh.position.x;
 const y = slot.mesh.position.y + 0.4; // center of body
 const z = slot.mesh.position.z;
 
-```
 // Hit-stop: freeze simulation for a brief moment — gives attacks a heavy, impactful feel
 _triggerHitStop(HIT_STOP_KILL_DURATION_MS);
 // Hard camera shake on kill (scales slightly with hit force)
@@ -1174,7 +1165,6 @@ if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
 if (window.GameMilestones && typeof GameMilestones.recordKill === 'function') {
   GameMilestones.recordKill();
 }
-```
 
 }
 
@@ -1185,8 +1175,8 @@ function _updateSlimeHPBar(slot) {
 // ─── 5-PART GORE SYSTEM ───────────────────────────────────────────────────────
 /**
 
-- Acquire the next available pre-allocated wound mesh from the slot’s pool.
-- Returns null if the pool is exhausted (won’t happen within 11 wounds).
+- Acquire the next available pre-allocated wound mesh from the slot's pool.
+- Returns null if the pool is exhausted (won't happen within 11 wounds).
   */
   function _acquireWound(slot, woundColor) {
   if (!slot.woundPool || slot.woundCount >= slot.woundPool.length) return null;
@@ -1201,7 +1191,6 @@ function _applyDamageStage1(slot) {
 slot.mesh.material.color.setHex(0x44CC33);
 slot.mesh.material.emissiveIntensity = 0.15;
 
-```
 for (let i = 0; i < 2; i++) {
   const wound = _acquireWound(slot, 0x660000);
   if (wound) {
@@ -1236,7 +1225,6 @@ if (window.BloodSystem) {
 }
 _tmpV3.set(slot.mesh.position.x, 1.6, slot.mesh.position.z);
 createFloatingText('WOUNDED!', _tmpV3, '#FF8800');
-```
 
 }
 
@@ -1244,7 +1232,6 @@ createFloatingText('WOUNDED!', _tmpV3, '#FF8800');
 function _applyDamageStage2(slot) {
 slot.mesh.material.color.setHex(0x33AA22);
 
-```
 for (let i = 0; i < 2; i++) {
   const wound = _acquireWound(slot, 0x550000);
   if (wound) {
@@ -1276,7 +1263,6 @@ if (window.BloodSystem) {
 }
 _tmpV3.set(slot.mesh.position.x, 1.7, slot.mesh.position.z);
 createFloatingText('HEAVY DAMAGE!', _tmpV3, '#FF4400');
-```
 
 }
 
@@ -1286,7 +1272,6 @@ slot.mesh.material.color.setHex(0x228811);
 slot.mesh.material.opacity = 0.85;
 slot.mesh.scale.set(0.92, 0.92, 0.92);
 
-```
 for (let i = 0; i < 3; i++) {
   const wound = _acquireWound(slot, 0x440000);
   if (wound) {
@@ -1331,7 +1316,6 @@ if (window.BloodSystem) {
 }
 _tmpV3.set(slot.mesh.position.x, 1.8, slot.mesh.position.z);
 createFloatingText('CRITICAL!', _tmpV3, '#FF0000');
-```
 
 }
 
@@ -1342,7 +1326,6 @@ slot.mesh.material.opacity = 0.75;
 slot.mesh.material.emissiveIntensity = 0.05;
 slot.mesh.scale.set(0.85, 0.85, 0.85);
 
-```
 for (let i = 0; i < 4; i++) {
   const wound = _acquireWound(slot, 0x330000);
   if (wound) {
@@ -1378,7 +1361,6 @@ if (window.BloodSystem) {
 }
 _tmpV3.set(slot.mesh.position.x, 1.9, slot.mesh.position.z);
 createFloatingText('NEAR DEATH!', _tmpV3, '#DD0000');
-```
 
 }
 
@@ -1546,7 +1528,7 @@ function _acquireFleshChunk() {
 for (let i = 0; i < _fleshPool.length; i++) {
 if (!_fleshPool[i].active) return _fleshPool[i];
 }
-return null; // pool exhausted (won’t happen with 80 slots in practice)
+return null; // pool exhausted (won't happen with 80 slots in practice)
 }
 
 function _releaseFleshChunk(chunk) {
@@ -1560,7 +1542,6 @@ chunk.mesh.material.opacity = 1;
 function _spawnFleshChunks(slot, count, large) {
 const pos = slot.mesh.position;
 
-```
 for (let i = 0; i < count; i++) {
   const chunk = _acquireFleshChunk();
   if (!chunk) break; // pool exhausted — skip excess chunks
@@ -1590,7 +1571,6 @@ for (let i = 0; i < count; i++) {
   chunk.mesh.visible = true;
   _allFleshChunks.push(chunk);
 }
-```
 
 }
 
@@ -1598,9 +1578,9 @@ for (let i = 0; i < count; i++) {
 // Pre-allocates POOL_SIZE_GEMS ExpGem instances once at boot so no new THREE.Mesh
 // is created during gameplay when enemies are killed.
 function _buildExpGemPool() {
-if (typeof ExpGem === ‘undefined’) return; // gem-classes.js not loaded
+if (typeof ExpGem === 'undefined') return; // gem-classes.js not loaded
 for (let i = 0; i < POOL_SIZE_GEMS; i++) {
-const gem = new ExpGem(0, 0, ‘gun’, 1.0, 0);
+const gem = new ExpGem(0, 0, 'gun', 1.0, 0);
 gem._pooled = true;
 gem._returnToPool = function (g) { _expGemFreeList.push(g); };
 // Bug 3 fix: ensure the mesh is explicitly in the sandbox scene, then hide it.
@@ -1610,7 +1590,7 @@ gem.deactivate(); // park off-screen (sets active=false, visible=false)
 _expGemPool.push(gem);
 _expGemFreeList.push(gem);
 }
-console.log(’[SandboxLoop] EXP gem pool built: ’ + POOL_SIZE_GEMS + ’ slots’);
+console.log('[SandboxLoop] EXP gem pool built: ' + POOL_SIZE_GEMS + ' slots');
 }
 
 /** Acquire a pooled gem, reset it to position (x, z), and return it.
@@ -1620,12 +1600,12 @@ console.log(’[SandboxLoop] EXP gem pool built: ’ + POOL_SIZE_GEMS + ’ slot
   if (_expGemFreeList.length > 0) {
   const gem = _expGemFreeList.pop();
   gem.reset(x, z, sourceWeapon, hitForce, enemyType);
-  // Bug 3 fix: guarantee visibility in case reset() didn’t set it
+  // Bug 3 fix: guarantee visibility in case reset() didn't set it
   if (gem.mesh) gem.mesh.visible = true;
   return gem;
   }
-  // Pool exhausted (shouldn’t happen with 40 slots in a single-player sandbox)
-  if (typeof ExpGem !== ‘undefined’) {
+  // Pool exhausted (shouldn't happen with 40 slots in a single-player sandbox)
+  if (typeof ExpGem !== 'undefined') {
   const gem = new ExpGem(x, z, sourceWeapon, hitForce, enemyType);
   gem._pooled = false; // not pooled — will be disposed normally on collect
   if (gem.mesh && scene) scene.add(gem.mesh);
@@ -1671,7 +1651,7 @@ return f;
 }
 return null; // pool exhausted — flash skipped (harmless visual miss)
 };
-console.log(’[SandboxLoop] Flash pool built: ’ + FLASH_POOL_SIZE + ’ PointLight slots’);
+console.log('[SandboxLoop] Flash pool built: ' + FLASH_POOL_SIZE + ' PointLight slots');
 }
 
 /** Tick every active flash — fades intensity as the timer runs out. */
@@ -1692,10 +1672,9 @@ f.light.intensity = f.maxIntensity * (f.timer / f.duration);
 }
 
 function _updateFleshChunks(dt) {
-for (let i = _allFleshChunks.length - 1; i >= 0; i–) {
+for (let i = _allFleshChunks.length - 1; i >= 0; i--) {
 const chunk = _allFleshChunks[i];
 
-```
   chunk.life -= dt;
   if (chunk.life <= 0) {
     _releaseFleshChunk(chunk);
@@ -1731,7 +1710,6 @@ const chunk = _allFleshChunks[i];
     chunk.mesh.material.opacity = chunk.life / 0.5;
   }
 }
-```
 
 }
 
@@ -1739,7 +1717,6 @@ const chunk = _allFleshChunks[i];
 function _updateSlime(dt) {
 if (!player || !player.mesh) return;
 
-```
 _updateFleshChunks(dt);
 
 const px = player.mesh.position.x, pz = player.mesh.position.z;
@@ -1914,7 +1891,6 @@ for (let ai = 0; ai < _activeSlimes.length; ai++) {
     }
   }
 }
-```
 
 }
 
@@ -1925,7 +1901,6 @@ const px = player.mesh.position.x;
 const pz = player.mesh.position.z;
 const py = player.mesh.position.y;
 
-```
 for (let i = expGems.length - 1; i >= 0; i--) {
   const g = expGems[i];
   if (!g || !g.active) { expGems.splice(i, 1); continue; }
@@ -1952,12 +1927,11 @@ for (let i = expGems.length - 1; i >= 0; i--) {
 
   g.update({ x: px, y: py, z: pz });
 }
-```
 
 }
 
 function _collectGem(gem, idx) {
-const expGain = gem.value || (typeof GAME_CONFIG !== ‘undefined’ ? GAME_CONFIG.expValue : 15);
+const expGain = gem.value || (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 15);
 // Reuse _tmpV3b for gem position (avoids .clone() allocation)
 if (gem.mesh) {
 _tmpV3b.copy(gem.mesh.position);
@@ -1965,7 +1939,6 @@ _tmpV3b.copy(gem.mesh.position);
 _tmpV3b.set(0, 0, 0);
 }
 
-```
 if (typeof gem.collect === 'function') {
   // gem.collect() removes the mesh and calls addExp() internally
   gem.collect();
@@ -1980,23 +1953,21 @@ if (typeof gem.collect === 'function') {
 createFloatingText('+' + expGain + ' EXP', _tmpV3b, '#5DADE2');
 
 if (idx !== undefined) expGems.splice(idx, 1);
-```
 
 }
 
 function _refreshExpBar() {
 try {
 const pct = Math.min(100, (playerStats.exp / playerStats.expReq) * 100);
-const fill = document.getElementById(‘exp-fill’);
-const text = document.getElementById(‘exp-text’);
-const bFill = document.getElementById(‘bottom-exp-fill’);
-const bText = document.getElementById(‘bottom-exp-text’);
-if (fill) fill.style.width = pct + ‘%’;
-if (text) text.innerText = ’EXP: ’ + Math.ceil(pct) + ‘%’;
-if (bFill) bFill.style.width = pct + ‘%’;
-if (bText) bText.innerText = ’EXP: ’ + Math.ceil(pct) + ‘%’;
+const fill = document.getElementById('exp-fill');
+const text = document.getElementById('exp-text');
+const bFill = document.getElementById('bottom-exp-fill');
+const bText = document.getElementById('bottom-exp-text');
+if (fill) fill.style.width = pct + '%';
+if (text) text.innerText = 'EXP: ' + Math.ceil(pct) + '%';
+if (bFill) bFill.style.width = pct + '%';
+if (bText) bText.innerText = 'EXP: ' + Math.ceil(pct) + '%';
 
-```
   // Waterdrop SVG level text
   const wlv = document.getElementById('waterdrop-level-text');
   const wfill = document.getElementById('waterdrop-exp-fill');
@@ -2007,7 +1978,6 @@ if (bText) bText.innerText = ’EXP: ’ + Math.ceil(pct) + ‘%’;
     wfill.setAttribute('height', (pct / 100) * 92);
   }
 } catch (e) {}
-```
 
 }
 
@@ -2017,18 +1987,18 @@ player && player.mesh ? player.mesh.position.x : 0,
 player && player.mesh ? player.mesh.position.y + 0.5 : 0.5,
 player && player.mesh ? player.mesh.position.z : 0
 );
-createFloatingText(‘LEVEL UP!’, _tmpV3, ‘#FFD700’);
+createFloatingText('LEVEL UP!', _tmpV3, '#FFD700');
 // Trigger the level-up upgrade modal if available
-if (typeof showUpgradeModal === ‘function’) {
+if (typeof showUpgradeModal === 'function') {
 // Use direct window.isPaused assignment in sandbox to bypass main.js overlay counter,
-// which prevents “player freeze” when forceGameUnpause only resets window.isPaused.
+// which prevents "player freeze" when forceGameUnpause only resets window.isPaused.
 window.isPaused = true;
 showUpgradeModal(false, null);
 // Failsafe: if showUpgradeModal returned without showing the modal
 // (e.g., isGameActive guard bailed early), unpause immediately.
 setTimeout(function () {
-const modal = document.getElementById(‘levelup-modal’);
-if (window.isPaused && (!modal || modal.style.display !== ‘flex’)) {
+const modal = document.getElementById('levelup-modal');
+if (window.isPaused && (!modal || modal.style.display !== 'flex')) {
 window.isPaused = false;
 }
 }, 80);
@@ -2048,7 +2018,6 @@ if (!player || !player.mesh || !weapons) return;
 const px = player.mesh.position.x;
 const pz = player.mesh.position.z;
 
-```
 // ── SWORD / SAMURAI SWORD: periodic melee slash in front of player ────────
 const hasSword = (weapons.sword && weapons.sword.active) ||
                  (weapons.samuraiSword && weapons.samuraiSword.active);
@@ -2133,7 +2102,6 @@ if (weapons.aura && weapons.aura.active) {
 } else {
   _auraEffectTimer = 0;
 }
-```
 
 }
 
@@ -2169,7 +2137,6 @@ let _smoothInputZ = 0;    // lerped input direction Z
 function _tryFire(dt) {
 if (!player) return;
 
-```
 // Effective magazine size and reload time — read from playerStats if available
 const _effMaxAmmo    = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
 const _effReloadTime = REVOLVER_RELOAD_TIME / Math.max(0.1, (playerStats && playerStats.reloadSpeed) || 1.0);
@@ -2251,25 +2218,24 @@ if (_gunModel) {
   _gunModel.position.z = _gunOffset.z + 0.04;
   _gunRecoilTime = 0.08;
 }
-```
 
 }
 
 function _updateRevolverUI() {
-const ui = document.getElementById(‘revolver-ui’);
+const ui = document.getElementById('revolver-ui');
 if (!ui) return;
-const bullets = ui.querySelectorAll(’.revolver-bullet’);
+const bullets = ui.querySelectorAll('.revolver-bullet');
 bullets.forEach(function(b, i) {
 if (_isReloading) {
-b.className = ‘revolver-bullet’ + (i < _reloadAnimFrame ? ’ loaded’ : ’ empty’);
+b.className = 'revolver-bullet' + (i < _reloadAnimFrame ? ' loaded' : ' empty');
 } else {
-b.className = ‘revolver-bullet’ + (i < _revolverAmmo ? ’ loaded’ : ’ empty’);
+b.className = 'revolver-bullet' + (i < _revolverAmmo ? ' loaded' : ' empty');
 }
 });
-const label = ui.querySelector(’.revolver-label’);
+const label = ui.querySelector('.revolver-label');
 if (label) {
-label.textContent = _isReloading ? ‘RELOADING…’ : (_revolverAmmo + ‘/’ + REVOLVER_MAX_AMMO);
-label.style.color = _isReloading ? ‘#FF8800’ : (_revolverAmmo <= 1 ? ‘#FF4444’ : ‘#FFD700’);
+label.textContent = _isReloading ? 'RELOADING…' : (_revolverAmmo + '/' + REVOLVER_MAX_AMMO);
+label.style.color = _isReloading ? '#FF8800' : (_revolverAmmo <= 1 ? '#FF4444' : '#FFD700');
 }
 }
 
@@ -2278,7 +2244,6 @@ function _buildGunModel() {
 if (!player || !player.mesh) return;
 const gunGroup = new THREE.Group();
 
-```
 // Barrel (long thin cylinder)
 const barrelGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8);
 const metalMat = new THREE.MeshStandardMaterial({ color: 0x555566, roughness: 0.4, metalness: 0.8 });
@@ -2309,7 +2274,6 @@ gunGroup.castShadow = true;
 player.mesh.add(gunGroup);
 _gunModel = gunGroup;
 _gunDrum = drum;
-```
 
 }
 
@@ -2338,10 +2302,9 @@ const _mousePt    = new THREE.Vector3();
 const _camTarget  = new THREE.Vector3();
 
 function _initInput() {
-document.addEventListener(‘keydown’, function (e) { _keysDown[e.code] = true; });
-document.addEventListener(‘keyup’,   function (e) { _keysDown[e.code] = false; });
+document.addEventListener('keydown', function (e) { _keysDown[e.code] = true; });
+document.addEventListener('keyup',   function (e) { _keysDown[e.code] = false; });
 
-```
 // Mouse: project onto ground plane (y=0) — uses pre-allocated objects (no GC)
 document.addEventListener('mousemove', function (e) {
   if (!camera || !renderer) return;
@@ -2362,7 +2325,6 @@ if (jZone) {
   jZone.addEventListener('touchend',    _onTouchEnd,    { passive: false });
   jZone.addEventListener('touchcancel', _onTouchEnd,    { passive: false });
 }
-```
 
 }
 
@@ -2410,20 +2372,20 @@ _updateJoystickVisuals();
 }
 
 function _updateJoystickVisuals() {
-const outer  = document.getElementById(‘joystick-outer’);
-const inner  = document.getElementById(‘joystick-inner’);
-const outerR = document.getElementById(‘joystick-outer-right’);
-const innerR = document.getElementById(‘joystick-inner-right’);
-if (inner  && outer)  { inner.style.transform  = _joy.active    ? ‘translate(’ + _joy.dx * 30    + ‘px,’ + _joy.dz * 30    + ‘px)’ : ‘’; }
-if (innerR && outerR) { innerR.style.transform = _aimJoy.active ? ‘translate(’ + _aimJoy.dx * 30 + ‘px,’ + _aimJoy.dz * 30 + ‘px)’ : ‘’; }
+const outer  = document.getElementById('joystick-outer');
+const inner  = document.getElementById('joystick-inner');
+const outerR = document.getElementById('joystick-outer-right');
+const innerR = document.getElementById('joystick-inner-right');
+if (inner  && outer)  { inner.style.transform  = _joy.active    ? 'translate(' + _joy.dx * 30    + 'px,' + _joy.dz * 30    + 'px)' : ''; }
+if (innerR && outerR) { innerR.style.transform = _aimJoy.active ? 'translate(' + _aimJoy.dx * 30 + 'px,' + _aimJoy.dz * 30 + 'px)' : ''; }
 }
 
 function _getMoveDir() {
 let dx = 0, dz = 0;
-if (_keysDown[‘KeyW’] || _keysDown[‘ArrowUp’])    dz -= 1;
-if (_keysDown[‘KeyS’] || _keysDown[‘ArrowDown’])  dz += 1;
-if (_keysDown[‘KeyA’] || _keysDown[‘ArrowLeft’])  dx -= 1;
-if (_keysDown[‘KeyD’] || _keysDown[‘ArrowRight’]) dx += 1;
+if (_keysDown['KeyW'] || _keysDown['ArrowUp'])    dz -= 1;
+if (_keysDown['KeyS'] || _keysDown['ArrowDown'])  dz += 1;
+if (_keysDown['KeyA'] || _keysDown['ArrowLeft'])  dx -= 1;
+if (_keysDown['KeyD'] || _keysDown['ArrowRight']) dx += 1;
 if (_joy.active) { dx = _joy.dx; dz = _joy.dz; }
 const len = Math.sqrt(dx * dx + dz * dz);
 if (len > 0) { dx /= len; dz /= len; }
@@ -2436,7 +2398,6 @@ function _initScene() {
 _tmpV3  = new THREE.Vector3();
 _tmpV3b = new THREE.Vector3();
 
-```
 // Renderer - expose as window global for gem-classes.js and other systems
 window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 // Apply saved or default graphics quality — this sets pixelRatio, shadowMap, toneMapping
@@ -2507,7 +2468,6 @@ window.addEventListener('resize', function () {
 
 // Apply saved quality after renderer is set up
 _applyGraphicsQuality(_savedQuality);
-```
 
 }
 
@@ -2515,13 +2475,13 @@ _applyGraphicsQuality(_savedQuality);
 // Maps quality key → renderer configuration.
 // Called once at boot (from saved preference) and dynamically when user changes.
 const QUALITY_DESCS = {
-ultralow: ‘Shadows OFF · Pixel ratio 0.5× · No tone mapping — best for budget phones’,
-low:      ‘Shadows OFF · Pixel ratio 1× · Linear tone mapping — good for S10/mid-range’,
-medium:   ‘Shadows ON  · Pixel ratio 1× · Linear tone mapping — balanced (default)’,
-high:     ‘Shadows ON (PCF) · Pixel ratio ≤1.5× · Filmic tone mapping — modern phones’,
-ultra:    ‘Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping — iPhone 16 / PC’,
+ultralow: 'Shadows OFF · Pixel ratio 0.5× · No tone mapping — best for budget phones',
+low:      'Shadows OFF · Pixel ratio 1× · Linear tone mapping — good for S10/mid-range',
+medium:   'Shadows ON  · Pixel ratio 1× · Linear tone mapping — balanced (default)',
+high:     'Shadows ON (PCF) · Pixel ratio ≤1.5× · Filmic tone mapping — modern phones',
+ultra:    'Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping — iPhone 16 / PC',
 };
-const DEFAULT_QUALITY = ‘ultra’;
+const DEFAULT_QUALITY = 'ultra';
 
 // ─── FPS Tracking & Auto-Quality Adjustment ───────────────────────────────────
 let _fpsSamples = [];
@@ -2536,7 +2496,6 @@ const FPS_VERY_LOW_THRESHOLD = 20; // If average FPS drops below 20
 function _trackFPS(dt) {
 if (!_autoQualityEnabled || _hasAutoAdjusted) return;
 
-```
 const fps = dt > 0 ? 1.0 / dt : 60;
 _fpsSamples.push(fps);
 if (_fpsSamples.length > FPS_SAMPLE_COUNT) {
@@ -2569,57 +2528,54 @@ if (_fpsCheckTimer >= FPS_CHECK_INTERVAL && _fpsSamples.length >= FPS_SAMPLE_COU
     _showPerformanceNotification('Performance mode enabled (Low)');
   }
 }
-```
 
 }
 
 function _showPerformanceNotification(message) {
 // Create a simple notification overlay
-const notification = document.createElement(‘div’);
+const notification = document.createElement('div');
 notification.style.cssText = `position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); color: #FFD700; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: bold; z-index: 10000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);`;
 notification.textContent = message;
 document.body.appendChild(notification);
 
-```
 setTimeout(() => {
   notification.style.transition = 'opacity 0.5s';
   notification.style.opacity = '0';
   setTimeout(() => document.body.removeChild(notification), 500);
 }, 3000);
-```
 
 }
 
 function *applyGraphicsQuality(quality) {
 if (!renderer) return;
 switch (quality) {
-case ‘ultralow’:
+case 'ultralow':
 renderer.setPixelRatio(0.5);
 renderer.shadowMap.enabled = false;
 renderer.toneMapping = THREE.NoToneMapping;
 renderer.toneMappingExposure = 1.0;
 break;
-case ‘low’:
+case 'low':
 renderer.setPixelRatio(1.0);
 renderer.shadowMap.enabled = false;
 renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 1.0;
 break;
-case ‘medium’:
+case 'medium':
 renderer.setPixelRatio(1.0);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.BasicShadowMap;
 renderer.toneMapping = THREE.LinearToneMapping;
 renderer.toneMappingExposure = 1.1;
 break;
-case ‘high’:
+case 'high':
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 break;
-case ‘ultra’:
+case 'ultra':
 default:
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.shadowMap.enabled = true;
@@ -2631,24 +2587,23 @@ break;
 // Force shader recompile so shadow map type change takes effect
 renderer.shadowMap.needsUpdate = true;
 // Persist selection
-try { localStorage.setItem(‘sandboxGraphicsQuality’, quality); } catch (*) {}
+try { localStorage.setItem('sandboxGraphicsQuality', quality); } catch (_e) {}
 // Update gameSettings global if present
 if (window.gameSettings) window.gameSettings.quality = quality;
-console.log(’[SandboxLoop] Graphics quality applied:’, quality);
+console.log('[SandboxLoop] Graphics quality applied:', quality);
 }
 
 // ─── Settings modal + UI Calibration entry (sandbox) ─────────────────────────
 function _initSandboxSettings() {
-const settingsBtn   = document.getElementById(‘settings-btn’);
-const settingsModal = document.getElementById(‘settings-modal’);
-const closeBtn      = document.getElementById(‘settings-close-btn’);
-const uiCalBtn      = document.getElementById(‘ui-calibration-btn’);
-const campBtn       = document.getElementById(‘return-to-camp-btn’);
-const qualitySelect = document.getElementById(‘graphics-quality-select’);
-const qualityDesc   = document.getElementById(‘quality-desc’);
-const applyQualBtn  = document.getElementById(‘apply-quality-btn’);
+const settingsBtn   = document.getElementById('settings-btn');
+const settingsModal = document.getElementById('settings-modal');
+const closeBtn      = document.getElementById('settings-close-btn');
+const uiCalBtn      = document.getElementById('ui-calibration-btn');
+const campBtn       = document.getElementById('return-to-camp-btn');
+const qualitySelect = document.getElementById('graphics-quality-select');
+const qualityDesc   = document.getElementById('quality-desc');
+const applyQualBtn  = document.getElementById('apply-quality-btn');
 
-```
 if (!settingsBtn || !settingsModal || !closeBtn) return;
 
 settingsBtn.style.display = 'block';
@@ -2709,20 +2664,19 @@ if (uiCalBtn) {
 if (window.UICalibration && typeof window.UICalibration.applyLayout === 'function') {
   window.UICalibration.applyLayout();
 }
-```
 
 }
 
 // ─── Ground via Engine2Sandbox ────────────────────────────────────────────────
 function _initGround() {
-if (typeof Engine2Sandbox === ‘function’) {
+if (typeof Engine2Sandbox === 'function') {
 try {
 const e2 = new Engine2Sandbox();
 e2.init(scene);
 window._engine2Instance = e2;
 return;
 } catch (e) {
-console.warn(’[SandboxLoop] Engine2Sandbox failed, falling back to basic ground:’, e);
+console.warn('[SandboxLoop] Engine2Sandbox failed, falling back to basic ground:', e);
 }
 }
 // Fallback flat ground with texture — also used when Engine2Sandbox is missing or throws
@@ -2732,18 +2686,18 @@ const mat = new THREE.MeshStandardMaterial({ color: 0x2d5a1b, roughness: 0.85, m
 try {
 const loader = new THREE.TextureLoader();
 const tex = loader.load(
-‘assets/textures/mossy_brick_diff_4k.jpg’,
+'assets/textures/mossy_brick_diff_4k.jpg',
 function(t) { mat.map = t; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); mat.color.setHex(0xffffff); mat.needsUpdate = true; },
 undefined,
 function() {
-loader.load(‘assets/textures/ground/color.jpg’,
+loader.load('assets/textures/ground/color.jpg',
 function(t) { mat.map = t; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); mat.color.setHex(0xffffff); mat.needsUpdate = true; },
 undefined,
 function() { /* all textures failed, plain colour is fine */ }
 );
 }
 );
-void tex; // texture object kept alive by THREE’s cache
+void tex; // texture object kept alive by THREE's cache
 } catch (e) {
 // keep plain-colour material
 }
@@ -2765,19 +2719,18 @@ function _initPlayer() {
 // ── Camp Bridge: calculateTotalPlayerStats() aggregates ALL permanent bonuses
 // from the Camp (skill tree, buildings, gear, neural matrix, attributes).
 // Exposed by stat-aggregator.js, which is loaded before sandbox-loop.js.
-if (typeof window.calculateTotalPlayerStats === ‘function’) {
+if (typeof window.calculateTotalPlayerStats === 'function') {
 try {
 playerStats = window.calculateTotalPlayerStats();
 // Inject into window so other systems can read it
 window.playerStats = playerStats;
-console.log(’[SandboxLoop] calculateTotalPlayerStats() applied — all camp bonuses loaded.’);
+console.log('[SandboxLoop] calculateTotalPlayerStats() applied — all camp bonuses loaded.');
 } catch (e) {
-console.warn(’[SandboxLoop] calculateTotalPlayerStats() error (non-fatal):’, e);
+console.warn('[SandboxLoop] calculateTotalPlayerStats() error (non-fatal):', e);
 playerStats = null;
 }
 }
 
-```
 // Fallback: if aggregator unavailable, use base defaults + skill tree only
 if (!playerStats) {
   if (typeof getDefaultPlayerStats === 'function') {
@@ -2828,7 +2781,6 @@ _buildSpiralDoor();
 _buildGunModel();
 _spawnIntroActive = true;
 _spawnIntroTimer = 0;
-```
 
 }
 
@@ -2870,7 +2822,6 @@ baseRadius: ringR,
 }
 }
 
-```
 // Elevator platform — simple disc below the player
 const platGeo = new THREE.CylinderGeometry(1.1, 1.2, 0.12, 20);
 const platMat = new THREE.MeshStandardMaterial({
@@ -2887,7 +2838,6 @@ scene.add(_elevatorPlatform);
 _spawnLight = new THREE.PointLight(0xFFAA44, 0, 12);
 _spawnLight.position.set(0, -1.0, 0);
 scene.add(_spawnLight);
-```
 
 }
 
@@ -2929,7 +2879,6 @@ if (!_spawnIntroActive || !player || !player.mesh) return;
 _spawnIntroTimer += dt;
 const t = Math.min(1, _spawnIntroTimer / SPAWN_INTRO_DURATION);
 
-```
 // ── Phase 1 (t 0→0.3): Door appears, starts spinning, light ramps up ────
 const doorAppear = Math.min(1, t / 0.3);
 
@@ -2986,7 +2935,6 @@ if (t >= 1) {
   _tmpV3.set(0, 2, 0);
   createFloatingText('READY!', _tmpV3, '#FFD700');
 }
-```
 
 }
 
@@ -2995,7 +2943,6 @@ function _movePlayer(dt) {
 if (!player || !player.mesh) return;
 const rawDir = _getMoveDir();
 
-```
 // ── Stats with safe fallbacks ──────────────────────────────────────────────
 const ps         = playerStats || {};
 // topSpeed: world-units/sec.  Use new stat if set, otherwise derive from walkSpeed.
@@ -3095,7 +3042,6 @@ if (camera) {
   camera.position.lerp(_camTarget, 0.06);
   camera.lookAt(player.mesh.position);
 }
-```
 
 }
 
@@ -3108,52 +3054,52 @@ _hudTimer = 0;
 if (!playerStats) return;
 try {
 const hpPct = Math.max(0, (playerStats.hp / playerStats.maxHp) * 100);
-const hpFill = document.getElementById(‘hp-fill’);
-const hpText = document.getElementById(‘hp-text’);
-if (hpFill) hpFill.style.width = hpPct + ‘%’;
-if (hpText) hpText.innerText = ’HP: ’ + Math.ceil(playerStats.hp) + ‘/’ + playerStats.maxHp;
+const hpFill = document.getElementById('hp-fill');
+const hpText = document.getElementById('hp-text');
+if (hpFill) hpFill.style.width = hpPct + '%';
+if (hpText) hpText.innerText = 'HP: ' + Math.ceil(playerStats.hp) + '/' + playerStats.maxHp;
 _refreshExpBar();
 } catch (e) {}
 }
 
 // ─── Blood system init ────────────────────────────────────────────────────────
 function _initBloodSystem() {
-if (window.BloodSystem && typeof BloodSystem.init === ‘function’) {
+if (window.BloodSystem && typeof BloodSystem.init === 'function') {
 BloodSystem.init(scene);
 }
 // New v2 systems — guarded so missing scripts are harmless
-if (window.BloodV2 && typeof window.BloodV2.init === ‘function’) {
+if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
 window.BloodV2.init(scene);
 }
-if (window.GoreSim && typeof window.GoreSim.init === ‘function’) {
+if (window.GoreSim && typeof window.GoreSim.init === 'function') {
 window.GoreSim.init(scene, camera);
 }
-if (window.SlimePool && typeof window.SlimePool.init === ‘function’) {
+if (window.SlimePool && typeof window.SlimePool.init === 'function') {
 window.SlimePool.init(scene, 40);
 }
-if (window.WaveSpawner && typeof window.WaveSpawner.init === ‘function’) {
+if (window.WaveSpawner && typeof window.WaveSpawner.init === 'function') {
 window.WaveSpawner.init(scene, 9);
 }
-if (window.HitDetection && typeof window.HitDetection.init === ‘function’) {
+if (window.HitDetection && typeof window.HitDetection.init === 'function') {
 window.HitDetection.init(scene);
 }
 // Initialize trauma system alongside blood system
-if (window.TraumaSystem && typeof TraumaSystem.init === ‘function’) {
+if (window.TraumaSystem && typeof TraumaSystem.init === 'function') {
 TraumaSystem.init(scene);
 }
 }
 
 // ─── Rage combat system init ──────────────────────────────────────────────────
 function _initRageCombat() {
-if (window.GameRageCombat && typeof GameRageCombat.init === ‘function’) {
+if (window.GameRageCombat && typeof GameRageCombat.init === 'function') {
 try {
 GameRageCombat.init(scene, saveData, spawnParticles);
 // Make combat HUD visible in sandbox
-if (typeof GameRageCombat.setCombatHUDVisible === ‘function’) {
+if (typeof GameRageCombat.setCombatHUDVisible === 'function') {
 GameRageCombat.setCombatHUDVisible(true);
 }
 // Register special attack callback to handle damage to slimes
-if (typeof GameRageCombat.onSpecialAttack === ‘function’) {
+if (typeof GameRageCombat.onSpecialAttack === 'function') {
 GameRageCombat.onSpecialAttack((sa) => {
 if (!player || !player.mesh) return;
 const pPos = player.mesh.position;
@@ -3178,9 +3124,9 @@ _updateSlimeHPBar(s);
 }
 });
 }
-console.log(’[SandboxLoop] Rage combat system initialized’);
+console.log('[SandboxLoop] Rage combat system initialized');
 } catch (e) {
-console.warn(’[SandboxLoop] Failed to initialize rage combat:’, e);
+console.warn('[SandboxLoop] Failed to initialize rage combat:', e);
 }
 }
 }
@@ -3188,11 +3134,11 @@ console.warn(’[SandboxLoop] Failed to initialize rage combat:’, e);
 // ─── Object pool init ─────────────────────────────────────────────────────────
 function _initPools() {
 // Initialize the GameObjectPool (trail pool) with the active scene
-if (window.GameObjectPool && typeof GameObjectPool.init === ‘function’) {
+if (window.GameObjectPool && typeof GameObjectPool.init === 'function') {
 GameObjectPool.init(scene);
 }
 // Initialize entity pools from main.js if available
-if (typeof _ensureEntityPools === ‘function’) {
+if (typeof _ensureEntityPools === 'function') {
 _ensureEntityPools();
 }
 // Build our local projectile pool
@@ -3206,9 +3152,9 @@ _buildBulletHolePool();
 // Build pre-allocated EXP gem pool (critical for XP drops to work)
 // If ExpGem is not yet defined (rare race), retry on window load.
 _buildExpGemPool();
-if (typeof ExpGem === ‘undefined’) {
-window.addEventListener(‘load’, function () {
-if (typeof ExpGem !== ‘undefined’ && _expGemPool.length === 0) _buildExpGemPool();
+if (typeof ExpGem === 'undefined') {
+window.addEventListener('load', function () {
+if (typeof ExpGem !== 'undefined' && _expGemPool.length === 0) _buildExpGemPool();
 });
 }
 // Build pooled PointLight flash pool (muzzle flashes, hit lights)
@@ -3219,34 +3165,34 @@ _initSpatialHash();
 
 // ─── Sandbox status overlay ───────────────────────────────────────────────────
 function _buildSandboxOverlay() {
-const el = document.createElement(‘div’);
-el.id = ‘sandbox-overlay’;
+const el = document.createElement('div');
+el.id = 'sandbox-overlay';
 el.style.cssText = [
-‘position:fixed’,
-‘top:8px’,
-‘left:50%’,
-‘transform:translateX(-50%)’,
-‘background:rgba(0,0,0,0.65)’,
-‘color:#FFD700’,
-‘font-family:Bangers,cursive’,
-‘font-size:15px’,
-‘letter-spacing:1px’,
-‘padding:4px 18px’,
-‘border-radius:20px’,
-‘border:1px solid #FFD700’,
-‘z-index:9990’,
-‘pointer-events:none’,
-‘text-align:center’,
-].join(’;’);
+'position:fixed',
+'top:8px',
+'left:50%',
+'transform:translateX(-50%)',
+'background:rgba(0,0,0,0.65)',
+'color:#FFD700',
+'font-family:Bangers,cursive',
+'font-size:15px',
+'letter-spacing:1px',
+'padding:4px 18px',
+'border-radius:20px',
+'border:1px solid #FFD700',
+'z-index:9990',
+'pointer-events:none',
+'text-align:center',
+].join(';');
 // Object pooling is active when the global GameObjectPool/ObjectPool system is available
 // OR when our local projectile pool has been successfully pre-allocated.
 const poolActive = !!(window.GameObjectPool || window.ObjectPool) || _projPool.length > 0;
 const poolBadge = poolActive
-? ‘<span style="color:#00FF88">✔ Object Pooling Active</span>’
-: ‘<span style="color:#FF4444">✘ Object Pooling Inactive</span>’;
-el.innerHTML = ‘⚙️ ENGINE 2.0 SANDBOX  |  WASD/Joystick to move  |  Mouse/Right-Joystick to aim  |  ’ + poolBadge;
+? '<span style="color:#00FF88">✔ Object Pooling Active</span>'
+: '<span style="color:#FF4444">✘ Object Pooling Inactive</span>';
+el.innerHTML = '⚙️ ENGINE 2.0 SANDBOX  |  WASD/Joystick to move  |  Mouse/Right-Joystick to aim  |  ' + poolBadge;
 document.body.appendChild(el);
-console.log(’[SandboxLoop] ’ + (poolActive ? ‘✔ Object Pooling Active’ : ‘✘ Object Pooling Inactive’));
+console.log('[SandboxLoop] ' + (poolActive ? '✔ Object Pooling Active' : '✘ Object Pooling Inactive'));
 }
 
 // ─── WaveManager — encapsulates survivor-style wave spawning logic ───────────
@@ -3261,7 +3207,6 @@ _spawnTimer = _spawnInterval;
 _spawnWave();
 }
 
-```
   _escalationTimer -= dt;
   if (_escalationTimer <= 0) {
     _escalationTimer = ESCALATION_INTERVAL;
@@ -3273,7 +3218,6 @@ _spawnWave();
       ' interval=' + _spawnInterval.toFixed(2) + 's');
   }
 }
-```
 
 };
 
@@ -3290,7 +3234,6 @@ _updateGems(dt);
 function _animate(nowMs) {
 _rafId = requestAnimationFrame(_animate);
 
-```
 try {
   const rawDt = Math.min((nowMs - _lastTime) / 1000, 0.05); // cap at 50 ms
   _lastTime = nowMs;
@@ -3477,7 +3420,6 @@ try {
     console.error('[SandboxLoop] _animate error:', e);
   }
 }
-```
 
 }
 
@@ -3486,7 +3428,6 @@ function _boot() {
 if (_ready) return;
 _ready = true;
 
-```
 console.log('[🎮 SandboxLoop] Starting Sandbox 2.0 boot sequence...');
 
 // Bug 1 fix: set sandbox mode flag BEFORE any init calls so world-gen.js
@@ -3586,13 +3527,12 @@ try {
   _showError('Boot error: ' + (e && e.message ? e.message : String(e)));
   console.error('[SandboxLoop] _boot error:', e);
 }
-```
 
 }
 
 // Boot when DOM is ready
-if (document.readyState === ‘loading’) {
-document.addEventListener(‘DOMContentLoaded’, _boot);
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', _boot);
 } else {
 _boot();
 }
