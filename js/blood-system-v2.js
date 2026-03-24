@@ -76,6 +76,7 @@ bug:      { base: 0xaadd00, dark: 0x667700, organ: 0xddff00, mist: 0xccee33 },
 human:    { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
 alien:    { base: 0x8800ff, dark: 0x440088, organ: 0xcc44ff, mist: 0xaa33ee },
 robot:    { base: 0x88aaff, dark: 0x334488, organ: 0xffffff, mist: 0xaaccff },
+crawler:  { base: 0x994422, dark: 0x662200, organ: 0xcc6633, mist: 0xbb7744 },
 default:  { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
 };
 

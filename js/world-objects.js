@@ -1098,6 +1098,7 @@
     _buildGrass();
     _buildStonehenge();
     _buildLoreLake();
+    _buildHiddenMeshes();
 
     console.log('[WorldObjects] ✓ Static world built:',
       _trees.length, 'trees,',
@@ -1115,6 +1116,7 @@
     _updateSway(dt);
     _updateAmbient(dt);
     if (_gatherCooldown > 0) _gatherCooldown -= dt;
+    _updateHiddenEvents(dt);
   };
 
   /**
@@ -1146,6 +1148,192 @@
 
   /** Get current day/night time (0-1) */
   WorldObjects.getDayTime = function () { return _dayTime; };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HIDDEN ENVIRONMENTAL EVENTS
+  // Two deeply hidden, undocumented atmospheric surprises
+  // ═══════════════════════════════════════════════════════════════════════════
+  var _hiddenEventTimer = 0;
+  var _glyphGroup = null;
+  var _glyphActive = false;
+  var _glyphFade = 0;
+  var _watcherMesh = null;
+  var _watcherActive = false;
+  var _watcherFade = 0;
+  var _watcherPulse = 0;
+
+  function _buildHiddenMeshes() {
+    if (!_scene) return;
+
+    // Event 1: Ancient Annunaki Glyphs above Stonehenge
+    _glyphGroup = new THREE.Group();
+    _glyphGroup.visible = false;
+    var glyphMat = new THREE.MeshBasicMaterial({
+      color: 0x00FFCC, transparent: true, opacity: 0,
+      side: THREE.DoubleSide, depthWrite: false
+    });
+    // Create 7 floating glyph rings (torus knots as ancient symbols)
+    for (var g = 0; g < 7; g++) {
+      var radius = 0.3 + Math.random() * 0.4;
+      var glyph = new THREE.Mesh(
+        new THREE.TorusKnotGeometry(radius, 0.06, 32, 6, 2, 3),
+        glyphMat.clone()
+      );
+      var angle = (g / 7) * Math.PI * 2;
+      var dist = 3 + Math.random() * 2;
+      glyph.position.set(
+        Math.cos(angle) * dist,
+        8 + g * 0.6 + Math.random() * 2,
+        Math.sin(angle) * dist
+      );
+      glyph.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+      glyph._baseY = glyph.position.y;
+      glyph._phase = Math.random() * Math.PI * 2;
+      glyph._rotSpeed = 0.3 + Math.random() * 0.5;
+      _glyphGroup.add(glyph);
+    }
+    // Center column of light (vertical beam)
+    var beamGeo = new THREE.CylinderGeometry(0.15, 0.15, 12, 8);
+    var beamMat = new THREE.MeshBasicMaterial({
+      color: 0x00FFAA, transparent: true, opacity: 0, depthWrite: false
+    });
+    var beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.set(0, 6, 0);
+    _glyphGroup.add(beam);
+    _glyphGroup._beam = beam;
+    // Position at Stonehenge center (approx 45, 0, 45)
+    _glyphGroup.position.set(45, 0, 45);
+    _scene.add(_glyphGroup);
+
+    // Event 2: The Watcher — giant translucent eye in the sky
+    var watcherGroup = new THREE.Group();
+    // Outer eye (iris/sclera)
+    var eyeGeo = new THREE.SphereGeometry(6, 24, 16);
+    var eyeMat = new THREE.MeshBasicMaterial({
+      color: 0x220033, transparent: true, opacity: 0, depthWrite: false
+    });
+    var eyeMesh = new THREE.Mesh(eyeGeo, eyeMat);
+    eyeMesh.scale.set(1.0, 0.45, 1.0); // flatten to eye shape
+    watcherGroup.add(eyeMesh);
+    // Iris
+    var irisGeo = new THREE.SphereGeometry(2.5, 20, 12);
+    var irisMat = new THREE.MeshBasicMaterial({
+      color: 0x990044, transparent: true, opacity: 0, depthWrite: false
+    });
+    var iris = new THREE.Mesh(irisGeo, irisMat);
+    iris.position.set(0, 0, 2.0);
+    iris.scale.set(1, 1, 0.3);
+    watcherGroup.add(iris);
+    // Pupil
+    var pupilGeo = new THREE.SphereGeometry(1.2, 16, 10);
+    var pupilMat = new THREE.MeshBasicMaterial({
+      color: 0x000000, transparent: true, opacity: 0, depthWrite: false
+    });
+    var pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.position.set(0, 0, 3.2);
+    pupil.scale.set(1, 1, 0.2);
+    watcherGroup.add(pupil);
+    // Veins (thin torus shapes)
+    for (var v = 0; v < 5; v++) {
+      var vein = new THREE.Mesh(
+        new THREE.TorusGeometry(3 + Math.random() * 2.5, 0.08, 6, 20),
+        new THREE.MeshBasicMaterial({
+          color: 0x440011, transparent: true, opacity: 0, depthWrite: false
+        })
+      );
+      vein.rotation.set(Math.random() * 0.5, Math.random() * Math.PI, 0);
+      watcherGroup.add(vein);
+    }
+    watcherGroup.position.set(0, 35, 0);
+    watcherGroup.rotation.x = -Math.PI / 2; // face down
+    watcherGroup.visible = false;
+    _scene.add(watcherGroup);
+    _watcherMesh = watcherGroup;
+    _watcherMesh._eyeMat = eyeMat;
+    _watcherMesh._irisMat = irisMat;
+    _watcherMesh._pupilMat = pupilMat;
+  }
+
+  function _updateHiddenEvents(dt) {
+    _hiddenEventTimer += dt;
+
+    // Event 1: Annunaki Glyphs — appear near midnight (dayTime ~0.0-0.05)
+    var isDeepNight = _dayTime < 0.05 || _dayTime > 0.95;
+    var glyphShouldShow = isDeepNight && (_hiddenEventTimer > 60);
+    if (glyphShouldShow && !_glyphActive && _glyphGroup) {
+      _glyphActive = true;
+      _glyphFade = 0;
+      _glyphGroup.visible = true;
+    }
+    if (_glyphActive && _glyphGroup) {
+      if (isDeepNight) {
+        _glyphFade = Math.min(1, _glyphFade + dt * 0.3);
+      } else {
+        _glyphFade = Math.max(0, _glyphFade - dt * 0.5);
+        if (_glyphFade <= 0) {
+          _glyphActive = false;
+          _glyphGroup.visible = false;
+        }
+      }
+      // Animate glyphs: rotate, bob, pulse opacity
+      for (var i = 0; i < _glyphGroup.children.length; i++) {
+        var child = _glyphGroup.children[i];
+        if (child === _glyphGroup._beam) {
+          child.material.opacity = _glyphFade * 0.15 * (0.7 + Math.sin(_hiddenEventTimer * 2) * 0.3);
+          continue;
+        }
+        if (child._baseY !== undefined) {
+          child.rotation.y += child._rotSpeed * dt;
+          child.rotation.x += child._rotSpeed * 0.3 * dt;
+          child.position.y = child._baseY + Math.sin(_hiddenEventTimer * 0.8 + child._phase) * 0.5;
+          child.material.opacity = _glyphFade * (0.4 + Math.sin(_hiddenEventTimer * 1.5 + child._phase) * 0.3);
+          child.material.color.setHex(
+            _hiddenEventTimer % 8 < 4 ? 0x00FFCC : 0x8800FF
+          );
+        }
+      }
+    }
+
+    // Event 2: The Watcher — appears rarely during night, stares at player
+    var watcherTrigger = _dayTime > 0.80 && _dayTime < 0.90 && _hiddenEventTimer > 120;
+    if (watcherTrigger && !_watcherActive && _watcherMesh) {
+      _watcherActive = true;
+      _watcherFade = 0;
+      _watcherPulse = 0;
+      _watcherMesh.visible = true;
+    }
+    if (_watcherActive && _watcherMesh) {
+      var inWindow = _dayTime > 0.78 && _dayTime < 0.92;
+      if (inWindow) {
+        _watcherFade = Math.min(1, _watcherFade + dt * 0.15);
+      } else {
+        _watcherFade = Math.max(0, _watcherFade - dt * 0.3);
+        if (_watcherFade <= 0) {
+          _watcherActive = false;
+          _watcherMesh.visible = false;
+        }
+      }
+      _watcherPulse += dt * 1.5;
+      var opBase = _watcherFade * 0.25;
+      var pulse = Math.sin(_watcherPulse) * 0.08;
+      _watcherMesh._eyeMat.opacity = opBase + pulse;
+      _watcherMesh._irisMat.opacity = (opBase + pulse) * 1.5;
+      _watcherMesh._pupilMat.opacity = (opBase + pulse) * 2.0;
+      // Slow rotation (eerie drift)
+      _watcherMesh.rotation.z += dt * 0.05;
+      // Veins pulse
+      for (var i = 0; i < _watcherMesh.children.length; i++) {
+        var c = _watcherMesh.children[i];
+        if (c.geometry && c.geometry.type === 'TorusGeometry') {
+          c.material.opacity = opBase * 0.6 * (0.5 + Math.sin(_watcherPulse + i) * 0.5);
+        }
+      }
+    }
+  }
 
   window.WorldObjects = WorldObjects;
   console.log('[WorldObjects] Module loaded');

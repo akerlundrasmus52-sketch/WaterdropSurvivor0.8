@@ -388,7 +388,47 @@ description: 'Vital fluid core — death when depleted',
 };
 
 // ─────────────────────────────────────────────
-//  BLOOD PARTICLE PHYSICS
+//  CRAWLER ANATOMY
+//  Multi-segmented worm — each zone maps to a
+//  body region from head to tail.
+// ─────────────────────────────────────────────
+const CRAWLER_ANATOMY = {
+head: {
+hp: 40, maxHp: 40,
+yRange: [0.4, 1.0],
+color: 0x994422,
+deathReaction: 'head_burst',
+bleedRate: 0.5,
+description: 'Armored head — splits into toothed maw',
+},
+thorax: {
+hp: 60, maxHp: 60,
+yRange: [0.0, 0.4],
+color: 0xcc6633,
+deathReaction: 'thorax_rupture',
+bleedRate: 0.8,
+pumpBlood: true,
+description: 'Central thorax — vital organs cluster',
+},
+abdomen: {
+hp: 80, maxHp: 80,
+yRange: [-0.5, 0.0],
+color: 0xbb7744,
+deathReaction: 'abdomen_burst',
+bleedRate: 0.6,
+description: 'Segmented abdomen — bursts into chunks on death',
+},
+tail: {
+hp: 50, maxHp: 50,
+yRange: [-1.0, -0.5],
+color: 0x885522,
+deathReaction: 'tail_sever',
+bleedRate: 0.4,
+description: 'Trailing segments — can be severed',
+},
+};
+
+// ─────────────────────────────────────────────
 //  Each blood drop is a rigid body with:
 //  - initial velocity from impact
 //  - gravity
@@ -982,7 +1022,7 @@ const wound = gore.addWound(localPos, profile.woundRadius, organHit, {
   depth:      profile.penetration,
   cauterized: profile.cauterizes || false,
   frozen:     profile.freezesBlood || false,
-  color:      (enemy.enemyType === 'slime' && SLIME_ANATOMY[organHit]) ? SLIME_ANATOMY[organHit].color : 0x880000,
+  color:      (enemy.enemyType === 'slime' && SLIME_ANATOMY[organHit]) ? SLIME_ANATOMY[organHit].color : (enemy.enemyType === 'crawler' && CRAWLER_ANATOMY[organHit]) ? CRAWLER_ANATOMY[organHit].color : 0x880000,
 });
 
 // ── SPAWN BLOOD BASED ON WEAPON TYPE ──────
@@ -1682,6 +1722,7 @@ return {
 // ────────────────────────────────────────
 WEAPON_GORE,
 SLIME_ANATOMY,
+CRAWLER_ANATOMY,
 };
 
 // Expose globally
