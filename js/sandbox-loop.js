@@ -3915,13 +3915,16 @@
     _weatherFrameCounter++;
     // Re-center particle cloud around player every 60 frames
     var recenter = (_weatherFrameCounter % 60 === 0);
+    // Scale horizontal drift by dt so motion is frame-rate independent.
+    // Using 60 as a reference FPS keeps behavior similar at 60 FPS.
+    var driftScale = dt * 60;
     for (var i = 0; i < WEATHER_COUNT; i++) {
       var idx = i * 3;
       // Downward movement
       pos[idx + 1] += _weatherVelocities[i] * dt;
-      // Horizontal drift (sin-wave swaying)
-      pos[idx]     += Math.sin(nowMs * 0.001 + i) * 0.02;
-      pos[idx + 2] += Math.cos(nowMs * 0.0008 + i * 0.5) * 0.015;
+      // Horizontal drift (sin-wave swaying), scaled by dt
+      pos[idx]     += Math.sin(nowMs * 0.001 + i) * 0.02  * driftScale;
+      pos[idx + 2] += Math.cos(nowMs * 0.0008 + i * 0.5) * 0.015 * driftScale;
       // Respawn particle when it falls below floor
       if (pos[idx + 1] < -2) {
         pos[idx]     = px + (Math.random() - 0.5) * 200;
