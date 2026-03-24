@@ -3893,6 +3893,9 @@
         blending: THREE.AdditiveBlending,
       });
       _weatherParticles = new THREE.Points(_weatherGeo, _weatherMat);
+      // Disable frustum culling because geometry positions are continuously re-centered
+      // around the player without updating the geometry's bounding volume.
+      _weatherParticles.frustumCulled = false;
       scene.add(_weatherParticles);
       // Weather toggle exposed globally
       window._toggleWeather = function() {
