@@ -45,7 +45,7 @@ These exist in the MAIN game (world-gen.js), NOT in Sandbox 2.0:
 - ✅ Companion egg near UFO (quest objective)
 - ✅ Lake with waterfall at position (30, -30) — southeast area
 - ✅ Enhanced reflective lake with physics material
-- ❌ Annunaki obelisk — NOT IMPLEMENTED (Annunaki features are in neural-1945.js minigame only)
+- ✅ Annunaki obelisk at position (25, -35) — southwest region near pyramid (IMPLEMENTED 2026-03-24)
 
 **Note**: These world features are in `js/world-gen.js` (the old map file). Sandbox 2.0 does NOT include world generation.
 

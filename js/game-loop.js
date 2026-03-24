@@ -3307,6 +3307,53 @@
         }
       }
 
+      // ── Annunaki Obelisk: crystal rotation + energy ring spin + pulsing lights ──
+      if (window._annunakiObelisk) {
+        const obelisk = window._annunakiObelisk;
+
+        // Rotate and pulse the top energy crystal
+        if (obelisk.crystal) {
+          obelisk.crystal.userData.phase = (obelisk.crystal.userData.phase || 0) + dt * 1.5;
+          obelisk.crystal.rotation.y += dt * 0.8;
+          obelisk.crystal.rotation.x = Math.sin(obelisk.crystal.userData.phase) * 0.3;
+          // Pulse the crystal's emissive intensity
+          obelisk.crystal.material.emissiveIntensity = 1.0 + Math.sin(obelisk.crystal.userData.phase * 2) * 0.4;
+        }
+
+        // Rotate energy rings at different speeds
+        if (obelisk.rings && obelisk.rings.length > 0) {
+          obelisk.rings.forEach((ring, idx) => {
+            if (ring.userData.isEnergyRing) {
+              ring.userData.phase += dt * ring.userData.speed;
+              ring.rotation.z = ring.userData.phase;
+              // Subtle opacity pulse
+              ring.material.opacity = (0.3 - idx * 0.08) + Math.sin(ring.userData.phase * 1.5) * 0.1;
+            }
+          });
+        }
+
+        // Pulse the top and base lights
+        const obeliskPhase = (window._obeliskLightPhase || 0) + dt * 2.0;
+        window._obeliskLightPhase = obeliskPhase;
+
+        if (obelisk.topLight) {
+          obelisk.topLight.intensity = 2.5 + Math.sin(obeliskPhase) * 0.8;
+        }
+        if (obelisk.baseLight) {
+          obelisk.baseLight.intensity = 1.3 + Math.sin(obeliskPhase * 1.3) * 0.5;
+        }
+
+        // Pulse pylon crystals
+        if (obelisk.pylonCrystals && obelisk.pylonCrystals.length > 0) {
+          obelisk.pylonCrystals.forEach(crystal => {
+            crystal.userData.phase = (crystal.userData.phase || 0) + dt * 2.5;
+            crystal.rotation.y += dt * 1.2;
+            // Sync pulse with main crystal but offset by initial phase
+            crystal.material.opacity = 0.6 + Math.sin(obeliskPhase * 2 + crystal.userData.phase) * 0.2;
+          });
+        }
+      }
+
       // Lava damage: player takes damage when close to volcano (OPTIMIZED: ultra-compact at -35, 0, -35)
       if (player && isGameActive && !isGameOver) {
         const LAVA_DAMAGE_RADIUS = 8;   // Distance from volcano center to take lava damage
