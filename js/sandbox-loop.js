@@ -210,9 +210,9 @@
       if (playerStats.exp >= playerStats.expReq) {
         playerStats.exp -= playerStats.expReq;
         playerStats.lvl++;
-        // Soft early-game curve: 3 gems → level 1, 4 → level 2, ~6 → level 3.
-        // Balanced for ~65 max level. Formula: 60 + 20*(lvl-1)^1.3
-        // L2→3: 80 XP (4 gems) | L3→4: ~109 (5-6 gems) | L10: ~356 | L65: ~4000
+        // Soft early-game curve: L1→2 uses GAME_CONFIG.baseExpReq (45 XP, ~2–3 common gems),
+        // then L2→3+ follow: 60 + 20*(lvl - 1)^1.3, balanced for ~65 max level.
+        // L1→2: 45 XP (~2–3 gems) | L2→3: 80 XP (4 gems) | L3→4: ~109 (5–6 gems) | L10: ~356 | L65: ~4000
         playerStats.expReq = Math.floor(60 + 20 * Math.pow(playerStats.lvl - 1, 1.3));
         _onLevelUp();
       }
