@@ -14,13 +14,13 @@
     // EXP gem tier colours — colour-coded by enemy difficulty tier
     // Common (tier 0): Grey | Green (tier 1) | Blue (tier 2) | Purple (tier 3) | Orange (tier 4) | Red (tier 5) | Mythical (tier 6)
     const GEM_TIER_COLORS = [
-      { color: 0xCCCCCC, emissive: 0x888888 }, // 0 — Common  (Grey)
-      { color: 0x44FF66, emissive: 0x22AA33 }, // 1 — Uncommon (Green)
-      { color: 0x5DADE2, emissive: 0x2E86C1 }, // 2 — Rare (Blue)
-      { color: 0xAA44FF, emissive: 0x6600CC }, // 3 — Epic (Purple)
-      { color: 0xFF8800, emissive: 0xCC5500 }, // 4 — Boss (Orange)
-      { color: 0xFF2222, emissive: 0xAA0000 }, // 5 — Legendary (Red)
-      { color: 0xFFD700, emissive: 0xFF8C00 }  // 6 — Mythical (Gold shimmer)
+      { color: 0xEEEEFF, emissive: 0xBBCCFF }, // 0 — Common  (Bright White-Grey)
+      { color: 0x66FF88, emissive: 0x33AA44 }, // 1 — Uncommon (Bright Green)
+      { color: 0x88CCFF, emissive: 0x4499DD }, // 2 — Rare (Bright Blue)
+      { color: 0xCC88FF, emissive: 0x9933CC }, // 3 — Epic (Bright Purple)
+      { color: 0xFFCC44, emissive: 0xFF8800 }, // 4 — Boss (Bright Gold/Orange)
+      { color: 0xFF5555, emissive: 0xCC1100 }, // 5 — Legendary (Bright Red)
+      { color: 0xFFDD00, emissive: 0xFF8C00 }  // 6 — Mythical (Bright Gold shimmer)
     ];
 
     // XP multiplier per gem tier — higher tiers give more EXP
@@ -40,20 +40,20 @@
     // Value 1-5: Common (White/Light Blue) | 6-15: Rare (Deep Blue) |
     // 16-30: Epic (Purple) | 31-49: Legendary (Gold) | 50+: Mythic (Red/Black pulsing)
     function _gemRarityColorForValue(value) {
-      if (value >= 50) return { color: 0xCC0000, emissive: 0x660000, particle: 0xFF2200, mythic: true }; // Mythic
-      if (value >= 31) return { color: 0xFFD700, emissive: 0xCC8800, particle: 0xFFD700, mythic: false }; // Legendary
-      if (value >= 16) return { color: 0xAA44FF, emissive: 0x6600CC, particle: 0xBB66FF, mythic: false }; // Epic
-      if (value >=  6) return { color: 0x1A5ECC, emissive: 0x0033AA, particle: 0x4488FF, mythic: false }; // Rare (Deep Blue)
-      return               { color: 0xD0E8FF, emissive: 0x7799BB, particle: 0xADD8E6, mythic: false };    // Common (White/Light Blue)
+      if (value >= 50) return { color: 0xFF5555, emissive: 0xCC1100, particle: 0xFF2200, mythic: true }; // Mythic - bright red
+      if (value >= 31) return { color: 0xFFDD00, emissive: 0xFF8800, particle: 0xFFD700, mythic: false }; // Legendary - bright gold
+      if (value >= 16) return { color: 0xCC88FF, emissive: 0x9933CC, particle: 0xBB66FF, mythic: false }; // Epic - bright purple
+      if (value >=  6) return { color: 0x88CCFF, emissive: 0x4499DD, particle: 0x4488FF, mythic: false }; // Rare - bright blue
+      return               { color: 0xEEEEFF, emissive: 0xBBCCFF, particle: 0xCCDDFF, mythic: false };    // Common - bright white-grey
     }
 
     class ExpGem {
       constructor(x, z, sourceWeapon, hitForce, enemyType) {
-        // Use shared star geometry (created once) — 25% larger than base size (reduced from prior 50% increase)
+        // Use shared star geometry (created once) — 2.5x base size (100% bigger than previous 1.25x)
         if (!_expGemStarGeometry) {
           const starPoints = 5;
-          const outerR = 0.28 * 0.4025 * 1.25; // 25% larger
-          const innerR = 0.12 * 0.4025 * 1.25;
+          const outerR = 0.28 * 0.4025 * 2.5; // 100% bigger than the 1.25x version
+          const innerR = 0.12 * 0.4025 * 2.5;
           const starShape = new THREE.Shape();
           for (let i = 0; i < starPoints * 2; i++) {
             const angle = (i / (starPoints * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -62,14 +62,14 @@
             else starShape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
           }
           starShape.closePath();
-          const extrudeSettings = { depth: 0.04025 * 1.25, bevelEnabled: true, bevelSize: 0.01265 * 1.25, bevelThickness: 0.01265 * 1.25, bevelSegments: 2 };
+          const extrudeSettings = { depth: 0.04025 * 2.5, bevelEnabled: true, bevelSize: 0.01265 * 2.5, bevelThickness: 0.01265 * 2.5, bevelSegments: 2 };
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x5DADE2,
-            emissive: 0x2E86C1,
-            emissiveIntensity: 0.4,
-            metalness: 0.3,
+            color: 0x88CCFF,
+            emissive: 0x4499DD,
+            emissiveIntensity: 0.8,
+            metalness: 0.2,
             roughness: 0.05,
             clearcoat: 1.0,
             clearcoatRoughness: 0.05,
@@ -94,9 +94,9 @@
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
         // Pop out from enemy body in random direction — X/Z set now; Y after launch style
-        // Initial horizontal offset 0.5–2.5 units from enemy (1.5 enemy height = typical visual range)
+        // Initial horizontal offset 0.25–1.25 units from enemy (50% of previous 0.5–2.5)
         var popAngle = Math.random() * Math.PI * 2;
-        var popDist  = 0.5 + Math.random() * 2.0; // 0.5-2.5 units
+        var popDist  = 0.25 + Math.random() * 1.0; // 50% shorter: was 0.5-2.5
         var startX   = x + Math.cos(popAngle) * popDist;
         var startZ   = z + Math.sin(popAngle) * popDist;
         // Temporary position — Y will be overwritten after launch style selection
@@ -109,7 +109,7 @@
         // Outline geometry is shared across all ExpGem instances (created once)
         if (!_expGemOutlineGeometry) {
           const s = new THREE.Shape();
-          const pts = 5, outerO = 0.33 * 0.4025 * 1.25, innerO = 0.14 * 0.4025 * 1.25;
+          const pts = 5, outerO = 0.33 * 0.4025 * 2.5, innerO = 0.14 * 0.4025 * 2.5;
           for (let i = 0; i < pts * 2; i++) {
             const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
             const r = i % 2 === 0 ? outerO : innerO;
@@ -167,21 +167,21 @@
         var popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
           // High arc — flies upward to about enemy head height (~1.3-1.5 units, capped at physForce=1.5)
-          popSpeed = (0.01 + Math.random() * 0.015) * physForce; // Reduced horizontal speed
-          this.vy = (0.20 + Math.random() * 0.08) * physForce; // Reduced vertical speed for lower arc
+          popSpeed = (0.005 + Math.random() * 0.0075) * physForce; // 50% of original 0.01-0.025 range
+          this.vy = (0.20 + Math.random() * 0.08) * physForce; // Keep vertical speed the same
           startY = 0.8 + Math.random() * 0.3; // Start higher
           this.gravity = -0.018; // Lighter gravity for smoother arc
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
           // Mostly drops near enemy with slow "plopping" feel — varies speed
-          popSpeed = (0.005 + Math.random() * 0.012) * physForce; // Very slow
+          popSpeed = (0.0025 + Math.random() * 0.006) * physForce; // 50% of original
           this.vy = (0.08 + Math.random() * 0.06) * physForce; // Low height
           startY = 1.0 + Math.random() * 0.5; // Variable start height
           this.gravity = -0.020; // Moderate gravity
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
           // Rolls along ground quickly with spinning rotation
-          popSpeed = (0.02 + Math.random() * 0.03) * physForce; // Medium horizontal
+          popSpeed = (0.01 + Math.random() * 0.015) * physForce; // 50% of original 0.02-0.05
           this.vy = (0.04 + Math.random() * 0.06) * physForce; // Very low arc
           startY = 0.3 + Math.random() * 0.2;
           this.gravity = -0.019;
@@ -189,7 +189,7 @@
         } else {
           // 'pop' — classic burst with varied speed
           var speedVariation = Math.random(); // 0-1 for speed variance
-          popSpeed = (0.015 + speedVariation * 0.04) * physForce; // Moderate variance: 0.015-0.055
+          popSpeed = (0.0075 + speedVariation * 0.02) * physForce; // 50% of original 0.015-0.055
           this.vy = (0.12 + Math.random() * 0.10) * physForce; // Medium height (~1.0-1.4 units)
           startY = 0.6 + Math.random() * 0.4;
           this.gravity = -0.018;
@@ -264,9 +264,9 @@
           this.mesh.rotation.y += this.rotSpeedY * 0.2;
         }
         
-        // Pulsing black edge glow — sync with star's emissive intensity
+        // Pulsing emissive glow — brighter for visibility
         this.sparklePhase += 0.1;
-        const pulse = 0.35 + Math.sin(this.sparklePhase) * 0.25;
+        const pulse = 0.65 + Math.sin(this.sparklePhase) * 0.35; // 0.3–1.0 (brighter)
         this.mesh.material.emissiveIntensity = pulse;
         // Also pulse the black glow ring opacity
         if (this._glowRingMat) {
@@ -370,9 +370,9 @@
         this.value = gemBaseValue;
 
         // Reposition with pop — X/Z set now; Y will be set after launch-style is chosen
-        // Initial offset 0.5–2.5 units from enemy (1.5 enemy height = typical visual range)
+        // Initial offset 0.25–1.25 units from enemy (50% of previous 0.5–2.5)
         const popAngle = Math.random() * Math.PI * 2;
-        const popDist  = 0.5 + Math.random() * 2.0; // 0.5-2.5 units
+        const popDist  = 0.25 + Math.random() * 1.0; // 50% shorter: was 0.5-2.5
         const posX = x + Math.cos(popAngle) * popDist;
         const posZ = z + Math.sin(popAngle) * popDist;
         this.mesh.scale.set(0.01, 0.01, 0.01);
@@ -401,21 +401,21 @@
         let popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
           // High arc — flies upward to about enemy head height (~1.3-1.5 units, capped at physForce=1.5)
-          popSpeed = (0.01 + Math.random() * 0.015) * physForce; // Reduced horizontal speed
-          this.vy = (0.20 + Math.random() * 0.08) * physForce; // Reduced vertical speed for lower arc
+          popSpeed = (0.005 + Math.random() * 0.0075) * physForce; // 50% of original
+          this.vy = (0.20 + Math.random() * 0.08) * physForce; // Keep vertical speed the same
           startY = 0.8 + Math.random() * 0.3; // Start higher
           this.gravity = -0.018; // Lighter gravity for smoother arc
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
           // Mostly drops near enemy with slow "plopping" feel — varies speed
-          popSpeed = (0.005 + Math.random() * 0.012) * physForce; // Very slow
+          popSpeed = (0.0025 + Math.random() * 0.006) * physForce; // 50% of original
           this.vy = (0.08 + Math.random() * 0.06) * physForce; // Low height
           startY = 1.0 + Math.random() * 0.5; // Variable start height
           this.gravity = -0.020; // Moderate gravity
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
           // Rolls along ground quickly with spinning rotation
-          popSpeed = (0.02 + Math.random() * 0.03) * physForce; // Medium horizontal
+          popSpeed = (0.01 + Math.random() * 0.015) * physForce; // 50% of original
           this.vy = (0.04 + Math.random() * 0.06) * physForce; // Very low arc
           startY = 0.3 + Math.random() * 0.2;
           this.gravity = -0.019;
@@ -423,7 +423,7 @@
         } else {
           // 'pop' — classic burst with varied speed
           const speedVariation = Math.random(); // 0-1 for speed variance
-          popSpeed = (0.015 + speedVariation * 0.04) * physForce; // Moderate variance: 0.015-0.055
+          popSpeed = (0.0075 + speedVariation * 0.02) * physForce; // 50% of original
           this.vy = (0.12 + Math.random() * 0.10) * physForce; // Medium height (~1.0-1.4 units)
           startY = 0.6 + Math.random() * 0.4;
           this.gravity = -0.018;

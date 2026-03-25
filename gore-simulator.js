@@ -339,6 +339,26 @@ const WEAPON_GORE = {
 //  woundZone determines which organ was hit
 //  based on normalized hit position (y axis).
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+//  ENEMY COLOR TABLE — body/chunk/blood color per enemy type
+//  Keyed by enemy.enemyType string (matches sandbox-loop usage)
+// ─────────────────────────────────────────────
+const ENEMY_GORE_COLORS = {
+  'slime':         { body: 0x33cc44, chunk: 0x44FF66, blood: 0x33ee44 },
+  'leaping_slime': { body: 0x00bfff, chunk: 0x00ffff, blood: 0x55ddff },
+  'crawler':       { body: 0x8B4513, chunk: 0xDEB887, blood: 0x6B3410 },
+  'boss':          { body: 0xcc0000, chunk: 0xff4444, blood: 0xff0000 },
+};
+
+function _enemyChunkColor(enemy) {
+  const type = (enemy && enemy.enemyType) || 'slime';
+  return (ENEMY_GORE_COLORS[type] || ENEMY_GORE_COLORS['slime']).chunk;
+}
+function _enemyBloodColor(enemy) {
+  const type = (enemy && enemy.enemyType) || 'slime';
+  return (ENEMY_GORE_COLORS[type] || ENEMY_GORE_COLORS['slime']).blood;
+}
+
 const SLIME_ANATOMY = {
   membrane: {
     hp: 35, maxHp: 35,
@@ -976,7 +996,7 @@ const GoreSim = {
 
     // ── SPAWN BLOOD BASED ON WEAPON TYPE ──────
     if (profile.isExplosive) {
-      this._explosionBlood(hitPoint || enemyPos, profile, gore);
+      this._explosionBlood(hitPoint || enemyPos, profile, gore, _enemyBloodColor(enemy));
     } else if (profile.isSlashing) {
       this._slashBlood(hitPoint || enemyPos, hitNormal, profile, gore);
     } else if (profile.cauterizes) {
@@ -994,7 +1014,7 @@ const GoreSim = {
       const count = profile.chunkCount
         ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
         : 2;
-      this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile);
+      this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, _enemyChunkColor(enemy));
     }
 
     // ── ARTERIAL PUMP if heart hit ─────────────
@@ -1038,7 +1058,7 @@ const GoreSim = {
       for (const s of gore.streams) s.active = false;
     }
 
-    this._killExplosion(pos, profile, killedBy, enemy);
+    this._killExplosion(pos, profile, killedBy, enemy, _enemyChunkColor(enemy), _enemyBloodColor(enemy));
     if (gore) gore.cleanup();
     this._enemyGoreMap.delete(enemy.id || enemy.uuid);
   },
@@ -1049,6 +1069,8 @@ const GoreSim = {
   _bulletBlood(pos, normal, profile, gore, organ, localY) {
     const count = Math.ceil(profile.bloodVolume * 20);
     const speed = profile.bloodVelocity;
+    // Use enemy blood color when available (via gore state → enemy ref)
+    const enemyBloodCol = gore && gore.enemy ? _enemyBloodColor(gore.enemy) : (SLIME_ANATOMY[organ]?.color || 0xaa0000);
 
     // Entry wound spray — forward cone opposite to normal
     const hitDir = normal ? normal.clone().negate() : new THREE.Vector3(0, 0, 1);
@@ -1063,7 +1085,7 @@ const GoreSim = {
 
       const isMist = Math.random() < profile.mistDensity * 0.3;
       this._spawnDrop(pos, vel, {
-        color:      SLIME_ANATOMY[organ]?.color || 0xaa0000,
+        color:      enemyBloodCol,
         radius:     isMist ? 0.005 + Math.random() * 0.008 : 0.012 + Math.random() * 0.025,
         life:       isMist ? 1.0 + Math.random() * 0.5 : 2.5 + Math.random() * 1.5,
         maxBounces: isMist ? 0 : 3,
@@ -1083,7 +1105,7 @@ const GoreSim = {
           exitDir.z * (speed.min + Math.random() * speed.max) * profile.exitScale + (Math.random()-0.5)*3
         );
         this._spawnDrop(pos, vel, {
-          color:     0x880000,
+          color:     enemyBloodCol,
           radius:    0.018 + Math.random() * 0.03,
           life:      2.0 + Math.random() * 2,
           maxBounces: 4,
@@ -1166,7 +1188,9 @@ const GoreSim = {
   // ────────────────────────────────────────
   //  EXPLOSION BLOOD
   // ────────────────────────────────────────
-  _explosionBlood(pos, profile, gore) {
+  _explosionBlood(pos, profile, gore, bloodColor) {
+    const col     = bloodColor || 0xcc1100;
+    const colMist = bloodColor || 0xaa1100;
     const count = Math.ceil(profile.bloodVolume * 25);
     for (let i = 0; i < count; i++) {
       const angle  = Math.random() * Math.PI * 2;
@@ -1178,7 +1202,7 @@ const GoreSim = {
         Math.sin(angle) * Math.cos(elev) * speed
       );
       this._spawnDrop(pos, vel, {
-        color:      0xcc1100,
+        color:      col,
         radius:     0.015 + Math.random() * 0.04,
         life:       3.0 + Math.random() * 2,
         maxBounces: 4,
@@ -1193,7 +1217,7 @@ const GoreSim = {
         (Math.random()-0.5) * 12
       );
       this._spawnDrop(pos, vel, {
-        color:     0xaa1100,
+        color:     colMist,
         radius:    0.006 + Math.random() * 0.010,
         life:      1.5 + Math.random(),
         maxBounces: 0,
@@ -1379,12 +1403,15 @@ const GoreSim = {
   //  KILL EXPLOSION
   //  Final death — depends on weapon and killedBy organ
   // ────────────────────────────────────────
-  _killExplosion(pos, profile, killedBy, enemy) {
+  _killExplosion(pos, profile, killedBy, enemy, chunkColor, bloodColor) {
+    // Use enemy-specific colors when provided, fall back to green slime defaults
+    const _chunkCol = chunkColor || 0x22aa33;
+    const _bloodCol = bloodColor || 0x33ee44;
 
     if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
-      // MASSIVE chunk explosion
-      this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile);
-      this._explosionBlood(pos, profile, null);
+      // MASSIVE chunk explosion — use enemy-specific colors for both chunks and blood
+      this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile, _chunkCol);
+      this._explosionBlood(pos, profile, null, _bloodCol);
       return;
     }
 
@@ -1441,30 +1468,30 @@ const GoreSim = {
       return;
     }
 
-    // DEFAULT DEATH — based on which organ killed enemy
+    // DEFAULT DEATH — use enemy-specific blood/chunk colors
     const deathBloodCount  = 60 + Math.floor(profile.bloodVolume * 20);
-    const deathColor       = SLIME_ANATOMY[killedBy]?.color || 0xaa0000;
+    const deathColor       = _bloodCol;
 
     switch (killedBy) {
 
       case 'brain':
-        // Cross-eyed wobble → instant flat melt downward
-        // Brain fluid + regular blood
-        this._spawnBloodBurst(pos, null, deathBloodCount, 0xaaffaa, 'brain_death');
-        this._spawnBloodBurst(pos, null, 20, deathColor, 'normal');
+        // First burst: pale/luminous brain-fluid color (distinct from body blood).
+        // Second burst: body blood in enemy-specific color for the main splatter.
+        this._spawnBloodBurst(pos, null, deathBloodCount, 0xaaffaa, 'brain_death'); // brain neural fluid
+        this._spawnBloodBurst(pos, null, 20, deathColor, 'normal');                  // body blood
         break;
 
       case 'heart':
         // 3 massive cardiac pulses then collapse
         for (let p = 0; p < 4; p++) {
           setTimeout(() => {
-            this._spawnBloodBurst(pos, null, 20, 0xff0000, 'pump');
+            this._spawnBloodBurst(pos, null, 20, deathColor, 'pump');
           }, p * 150);
         }
         break;
 
       case 'guts':
-        // Deflation — slime slowly sinks while leaking everywhere
+        // Deflation — slowly leaking everywhere
         for (let i = 0; i < 80; i++) {
           setTimeout(() => {
             if (!this.scene) return;
@@ -1474,7 +1501,7 @@ const GoreSim = {
               (Math.random()-0.5) * 1
             );
             this._spawnDrop(pos, vel, {
-              color:     0x44cc22,
+              color:     _bloodCol,
               radius:    0.01 + Math.random() * 0.02,
               life:      3.5 + Math.random(),
               maxBounces: 1,
@@ -1489,7 +1516,7 @@ const GoreSim = {
         this._spawnBloodBurst(pos, null, deathBloodCount, deathColor, 'normal');
         // Some chunks for drama
         if (Math.random() < 0.5) {
-          this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile);
+          this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile, _chunkCol);
         }
         break;
     }
@@ -1547,7 +1574,8 @@ const GoreSim = {
     return chunk;
   },
 
-  _spawnChunks(pos, normal, count, profile) {
+  _spawnChunks(pos, normal, count, profile, chunkColor) {
+    const col = chunkColor || 0x22aa33;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const elev  = 0.3 + Math.random() * 0.5;
@@ -1558,7 +1586,7 @@ const GoreSim = {
         Math.sin(angle) * Math.cos(elev) * speed
       );
       this._spawnChunk(pos, vel, {
-        color: 0x22aa33,
+        color: col,
         size:  0.04 + Math.random() * 0.14,
       });
     }
