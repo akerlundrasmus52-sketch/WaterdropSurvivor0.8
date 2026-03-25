@@ -413,6 +413,10 @@ LeapingSlimeEnemy.prototype.receiveHit = function(weaponKey, weaponLevel, hitPoi
   if (global.BloodV2 && typeof global.BloodV2.hit === 'function') {
     try { global.BloodV2.hit(this, weaponKey, hitPoint, hitNormal); } catch(e) {}
   }
+  // GoreSim integration
+  if (global.GoreSim && typeof global.GoreSim.onHit === 'function') {
+    try { global.GoreSim.onHit(this, weaponKey, hitPoint, hitNormal); } catch(e) {}
+  }
 
   if (this.hp <= 0) {
     this._die(weaponKey, hitPoint);

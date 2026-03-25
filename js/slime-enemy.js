@@ -509,6 +509,10 @@ this._playHitReaction(weaponKey, weaponLevel, organ, isThrough, hitPoint, hitNor
 if (global.BloodV2) {
 global.BloodV2.hit(this, weaponKey, hitPoint, hitNormal);
 }
+// ── Tell GoreSim about the hit
+if (global.GoreSim && typeof global.GoreSim.onHit === 'function') {
+global.GoreSim.onHit(this, weaponKey, hitPoint, hitNormal);
+}
 
 // ── Check death
 if (this.hp <= 0) {
@@ -1113,6 +1117,9 @@ this.deathTimer = 0;
 
 if (global.BloodV2) {
 global.BloodV2.kill(this, wk);
+}
+if (global.GoreSim && typeof global.GoreSim.onKill === 'function') {
+global.GoreSim.onKill(this, wk, null);
 }
 
 // Choose death style based on weapon + organ + level
