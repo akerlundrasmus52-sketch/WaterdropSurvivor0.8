@@ -423,13 +423,14 @@ LeapingSlimeEnemy.prototype._die = function(weaponKey, hitPoint) {
   this.killedBy   = weaponKey || 'unknown';
   this.deathTimer = 0.55;
 
-  // Gore explosion (light-blue)
+  // BloodV2 kill burst — sandbox-loop.js also calls rawBurst, but BloodV2.kill
+  // triggers the internal blood-pooling logic (decals, mist) that rawBurst skips.
   if (global.BloodV2 && typeof global.BloodV2.kill === 'function') {
     try { global.BloodV2.kill(this, weaponKey, hitPoint); } catch(e) {}
   }
-  if (global.GoreSim && typeof global.GoreSim.onKill === 'function') {
-    try { global.GoreSim.onKill(this, weaponKey, hitPoint); } catch(e) {}
-  }
+  // NOTE: GoreSim.onKill is intentionally NOT called here.
+  // sandbox-loop.js _killLeapingSlime() is the single owner of GoreSim.onKill
+  // to avoid duplicate calls when receiveHit triggers _die before _killLeapingSlime runs.
 };
 
 // ─── Death animation update ────────────────────────────────────────────────

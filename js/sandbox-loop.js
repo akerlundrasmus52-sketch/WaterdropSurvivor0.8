@@ -1433,7 +1433,7 @@
 
   /** Apply a projectile hit to a leaping slime. */
   function _hitLeapingSlime(projectile, enemy) {
-    if (!enemy || !enemy.active || enemy.dead) return;
+    if (!enemy || !enemy.active || enemy.dead || enemy.dying) return;
 
     const weaponKey   = (weapons && weapons.gun) ? 'gun' : 'pistol';
     const weaponLevel = (weapons && weapons.gun) ? (weapons.gun.level || 1) : 1;
@@ -1594,7 +1594,8 @@
     LeapingSlimePool.update(dt, playerPos);
 
     const LEAPING_CONTACT_RADIUS = 1.0; // smaller than green slime (0.75 base size)
-    const LEAPING_DAMAGE = window.LEAP_CFG ? LEAP_CFG.BASE_DAMAGE : 15;
+    const LEAPING_DAMAGE  = window.LEAP_CFG ? LEAP_CFG.BASE_DAMAGE    : 15;
+    const LEAPING_COOLDOWN = window.LEAP_CFG ? LEAP_CFG.ATTACK_COOLDOWN : 500;
 
     for (let i = _activeLeapingSlimes.length - 1; i >= 0; i--) {
       const e = _activeLeapingSlimes[i];
@@ -1611,7 +1612,7 @@
       const dist = Math.sqrt(dx * dx + dz * dz);
       if (dist < LEAPING_CONTACT_RADIUS && !player.invulnerable) {
         const now = Date.now();
-        if (now - e.lastDamageTime > LEAP_CFG.ATTACK_COOLDOWN) {
+        if (now - e.lastDamageTime > LEAPING_COOLDOWN) {
           e.lastDamageTime = now;
           if (typeof player.takeDamage === 'function') {
             player.takeDamage(LEAPING_DAMAGE, 'leaping_slime', e.mesh.position);
