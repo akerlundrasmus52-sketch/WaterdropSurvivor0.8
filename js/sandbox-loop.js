@@ -1095,14 +1095,19 @@
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
     }
 
-    // ── GORE SIMULATOR: Connect every weapon to gore system ──────────────────
-    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+    // ── GORE: Connect every weapon to both gore systems ──────────────────────
+    {
       _tmpV3.set(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
         hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
       }
-      GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
+      if (window.BloodV2 && typeof BloodV2.hit === 'function') {
+        BloodV2.hit(slot, 'pistol', _tmpV3, hitNormal);
+      }
+      if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+        GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
+      }
     }
 
     _applyBloodToNearbyEnemies(
@@ -1213,7 +1218,10 @@
     // Hard camera shake on kill (scales slightly with hit force)
     _triggerShake(SHAKE_KILL_BASE + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
 
-    // ── GORE SIMULATOR: Weapon-specific death reaction ──────────────────────
+    // ── GORE: Weapon-specific death reaction ─────────────────────────────────
+    if (window.BloodV2 && typeof BloodV2.kill === 'function') {
+      BloodV2.kill(slot, 'pistol');
+    }
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(slot, 'pistol', null);
     }
@@ -1357,14 +1365,19 @@
     _reusableBloodPos.x = cx;
     _reusableBloodPos.y = 0.5;
     _reusableBloodPos.z = cz;
-    // Gore simulator
-    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+    // Gore — both systems
+    {
       _tmpV3.set(cx, 0.4, cz);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
         hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
       }
-      GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
+      if (window.BloodV2 && typeof BloodV2.hit === 'function') {
+        BloodV2.hit(crawler, 'pistol', _tmpV3, hitNormal);
+      }
+      if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+        GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
+      }
     }
 
     // Bullet hole on crawler
@@ -1393,7 +1406,10 @@
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 1.5);
     _triggerShake(SHAKE_KILL_BASE * 1.3 + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
 
-    // Gore sim kill
+    // Gore — both systems kill
+    if (window.BloodV2 && typeof BloodV2.kill === 'function') {
+      BloodV2.kill(crawler, 'pistol');
+    }
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(crawler, 'pistol', null);
     }
@@ -1558,7 +1574,10 @@
       BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
     }
 
-    // GoreSim hit reaction
+    // Gore — both systems hit reaction
+    if (window.BloodV2 && typeof BloodV2.hit === 'function') {
+      BloodV2.hit(enemy, weaponKey, _tmpV3, hitNormal);
+    }
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
     }
@@ -1598,9 +1617,12 @@
       }
     }
 
-    // GoreSim kill
+    // Gore — both systems kill
+    if (window.BloodV2 && typeof BloodV2.kill === 'function') {
+      BloodV2.kill(enemy, weaponKey);
+    }
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(enemy, 'pistol', null);
+      GoreSim.onKill(enemy, weaponKey, null);
     }
 
     // Spawn blue slime flesh chunks
