@@ -7,6 +7,10 @@
     let _expGemStarMaterial = null;
     let _expGemOutlineGeometry = null;
 
+    // Launch-style table — hoisted once to avoid per-gem allocations/GC churn
+    // Weighted: 'pop' appears twice so it fires ~33% of the time
+    const _GEM_LAUNCH_STYLES = ['pop', 'pop', 'lob', 'drop', 'tumble', 'overhead'];
+
     // EXP gem tier colours — colour-coded by enemy difficulty tier
     // Common (tier 0): Grey | Green (tier 1) | Blue (tier 2) | Purple (tier 3) | Orange (tier 4) | Red (tier 5) | Mythical (tier 6)
     const GEM_TIER_COLORS = [
@@ -89,13 +93,13 @@
 
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
-        // Pop out from enemy body in random direction
+        // Pop out from enemy body in random direction — X/Z set now; Y after launch style
         var popAngle = Math.random() * Math.PI * 2;
         var popDist  = 0.3 + Math.random() * 0.5;
         var startX   = x + Math.cos(popAngle) * popDist;
         var startZ   = z + Math.sin(popAngle) * popDist;
-        // Start invisible, grow to full size
-        this.mesh.position.set(startX, 0.6 + Math.random() * 0.8, startZ);
+        // Temporary position — Y will be overwritten after launch style selection
+        this.mesh.position.set(startX, 0.5, startZ);
         this.mesh.scale.set(0.01, 0.01, 0.01);
         this._growTimer = 0;
         this._grown = false;
@@ -151,10 +155,9 @@
         this.rotSpeedY = (Math.random() * 0.30 + 0.15) * spinMult * (Math.random() < 0.5 ? 1 : -1);
         this.rotSpeedZ = (Math.random() * 0.20 + 0.08) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
 
-        // Random launch style: 'pop' | 'lob' | 'drop' | 'tumble' | 'overhead'
-        // Adds variety — some fly over enemy head, some drop near, some tumble on ground
-        var launchStyles = ['pop', 'pop', 'lob', 'drop', 'tumble', 'overhead'];
-        var launchStyle = launchStyles[Math.floor(Math.random() * launchStyles.length)];
+        // Random launch style — uses module-level table to avoid per-gem allocations
+        // Adds variety: some fly over enemy head, some drop near, some tumble on ground
+        var launchStyle = _GEM_LAUNCH_STYLES[Math.floor(Math.random() * _GEM_LAUNCH_STYLES.length)];
         this._launchStyle = launchStyle;
 
         var popSpeed, startY;
@@ -191,6 +194,8 @@
         this.vz = Math.sin(popAngle) * popSpeed;
         this.onGround = false;
         this._bounceCount = 0; // Track bounces for realistic settling
+        // Apply startY — different launch styles start at different heights
+        this.mesh.position.y = startY;
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
@@ -359,14 +364,11 @@
         this._isMythic = rarCol.mythic;
         this.value = gemBaseValue;
 
-        // Reposition with pop
+        // Reposition with pop — X/Z set now; Y will be set after launch-style is chosen
         const popAngle = Math.random() * Math.PI * 2;
         const popDist  = 0.3 + Math.random() * 0.5;
-        this.mesh.position.set(
-          x + Math.cos(popAngle) * popDist,
-          0.6 + Math.random() * 0.8,
-          z + Math.sin(popAngle) * popDist
-        );
+        const posX = x + Math.cos(popAngle) * popDist;
+        const posZ = z + Math.sin(popAngle) * popDist;
         this.mesh.scale.set(0.01, 0.01, 0.01);
         this.mesh.visible = true;
 
@@ -384,32 +386,36 @@
         this.rotSpeedY = (Math.random() * 0.30 + 0.15) * spinMult * (Math.random() < 0.5 ? 1 : -1);
         this.rotSpeedZ = (Math.random() * 0.20 + 0.08) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
 
-        // Reset physics with varied launch styles
-        const launchStyles = ['pop', 'pop', 'lob', 'drop', 'tumble', 'overhead'];
-        const launchStyle = launchStyles[Math.floor(Math.random() * launchStyles.length)];
+        // Reset physics with varied launch styles — module-level table, no per-reset allocation
+        const launchStyle = _GEM_LAUNCH_STYLES[Math.floor(Math.random() * _GEM_LAUNCH_STYLES.length)];
         this._launchStyle = launchStyle;
-        let popSpeed;
+        let popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
           popSpeed = (0.025 + Math.random() * 0.03) * force;
           this.vy = (0.20 + Math.random() * 0.14) * force;
+          startY = 0.5;
           this.gravity = -0.016;
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
           popSpeed = (0.008 + Math.random() * 0.015) * force;
           this.vy = (0.07 + Math.random() * 0.05) * force;
+          startY = 0.8 + Math.random() * 0.5;
           this.gravity = -0.030;
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
           popSpeed = (0.04 + Math.random() * 0.04) * force;
           this.vy = (0.08 + Math.random() * 0.04) * force;
+          startY = 0.4;
           this.gravity = -0.026;
           this.groundFriction = 0.72;
         } else {
           popSpeed = (0.04 + Math.random() * 0.05) * force;
           this.vy = (0.12 + Math.random() * 0.07) * force;
+          startY = 0.5 + Math.random() * 0.3;
           this.gravity = -0.022;
           this.groundFriction = 0.58;
         }
+        this.mesh.position.set(posX, startY, posZ);
         this.vx = Math.cos(popAngle) * popSpeed;
         this.vz = Math.sin(popAngle) * popSpeed;
         this.onGround     = false;
