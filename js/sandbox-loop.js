@@ -2510,7 +2510,7 @@
     // Eye of Horus SVG (black/gold, glowing) above the text
     const eyeEl = document.createElement('div');
     eyeEl.innerHTML = [
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="clamp(60px,12vw,120px)" height="clamp(30px,6vw,60px)" style="width:clamp(60px,12vw,120px);height:auto;filter:drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 18px #FF8C00);margin-bottom:4px;">',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" style="width:clamp(60px,12vw,120px);height:auto;filter:drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 18px #FF8C00);margin-bottom:4px;">',
       '  <defs>',
       '    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
       '      <stop offset="0%" style="stop-color:#B8860B"/>',

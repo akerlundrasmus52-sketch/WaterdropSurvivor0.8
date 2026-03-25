@@ -213,7 +213,8 @@ class XPStar {
     // Distance: MIN_DISTANCE to MAX_DISTANCE enemy lengths (capped at 50% of original)
     const minDist = XP_CFG.MIN_DISTANCE * enemySize;
     const maxDist = XP_CFG.MAX_DISTANCE * enemySize * 0.5; // 50% max horizontal distance
-    const distance = minDist + (maxDist - minDist) * force;
+    const distanceForce = Math.min(force, 1.0); // Clamp interpolation factor to [0,1] to never exceed maxDist
+    const distance = minDist + (maxDist - minDist) * distanceForce;
 
     // Launch velocity: 50% of original horizontal speed
     const launchSpeed = (0.75 + force * 1.0); // Was 1.5 + force * 2.0 → halved

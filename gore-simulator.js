@@ -358,10 +358,6 @@ function _enemyBloodColor(enemy) {
   const type = (enemy && enemy.enemyType) || 'slime';
   return (ENEMY_GORE_COLORS[type] || ENEMY_GORE_COLORS['slime']).blood;
 }
-function _enemyBodyColor(enemy) {
-  const type = (enemy && enemy.enemyType) || 'slime';
-  return (ENEMY_GORE_COLORS[type] || ENEMY_GORE_COLORS['slime']).body;
-}
 
 const SLIME_ANATOMY = {
   membrane: {
@@ -1000,7 +996,7 @@ const GoreSim = {
 
     // ── SPAWN BLOOD BASED ON WEAPON TYPE ──────
     if (profile.isExplosive) {
-      this._explosionBlood(hitPoint || enemyPos, profile, gore);
+      this._explosionBlood(hitPoint || enemyPos, profile, gore, _enemyBloodColor(enemy));
     } else if (profile.isSlashing) {
       this._slashBlood(hitPoint || enemyPos, hitNormal, profile, gore);
     } else if (profile.cauterizes) {
@@ -1192,7 +1188,9 @@ const GoreSim = {
   // ────────────────────────────────────────
   //  EXPLOSION BLOOD
   // ────────────────────────────────────────
-  _explosionBlood(pos, profile, gore) {
+  _explosionBlood(pos, profile, gore, bloodColor) {
+    const col     = bloodColor || 0xcc1100;
+    const colMist = bloodColor || 0xaa1100;
     const count = Math.ceil(profile.bloodVolume * 25);
     for (let i = 0; i < count; i++) {
       const angle  = Math.random() * Math.PI * 2;
@@ -1204,7 +1202,7 @@ const GoreSim = {
         Math.sin(angle) * Math.cos(elev) * speed
       );
       this._spawnDrop(pos, vel, {
-        color:      0xcc1100,
+        color:      col,
         radius:     0.015 + Math.random() * 0.04,
         life:       3.0 + Math.random() * 2,
         maxBounces: 4,
@@ -1219,7 +1217,7 @@ const GoreSim = {
         (Math.random()-0.5) * 12
       );
       this._spawnDrop(pos, vel, {
-        color:     0xaa1100,
+        color:     colMist,
         radius:    0.006 + Math.random() * 0.010,
         life:      1.5 + Math.random(),
         maxBounces: 0,
@@ -1411,9 +1409,9 @@ const GoreSim = {
     const _bloodCol = bloodColor || 0x33ee44;
 
     if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
-      // MASSIVE chunk explosion
+      // MASSIVE chunk explosion — use enemy-specific colors for both chunks and blood
       this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile, _chunkCol);
-      this._explosionBlood(pos, profile, null);
+      this._explosionBlood(pos, profile, null, _bloodCol);
       return;
     }
 
@@ -1477,9 +1475,10 @@ const GoreSim = {
     switch (killedBy) {
 
       case 'brain':
-        // Brain fluid + body blood burst
-        this._spawnBloodBurst(pos, null, deathBloodCount, _bloodCol, 'brain_death');
-        this._spawnBloodBurst(pos, null, 20, deathColor, 'normal');
+        // First burst: pale/luminous brain-fluid color (distinct from body blood).
+        // Second burst: body blood in enemy-specific color for the main splatter.
+        this._spawnBloodBurst(pos, null, deathBloodCount, 0xaaffaa, 'brain_death'); // brain neural fluid
+        this._spawnBloodBurst(pos, null, 20, deathColor, 'normal');                  // body blood
         break;
 
       case 'heart':
