@@ -264,57 +264,89 @@
   }
 
   // Apply upgrade effect to player stats
+  // Prefer a full stat recalculation via stat-aggregator (reads saveData fresh,
+  // avoids stale property names and double-counting across runs). Falls back to
+  // direct property patching when the aggregator is not loaded yet.
   function applyUpgradeEffect(upgradeId) {
-    const upgrade = PROGRESSION_UPGRADES[upgradeId];
-    const level = window.saveData.progressionUpgrades[upgradeId].level;
-    const value = upgrade.perLevel * level;
+    // ── Preferred path: full recalculation ────────────────────────────────
+    if (typeof window.recalculateAllStats === 'function') {
+      window.recalculateAllStats();
+      return;
+    }
 
-    // Apply to playerStats if available
-    if (typeof window.playerStats !== 'undefined') {
-      switch(upgradeId) {
-        case 'maxHealth':
-          window.playerStats.maxHp = (window.playerStats.maxHp || 100) + upgrade.perLevel;
-          break;
-        case 'healthRegen':
-          window.playerStats.hpRegen = (window.playerStats.hpRegen || 0) + upgrade.perLevel;
-          break;
-        case 'armor':
-          window.playerStats.armor = (window.playerStats.armor || 0) + upgrade.perLevel;
-          break;
-        case 'baseDamage':
-          window.playerStats.damageMultiplier = (window.playerStats.damageMultiplier || 1) + upgrade.perLevel;
-          break;
-        case 'attackSpeed':
-          window.playerStats.attackSpeedMultiplier = (window.playerStats.attackSpeedMultiplier || 1) + upgrade.perLevel;
-          break;
-        case 'criticalChance':
-          window.playerStats.critChance = (window.playerStats.critChance || 0.1) + upgrade.perLevel;
-          break;
-        case 'criticalDamage':
-          window.playerStats.critDamage = (window.playerStats.critDamage || 1.5) + upgrade.perLevel;
-          break;
-        case 'moveSpeed':
-          window.playerStats.moveSpeed = (window.playerStats.moveSpeed || 1) + upgrade.perLevel;
-          break;
-        case 'goldFind':
-          window.playerStats.goldMultiplier = (window.playerStats.goldMultiplier || 1) + upgrade.perLevel;
-          break;
-        case 'experienceGain':
-          window.playerStats.xpMultiplier = (window.playerStats.xpMultiplier || 1) + upgrade.perLevel;
-          break;
-        case 'lifeSteal':
-          window.playerStats.lifeSteal = (window.playerStats.lifeSteal || 0) + upgrade.perLevel;
-          break;
-        case 'pickupRange':
-          window.playerStats.pickupRange = (window.playerStats.pickupRange || 1) + upgrade.perLevel;
-          break;
-      }
+    // ── Fallback: direct patch with canonical engine property names ────────
+    // (Used only when stat-aggregator.js has not loaded yet.)
+    if (typeof window.playerStats === 'undefined') return;
+    const upgrade = PROGRESSION_UPGRADES[upgradeId];
+    const perLvl  = upgrade.perLevel;
+    const ps      = window.playerStats;
+    switch (upgradeId) {
+      case 'maxHealth':
+        ps.maxHp = (ps.maxHp || 100) + perLvl;
+        ps.hp = Math.min(ps.hp !== undefined ? ps.hp : ps.maxHp, ps.maxHp);
+        break;
+      case 'healthRegen':
+        ps.hpRegen          = (ps.hpRegen          || 0) + perLvl;
+        ps.hpRegenPerSecond = (ps.hpRegenPerSecond || 0) + perLvl;
+        break;
+      case 'armor':
+        ps.armor     = (ps.armor     || 0) + perLvl;
+        ps.flatArmor = (ps.flatArmor || 0) + perLvl;
+        break;
+      case 'baseDamage':
+        ps.strength = (ps.strength || 1)   * (1 + perLvl);
+        ps.damage   = (ps.damage   || 1.0) * (1 + perLvl);
+        break;
+      case 'attackSpeed':
+        ps.atkSpeed          = (ps.atkSpeed          || 1.0) * (1 + perLvl);
+        ps.meleeAttackSpeed  = (ps.meleeAttackSpeed  || 1.0) * (1 + perLvl);
+        ps.fireRate          = (ps.fireRate          || 1.0) * (1 + perLvl);
+        ps.projectileFireRate= (ps.projectileFireRate|| 1.0) * (1 + perLvl);
+        break;
+      case 'criticalChance':
+        ps.critChance = Math.min(0.95, (ps.critChance || 0.1) + perLvl);
+        break;
+      case 'criticalDamage':
+        ps.critDmg = (ps.critDmg || 1.5) + perLvl;
+        break;
+      case 'moveSpeed':
+        ps.walkSpeed         = (ps.walkSpeed         || 25)  * (1 + perLvl);
+        ps.topSpeed          = (ps.topSpeed          || 6.5) * (1 + perLvl);
+        ps.baseMovementSpeed = (ps.baseMovementSpeed || 1.0) * (1 + perLvl);
+        break;
+      case 'dashCooldown':
+        ps.dashCooldown  = Math.max(0.2, (ps.dashCooldown  || 1.0) * (1 + perLvl));
+        ps.skillCooldown = Math.max(0.2, (ps.skillCooldown || 1.0) * (1 + perLvl));
+        break;
+      case 'goldFind':
+        ps.goldDropBonus = (ps.goldDropBonus || 0) + perLvl;
+        break;
+      case 'experienceGain':
+        ps.expGainBonus = (ps.expGainBonus || 0)   + perLvl;
+        ps.xpMultiplier = (ps.xpMultiplier || 1.0) + perLvl;
+        break;
+      case 'lifeSteal':
+        ps.lifesteal        = Math.min(0.50, (ps.lifesteal        || 0) + perLvl);
+        ps.lifeSteal        = ps.lifesteal;
+        ps.lifeStealPercent = (ps.lifeStealPercent || 0) + perLvl;
+        break;
+      case 'pickupRange':
+        ps.pickupRange        = (ps.pickupRange        || 1.0) + perLvl;
+        ps.xpCollectionRadius = (ps.xpCollectionRadius || 1.0) + perLvl;
+        break;
     }
   }
 
-  // Apply all purchased upgrades on game start
+  // Apply all purchased upgrades — triggers a full stat recalculation when
+  // the stat-aggregator is available (preferred), so all sources are combined
+  // correctly and no double-counting can occur.
   function applyAllUpgrades() {
     ensureProgressionData();
+    if (typeof window.recalculateAllStats === 'function') {
+      window.recalculateAllStats();
+      return;
+    }
+    // Fallback: iterate and directly patch
     Object.keys(window.saveData.progressionUpgrades).forEach(upgradeId => {
       const level = window.saveData.progressionUpgrades[upgradeId].level;
       if (level > 0 && PROGRESSION_UPGRADES[upgradeId]) {

@@ -182,10 +182,11 @@
         stats.armor     = (stats.armor     || 0) + 5 * aLvl;
       }
 
-      // Weaponsmith: +3% weapon damage / level
+      // Weaponsmith: +3% weapon damage / level (crafQuality bonus included)
       if (bldgs.weaponsmith && bldgs.weaponsmith.level > 0) {
         var wsLvl = bldgs.weaponsmith.level;
         stats.strength = (stats.strength || 1) * (1 + 0.03 * wsLvl);
+        stats.weaponDamage = (stats.weaponDamage || 0) + 0.03 * wsLvl;
       }
 
       // Shrine: +regen / level (0.5 per level, from bonus.regen)
@@ -193,6 +194,44 @@
         var shLvl = bldgs.shrine.level;
         stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + 0.5 * shLvl;
         stats.hpRegen           = (stats.hpRegen           || 0) + 0.5 * shLvl;
+      }
+
+      // Training Grounds (legacy): +5% damage / level, +3% attack speed / level
+      if (bldgs.trainingGrounds && bldgs.trainingGrounds.level > 0) {
+        var tgLvl = bldgs.trainingGrounds.level;
+        stats.strength         = (stats.strength         || 1)   * (1 + 0.05 * tgLvl);
+        var tgAsm = 1 + 0.03 * tgLvl;
+        stats.atkSpeed         = (stats.atkSpeed         || 1.0) * tgAsm;
+        stats.meleeAttackSpeed = (stats.meleeAttackSpeed || 1.0) * tgAsm;
+        stats.fireRate         = (stats.fireRate         || 1.0) * tgAsm;
+      }
+
+      // Library: +10% XP gain / level
+      if (bldgs.library && bldgs.library.level > 0) {
+        var libLvl = bldgs.library.level;
+        stats.xpMultiplier = (stats.xpMultiplier || 1.0) + 0.10 * libLvl;
+        stats.expGainBonus = (stats.expGainBonus || 0)   + 0.10 * libLvl;
+      }
+
+      // Campfire Kitchen: mealPotency → +5% HP regen & +3% damage / level
+      if (bldgs.campfireKitchen && bldgs.campfireKitchen.level > 0) {
+        var ckLvl = bldgs.campfireKitchen.level;
+        stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + 0.5 * ckLvl;
+        stats.hpRegen          = (stats.hpRegen          || 0) + 0.5 * ckLvl;
+        stats.strength         = (stats.strength         || 1)  * (1 + 0.03 * ckLvl);
+      }
+
+      // Training Hall: +5% attribute training efficiency → flat +1 bonus to all attributes per level
+      if (bldgs.trainingHall && bldgs.trainingHall.level > 0) {
+        var thLvl = bldgs.trainingHall.level;
+        // Each training hall level gives a small permanent stat bonus reflecting improved training
+        stats.maxHp            += 5 * thLvl;
+        stats.strength          = (stats.strength || 1) * (1 + 0.01 * thLvl);
+        stats.atkSpeed          = (stats.atkSpeed || 1.0) * (1 + 0.01 * thLvl);
+        var thMsm = 1 + 0.01 * thLvl;
+        stats.walkSpeed         = (stats.walkSpeed || 25)  * thMsm;
+        stats.topSpeed          = (stats.topSpeed  || 6.5) * thMsm;
+        stats.baseMovementSpeed = (stats.baseMovementSpeed || 1.0) * thMsm;
       }
     }
 
@@ -243,6 +282,84 @@
       if (upg.expEarned    > 0) {
         stats.expGainBonus  = (stats.expGainBonus  || 0) + 0.10 * upg.expEarned;
         stats.xpMultiplier  = (stats.xpMultiplier  || 1.0) + 0.10 * upg.expEarned;
+      }
+    }
+
+    // ── 3b. Progression Center (Stat Forge) permanent upgrades ───────────────
+    // saveData.progressionUpgrades is managed by progression-center.js.
+    // Each entry is { level: N }. Stat increments mirror PROGRESSION_UPGRADES.perLevel.
+    if (sd.progressionUpgrades) {
+      var pu = sd.progressionUpgrades;
+
+      // maxHealth: +15 HP / level
+      if (pu.maxHealth && (pu.maxHealth.level || 0) > 0) {
+        stats.maxHp += 15 * pu.maxHealth.level;
+      }
+      // healthRegen: +0.5 HP/s / level
+      if (pu.healthRegen && (pu.healthRegen.level || 0) > 0) {
+        stats.hpRegen          = (stats.hpRegen          || 0) + 0.5 * pu.healthRegen.level;
+        stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + 0.5 * pu.healthRegen.level;
+      }
+      // armor: +3 flat armor / level
+      if (pu.armor && (pu.armor.level || 0) > 0) {
+        stats.armor     = (stats.armor     || 0) + 3 * pu.armor.level;
+        stats.flatArmor = (stats.flatArmor || 0) + 3 * pu.armor.level;
+      }
+      // baseDamage: +8% damage / level (multiplicative)
+      if (pu.baseDamage && (pu.baseDamage.level || 0) > 0) {
+        var puBdMult = 1 + 0.08 * pu.baseDamage.level;
+        stats.strength = (stats.strength || 1)   * puBdMult;
+        stats.damage   = (stats.damage   || 1.0) * puBdMult;
+      }
+      // attackSpeed: +5% / level (multiplicative)
+      if (pu.attackSpeed && (pu.attackSpeed.level || 0) > 0) {
+        var puAsm = 1 + 0.05 * pu.attackSpeed.level;
+        stats.atkSpeed          = (stats.atkSpeed          || 1.0) * puAsm;
+        stats.meleeAttackSpeed  = (stats.meleeAttackSpeed  || 1.0) * puAsm;
+        stats.projectileFireRate= (stats.projectileFireRate|| 1.0) * puAsm;
+        stats.fireRate          = (stats.fireRate          || 1.0) * puAsm;
+      }
+      // criticalChance: +1.5% / level
+      if (pu.criticalChance && (pu.criticalChance.level || 0) > 0) {
+        stats.critChance = Math.min(0.95, (stats.critChance || 0.10) + 0.015 * pu.criticalChance.level);
+      }
+      // criticalDamage: +10% crit multiplier / level
+      if (pu.criticalDamage && (pu.criticalDamage.level || 0) > 0) {
+        stats.critDmg = (stats.critDmg || 1.5) + 0.10 * pu.criticalDamage.level;
+      }
+      // moveSpeed: +4% / level
+      if (pu.moveSpeed && (pu.moveSpeed.level || 0) > 0) {
+        var puMsm = 1 + 0.04 * pu.moveSpeed.level;
+        stats.walkSpeed         = (stats.walkSpeed         || 25)  * puMsm;
+        stats.topSpeed          = (stats.topSpeed          || 6.5) * puMsm;
+        stats.baseMovementSpeed = (stats.baseMovementSpeed || 1.0) * puMsm;
+      }
+      // dashCooldown: -5% per level (perLevel is -0.05)
+      if (pu.dashCooldown && (pu.dashCooldown.level || 0) > 0) {
+        var puDcRed = Math.min(0.60, 0.05 * pu.dashCooldown.level);
+        stats.dashCooldown  = Math.max(0.2, (stats.dashCooldown  || 1.0) * (1 - puDcRed));
+        stats.skillCooldown = Math.max(0.2, (stats.skillCooldown || 1.0) * (1 - puDcRed));
+      }
+      // goldFind: +10% gold drops / level
+      if (pu.goldFind && (pu.goldFind.level || 0) > 0) {
+        stats.goldDropBonus      = (stats.goldDropBonus || 0) + 0.10 * pu.goldFind.level;
+      }
+      // experienceGain: +8% XP / level
+      if (pu.experienceGain && (pu.experienceGain.level || 0) > 0) {
+        stats.expGainBonus = (stats.expGainBonus || 0)   + 0.08 * pu.experienceGain.level;
+        stats.xpMultiplier = (stats.xpMultiplier || 1.0) + 0.08 * pu.experienceGain.level;
+      }
+      // lifeSteal: +2% per level
+      if (pu.lifeSteal && (pu.lifeSteal.level || 0) > 0) {
+        var puLs = 0.02 * pu.lifeSteal.level;
+        stats.lifesteal        = Math.min(0.50, (stats.lifesteal        || 0) + puLs);
+        stats.lifeSteal        = Math.min(0.50, (stats.lifeSteal        || 0) + puLs);
+        stats.lifeStealPercent = (stats.lifeStealPercent || 0) + puLs;
+      }
+      // pickupRange: +15% / level
+      if (pu.pickupRange && (pu.pickupRange.level || 0) > 0) {
+        stats.pickupRange        = (stats.pickupRange        || 1.0) + 0.15 * pu.pickupRange.level;
+        stats.xpCollectionRadius = (stats.xpCollectionRadius || 1.0) + 0.15 * pu.pickupRange.level;
       }
     }
 
@@ -572,6 +689,119 @@
       if ((pa.skillCooldown || 0) > 0) {
         var scRed = Math.min(0.60, pa.skillCooldown * 0.05);
         stats.skillCooldown = Math.max(0.2, (stats.skillCooldown || 1.0) * (1 - scRed));
+      }
+    }
+
+    // ── 9. Account-level permanent bonuses ───────────────────────────────────
+    // Applies coreAttributes (spent attribute points from the Profile panel) and
+    // levelStatBonuses (random per-account-level-up bonuses) to the player stats.
+    // These live in saveData.account and are managed by idle-account.js.
+    if (sd.account) {
+      var acc = sd.account;
+
+      // 9a. Core attribute points (each costs 1 attribute point; 0.2% bonus per point)
+      //     Mirrors the CORE_ATTRS mapping in idle-account.js.
+      var _AP = 0.002; // bonus fraction per attribute point
+      var cAttrs = acc.coreAttributes || {};
+
+      if ((cAttrs.might || 0) > 0) {
+        var mightMult = 1 + cAttrs.might * _AP;
+        stats.strength  = (stats.strength  || 1)   * mightMult;
+        stats.damage    = (stats.damage    || 1.0)  * mightMult;
+        stats.weaponDamage = (stats.weaponDamage || 0) + cAttrs.might * _AP;
+      }
+      if ((cAttrs.swiftness || 0) > 0) {
+        var swiftMult = 1 + cAttrs.swiftness * _AP;
+        stats.atkSpeed          = (stats.atkSpeed          || 1.0) * swiftMult;
+        stats.meleeAttackSpeed  = (stats.meleeAttackSpeed  || 1.0) * swiftMult;
+        stats.projectileFireRate= (stats.projectileFireRate|| 1.0) * swiftMult;
+        stats.fireRate          = (stats.fireRate          || 1.0) * swiftMult;
+      }
+      if ((cAttrs.agility || 0) > 0) {
+        var agilMult = 1 + cAttrs.agility * _AP;
+        stats.walkSpeed         = (stats.walkSpeed         || 25)  * agilMult;
+        stats.topSpeed          = (stats.topSpeed          || 6.5) * agilMult;
+        stats.baseMovementSpeed = (stats.baseMovementSpeed || 1.0) * agilMult;
+      }
+      if ((cAttrs.haste || 0) > 0) {
+        var hasteCdr = Math.min(0.60, cAttrs.haste * _AP);
+        stats.dashCooldown  = Math.max(0.2, (stats.dashCooldown  || 1.0) * (1 - hasteCdr));
+        stats.meleeCooldown = Math.max(0.2, (stats.meleeCooldown || 1.0) * (1 - hasteCdr));
+        stats.skillCooldown = Math.max(0.2, (stats.skillCooldown || 1.0) * (1 - hasteCdr));
+        stats.reloadSpeed   = (stats.reloadSpeed || 1.0) * (1 + hasteCdr);
+      }
+      if ((cAttrs.precision || 0) > 0) {
+        stats.aimSpeed   = (stats.aimSpeed  || 1.0) * (1 + cAttrs.precision * _AP);
+        stats.critChance = Math.min(0.95, (stats.critChance || 0.10) + cAttrs.precision * _AP * 0.5);
+        stats.recoilRecovery = (stats.recoilRecovery || 1.0) * (1 + cAttrs.precision * _AP);
+      }
+      if ((cAttrs.fortitude || 0) > 0) {
+        // 0.2% per point → fortitude * _AP is the fraction; armor is stored in %
+        var fortArmor = cAttrs.fortitude * _AP * 100; // fraction → percent
+        stats.armor     = (stats.armor     || 0) + fortArmor;
+        stats.flatArmor = (stats.flatArmor || 0) + fortArmor;
+        stats.maxHp     += cAttrs.fortitude * 0.5; // tiny HP boost per point
+      }
+      if ((cAttrs.lethality || 0) > 0) {
+        stats.critChance = Math.min(0.95, (stats.critChance || 0.10) + cAttrs.lethality * _AP);
+        stats.critDmg    = (stats.critDmg  || 1.5)  + cAttrs.lethality * _AP * 0.5;
+      }
+      if ((cAttrs.potency || 0) > 0) {
+        var potencyBonus = cAttrs.potency * _AP;
+        stats.elementalDamage = (stats.elementalDamage || 0) + potencyBonus;
+        stats.fireDamage      = (stats.fireDamage      || 0) + potencyBonus * 0.5;
+        stats.iceDamage       = (stats.iceDamage       || 0) + potencyBonus * 0.5;
+        stats.lightningDamage = (stats.lightningDamage || 0) + potencyBonus * 0.5;
+        stats.spellEchoChance = Math.min(0.60, (stats.spellEchoChance || 0) + cAttrs.potency * _AP * 0.3);
+      }
+
+      // 9b. Level-up stat bonuses (random permanent bonus earned each account level-up)
+      //     Keys match the getDefaultPlayerStats() field names exactly.
+      var lvlBonuses = acc.levelStatBonuses || {};
+      if ((lvlBonuses.damage || 0) > 0) {
+        stats.strength  = (stats.strength  || 1)   * (1 + lvlBonuses.damage);
+        stats.damage    = (stats.damage    || 1.0)  * (1 + lvlBonuses.damage);
+      }
+      if ((lvlBonuses.atkSpeed || 0) > 0) {
+        var lbAsm = 1 + lvlBonuses.atkSpeed;
+        stats.atkSpeed          = (stats.atkSpeed          || 1.0) * lbAsm;
+        stats.meleeAttackSpeed  = (stats.meleeAttackSpeed  || 1.0) * lbAsm;
+        stats.projectileFireRate= (stats.projectileFireRate|| 1.0) * lbAsm;
+        stats.fireRate          = (stats.fireRate          || 1.0) * lbAsm;
+      }
+      if ((lvlBonuses.walkSpeed || 0) > 0) {
+        var lbMsm = 1 + lvlBonuses.walkSpeed;
+        stats.walkSpeed         = (stats.walkSpeed         || 25)  * lbMsm;
+        stats.topSpeed          = (stats.topSpeed          || 6.5) * lbMsm;
+        stats.baseMovementSpeed = (stats.baseMovementSpeed || 1.0) * lbMsm;
+      }
+      if ((lvlBonuses.critChance || 0) > 0) {
+        stats.critChance = Math.min(0.95, (stats.critChance || 0.10) + lvlBonuses.critChance);
+      }
+      if ((lvlBonuses.maxHp || 0) > 0) {
+        stats.maxHp += lvlBonuses.maxHp * (stats.maxHp || 100);
+        stats.hp     = stats.maxHp;
+      }
+      if ((lvlBonuses.armor || 0) > 0) {
+        stats.armor     = (stats.armor     || 0) + lvlBonuses.armor * 100;
+        stats.flatArmor = (stats.flatArmor || 0) + lvlBonuses.armor * 100;
+      }
+      if ((lvlBonuses.hpRegen || 0) > 0) {
+        stats.hpRegen          = (stats.hpRegen          || 0) + lvlBonuses.hpRegen * 5;
+        stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + lvlBonuses.hpRegen * 5;
+      }
+      if ((lvlBonuses.pickupRange || 0) > 0) {
+        stats.pickupRange       = (stats.pickupRange       || 1.0) * (1 + lvlBonuses.pickupRange);
+        stats.xpCollectionRadius= (stats.xpCollectionRadius|| 1.0) * (1 + lvlBonuses.pickupRange);
+      }
+      if ((lvlBonuses.dropRate || 0) > 0) {
+        stats.dropRate     = (stats.dropRate     || 1.0) * (1 + lvlBonuses.dropRate);
+        stats.itemDropRate = (stats.itemDropRate || 1.0) * (1 + lvlBonuses.dropRate);
+      }
+      if ((lvlBonuses.lifeStealPercent || 0) > 0) {
+        stats.lifeStealPercent = (stats.lifeStealPercent || 0) + lvlBonuses.lifeStealPercent;
+        stats.lifesteal        = (stats.lifesteal        || 0) + lvlBonuses.lifeStealPercent;
+        stats.lifeSteal        = (stats.lifeSteal        || 0) + lvlBonuses.lifeStealPercent;
       }
     }
 
