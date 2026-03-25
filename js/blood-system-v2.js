@@ -667,7 +667,7 @@
       }
       if (wp.mistCount > 0) {
         _spawnMist(hx, hy, hz, wp.mistCount, wp.mistSpeed[0], wp.mistSpeed[1],
-          wp.freezesBlood ? 0xcceeFF : bc.mist);
+          wp.freezesBlood ? 0xcceeff : bc.mist);
       }
     } else {
       var bloodColor = wp.freezesBlood ? 0xaaddff : bc.base;
@@ -677,7 +677,7 @@
       }
       if (wp.mistCount > 0) {
         _spawnMist(hx, hy, hz, wp.mistCount, wp.mistSpeed[0], wp.mistSpeed[1],
-          wp.freezesBlood ? 0xcceeFF : bc.mist);
+          wp.freezesBlood ? 0xcceeff : bc.mist);
       }
     }
 
