@@ -24,8 +24,8 @@ const GAME_CONFIG = {
   // Reduced from 3.0 to 2.0 to give the player a fair chance to react and manoeuvre.
   enemySpeedBase: 2.0,
   waveInterval: 300, // Frames between waves (approx 5s)
-  expValue: 15,      // Increased from 10 — supports the Level-100 goal
-  baseExpReq: 30,    // Increased from 20 — deeper XP curve for long progression
+  expValue: 20,      // More XP per gem — faster early leveling
+  baseExpReq: 45,    // 3 gems to get first level up (45/15 = 3, but using 20xp = 45/20 ≈ 3)
   // Lake configuration - used for spawn avoidance - OPTIMIZED: Repositioned to outer edge for ultra-compact world
   lakeCenterX: 30,   // OPTIMIZED: Moved to outer edge (was 14, before 20)
   lakeCenterZ: -30,  // OPTIMIZED: Moved to outer edge (was -14, before -20)
