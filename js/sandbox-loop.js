@@ -1370,8 +1370,14 @@
     _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: _cbSlot2?.mesh || null, poolMat: _cbSlot2?.mat || null, poolSlot: _cbSlot2 || null, x, z });
 
     // ══════════ NEW XP STAR SYSTEM V2 ══════════
-    // Crawler drops green stars
-    const killDamage = 250 * hitForce; // Crawler has 250 HP
+    // Crawler drops green stars — use actual maxHp to keep scaling consistent
+    const crawlerBaseHp =
+      (typeof crawler.maxHp === 'number' && crawler.maxHp > 0)
+        ? crawler.maxHp
+        : (window.CRAWLER_CFG && typeof CRAWLER_CFG.BASE_HP === 'number' && CRAWLER_CFG.BASE_HP > 0)
+          ? CRAWLER_CFG.BASE_HP
+          : 250;
+    const killDamage = crawlerBaseHp * hitForce;
 
     if (window.XPStarSystem) {
       XPStarSystem.spawn(x, y, z, 'crawler', killDamage, killVX || 0, killVZ || 0);
@@ -2439,8 +2445,15 @@
     const py = player.mesh.position.y + 0.5; // Player center height
     const pz = player.mesh.position.z;
 
+    // Respect pickup-range / XP collection-radius upgrades, if available
+    const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
+    const radiusMultiplier =
+      _xpStats && (typeof _xpStats.xpCollectionRadius === 'number' || typeof _xpStats.pickupRange === 'number')
+        ? (_xpStats.xpCollectionRadius || _xpStats.pickupRange || 1)
+        : 1;
+
     // Update XP stars and collect any that are ready
-    const collected = XPStarSystem.update(dt, px, py, pz);
+    const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
 
     // Process collected stars
     for (let i = 0; i < collected.length; i++) {

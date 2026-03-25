@@ -70,6 +70,65 @@ const ENEMY_RARITIES = {
   'boss':          5,  // Mythical (red)
 };
 
+// Enemy-specific size table (used for physics scaling: distance/height)
+const ENEMY_SIZES = {
+  'slime':         0.5,
+  'leaping_slime': 0.6,
+  'crawler':       1.1,
+  'boss':          2.0,
+};
+
+// ════════════════════════════════════════════════════════════════════
+//  XP STAR CLASS
+// ════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════
+//  SHARED GPU ASSETS (geometry + material templates, built once)
+// ════════════════════════════════════════════════════════════════════
+
+let _sharedGeometry = null;
+let _rarityMaterials = null;
+
+function _buildSharedAssets() {
+  if (_sharedGeometry) return;
+
+  const shape = new THREE.Shape();
+  const points = XP_CFG.STAR_POINTS;
+  const outerR = XP_CFG.STAR_SIZE;
+  const innerR = XP_CFG.STAR_SIZE * 0.4;
+  for (let i = 0; i < points * 2; i++) {
+    const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? outerR : innerR;
+    const sx = Math.cos(angle) * r;
+    const sy = Math.sin(angle) * r;
+    if (i === 0) shape.moveTo(sx, sy);
+    else shape.lineTo(sx, sy);
+  }
+  shape.closePath();
+
+  const extrudeSettings = {
+    depth: 0.05,
+    bevelEnabled: true,
+    bevelSize: 0.015,
+    bevelThickness: 0.015,
+    bevelSegments: 2
+  };
+
+  _sharedGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  _sharedGeometry.center();
+
+  // One material template per rarity; each star clones its own instance
+  _rarityMaterials = XP_CFG.RARITIES.map(r => new THREE.MeshPhysicalMaterial({
+    color: r.color,
+    emissive: r.emissive,
+    emissiveIntensity: 0.5,
+    metalness: 0.4,
+    roughness: 0.1,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.05
+  }));
+}
+
 // ════════════════════════════════════════════════════════════════════
 //  XP STAR CLASS
 // ════════════════════════════════════════════════════════════════════
@@ -124,17 +183,19 @@ class XPStar {
     // Damage determines launch force: higher damage = more speed and distance
     const force = Math.min(killDamage / 10, 2.0); // Normalize damage to 0-2 range
 
+    // Enemy size derived from enemy type (not hardcoded)
+    const enemySize = ENEMY_SIZES[enemyType] || 0.7;
+
     // Random launch angle
     const angle = Math.random() * Math.PI * 2;
 
-    // Distance: 0.2 to 2.5 enemy lengths (assuming enemy length ~0.7)
-    const enemySize = 0.7;
+    // Distance: MIN_DISTANCE to MAX_DISTANCE enemy lengths
     const minDist = XP_CFG.MIN_DISTANCE * enemySize;
     const maxDist = XP_CFG.MAX_DISTANCE * enemySize;
     const distance = minDist + (maxDist - minDist) * force;
 
-    // Launch velocity based on damage
-    const launchSpeed = 0.08 + force * 0.12; // 0.08 to 0.20
+    // Launch velocity based on damage (physics-consistent with GRAVITY)
+    const launchSpeed = 1.5 + force * 2.0; // 1.5 to 3.5 units/s horizontal
     this.vx = Math.cos(angle) * launchSpeed;
     this.vz = Math.sin(angle) * launchSpeed;
 
@@ -144,9 +205,17 @@ class XPStar {
       this.vz += killVZ * 0.05;
     }
 
-    // Height: up to 1.7 enemy heights based on damage
+    // Upward velocity clamped by MAX_HEIGHT constraint using kinematics
+    // max height = vy² / (2 * |gravity|), so maxVy = sqrt(2 * |g| * maxUpward)
     const maxUpward = XP_CFG.MAX_HEIGHT * enemySize;
-    this.vy = 0.15 + force * 0.25; // 0.15 to 0.40 upward velocity
+    const gAbs = Math.abs(XP_CFG.GRAVITY);
+    const desiredVy = 4.0 + force * 3.0; // 4.0 to 7.0 upward velocity
+    if (gAbs > 0) {
+      const maxVy = Math.sqrt(2 * gAbs * maxUpward);
+      this.vy = Math.min(desiredVy, maxVy);
+    } else {
+      this.vy = desiredVy;
+    }
 
     // Position: spawn from enemy center
     const spawnDist = distance * (0.3 + Math.random() * 0.3); // Some randomness
@@ -177,49 +246,15 @@ class XPStar {
   }
 
   _createMesh() {
-    // Create 5-pointed star geometry
-    const shape = new THREE.Shape();
-    const points = XP_CFG.STAR_POINTS;
-    const outerR = XP_CFG.STAR_SIZE;
-    const innerR = XP_CFG.STAR_SIZE * 0.4;
-
-    for (let i = 0; i < points * 2; i++) {
-      const angle = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
-      const r = i % 2 === 0 ? outerR : innerR;
-      const x = Math.cos(angle) * r;
-      const y = Math.sin(angle) * r;
-      if (i === 0) shape.moveTo(x, y);
-      else shape.lineTo(x, y);
-    }
-    shape.closePath();
-
-    const extrudeSettings = {
-      depth: 0.05,
-      bevelEnabled: true,
-      bevelSize: 0.015,
-      bevelThickness: 0.015,
-      bevelSegments: 2
-    };
-
-    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    geometry.center();
-
-    const material = new THREE.MeshPhysicalMaterial({
-      color: 0xCCCCCC,
-      emissive: 0x888888,
-      emissiveIntensity: 0.5,
-      metalness: 0.4,
-      roughness: 0.1,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.05
-    });
-
-    this.mesh = new THREE.Mesh(geometry, material);
+    // Use shared geometry; clone material from per-rarity template so each
+    // star can have independent emissiveIntensity / color animation
+    const material = _rarityMaterials[this.rarity].clone();
+    this.mesh = new THREE.Mesh(_sharedGeometry, material);
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = false;
   }
 
-  update(dt, playerX, playerY, playerZ) {
+  update(dt, playerX, playerY, playerZ, radiusMultiplier) {
     if (!this.active) return;
 
     // Grow animation
@@ -230,10 +265,10 @@ class XPStar {
       if (s >= 1.0) this.grown = true;
     }
 
-    // 360° rotation on all axes
-    this.mesh.rotation.x += this.rotSpeedX;
-    this.mesh.rotation.y += this.rotSpeedY;
-    this.mesh.rotation.z += this.rotSpeedZ;
+    // 360° rotation on all axes (frame-rate independent)
+    this.mesh.rotation.x += this.rotSpeedX * dt * 60;
+    this.mesh.rotation.y += this.rotSpeedY * dt * 60;
+    this.mesh.rotation.z += this.rotSpeedZ * dt * 60;
 
     // Pulsing emissive
     this.pulsePhase += dt * 3;
@@ -289,17 +324,18 @@ class XPStar {
         }
       }
     } else {
-      // On ground: gentle Y-axis spin
-      this.mesh.rotation.y += this.rotSpeedY * 0.5;
+      // On ground: gentle Y-axis spin (frame-rate independent)
+      this.mesh.rotation.y += this.rotSpeedY * 0.5 * dt * 60;
     }
 
-    // Magnetism: pull toward player
+    // Magnetism: pull toward player (radius scaled by optional upgrade multiplier)
     const dx = playerX - this.mesh.position.x;
     const dy = playerY - this.mesh.position.y;
     const dz = playerZ - this.mesh.position.z;
     const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    const rm = (typeof radiusMultiplier === 'number' && radiusMultiplier > 0) ? radiusMultiplier : 1;
 
-    if (dist < XP_CFG.MAGNET_RANGE && dist > 0.01) {
+    if (dist < XP_CFG.MAGNET_RANGE * rm && dist > 0.01) {
       // Lift off ground when magnetized
       this.onGround = false;
 
@@ -319,7 +355,7 @@ class XPStar {
     }
 
     // Collection check
-    if (dist < XP_CFG.COLLECT_RANGE) {
+    if (dist < XP_CFG.COLLECT_RANGE * rm) {
       return true; // Signal for collection
     }
 
@@ -358,6 +394,9 @@ const XPStarManager = {
     if (this._ready) return;
 
     this._scene = scene;
+
+    // Build shared geometry and material templates once
+    _buildSharedAssets();
 
     // Pre-allocate pool
     for (let i = 0; i < XP_CFG.POOL_SIZE; i++) {
@@ -404,7 +443,7 @@ const XPStarManager = {
     return star;
   },
 
-  update: function(dt, playerX, playerY, playerZ) {
+  update: function(dt, playerX, playerY, playerZ, radiusMultiplier) {
     if (!this._ready) return [];
 
     const collected = [];
@@ -417,7 +456,7 @@ const XPStarManager = {
         continue;
       }
 
-      const shouldCollect = star.update(dt, playerX, playerY, playerZ);
+      const shouldCollect = star.update(dt, playerX, playerY, playerZ, radiusMultiplier);
 
       if (shouldCollect) {
         collected.push({
