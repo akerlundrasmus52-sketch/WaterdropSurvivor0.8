@@ -25,7 +25,7 @@ const GAME_CONFIG = {
   enemySpeedBase: 2.0,
   waveInterval: 300, // Frames between waves (approx 5s)
   expValue: 20,      // More XP per gem — faster early leveling
-  baseExpReq: 45,    // ~3 gems to get first level up (45 XP / 20 per gem ≈ 3 gems)
+  baseExpReq: 45,    // ~2–3 gems to get first level up (45 XP / 20 per gem ≈ 2.25 gems)
   // Lake configuration - used for spawn avoidance - OPTIMIZED: Repositioned to outer edge for ultra-compact world
   lakeCenterX: 30,   // OPTIMIZED: Moved to outer edge (was 14, before 20)
   lakeCenterZ: -30,  // OPTIMIZED: Moved to outer edge (was -14, before -20)
