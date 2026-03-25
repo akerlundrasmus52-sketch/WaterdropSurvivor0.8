@@ -94,9 +94,9 @@
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
         // Pop out from enemy body in random direction — X/Z set now; Y after launch style
-        // Reduced distance: max 2.5 units away from enemy (user requirement)
+        // Short hop: max ~0.8 units away from enemy
         var popAngle = Math.random() * Math.PI * 2;
-        var popDist  = 0.2 + Math.random() * 0.6; // 0.2-0.8 units (reduced from 0.3-0.8)
+        var popDist  = 0.2 + Math.random() * 0.6; // 0.2-0.8 units
         var startX   = x + Math.cos(popAngle) * popDist;
         var startZ   = z + Math.sin(popAngle) * popDist;
         // Temporary position — Y will be overwritten after launch style selection
@@ -370,9 +370,9 @@
         this.value = gemBaseValue;
 
         // Reposition with pop — X/Z set now; Y will be set after launch-style is chosen
-        // Reduced distance: max 2.5 units away from enemy (user requirement)
+        // Short hop: max ~0.8 units away from enemy
         const popAngle = Math.random() * Math.PI * 2;
-        const popDist  = 0.2 + Math.random() * 0.6; // 0.2-0.8 units (consistent with constructor)
+        const popDist  = 0.2 + Math.random() * 0.6; // 0.2-0.8 units
         const posX = x + Math.cos(popAngle) * popDist;
         const posZ = z + Math.sin(popAngle) * popDist;
         this.mesh.scale.set(0.01, 0.01, 0.01);
