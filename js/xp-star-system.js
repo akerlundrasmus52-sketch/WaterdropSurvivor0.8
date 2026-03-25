@@ -65,11 +65,13 @@ const XP_CFG = {
 };
 
 // Enemy-specific rarity mapping
+// NOTE: Visual color is fully overridden by ENEMY_STAR_COLORS below.
+// This value determines only the XP tier multiplier (rarity xp value × GAME_CONFIG.expValue).
 const ENEMY_RARITIES = {
-  'slime':         0,  // Common (grey/white)
-  'leaping_slime': 2,  // Rare (blue — matches blue slime body)
-  'crawler':       3,  // Epic tier — but overridden by ENEMY_STAR_COLORS to brown
-  'boss':          5,  // Mythical (red)
+  'slime':         0,  // Common   — 1× XP multiplier
+  'leaping_slime': 2,  // Rare     — 3× XP multiplier (tougher, visual override: sky-blue)
+  'crawler':       3,  // Epic     — 5× XP multiplier (worm, visual override: brown/amber)
+  'boss':          5,  // Mythical — 40× XP multiplier
 };
 
 // Enemy-specific star COLOR override — uses the enemy's actual body color
@@ -294,15 +296,15 @@ class XPStar {
     const pulse = 0.6 + Math.sin(this.pulsePhase) * 0.4; // 0.2–1.0 range (brighter)
     this.mesh.material.emissiveIntensity = pulse;
 
-    // Mythical stars pulse color
+    // Mythical stars pulse color (boss drops — bright red glow)
     if (this.rarity === 5) {
       const colorPulse = (Math.sin(this.pulsePhase * 1.5) + 1) * 0.5;
       if (colorPulse > 0.5) {
-        this.mesh.material.color.setHex(0xFF2222);
-        this.mesh.material.emissive.setHex(0xAA0000);
+        this.mesh.material.color.setHex(0xFF5555);
+        this.mesh.material.emissive.setHex(0xCC0000);
       } else {
-        this.mesh.material.color.setHex(0x880000);
-        this.mesh.material.emissive.setHex(0x440000);
+        this.mesh.material.color.setHex(0xAA1111);
+        this.mesh.material.emissive.setHex(0x660000);
       }
     }
 

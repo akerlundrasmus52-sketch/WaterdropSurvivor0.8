@@ -344,10 +344,10 @@ const WEAPON_GORE = {
 //  Keyed by enemy.enemyType string (matches sandbox-loop usage)
 // ─────────────────────────────────────────────
 const ENEMY_GORE_COLORS = {
-  'slime':         { body: 0x33cc44, dark: 0x228811, chunk: 0x44FF66, blood: 0x33ee44 },
-  'leaping_slime': { body: 0x00bfff, dark: 0x0090cc, chunk: 0x00ffff, blood: 0x55ddff },
-  'crawler':       { body: 0x8B4513, dark: 0x5C3010, chunk: 0xDEB887, blood: 0x6B3410 },
-  'boss':          { body: 0xcc0000, dark: 0x880000, chunk: 0xff4444, blood: 0xff0000 },
+  'slime':         { body: 0x33cc44, chunk: 0x44FF66, blood: 0x33ee44 },
+  'leaping_slime': { body: 0x00bfff, chunk: 0x00ffff, blood: 0x55ddff },
+  'crawler':       { body: 0x8B4513, chunk: 0xDEB887, blood: 0x6B3410 },
+  'boss':          { body: 0xcc0000, chunk: 0xff4444, blood: 0xff0000 },
 };
 
 function _enemyChunkColor(enemy) {
