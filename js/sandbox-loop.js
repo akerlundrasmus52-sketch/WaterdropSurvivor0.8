@@ -374,6 +374,11 @@
   // Corpses linger 5-8 seconds after death with heartbeat blood pumping.
   const _activeCorpses = [];       // { slot, timer, lingerDuration, bloodTimer, poolMesh, poolMat }
 
+  // ─── Corpse Blood Pool ────────────────────────────────────────────────────────
+  const CORPSE_BLOOD_POOL_SIZE = 30;
+  const _corpseBloodPool = [];
+  let _corpseBloodHead = 0;
+
   // Pre-allocated reusable Vector3 objects — ZERO new THREE.Vector3() during gameplay
   // Declared as plain objects first; upgraded to THREE.Vector3 after THREE is available
   // (THREE loads before sandbox-loop.js, so they become real Vector3s at IIFE boot time)
@@ -865,7 +870,7 @@
           c.slot.mesh.material.opacity -= dt * 2;
           if (c.slot.mesh.material.opacity <= 0) {
             // Fully faded — return slot to pool
-            if (c.poolMesh) { scene.remove(c.poolMesh); c.poolMesh.geometry.dispose(); c.poolMat.dispose(); }
+            if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
             // Restore slot mesh for reuse
             c.slot.mesh.visible = false;
             c.slot.mesh.material.opacity = 0.92;
@@ -881,7 +886,7 @@
           }
         } else {
           // No material — just clean up immediately
-          if (c.poolMesh) { scene.remove(c.poolMesh); c.poolMesh.geometry.dispose(); c.poolMat.dispose(); }
+          if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
           _activeCorpses.splice(i, 1);
         }
       }
@@ -1176,16 +1181,8 @@
     }
     // HP bars removed
     // Growing blood pool under corpse
-    const poolGeo = new THREE.CircleGeometry(0.1, 10);
-    const poolMat = new THREE.MeshBasicMaterial({
-      color: 0x550000, transparent: true, opacity: 0.75, side: THREE.DoubleSide, depthWrite: false,
-      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
-    });
-    const poolMesh = new THREE.Mesh(poolGeo, poolMat);
-    poolMesh.rotation.x = -Math.PI / 2;
-    poolMesh.position.set(x, 0.06, z);
-    scene.add(poolMesh);
-    _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh, poolMat, x, z });
+    const _cbSlot = _acquireCorpseBlood(x, 0.06, z, 0x550000);
+    _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh: _cbSlot.mesh, poolMat: _cbSlot.mat, x, z });
 
     // ── EXP star drop: 1 guaranteed star + 15% chance for a bonus star per kill ──
     // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
@@ -1335,15 +1332,8 @@
     if (cidx !== -1) _activeCrawlers.splice(cidx, 1);
 
     // Corpse stays 15 seconds
-    const poolGeo = new THREE.CircleGeometry(0.1, 10);
-    const poolMat = new THREE.MeshBasicMaterial({
-      color: 0x442200, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false
-    });
-    const poolMesh = new THREE.Mesh(poolGeo, poolMat);
-    poolMesh.rotation.x = -Math.PI / 2;
-    poolMesh.position.set(x, 0.03, z);
-    scene.add(poolMesh);
-    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: poolMesh, poolMat: poolMat, x: x, z: z });
+    const _cbSlot2 = _acquireCorpseBlood(x, 0.03, z, 0x442200);
+    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: _cbSlot2.mesh, poolMat: _cbSlot2.mat, x, z });
 
     // Drop XP
     const gemType = hitForce > 2.0 ? 5 : (hitForce > 1.5 ? 3 : 2);
@@ -1621,6 +1611,39 @@
       scene.add(mesh);
       _bloodStainPool.push({ mesh, fadeTimer: 0 });
     }
+  }
+
+  function _buildCorpseBloodPool() {
+    const geo = new THREE.CircleGeometry(0.1, 10);
+    for (let i = 0; i < CORPSE_BLOOD_POOL_SIZE; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x550000,
+        transparent: true,
+        opacity: 0.75,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(0, 0.06, 0);
+      mesh.visible = false;
+      scene.add(mesh);
+      _corpseBloodPool.push({ mesh, mat });
+    }
+  }
+
+  function _acquireCorpseBlood(x, y, z, color) {
+    const slot = _corpseBloodPool[_corpseBloodHead % CORPSE_BLOOD_POOL_SIZE];
+    _corpseBloodHead++;
+    slot.mesh.scale.set(0.2, 0.2, 0.2);
+    slot.mesh.position.set(x, y, z);
+    slot.mat.color.setHex(color || 0x550000);
+    slot.mat.opacity = 0.75;
+    slot.mesh.visible = true;
+    return slot;
   }
 
   /**
@@ -3592,6 +3615,7 @@
     _buildFleshPool();
     // Build pre-allocated blood stain decal pool (ground stains at kill positions)
     _buildBloodStainPool();
+    _buildCorpseBloodPool();
     // Build pre-allocated bullet hole decal pool (ground impacts at miss positions)
     _buildBulletHolePool();
     // Build pre-allocated EXP gem pool (critical for XP drops to work)
