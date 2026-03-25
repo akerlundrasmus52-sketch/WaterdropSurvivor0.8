@@ -652,9 +652,9 @@ _dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
   new Float32Array(CFG.DROP_COUNT * 3), 3
 );
 _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
-_dropIM.frustumCulled = false;
 _dropIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active drops
 _scene.add(_dropIM);
+_dropIM.frustumCulled = false;
 _dropIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
 // Pre-create drop data objects
@@ -683,9 +683,9 @@ _mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
   new Float32Array(CFG.MIST_COUNT * 3), 3
 );
 _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
-_mistIM.frustumCulled = false;
 _mistIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active mist
 _scene.add(_mistIM);
+_mistIM.frustumCulled = false;
 _mistIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
 _mistData = [];
@@ -742,7 +742,7 @@ _decals = [];
 for (var i = 0; i < CFG.DECAL_COUNT; i++) {
 var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
-mesh.position.y = CFG.GROUND_Y;
+mesh.position.y = 0.04;
 mesh.visible    = false;
 mesh.renderOrder = 2;
 _scene.add(mesh);
@@ -1365,7 +1365,7 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = (Math.random()-0.5) * 6.0;
 d.vy = -2.0 - Math.random()*3.0;
 d.vz = (Math.random()-0.5) * 6.0;
-d.r         = 0.012 + Math.random()*0.018;
+d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 1.8 + Math.random();
 d.life      = d.maxLife;
 d.viscosity = 0.55;
@@ -1896,11 +1896,7 @@ c.rvy = (Math.random()-0.5)*18;
 c.rvz = (Math.random()-0.5)*18;
 c.rx = 0; c.ry = 0; c.rz = 0;
 c.life    = 4.0 + Math.random()*3.0;
-var _chunkRoll = Math.random();
-c.size = _chunkRoll < 0.15 ? 0.008 + Math.random()*0.015
-       : _chunkRoll < 0.50 ? 0.025 + Math.random()*0.035
-       : _chunkRoll < 0.85 ? 0.04 + Math.random()*0.05
-       : 0.07 + Math.random()*0.08;
+c.size = 0.035 + Math.random()*0.06;
 c.bounces = 0;
 c.color   = col.base;
 if (c.mesh) {
@@ -1921,7 +1917,7 @@ _decalIdx++;
 dd.alive   = true;
 dd.life    = CFG.DECAL_FADE;
 dd.maxLife = CFG.DECAL_FADE;
-dd.mesh.position.set(x, CFG.GROUND_Y, z);
+dd.mesh.position.set(x, 0.04, z);
 // Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
 radius * (1.5 + Math.random() * 1.5),

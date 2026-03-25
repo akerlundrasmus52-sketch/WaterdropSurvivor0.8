@@ -903,6 +903,13 @@ for (const s of this.streams) s.active = false;
 }
 }
 
+// Chunk colors per enemy type to keep gore matching body color
+const ENEMY_CHUNK_COLORS = {
+slime:         [0x22cc44, 0x1a992f, 0x33ee66],
+leaping_slime: [0x00bfff, 0x0090cc, 0x55ddff],
+crawler:       [0x8b4513, 0x6b3410, 0x5c3010, 0xdeb887],
+};
+
 // Helper: get anatomy color for enemy type and organ
 function _getAnatomyColor(enemyType, organ) {
   if (enemyType === 'slime' && SLIME_ANATOMY[organ]) return SLIME_ANATOMY[organ].color;
@@ -915,6 +922,27 @@ function _getAnatomyColor(enemyType, organ) {
 function _getBloodV2Palette(enemyType) {
   if (!enemyType || !window.BloodV2 || !BloodV2.ENEMY_BLOOD) return null;
   return BloodV2.ENEMY_BLOOD[enemyType] || null;
+}
+
+function _resolveChunkColor(enemyType) {
+  if (!enemyType) return null;
+  var palette = _getBloodV2Palette(enemyType);
+  if (palette && palette.chunkColors) return palette.chunkColors;
+  if (ENEMY_CHUNK_COLORS[enemyType]) return ENEMY_CHUNK_COLORS[enemyType];
+  if (palette && palette.base) return palette.base;
+  return null;
+}
+
+function _pickChunkColor(value) {
+  if (!value) return value;
+  if (Array.isArray(value) && value.length > 0) {
+    return value[Math.floor(Math.random() * value.length)];
+  }
+  if (typeof value === 'object' && value !== null) {
+    if (value.base) return value.base;
+    if (value.color) return value.color;
+  }
+  return value;
 }
 
 // Helper: resolve a base blood/chunk color with palette fallback
@@ -1070,7 +1098,8 @@ if (Math.random() < profile.chunkChance) {
   const count = profile.chunkCount
     ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
     : 2;
-  const _enemyChunkColor = _resolveBloodColor(enemy.enemyType, organHit);
+  const _chunkColorLookup = _resolveChunkColor(enemy.enemyType) || _resolveBloodColor(enemy.enemyType, organHit);
+  const _enemyChunkColor = _pickChunkColor(_chunkColorLookup);
   this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, _enemyChunkColor);
 }
 
@@ -1482,9 +1511,9 @@ switch (organ) {
 _killExplosion(pos, profile, killedBy, enemy) {
 
 const _ekCol = enemy && enemy.enemyType
-  ? _resolveBloodColor(enemy.enemyType, 'membrane')
+  ? (_resolveChunkColor(enemy.enemyType) || _resolveBloodColor(enemy.enemyType, 'membrane'))
   : 0x22aa33;
-const _enemyKillColor = (typeof _ekCol === 'object' && _ekCol !== null) ? _ekCol.base : _ekCol;
+const _enemyKillColor = _pickChunkColor(_ekCol);
 
 if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
   // MASSIVE chunk explosion
@@ -1633,7 +1662,7 @@ mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;
 mesh.visible = true;
 mesh.userData.decalBirth = performance.now();
-mesh.userData.decalLife = DECAL_FADE_TIME;
+mesh.userData.decalLife = DECAL_FADE_TIME * 1000;
 },
 
 _spawnChunk(pos, vel, options = {}) {
@@ -1721,32 +1750,26 @@ viscosity:  SLIME_VISCOSITY,
 // ────────────────────────────────────────
 //  UPDATE LOOP — call from game-loop.js
 // ────────────────────────────────────────
-update(dt) {
-if (!this._initialized) return;
-for (const d of this._drops)   d.update(dt);
-for (const c of this._chunks)  c.update(dt);
-for (const s of this._streams) s.update(dt);
-for (const [id, gore] of this._enemyGoreMap) gore.update(dt);
-var now = performance.now();
-for (var _di = 0; _di < this._decalMeshes.length; _di++) {
-  var _dm = this._decalMeshes[_di];
-  if (!_dm.visible) continue;
-  if (_dm.userData.decalBirth == null) { _dm.visible = false; continue; }
-  var _age = (now - _dm.userData.decalBirth) / 1000;
-  var _life = (typeof _dm.userData.decalLife === 'number' && _dm.userData.decalLife > 0)
-    ? _dm.userData.decalLife
-    : DECAL_FADE_TIME;
-  var _fadeDuration = Math.min(3.0, _life);
-  var _fadeStartAge = _life - _fadeDuration;
-  if (_age >= _life) {
-    _dm.visible = false;
-  } else if (_age > _fadeStartAge) {
-    _dm.material.opacity = Math.max(0,
-      (_life - _age) / _fadeDuration * 0.75
-    );
+  update(dt) {
+  if (!this._initialized) return;
+  for (const d of this._drops)   d.update(dt);
+  for (const c of this._chunks)  c.update(dt);
+  for (const s of this._streams) s.update(dt);
+  for (const [id, gore] of this._enemyGoreMap) gore.update(dt);
+  var now = performance.now();
+  for (var _di = 0; _di < this._decalMeshes.length; _di++) {
+    var _dm = this._decalMeshes[_di];
+    if (!_dm.visible) continue;
+    var _age = (now - _dm.userData.decalBirth) / 1000;
+    if (_age >= DECAL_FADE_TIME) {
+      _dm.visible = false;
+    } else if (_age > DECAL_FADE_TIME - 3.0) {
+      _dm.material.opacity = Math.max(0,
+        (DECAL_FADE_TIME - _age) / 3.0 * 0.75
+      );
+    }
   }
-}
-},
+  },
 
 // ────────────────────────────────────────
 //  CLEANUP — call when scene resets
