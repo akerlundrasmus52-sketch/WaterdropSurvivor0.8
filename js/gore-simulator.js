@@ -911,6 +911,19 @@ function _getAnatomyColor(enemyType, organ) {
   return 0x880000;
 }
 
+// Helper: pull BloodV2 palette if loaded so gore colors match blood-system-v2
+function _getBloodV2Palette(enemyType) {
+  if (!enemyType || !window.BloodV2 || !BloodV2.ENEMY_BLOOD) return null;
+  return BloodV2.ENEMY_BLOOD[enemyType] || null;
+}
+
+// Helper: resolve a base blood/chunk color with palette fallback
+function _resolveBloodColor(enemyType, organ) {
+  const palette = _getBloodV2Palette(enemyType);
+  if (palette) return (typeof palette === 'object' && palette !== null) ? (palette.base || palette) : palette;
+  return _getAnatomyColor(enemyType, organ);
+}
+
 // ─────────────────────────────────────────────
 //  GORE SIMULATOR — MAIN PUBLIC API
 // ─────────────────────────────────────────────
@@ -1057,8 +1070,7 @@ if (Math.random() < profile.chunkChance) {
   const count = profile.chunkCount
     ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
     : 2;
-  const _enemyCol = (window.ENEMY_BLOOD_V2 || {})[enemy.enemyType] || _getAnatomyColor(enemy.enemyType, organHit);
-  const _enemyChunkColor = (typeof _enemyCol === 'object' && _enemyCol !== null) ? _enemyCol.base : _enemyCol;
+  const _enemyChunkColor = _resolveBloodColor(enemy.enemyType, organHit);
   this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, _enemyChunkColor);
 }
 
@@ -1470,7 +1482,7 @@ switch (organ) {
 _killExplosion(pos, profile, killedBy, enemy) {
 
 const _ekCol = enemy && enemy.enemyType
-  ? (window.ENEMY_BLOOD_V2 || {})[enemy.enemyType] || _getAnatomyColor(enemy.enemyType, 'membrane')
+  ? _resolveBloodColor(enemy.enemyType, 'membrane')
   : 0x22aa33;
 const _enemyKillColor = (typeof _ekCol === 'object' && _ekCol !== null) ? _ekCol.base : _ekCol;
 

@@ -915,6 +915,7 @@ _goreMap.delete(eId);
   _frame++;
 
 var dirty = false;
+var maxDropIdx = -1;
 
 // ── Update blood drops ───────────────────
 for (var i = 0; i < _dropData.length; i++) {
@@ -922,25 +923,32 @@ var d = _dropData[i];
 if (!d.alive) continue;
 _updateDrop(d, dt, _dropIM, false);
 dirty = true;
+if (d.idx > maxDropIdx) maxDropIdx = d.idx;
 }
 if (dirty) {
-  _dropIM.count = CFG.DROP_COUNT;
+  _dropIM.count = Math.max(0, maxDropIdx + 1);
   _dropIM.instanceMatrix.needsUpdate = true;
   if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
+} else if (_dropIM.count !== 0) {
+  _dropIM.count = 0;
 }
 
 // ── Update mist ──────────────────────────
 var mistDirty = false;
+var maxMistIdx = -1;
 for (var i = 0; i < _mistData.length; i++) {
 var d = _mistData[i];
 if (!d.alive) continue;
 _updateDrop(d, dt, _mistIM, true);
 mistDirty = true;
+if (d.idx > maxMistIdx) maxMistIdx = d.idx;
 }
 if (mistDirty) {
-  _mistIM.count = CFG.MIST_COUNT;
+  _mistIM.count = Math.max(0, maxMistIdx + 1);
   _mistIM.instanceMatrix.needsUpdate = true;
   if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
+} else if (_mistIM.count !== 0) {
+  _mistIM.count = 0;
 }
 
 // ── Update chunks ────────────────────────
