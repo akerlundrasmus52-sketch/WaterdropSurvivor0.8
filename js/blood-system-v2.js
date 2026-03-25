@@ -655,6 +655,7 @@ _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
 _dropIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active drops
 _scene.add(_dropIM);
+_dropIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
 // Pre-create drop data objects
 _dropData = [];
@@ -685,6 +686,7 @@ _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
 _mistIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active mist
 _scene.add(_mistIM);
+_mistIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
 _mistData = [];
 for (var i = 0; i < CFG.MIST_COUNT; i++) {
@@ -740,7 +742,7 @@ _decals = [];
 for (var i = 0; i < CFG.DECAL_COUNT; i++) {
 var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
-mesh.position.y = CFG.GROUND_Y;
+mesh.position.y = 0.04;
 mesh.visible    = false;
 mesh.renderOrder = 2;
 _scene.add(mesh);
@@ -1193,7 +1195,7 @@ d.frozen     = false; d.charred = false;
 // ══════════════════════════════════════════
 function _updateWound(w, dt, ex, ey, ez, evx, evz, col) {
 if (!w.alive || w.cauterized || w.frozen) return;
-var anat  = ANATOMY[col._type] || ANATOMY.default;
+var anat  = ANATOMY.default;
 var oData = anat[w.organ];
 if (!oData) return;
 
@@ -1244,7 +1246,7 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx * spd + (Math.random()-0.5) * sctr * 6;
 d.vy = ny * spd * 0.2 - Math.random() * 0.6;
 d.vz = nz * spd + (Math.random()-0.5) * sctr * 6;
-d.r         = 0.010 + Math.random()*0.022;
+d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 2.5 + Math.random()*1.5;
 d.life      = d.maxLife;
 d.viscosity = 0.60;
@@ -1286,7 +1288,7 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = -nx*spd + (Math.random()-0.5)*3.5;
 d.vy = 0.2 + Math.random()*0.5;
 d.vz = -nz*spd + (Math.random()-0.5)*3.5;
-d.r         = 0.016 + Math.random()*0.028;
+d.r         = 0.008 + Math.random()*0.012;
 d.maxLife   = 2.2 + Math.random()*2.0;
 d.life      = d.maxLife;
 d.viscosity = 0.58;
@@ -1363,7 +1365,7 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = Math.cos(arc) * (1.0 + Math.random() * 2.5);
 d.vy = 0.4 + Math.random() * 0.8;
 d.vz = Math.sin(arc) * (1.0 + Math.random() * 2.5);
-d.r         = 0.013 + Math.random()*0.028;
+d.r         = 0.007 + Math.random()*0.012;
 d.maxLife   = 2.8 + Math.random()*1.5;
 d.life      = d.maxLife;
 d.viscosity = 0.68;
@@ -1772,7 +1774,7 @@ c.rvy = (Math.random()-0.5)*18;
 c.rvz = (Math.random()-0.5)*18;
 c.rx = 0; c.ry = 0; c.rz = 0;
 c.life    = 4.0 + Math.random()*3.0;
-c.size    = 0.04 + Math.random()*0.13;
+c.size    = 0.035 + Math.random()*0.06;
 c.bounces = 0;
 c.color   = col.base;
 if (c.mesh) {
@@ -1793,7 +1795,7 @@ _decalIdx++;
 dd.alive   = true;
 dd.life    = CFG.DECAL_FADE;
 dd.maxLife = CFG.DECAL_FADE;
-dd.mesh.position.set(x, CFG.GROUND_Y, z);
+dd.mesh.position.set(x, 0.04, z);
 // Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
 radius * (1.5 + Math.random() * 1.5),
@@ -1891,9 +1893,9 @@ s = _streams[0];
 s.alive    = true;
 s.enemy    = enemy;
 s.lx = lx; s.ly = ly; s.lz = lz;
-s.dx = normal ? normal.x : (Math.random()-0.5)*0.5;
-s.dy = normal ? normal.y : 0.6 + Math.random()*0.4;
-s.dz = normal ? normal.z : (Math.random()-0.5)*0.5;
+s.dx = (Math.random()-0.5)*0.8;
+s.dy = 0.5 + Math.random()*0.5;
+s.dz = (Math.random()-0.5)*0.8;
 // Normalise direction
 var len = Math.sqrt(s.dx*s.dx + s.dy*s.dy + s.dz*s.dz) + 0.001;
 s.dx /= len; s.dy /= len; s.dz /= len;
