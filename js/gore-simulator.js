@@ -1591,18 +1591,8 @@ mesh.scale.setScalar(radius * 3 + Math.random() * 0.15);
 mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;
 mesh.visible = true;
-// Fade after DECAL_FADE_TIME
-const m = mesh;
-const start = performance.now();
-const fade = () => {
-const elapsed = (performance.now() - start) / 1000;
-if (elapsed >= DECAL_FADE_TIME) { m.visible = false; return; }
-if (elapsed > DECAL_FADE_TIME - 3.0) {
-m.material.opacity = Math.max(0, (DECAL_FADE_TIME - elapsed) / 3.0 * 0.7);
-}
-requestAnimationFrame(fade);
-};
-requestAnimationFrame(fade);
+mesh.userData.decalBirth = performance.now();
+mesh.userData.decalLife = DECAL_FADE_TIME;
 },
 
 _spawnChunk(pos, vel, options = {}) {
@@ -1689,6 +1679,25 @@ for (const d of this._drops)   d.update(dt);
 for (const c of this._chunks)  c.update(dt);
 for (const s of this._streams) s.update(dt);
 for (const [id, gore] of this._enemyGoreMap) gore.update(dt);
+var now = performance.now();
+for (var _di = 0; _di < this._decalMeshes.length; _di++) {
+  var _dm = this._decalMeshes[_di];
+  if (!_dm.visible) continue;
+  if (_dm.userData.decalBirth == null) { _dm.visible = false; continue; }
+  var _age = (now - _dm.userData.decalBirth) / 1000;
+  var _life = (typeof _dm.userData.decalLife === 'number' && _dm.userData.decalLife > 0)
+    ? _dm.userData.decalLife
+    : DECAL_FADE_TIME;
+  var _fadeDuration = Math.min(3.0, _life);
+  var _fadeStartAge = _life - _fadeDuration;
+  if (_age >= _life) {
+    _dm.visible = false;
+  } else if (_age > _fadeStartAge) {
+    _dm.material.opacity = Math.max(0,
+      (_life - _age) / _fadeDuration * 0.75
+    );
+  }
+}
 },
 
 // ────────────────────────────────────────

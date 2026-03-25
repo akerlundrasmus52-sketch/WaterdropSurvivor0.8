@@ -786,10 +786,31 @@
         woundPool.push(wound);
       }
 
+      // Pre-allocate blood splatter meshes (pooled — no new THREE.Mesh during gameplay)
+      const MAX_SPLATTERS = 9;
+      const splatPool = [];
+      const _splatGeo = new THREE.CircleGeometry(0.09, 7);
+      for (var _si = 0; _si < MAX_SPLATTERS; _si++) {
+        var _sMat = new THREE.MeshBasicMaterial({
+          color: 0x440000,
+          transparent: true,
+          opacity: 0.9,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        var _sMesh = new THREE.Mesh(_splatGeo, _sMat);
+        _sMesh.renderOrder = 4;
+        _sMesh.visible = false;
+        mesh.add(_sMesh);
+        splatPool.push(_sMesh);
+      }
+
       _enemyPool.push({
         mesh,
         woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
         woundCount: 0, // number of currently active wound meshes
+        splatPool,   // pre-allocated blood splatter meshes (pooled)
+        splatIndex: 0, // next splatter slot to write (ring buffer)
         eyePupils,   // Store eye pupil references for tracking
         eyeMeshes,  // eye meshes for blinking
         hp: SLIME_HP,
@@ -845,6 +866,11 @@
     if (slot.woundPool) {
       for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
     }
+    // Hide all pre-allocated splatters and reset ring-buffer index
+    slot.splatIndex = 0;
+    if (slot.splatPool) {
+      for (var _spi = 0; _spi < slot.splatPool.length; _spi++) slot.splatPool[_spi].visible = false;
+    }
     slot.mesh.position.set(x, 0.45, z);
     slot.mesh.material.color.setHex(0x55EE44);
     slot.mesh.material.opacity = 0.92;
@@ -856,6 +882,11 @@
   }
 
   function _deactivateSlime(slot) {
+    // Hide all pre-allocated splatter meshes (pooled — no dispose needed)
+    slot.splatIndex = 0;
+    if (slot.splatPool) {
+      for (var _spi = 0; _spi < slot.splatPool.length; _spi++) slot.splatPool[_spi].visible = false;
+    }
     slot.active = false;
     slot.dead = true;
     slot.mesh.visible = false;
@@ -1042,25 +1073,6 @@
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
     }
 
-    // Blood splatter on hit — reuse _reusableBloodPos (no new {} per hit)
-    _reusableBloodPos.x = slot.mesh.position.x;
-    _reusableBloodPos.y = slot.mesh.position.y + 0.4;
-    _reusableBloodPos.z = slot.mesh.position.z;
-    const _bloodPos = _reusableBloodPos;
-    if (window.BloodSystem) {
-      // Reduced from 30 to 5 particles for realistic subtle hit
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bloodPos, 5, { spreadXZ: 1.2, spreadY: 0.5, minLife: 50, maxLife: 100 });
-      }
-
-      // Register wound for heartbeat spurts (like old map at 75% HP)
-      if (hpPercent <= 0.75 && typeof BloodSystem.addWound === 'function') {
-        const wDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
-        const wLife = hpPercent < 0.25 ? 480 : (hpPercent < 0.5 ? 300 : 180);
-        BloodSystem.addWound(_bloodPos, wDir, 'gun', { life: wLife });
-      }
-    }
-
     // ── GORE SIMULATOR: Connect every weapon to gore system ──────────────────
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       _tmpV3.set(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z);
@@ -1075,9 +1087,10 @@
     // This ensures EVERY single gun shot dynamically generates a visible bullet hole
     if (slot.woundPool && slot.woundCount < slot.woundPool.length) {
       const wound = slot.woundPool[slot.woundCount++];
-      // Make wound darker (bullet hole appearance) - dark brown/red
-      wound.material.color.setHex(0x330000);
+      // Make wound appear as true black hole
+      wound.material.color.setHex(0x000000);
       wound.visible = true;
+      wound.renderOrder = 5;
 
       // Position bullet hole on surface - randomized around hit point
       // Calculate hit direction from projectile velocity
@@ -1089,14 +1102,40 @@
       }
 
       // Place wound at surface impact point
-      const surfaceRadius = 0.5; // Approximate radius of slime body
+      const surfaceRadius = 0.68; // Approximate radius of slime body
       const woundX = hitDirX * surfaceRadius;
       const woundZ = hitDirZ * surfaceRadius;
       const woundY = -0.1 + Math.random() * 0.4; // Randomize height slightly
       wound.position.set(woundX, woundY, woundZ);
 
       // Scale down for bullet hole size (smaller than normal wounds)
-      wound.scale.setScalar(0.6);
+      wound.scale.setScalar(0.28);
+
+      // Recycle a pre-allocated splatter mesh from the pool (ring buffer)
+      if (slot.splatPool && slot.splatPool.length > 0) {
+        var _bsmesh = slot.splatPool[slot.splatIndex % slot.splatPool.length];
+        slot.splatIndex++;
+        var _bsAngle = Math.atan2(hitDirZ, hitDirX);
+        var _bsRadius = 0.65 + Math.random() * 0.15;
+        var _bsHeight = 0.0 + Math.random() * 0.6 - 0.2;
+        _bsmesh.position.set(
+          Math.cos(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1,
+          _bsHeight,
+          Math.sin(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1
+        );
+        _bsmesh.lookAt(
+          Math.cos(_bsAngle) * 2,
+          _bsHeight,
+          Math.sin(_bsAngle) * 2
+        );
+        var _bsScale = 0.6 + Math.random() * 0.8;
+        _bsmesh.scale.set(_bsScale, _bsScale * 1.4, 1);
+        _bsmesh.rotation.z = Math.random() * Math.PI * 2;
+        _bsmesh.material.opacity = 0.9;
+        _bsmesh.material.color.setHex(0x440000);
+        _bsmesh.userData.fadeTimer = 50 + Math.random() * 20;
+        _bsmesh.visible = true;
+      }
     }
 
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
@@ -1132,62 +1171,6 @@
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS);
     // Hard camera shake on kill (scales slightly with hit force)
     _triggerShake(SHAKE_KILL_BASE + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
-
-    // ── DEATH EXPLOSION WITH MASSIVE GORE (MATCH OLD MAP: 600 PARTICLES) ─────
-    if (window.BloodSystem) {
-      // OLD MAP: 350-600 particle burst for death - now tuned to 22 here
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 22, {
-          spreadXZ: 3.0,
-          spreadY: 1.2,
-          minLife: 50,
-          maxLife: 120,
-          minSize: 0.02,
-          maxSize: 0.12
-        });
-      }
-      if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x, y, z }, 8); // Reduced from 30 to 8
-      }
-      // Final death throes: heartbeat gushing before going still
-      // OLD MAP: 6-10 pulses × 280-500 particles, 180ms interval
-      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound({ x, y, z }, {
-          pulses: 3, // Reduced from 10 to 3
-          perPulse: 30, // Reduced from 280 to 30
-          interval: 180, // Reduced from 200 to 180 to match old map
-          woundHeight: 1.4,
-          pressure: 1.5
-        });
-      }
-      // OLD MAP: Blood pulse emissions
-      if (typeof BloodSystem.emitPulse === 'function') {
-        BloodSystem.emitPulse({ x, y, z }, {
-          pulses: 2, // Reduced from 6 to 2
-          perPulse: 40, // Reduced from 400 to 40
-          interval: 180,
-          spreadXZ: 1.5
-        });
-      }
-      // ADD: Physical blood drop meshes like old map (5 individual spheres)
-      if (typeof BloodSystem.emitDrop === 'function') {
-        for (let d = 0; d < 5; d++) { // Reduced from 18 to 5
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 0.5 + Math.random() * 1.5;
-          const dx = Math.cos(angle) * dist;
-          const dz = Math.sin(angle) * dist;
-          BloodSystem.emitDrop(
-            x + dx * 0.1,
-            y + 0.5,
-            z + dz * 0.1,
-            dx * 0.3, // velocity X
-            0.25 + Math.random() * 0.20, // velocity Y (upward arc)
-            dz * 0.3, // velocity Z
-            0.04 + Math.random() * 0.08 // size (larger drops)
-          );
-        }
-      }
-    }
 
     // ── GORE SIMULATOR: Weapon-specific death reaction ──────────────────────
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
@@ -1296,10 +1279,6 @@
     _reusableBloodPos.x = cx;
     _reusableBloodPos.y = 0.5;
     _reusableBloodPos.z = cz;
-    if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst(_reusableBloodPos, 20, { spreadXZ: 0.8, spreadY: 0.4, minLife: 40, maxLife: 80 });
-    }
-
     // Gore simulator
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       _tmpV3.set(cx, 0.4, cz);
@@ -1335,18 +1314,6 @@
 
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 1.5);
     _triggerShake(SHAKE_KILL_BASE * 1.3 + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
-
-    // Crawler explodes into segmented chunks — massive brown/amber blood burst
-    if (window.BloodSystem) {
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 60, {
-          spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100
-        });
-      }
-      if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x, y, z }, 25);
-      }
-    }
 
     // Gore sim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
