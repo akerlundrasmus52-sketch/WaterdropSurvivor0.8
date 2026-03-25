@@ -1956,7 +1956,7 @@
 
     /* Eye of Horus symbol in center */
     #levelup-modal::after {
-      content: '\u{1F441}';
+      content: "\1F441";
       position: absolute;
       top: 50%;
       left: 50%;
@@ -1974,8 +1974,8 @@
     }
 
     @keyframes pyramid-pulse {
-      0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(1); }
-      50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.05); }
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.6; }
     }
 
     @keyframes pyramid-rotate {
@@ -2231,10 +2231,18 @@
 
     /* Fogwater: slow breathing gradient on level-up modal background */
     @keyframes fogwater-bg {
-      0%   { background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97)); }
-      33%  { background: linear-gradient(to bottom, rgba(20,24,52,0.97), rgba(18,36,68,0.97)); }
-      66%  { background: linear-gradient(to bottom, rgba(24,30,50,0.97), rgba(20,30,58,0.97)); }
-      100% { background: linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97)); }
+      0%   { background:
+        radial-gradient(ellipse 800px 800px at 50% 50%, rgba(0,0,0,0.75), rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.98) 100%),
+        linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97)); }
+      33%  { background:
+        radial-gradient(ellipse 800px 800px at 50% 50%, rgba(0,0,0,0.75), rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.98) 100%),
+        linear-gradient(to bottom, rgba(20,24,52,0.97), rgba(18,36,68,0.97)); }
+      66%  { background:
+        radial-gradient(ellipse 800px 800px at 50% 50%, rgba(0,0,0,0.75), rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.98) 100%),
+        linear-gradient(to bottom, rgba(24,30,50,0.97), rgba(20,30,58,0.97)); }
+      100% { background:
+        radial-gradient(ellipse 800px 800px at 50% 50%, rgba(0,0,0,0.75), rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.98) 100%),
+        linear-gradient(to bottom, rgba(26,26,46,0.97), rgba(22,33,62,0.97)); }
     }
 
     /* Glass glow inward flash on card press */
@@ -2283,7 +2291,6 @@
       justify-content: space-between;
       box-sizing: border-box;
       transform-style: preserve-3d;
-      perspective: 1000px;
     }
 
     .upgrade-card::before {
@@ -2386,7 +2393,7 @@
     }
 
     .upgrade-card:hover {
-      transform: translateY(-12px) scale(1.06) rotateX(5deg);
+      transform: perspective(1000px) translateY(-12px) scale(1.06) rotateX(5deg);
       filter: brightness(1.2) saturate(1.1);
       animation: none;
       box-shadow:
@@ -2396,7 +2403,7 @@
         inset 0 2px 0 rgba(255, 255, 255, 0.15);
     }
 
-    .upgrade-card:hover::after {
+    .upgrade-card:not(.holding):hover::after {
       animation: card-glare-sweep 0.55s ease-out forwards !important;
       background: linear-gradient(115deg,
         transparent 0%,

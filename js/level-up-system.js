@@ -1483,7 +1483,7 @@ window.spawnBossChest = function(x, z) {
           if (e.animationName && e.animationName === 'cardRevealRotate') {
             card.style.animation = '';
             card.style.opacity = '1';
-            card.style.transform = 'scale(1) rotateY(0deg)';
+            card.style.transform = '';
           }
         }, { once: true });
         
@@ -1686,7 +1686,11 @@ window.spawnBossChest = function(x, z) {
 
       modal.style.display = 'flex';
       modal.style.opacity = '0';
-      modal.style.animation = 'wallFadeIn 0.3s ease-out forwards';
+      const existingAnimation = modal.style.animation || (window.getComputedStyle ? window.getComputedStyle(modal).animation : '') || '';
+      const wallFadeInAnim = 'wallFadeIn 0.3s ease-out forwards';
+      modal.style.animation = existingAnimation
+        ? existingAnimation + ', ' + wallFadeInAnim
+        : wallFadeInAnim;
 
       // --- Dopamine level-up FX: time dilation, camera zoom, chromatic aberration ---
       if (window.DopamineSystem && window.DopamineSystem.LevelUpFX) {
