@@ -1682,6 +1682,7 @@ var now = performance.now();
 for (var _di = 0; _di < this._decalMeshes.length; _di++) {
   var _dm = this._decalMeshes[_di];
   if (!_dm.visible) continue;
+  if (_dm.userData.decalBirth == null) { _dm.visible = false; continue; }
   var _age = (now - _dm.userData.decalBirth) / 1000;
   if (_age >= DECAL_FADE_TIME) {
     _dm.visible = false;

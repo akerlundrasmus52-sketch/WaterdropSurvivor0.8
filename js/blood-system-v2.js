@@ -742,7 +742,7 @@ _decals = [];
 for (var i = 0; i < CFG.DECAL_COUNT; i++) {
 var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
-mesh.position.y = 0.04;
+mesh.position.y = CFG.GROUND_Y;
 mesh.visible    = false;
 mesh.renderOrder = 2;
 _scene.add(mesh);
@@ -1795,7 +1795,7 @@ _decalIdx++;
 dd.alive   = true;
 dd.life    = CFG.DECAL_FADE;
 dd.maxLife = CFG.DECAL_FADE;
-dd.mesh.position.set(x, 0.04, z);
+dd.mesh.position.set(x, CFG.GROUND_Y, z);
 // Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
 radius * (1.5 + Math.random() * 1.5),

@@ -786,10 +786,31 @@
         woundPool.push(wound);
       }
 
+      // Pre-allocate blood splatter meshes (pooled — no new THREE.Mesh during gameplay)
+      const MAX_SPLATTERS = 9;
+      const splatPool = [];
+      const _splatGeo = new THREE.CircleGeometry(0.09, 7);
+      for (var _si = 0; _si < MAX_SPLATTERS; _si++) {
+        var _sMat = new THREE.MeshBasicMaterial({
+          color: 0x440000,
+          transparent: true,
+          opacity: 0.9,
+          depthWrite: false,
+          side: THREE.DoubleSide
+        });
+        var _sMesh = new THREE.Mesh(_splatGeo, _sMat);
+        _sMesh.renderOrder = 4;
+        _sMesh.visible = false;
+        mesh.add(_sMesh);
+        splatPool.push(_sMesh);
+      }
+
       _enemyPool.push({
         mesh,
         woundPool,   // pre-allocated wound meshes (pooled, replaces old wounds array)
         woundCount: 0, // number of currently active wound meshes
+        splatPool,   // pre-allocated blood splatter meshes (pooled)
+        splatIndex: 0, // next splatter slot to write (ring buffer)
         eyePupils,   // Store eye pupil references for tracking
         eyeMeshes,  // eye meshes for blinking
         hp: SLIME_HP,
@@ -845,6 +866,11 @@
     if (slot.woundPool) {
       for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
     }
+    // Hide all pre-allocated splatters and reset ring-buffer index
+    slot.splatIndex = 0;
+    if (slot.splatPool) {
+      for (var _spi = 0; _spi < slot.splatPool.length; _spi++) slot.splatPool[_spi].visible = false;
+    }
     slot.mesh.position.set(x, 0.45, z);
     slot.mesh.material.color.setHex(0x55EE44);
     slot.mesh.material.opacity = 0.92;
@@ -856,16 +882,10 @@
   }
 
   function _deactivateSlime(slot) {
-    if (slot.bloodSplatters) {
-      for (var _bsi = 0; _bsi < slot.bloodSplatters.length; _bsi++) {
-        var _bsOld = slot.bloodSplatters[_bsi];
-        if (_bsOld && _bsOld.parent) {
-          _bsOld.parent.remove(_bsOld);
-          _bsOld.geometry.dispose();
-          _bsOld.material.dispose();
-        }
-      }
-      slot.bloodSplatters = [];
+    // Hide all pre-allocated splatter meshes (pooled — no dispose needed)
+    slot.splatIndex = 0;
+    if (slot.splatPool) {
+      for (var _spi = 0; _spi < slot.splatPool.length; _spi++) slot.splatPool[_spi].visible = false;
     }
     slot.active = false;
     slot.dead = true;
@@ -1091,49 +1111,30 @@
       // Scale down for bullet hole size (smaller than normal wounds)
       wound.scale.setScalar(0.28);
 
-      if (!slot.bloodSplatters) slot.bloodSplatters = [];
-      var _bsg = new THREE.CircleGeometry(0.09, 7);
-      var _bsm = new THREE.MeshBasicMaterial({
-        color: 0x440000,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false,
-        side: THREE.DoubleSide
-      });
-      var _bsmesh = new THREE.Mesh(_bsg, _bsm);
-      _bsmesh.renderOrder = 4;
-      var _bsAngle = Math.atan2(hitDirZ, hitDirX);
-      var _bsRadius = 0.65 + Math.random() * 0.15;
-      var _bsHeight = 0.0 + Math.random() * 0.6 - 0.2;
-      _bsmesh.position.set(
-        Math.cos(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1,
-        _bsHeight,
-        Math.sin(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1
-      );
-      _bsmesh.lookAt(
-        Math.cos(_bsAngle) * 2,
-        _bsHeight,
-        Math.sin(_bsAngle) * 2
-      );
-      var _bsScale = 0.6 + Math.random() * 0.8;
-      _bsmesh.scale.set(_bsScale, _bsScale * 1.4, 1);
-      _bsmesh.rotation.z = Math.random() * Math.PI * 2;
-      _bsmesh.userData.fadeTimer = 50 + Math.random() * 20;
-      slot.mesh.add(_bsmesh);
-      slot.bloodSplatters.push(_bsmesh);
-      if (slot.bloodSplatters.length > 9) {
-        var _oldSplat = slot.bloodSplatters.shift();
-        if (_oldSplat) {
-          if (_oldSplat.parent) {
-            _oldSplat.parent.remove(_oldSplat);
-          }
-          if (_oldSplat.geometry) {
-            _oldSplat.geometry.dispose();
-          }
-          if (_oldSplat.material) {
-            _oldSplat.material.dispose();
-          }
-        }
+      // Recycle a pre-allocated splatter mesh from the pool (ring buffer)
+      if (slot.splatPool && slot.splatPool.length > 0) {
+        var _bsmesh = slot.splatPool[slot.splatIndex % slot.splatPool.length];
+        slot.splatIndex++;
+        var _bsAngle = Math.atan2(hitDirZ, hitDirX);
+        var _bsRadius = 0.65 + Math.random() * 0.15;
+        var _bsHeight = 0.0 + Math.random() * 0.6 - 0.2;
+        _bsmesh.position.set(
+          Math.cos(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1,
+          _bsHeight,
+          Math.sin(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1
+        );
+        _bsmesh.lookAt(
+          Math.cos(_bsAngle) * 2,
+          _bsHeight,
+          Math.sin(_bsAngle) * 2
+        );
+        var _bsScale = 0.6 + Math.random() * 0.8;
+        _bsmesh.scale.set(_bsScale, _bsScale * 1.4, 1);
+        _bsmesh.rotation.z = Math.random() * Math.PI * 2;
+        _bsmesh.material.opacity = 0.9;
+        _bsmesh.material.color.setHex(0x440000);
+        _bsmesh.userData.fadeTimer = 50 + Math.random() * 20;
+        _bsmesh.visible = true;
       }
     }
 
