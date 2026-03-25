@@ -285,6 +285,84 @@
       }
     }
 
+    // ── 3b. Progression Center (Stat Forge) permanent upgrades ───────────────
+    // saveData.progressionUpgrades is managed by progression-center.js.
+    // Each entry is { level: N }. Stat increments mirror PROGRESSION_UPGRADES.perLevel.
+    if (sd.progressionUpgrades) {
+      var pu = sd.progressionUpgrades;
+
+      // maxHealth: +15 HP / level
+      if (pu.maxHealth && (pu.maxHealth.level || 0) > 0) {
+        stats.maxHp += 15 * pu.maxHealth.level;
+      }
+      // healthRegen: +0.5 HP/s / level
+      if (pu.healthRegen && (pu.healthRegen.level || 0) > 0) {
+        stats.hpRegen          = (stats.hpRegen          || 0) + 0.5 * pu.healthRegen.level;
+        stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + 0.5 * pu.healthRegen.level;
+      }
+      // armor: +3 flat armor / level
+      if (pu.armor && (pu.armor.level || 0) > 0) {
+        stats.armor     = (stats.armor     || 0) + 3 * pu.armor.level;
+        stats.flatArmor = (stats.flatArmor || 0) + 3 * pu.armor.level;
+      }
+      // baseDamage: +8% damage / level (multiplicative)
+      if (pu.baseDamage && (pu.baseDamage.level || 0) > 0) {
+        var puBdMult = 1 + 0.08 * pu.baseDamage.level;
+        stats.strength = (stats.strength || 1)   * puBdMult;
+        stats.damage   = (stats.damage   || 1.0) * puBdMult;
+      }
+      // attackSpeed: +5% / level (multiplicative)
+      if (pu.attackSpeed && (pu.attackSpeed.level || 0) > 0) {
+        var puAsm = 1 + 0.05 * pu.attackSpeed.level;
+        stats.atkSpeed          = (stats.atkSpeed          || 1.0) * puAsm;
+        stats.meleeAttackSpeed  = (stats.meleeAttackSpeed  || 1.0) * puAsm;
+        stats.projectileFireRate= (stats.projectileFireRate|| 1.0) * puAsm;
+        stats.fireRate          = (stats.fireRate          || 1.0) * puAsm;
+      }
+      // criticalChance: +1.5% / level
+      if (pu.criticalChance && (pu.criticalChance.level || 0) > 0) {
+        stats.critChance = Math.min(0.95, (stats.critChance || 0.10) + 0.015 * pu.criticalChance.level);
+      }
+      // criticalDamage: +10% crit multiplier / level
+      if (pu.criticalDamage && (pu.criticalDamage.level || 0) > 0) {
+        stats.critDmg = (stats.critDmg || 1.5) + 0.10 * pu.criticalDamage.level;
+      }
+      // moveSpeed: +4% / level
+      if (pu.moveSpeed && (pu.moveSpeed.level || 0) > 0) {
+        var puMsm = 1 + 0.04 * pu.moveSpeed.level;
+        stats.walkSpeed         = (stats.walkSpeed         || 25)  * puMsm;
+        stats.topSpeed          = (stats.topSpeed          || 6.5) * puMsm;
+        stats.baseMovementSpeed = (stats.baseMovementSpeed || 1.0) * puMsm;
+      }
+      // dashCooldown: -5% per level (perLevel is -0.05)
+      if (pu.dashCooldown && (pu.dashCooldown.level || 0) > 0) {
+        var puDcRed = Math.min(0.60, 0.05 * pu.dashCooldown.level);
+        stats.dashCooldown  = Math.max(0.2, (stats.dashCooldown  || 1.0) * (1 - puDcRed));
+        stats.skillCooldown = Math.max(0.2, (stats.skillCooldown || 1.0) * (1 - puDcRed));
+      }
+      // goldFind: +10% gold drops / level
+      if (pu.goldFind && (pu.goldFind.level || 0) > 0) {
+        stats.goldDropBonus      = (stats.goldDropBonus || 0) + 0.10 * pu.goldFind.level;
+      }
+      // experienceGain: +8% XP / level
+      if (pu.experienceGain && (pu.experienceGain.level || 0) > 0) {
+        stats.expGainBonus = (stats.expGainBonus || 0)   + 0.08 * pu.experienceGain.level;
+        stats.xpMultiplier = (stats.xpMultiplier || 1.0) + 0.08 * pu.experienceGain.level;
+      }
+      // lifeSteal: +2% per level
+      if (pu.lifeSteal && (pu.lifeSteal.level || 0) > 0) {
+        var puLs = 0.02 * pu.lifeSteal.level;
+        stats.lifesteal        = Math.min(0.50, (stats.lifesteal        || 0) + puLs);
+        stats.lifeSteal        = Math.min(0.50, (stats.lifeSteal        || 0) + puLs);
+        stats.lifeStealPercent = (stats.lifeStealPercent || 0) + puLs;
+      }
+      // pickupRange: +15% / level
+      if (pu.pickupRange && (pu.pickupRange.level || 0) > 0) {
+        stats.pickupRange        = (stats.pickupRange        || 1.0) + 0.15 * pu.pickupRange.level;
+        stats.xpCollectionRadius = (stats.xpCollectionRadius || 1.0) + 0.15 * pu.pickupRange.level;
+      }
+    }
+
     // ── 4. Attribute points (Training Hall / Achievements) ───────────────────
     if (sd.attributes) {
       var attr = sd.attributes;
