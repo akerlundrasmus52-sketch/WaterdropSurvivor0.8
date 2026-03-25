@@ -1366,6 +1366,10 @@
       GoreSim.onKill(crawler, 'pistol', null);
     }
 
+    // Spawn brown crawler/worm flesh chunks
+    const crawlerColors = [0x8B4513, 0x6B3410, 0x5C3010, 0xDEB887];
+    _spawnFleshChunks(crawler, 6 + Math.floor(Math.random() * 5), true, crawlerColors);
+
     _placeBloodStain(x, z);
 
     // Mark as dying (crawler death animation handles fade)
@@ -1512,7 +1516,7 @@
     // Light-blue blood burst (DeepSkyBlue) — use BloodV2 rawBurst if available
     const bx = enemy.mesh.position.x, by = enemy.mesh.position.y + enemy.size, bz = enemy.mesh.position.z;
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
-      BloodV2.rawBurst(bx, by, bz, 6, { color: 0x00bfff });
+      BloodV2.rawBurst(bx, by, bz, 6, { enemyType: 'leaping_slime' });
     } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
       BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
     }
@@ -1547,7 +1551,7 @@
 
     // Light-blue gore burst
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
-      BloodV2.rawBurst(x, y, z, 18, { color: 0x00bfff });
+      BloodV2.rawBurst(x, y, z, 18, { enemyType: 'leaping_slime' });
     } else if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
         BloodSystem.emitBurst({ x, y, z }, 18, { spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100 });
@@ -1561,6 +1565,10 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(enemy, 'pistol', null);
     }
+
+    // Spawn blue slime flesh chunks
+    const blueSlimeColors = [0x00bfff, 0x0090cc, 0x005f99, 0x00ffff];
+    _spawnFleshChunks(enemy, 4 + Math.floor(Math.random() * 3), false, blueSlimeColors);
 
     _placeBloodStain(x, z);
 
@@ -2046,12 +2054,19 @@
   }
 
   // Spawn flying flesh chunks using pre-allocated pool (no new THREE.Mesh during gameplay)
-  function _spawnFleshChunks(slot, count, large) {
+  // color parameter can be either a single hex color or an array of colors to choose from
+  function _spawnFleshChunks(slot, count, large, color) {
     const pos = slot.mesh.position;
+    // Default to green slime colors if no color provided
+    const defaultColors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
+    const chunkColors = Array.isArray(color) ? color : (color ? [color] : defaultColors);
 
     for (let i = 0; i < count; i++) {
       const chunk = _acquireFleshChunk();
       if (!chunk) break; // pool exhausted — skip excess chunks
+
+      // Set chunk color from the provided color array
+      chunk.mesh.material.color.setHex(chunkColors[i % chunkColors.length]);
 
       const angle = Math.random() * Math.PI * 2;
       chunk.mesh.position.set(

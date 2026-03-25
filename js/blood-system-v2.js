@@ -71,13 +71,14 @@ BOUNCE_DECAL_PROB: 0.10, // probability of spawning a decal on first bounce
 //  Add more when you add more enemy types
 // ══════════════════════════════════════════
 var ENEMY_BLOOD = {
-slime:    { base: 0x22cc44, dark: 0x117722, organ: 0x00ff88, mist: 0x55ff66 },
-bug:      { base: 0xaadd00, dark: 0x667700, organ: 0xddff00, mist: 0xccee33 },
-human:    { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
-alien:    { base: 0x8800ff, dark: 0x440088, organ: 0xcc44ff, mist: 0xaa33ee },
-robot:    { base: 0x88aaff, dark: 0x334488, organ: 0xffffff, mist: 0xaaccff },
-crawler:  { base: 0x994422, dark: 0x662200, organ: 0xcc6633, mist: 0xbb7744 },
-default:  { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
+slime:         { base: 0x22cc44, dark: 0x117722, organ: 0x00ff88, mist: 0x55ff66 },
+bug:           { base: 0xaadd00, dark: 0x667700, organ: 0xddff00, mist: 0xccee33 },
+human:         { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
+alien:         { base: 0x8800ff, dark: 0x440088, organ: 0xcc44ff, mist: 0xaa33ee },
+robot:         { base: 0x88aaff, dark: 0x334488, organ: 0xffffff, mist: 0xaaccff },
+crawler:       { base: 0x994422, dark: 0x662200, organ: 0xcc6633, mist: 0xbb7744 },
+leaping_slime: { base: 0x00bfff, dark: 0x0090cc, organ: 0x00ffff, mist: 0x55ddff },
+default:       { base: 0xcc1100, dark: 0x880000, organ: 0xff3300, mist: 0xee2200 },
 };
 
 // ══════════════════════════════════════════
@@ -1994,13 +1995,21 @@ ANATOMY[enemyType] = anatomyProfile;
 },
 
 // Direct particle burst — bypasses hit/weapon logic, spawns exactly `count` drops radially.
-// opts: { spdMin, spdMax, rMin, rMax, life, visc, color }
+// opts: { spdMin, spdMax, rMin, rMax, life, visc, color, enemyType }
+//   If enemyType is provided, it overrides color with the enemy's blood color from ENEMY_BLOOD table.
 rawBurst: function(ox, oy, oz, count, opts) {
 if (!_ready) return;
 var o = opts || {};
+// If enemyType is provided, use that enemy's blood color; otherwise use opts.color or default red
+var bloodColor = 0xcc1100; // default red
+if (o.enemyType && ENEMY_BLOOD[o.enemyType]) {
+  bloodColor = ENEMY_BLOOD[o.enemyType].base;
+} else if (o.color !== undefined) {
+  bloodColor = o.color;
+}
 _burstRadial(ox, oy, oz,
   typeof count === 'number' ? count : 20,
-  o.color  !== undefined ? o.color  : 0xcc1100,
+  bloodColor,
   o.spdMin !== undefined ? o.spdMin : 1.5,
   o.spdMax !== undefined ? o.spdMax : 6.0,
   o.rMin   !== undefined ? o.rMin   : 0.007,
@@ -2011,13 +2020,21 @@ _burstRadial(ox, oy, oz,
 },
 
 // Direct upward particle burst — spawns exactly `count` drops in an upward cone.
-// opts: { spdMin, spdMax, rMin, rMax, life, visc, color }
+// opts: { spdMin, spdMax, rMin, rMax, life, visc, color, enemyType }
+//   If enemyType is provided, it overrides color with the enemy's blood color from ENEMY_BLOOD table.
 rawBurstUpward: function(ox, oy, oz, count, opts) {
 if (!_ready) return;
 var o = opts || {};
+// If enemyType is provided, use that enemy's blood color; otherwise use opts.color or default red
+var bloodColor = 0xcc1100; // default red
+if (o.enemyType && ENEMY_BLOOD[o.enemyType]) {
+  bloodColor = ENEMY_BLOOD[o.enemyType].base;
+} else if (o.color !== undefined) {
+  bloodColor = o.color;
+}
 _burstUpward(ox, oy, oz,
   typeof count === 'number' ? count : 15,
-  o.color  !== undefined ? o.color  : 0xcc1100,
+  bloodColor,
   o.spdMin !== undefined ? o.spdMin : 1.5,
   o.spdMax !== undefined ? o.spdMax : 5.5,
   o.rMin   !== undefined ? o.rMin   : 0.007,
