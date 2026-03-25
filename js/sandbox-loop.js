@@ -356,6 +356,7 @@
   let _escalationTimer = ESCALATION_INTERVAL; // seconds until next difficulty escalation
   let _allFleshChunks = [];        // global flying flesh chunk list (from all pool slots)
   let _activeCrawlers = [];        // live list of active crawler enemies
+  let _activeLeapingSlimes = [];   // live list of active leaping slime enemies
   let _projPool = [];              // reusable projectile objects
   let _activeProjList = [];        // currently flying projectiles
   let _animateErrorShown = false;  // prevent spamming error display every frame
@@ -498,6 +499,10 @@
     for (let i = 0; i < _activeCrawlers.length; i++) {
       _enemySpatialHash.insert(_activeCrawlers[i]);
     }
+    // Also insert active leaping slimes into spatial hash
+    for (let i = 0; i < _activeLeapingSlimes.length; i++) {
+      _enemySpatialHash.insert(_activeLeapingSlimes[i]);
+    }
   }
 
   // ─── Hit-Stop & Screen Shake helpers ─────────────────────────────────────────
@@ -609,7 +614,7 @@
 
       // Collision with enemies — use spatial hash if available (O(1) per projectile)
       let hitThisFrame = false;
-      if (_enemySpatialHash && (_activeSlimes.length > 0 || _activeCrawlers.length > 0)) {
+      if (_enemySpatialHash && (_activeSlimes.length > 0 || _activeCrawlers.length > 0 || _activeLeapingSlimes.length > 0)) {
         const nearby = _enemySpatialHash.query(p.mesh.position.x, p.mesh.position.z, COLLISION_QUERY_RADIUS);
         for (let si = 0; si < nearby.length; si++) {
           const s = nearby[si];
@@ -619,6 +624,8 @@
           if (ex * ex + ez * ez < COLLISION_THRESHOLD_SQ) {
             if (s.enemyType === 'crawler') {
               _hitCrawler(p, s);
+            } else if (s.enemyType === 'leaping_slime') {
+              _hitLeapingSlime(p, s);
             } else {
               _hitSlime(p, s);
             }
@@ -650,6 +657,21 @@
             const cz = p.mesh.position.z - c.mesh.position.z;
             if (cx * cx + cz * cz < COLLISION_THRESHOLD_SQ) {
               _hitCrawler(p, c);
+              _releaseProjectile(p, i);
+              hitThisFrame = true;
+              break;
+            }
+          }
+        }
+        if (!hitThisFrame) {
+          // Also check leaping slimes in brute-force mode
+          for (let li = 0; li < _activeLeapingSlimes.length; li++) {
+            const l = _activeLeapingSlimes[li];
+            if (!l.active || l.dead) continue;
+            const lx = p.mesh.position.x - l.mesh.position.x;
+            const lz = p.mesh.position.z - l.mesh.position.z;
+            if (lx * lx + lz * lz < COLLISION_THRESHOLD_SQ) {
+              _hitLeapingSlime(p, l);
               _releaseProjectile(p, i);
               hitThisFrame = true;
               break;
