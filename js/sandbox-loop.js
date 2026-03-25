@@ -3458,6 +3458,32 @@
     if (typeof getDefaultWeapons === 'function') {
       weapons = getDefaultWeapons();
     }
+
+    // ── Apply permanent stat bonuses to weapon defaults ───────────────────
+    // This ensures camp/skill-tree atkSpeed, weaponDamage, etc. are
+    // reflected in weapon cooldowns and damage from the very first frame.
+    if (weapons && playerStats) {
+      var _aspdMult   = playerStats.atkSpeed   || 1.0;
+      var _fireMult   = playerStats.fireRate    || 1.0;
+      var _dmgMult    = playerStats.strength    || 1.0;
+      var _wdBonus    = playerStats.weaponDamage|| 0;   // additive fraction
+
+      // Use the greater of atkSpeed and fireRate as fire rate multiplier
+      var _frMult = Math.max(_aspdMult, _fireMult);
+
+      Object.keys(weapons).forEach(function (wKey) {
+        var w = weapons[wKey];
+        if (!w) return;
+        // Scale cooldown: higher atkSpeed = lower cooldown (faster fire)
+        if (_frMult > 1.0 && w.cooldown != null) {
+          w.cooldown = Math.max(50, Math.round(w.cooldown / _frMult));
+        }
+        // Scale weapon damage by player strength and weapon-damage bonus
+        if (w.damage != null) {
+          w.damage = Math.round(w.damage * _dmgMult * (1 + _wdBonus));
+        }
+      });
+    }
     // Create player using the existing Player class
     if (typeof Player === 'function') {
       player = new Player();

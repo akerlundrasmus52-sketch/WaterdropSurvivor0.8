@@ -343,11 +343,17 @@ window.GameAccount = (function () {
       });
       html += '</div>';
 
-      // All stats by category
-      html += '<div class="acc-section-title" style="margin-top:10px;">═══ ALL STATS (Original → Current) ═══</div>';
+      // All stats by category — use live calculateTotalPlayerStats() when available
+      // so every camp upgrade, skill, gear and account bonus is reflected here.
+      html += '<div class="acc-section-title" style="margin-top:10px;">═══ ALL STATS (Base → Current) ═══</div>';
+      var liveStats = null;
+      try {
+        if (window.calculateTotalPlayerStats) liveStats = window.calculateTotalPlayerStats();
+      } catch (e) { liveStats = null; }
+
       html += '<div class="acc-stats-scroll">';
 
-      // Compute attribute-based bonuses
+      // Compute attribute-based bonuses (used as fallback when liveStats unavailable)
       var attrBonus = {};
       CORE_ATTRS.forEach(function (a) {
         var lvl = acc.coreAttributes[a.key] || 0;
@@ -358,31 +364,67 @@ window.GameAccount = (function () {
         html += '<div class="acc-stat-cat-header">' + cat.icon + ' ' + cat.name + '</div>';
         cat.stats.forEach(function (s) {
           var base = s.base;
-          var bonus = (attrBonus[s.key] || 0) + (levelBonuses[s.key] || 0);
-          var cur;
-          if (s.pct) {
-            cur = base + bonus;
-            var baseStr = (base * 100).toFixed(1) + '%';
-            var curStr = (cur * 100).toFixed(1) + '%';
-            var diffStr = bonus > 0 ? '+' + (bonus * 100).toFixed(1) + '%' : '—';
-            html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span><span class="acc-stat-vals">' + baseStr + ' → <b>' + curStr + '</b></span><span class="acc-stat-diff acc-stat-up">' + diffStr + '</span></div>';
+          var cur, diffStr;
+          if (liveStats && liveStats[s.key] !== undefined) {
+            // Use real aggregated stat value — reflects ALL sources
+            cur = liveStats[s.key];
+            if (s.pct) {
+              var diff = cur - base;
+              var baseStr = (base * 100).toFixed(1) + '%';
+              var curStr  = (cur  * 100).toFixed(1) + '%';
+              diffStr = diff > 0.0001 ? '+' + (diff * 100).toFixed(1) + '%' : (diff < -0.0001 ? (diff * 100).toFixed(1) + '%' : '—');
+              html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span>' +
+                      '<span class="acc-stat-vals">' + baseStr + ' → <b>' + curStr + '</b></span>' +
+                      '<span class="acc-stat-diff ' + (diff > 0 ? 'acc-stat-up' : '') + '">' + diffStr + '</span></div>';
+            } else {
+              var diff2 = cur - base;
+              var baseStr2 = base.toFixed(base < 10 ? 2 : 0);
+              var curStr2  = cur.toFixed(cur  < 10 ? 2 : 0);
+              if (base > 0) {
+                var pctDiff = ((cur / base) - 1) * 100;
+                diffStr = pctDiff > 0.05 ? '+' + pctDiff.toFixed(1) + '%' : (pctDiff < -0.05 ? pctDiff.toFixed(1) + '%' : '—');
+              } else {
+                diffStr = diff2 > 0 ? '+' + diff2.toFixed(diff2 < 10 ? 2 : 0) : '—';
+              }
+              html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span>' +
+                      '<span class="acc-stat-vals">' + baseStr2 + ' → <b>' + curStr2 + '</b></span>' +
+                      '<span class="acc-stat-diff ' + (diff2 > 0 ? 'acc-stat-up' : '') + '">' + diffStr + '</span></div>';
+            }
           } else {
-            cur = base * (1 + bonus);
-            var baseStr2 = base.toFixed(base < 10 ? 2 : 0);
-            var curStr2 = cur.toFixed(cur < 10 ? 2 : 0);
-            var diffStr2 = bonus > 0 ? '+' + (bonus * 100).toFixed(1) + '%' : '—';
-            html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span><span class="acc-stat-vals">' + baseStr2 + ' → <b>' + curStr2 + '</b></span><span class="acc-stat-diff acc-stat-up">' + diffStr2 + '</span></div>';
+            // Fallback: compute from attribute + level bonuses only
+            var bonus = (attrBonus[s.key] || 0) + (levelBonuses[s.key] || 0);
+            if (s.pct) {
+              cur = base + bonus;
+              var bsF = (base * 100).toFixed(1) + '%';
+              var csF = (cur  * 100).toFixed(1) + '%';
+              diffStr = bonus > 0 ? '+' + (bonus * 100).toFixed(1) + '%' : '—';
+              html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span>' +
+                      '<span class="acc-stat-vals">' + bsF + ' → <b>' + csF + '</b></span>' +
+                      '<span class="acc-stat-diff acc-stat-up">' + diffStr + '</span></div>';
+            } else {
+              cur = base * (1 + bonus);
+              var bsNF = base.toFixed(base < 10 ? 2 : 0);
+              var csNF = cur.toFixed(cur   < 10 ? 2 : 0);
+              diffStr = bonus > 0 ? '+' + (bonus * 100).toFixed(1) + '%' : '—';
+              html += '<div class="acc-stat-row"><span class="acc-stat-name">' + s.label + '</span>' +
+                      '<span class="acc-stat-vals">' + bsNF + ' → <b>' + csNF + '</b></span>' +
+                      '<span class="acc-stat-diff acc-stat-up">' + diffStr + '</span></div>';
+            }
           }
         });
       });
 
-      // Level stat bonuses earned
+      // Level stat bonuses earned — still shown as a summary at the bottom
       var hasLevelBonuses = Object.keys(levelBonuses).length > 0;
       if (hasLevelBonuses) {
         html += '<div class="acc-stat-cat-header">⬆️ Level-Up Bonuses</div>';
         Object.keys(levelBonuses).forEach(function (sk) {
-          html += '<div class="acc-stat-row"><span class="acc-stat-name">' + sk + '</span><span class="acc-stat-vals acc-stat-up">+' + (levelBonuses[sk] * 100).toFixed(1) + '%</span></div>';
+          html += '<div class="acc-stat-row"><span class="acc-stat-name">' + sk + '</span>' +
+                  '<span class="acc-stat-vals acc-stat-up">+' + (levelBonuses[sk] * 100).toFixed(1) + '%</span></div>';
         });
+      }
+      if (liveStats) {
+        html += '<div style="text-align:center;color:#2ecc71;font-size:11px;padding:4px;">✅ Showing live values — includes all camp upgrades, skills &amp; gear</div>';
       }
       html += '<div style="text-align:center;color:#666;font-size:11px;padding:6px;">[SCROLL FOR MORE CATEGORIES]</div>';
       html += '</div>';
