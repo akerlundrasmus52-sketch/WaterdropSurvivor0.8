@@ -383,6 +383,8 @@
   // (THREE loads before sandbox-loop.js, so they become real Vector3s at IIFE boot time)
   let _tmpV3  = null; // general-purpose temp vector (set in _initScene)
   let _tmpV3b = null; // second reusable temp vector (set in _initScene)
+  let _leapHitNormal = null; // scratch for leaping slime hit normal (no per-hit allocation)
+  let _leapBulletDir = null; // scratch for leaping slime bullet direction (no per-hit allocation)
 
   // Reusable world-space position object for blood emission (avoids new {} per hit)
   const _reusableBloodPos = { x: 0, y: 0, z: 0 };
@@ -1468,8 +1470,8 @@
     var bulletDir = null;
     if (projectile && projectile.vx !== undefined) {
       const spd = Math.sqrt(projectile.vx * projectile.vx + projectile.vz * projectile.vz) || 1;
-      hitNormal = new THREE.Vector3(-projectile.vx / spd, 0, -projectile.vz / spd);
-      bulletDir = new THREE.Vector3(projectile.vx / spd, 0, projectile.vz / spd);
+      hitNormal = _leapHitNormal.set(-projectile.vx / spd, 0, -projectile.vz / spd);
+      bulletDir = _leapBulletDir.set(projectile.vx / spd, 0, projectile.vz / spd);
     }
 
     // Critical hit check (uses same playerStats as slimes)
@@ -1486,20 +1488,25 @@
       ? Math.round(result.damage * (isCrit ? critMult : 1.0))
       : Math.round(15 * hitForce * critMult);
 
-    // Extra crit damage not already applied inside receiveHit
-    if (isCrit && result && !result.killed) {
-      enemy.hp -= Math.round(result.damage * (critMult - 1.0));
+    // Extra crit damage not already applied inside receiveHit.
+    // Apply even on killing blows so HP reduction matches the displayed crit damage,
+    // but clamp HP to zero to avoid negative values.
+    if (isCrit && result) {
+      const extraCritDmg = Math.round(result.damage * (critMult - 1.0));
+      if (extraCritDmg > 0) {
+        enemy.hp -= extraCritDmg;
+        if (enemy.hp < 0) enemy.hp = 0;
+      }
     }
 
-    // Floating damage text
-    const textPos = _tmpV3.clone();
-    textPos.y += 0.5;
+    // Floating damage text — reuse _tmpV3b to avoid _tmpV3.clone() allocation
+    _tmpV3b.set(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z);
     if (isCrit) {
-      createFloatingText(actualDmg, textPos, '#FFD700', actualDmg);
-      textPos.y += 0.4;
-      createFloatingText('Critical', textPos, '#FF4400', 0);
+      createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+      _tmpV3b.y += 0.4;
+      createFloatingText('Critical', _tmpV3b, '#FF4400', 0);
     } else {
-      createFloatingText(actualDmg, textPos, '#00CFFF', actualDmg);
+      createFloatingText(actualDmg, _tmpV3b, '#00CFFF', actualDmg);
     }
 
     // Light-blue blood burst (DeepSkyBlue) — use BloodV2 rawBurst if available
@@ -1561,13 +1568,14 @@
     const idx = _activeLeapingSlimes.indexOf(enemy);
     if (idx !== -1) _activeLeapingSlimes.splice(idx, 1);
 
-    // Trigger death animation inside the instance
+    // Trigger death animation inside the instance — set _tmpV3 to kill position first
+    _tmpV3.set(x, y, z);
     enemy._die('pistol', _tmpV3);
 
-    // Linger corpse (shorter than slime: 8 seconds)
+    // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
     const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
     _activeCorpses.push({
-      slot: enemy, timer: 0, lingerDuration: 24, bloodTimer: 0,
+      slot: enemy, timer: 0, lingerDuration: 8, bloodTimer: 0,
       poolMesh: _cbSlot3?.mesh || null, poolMat: _cbSlot3?.mat || null, poolSlot: _cbSlot3 || null, x, z
     });
 
@@ -1601,7 +1609,7 @@
     const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
     const waveLevel = Math.floor(_waveSize / 3) + 1;
     const e = LeapingSlimePool.spawn(rx, rz, waveLevel);
-    if (e) {
+    if (e && _activeLeapingSlimes.indexOf(e) === -1) {
       _activeLeapingSlimes.push(e);
     }
   }
@@ -1612,7 +1620,10 @@
     const playerPos = player.mesh.position;
     LeapingSlimePool.update(dt, playerPos);
 
-    const LEAPING_CONTACT_RADIUS = 1.0; // smaller than green slime (0.75 base size)
+    const LEAPING_CONTACT_RADIUS =
+      window.LEAP_CFG && typeof LEAP_CFG.ATTACK_RANGE === 'number'
+        ? LEAP_CFG.ATTACK_RANGE
+        : 1.0; // fallback: smaller than green slime (0.75 base size)
     const LEAPING_DAMAGE  = window.LEAP_CFG ? LEAP_CFG.BASE_DAMAGE    : 15;
     const LEAPING_COOLDOWN = window.LEAP_CFG ? LEAP_CFG.ATTACK_COOLDOWN : 500;
 
@@ -3059,6 +3070,8 @@
     // Allocate pre-shared Vector3 objects — must be after THREE.js is available
     _tmpV3  = new THREE.Vector3();
     _tmpV3b = new THREE.Vector3();
+    _leapHitNormal = new THREE.Vector3();
+    _leapBulletDir = new THREE.Vector3();
 
     // Renderer - expose as window global for gem-classes.js and other systems
     window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });

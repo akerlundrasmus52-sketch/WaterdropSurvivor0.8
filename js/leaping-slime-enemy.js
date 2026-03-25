@@ -636,8 +636,17 @@ var LeapingSlimePool = {
   },
 
   // ── return all alive, non-dying instances ─────────────────────────────────
-  getAlive: function() {
-    return this._pool.filter(function(e) { return e.alive && !e.dying; });
+  // Accepts an optional output array; otherwise fills and returns the internal
+  // _aliveScratch array — no allocation per call.
+  getAlive: function(outArray) {
+    var result = outArray || this._aliveScratch || (this._aliveScratch = []);
+    result.length = 0;
+    var pool = this._pool;
+    for (var i = 0; i < pool.length; i++) {
+      var e = pool[i];
+      if (e.alive && !e.dying) result.push(e);
+    }
+    return result;
   },
 
   // ── reset all instances (e.g. game over) ──────────────────────────────────
