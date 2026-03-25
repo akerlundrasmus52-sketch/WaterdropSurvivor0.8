@@ -1521,7 +1521,7 @@
       const crystalGroup = new THREE.Group();
       crystalGroup.position.set(-50, 0, 0);
       
-      const crystalGeo = new THREE.OctahedronGeometry(1);
+      const crystalTowerGeo = new THREE.OctahedronGeometry(1);
       for(let i=0; i<6; i++) {
         const crystalMat = new THREE.MeshPhysicalMaterial({
           color: 0x9B59B6, // Purple
@@ -1532,7 +1532,7 @@
           transparent: true,
           opacity: 0.9
         });
-        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+        const crystal = new THREE.Mesh(crystalTowerGeo, crystalMat);
         const angle = (i / 6) * Math.PI * 2;
         crystal.position.set(
           Math.cos(angle) * 5,
