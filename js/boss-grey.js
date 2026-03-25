@@ -263,11 +263,8 @@
     _introTimer  = 0;
     window._bossIntroActive = true;
 
-    // Disable player input
-    if (_player && _player.inputDisabled !== undefined) {
-      _player.inputDisabled = true;
-    }
-    window._bossInputDisabled = true;
+    // Pause the game loop so player cannot move/attack during cutscene
+    window.isPaused = true;
 
     // Save camera state
     _cameraSavedPos = _camera.position.clone();
@@ -399,11 +396,9 @@
   function _endIntroCutscene() {
     _introActive = false;
     window._bossIntroActive = false;
-    window._bossInputDisabled = false;
 
-    if (_player && _player.inputDisabled !== undefined) {
-      _player.inputDisabled = false;
-    }
+    // Resume the game loop
+    window.isPaused = false;
 
     _setState('PHASE1');
   }
@@ -590,10 +585,11 @@
     // Laser bolts
     _updateLaserBolts(dt);
 
-    // Detached arm gravity/tumble
+    // Detached arm gravity/tumble — dt-seconds physics
     if (_detachedArm) {
-      _detachedVelY -= 0.02;
-      _detachedArm.position.y += _detachedVelY * dt * 60;
+      const DETACH_GRAVITY = -1.2; // ~0.02/frame at 60 FPS expressed as units/sec²
+      _detachedVelY += DETACH_GRAVITY * dt;
+      _detachedArm.position.y += _detachedVelY * dt;
       _detachedArm.rotation.x += dt * 2;
       _detachedArm.rotation.z += dt * 1.3;
       if (_detachedArm.position.y < -5) {
@@ -607,27 +603,34 @@
       _playerStunRemaining -= dt;
     }
 
-    // Check boss activation
-    if (!_bossVisible && _shouldBossBeActive()) {
+    // Check boss activation — only when a relevant quest is active
+    const bossShouldBeActive = _shouldBossBeActive();
+    if (!_bossVisible && bossShouldBeActive) {
       _bossVisible = true;
       _bossGroup.visible = true;
     }
 
-    if (!_bossVisible || _bossState === 'DEAD') {
-      // Still check for intro trigger when near spawn
-      if (_bossState === 'IDLE' && !_introTriggered && _player && _player.mesh) {
-        const dist = _player.mesh.position.distanceTo(_bossGroup.position);
-        if (dist < 18) {
-          _introTriggered = true;
-          _bossVisible    = true;
-          _bossGroup.visible = true;
-          _startIntroCutscene();
-          _setState('INTRO_CUTSCENE');
-        }
+    // Dead boss: only allow egg pickup logic
+    if (_bossState === 'DEAD') {
+      _checkEggPickup(dt);
+      return;
+    }
+
+    // Trigger intro when player first approaches (quest-gated)
+    if (_bossState === 'IDLE' && bossShouldBeActive && !_introTriggered && _player && _player.mesh && _bossGroup) {
+      const dist = _player.mesh.position.distanceTo(_bossGroup.position);
+      if (dist < 18) {
+        _introTriggered    = true;
+        _bossVisible       = true;
+        _bossGroup.visible = true;
+        _startIntroCutscene();
+        _setState('INTRO_CUTSCENE');
+        return;
       }
-      if (_bossState === 'DEAD') {
-        _checkEggPickup(dt);
-      }
+    }
+
+    // If the boss is not yet visible (quest not active), skip all combat logic
+    if (!_bossVisible) {
       return;
     }
 
@@ -734,9 +737,8 @@
         bPos.addScaledVector(dir, 8 * dt);
         // Check impact
         if (dist < 1.2) {
-          // Evasion check: player dashed within 0.4s before impact
-          const dashAge = (performance.now() - _dashTimestamp) / 1000;
-          if (dashAge <= 0.4) {
+          // Evasion check: player is actively dashing at moment of impact
+          if (_isPlayerDashing()) {
             // Evaded!
             _nextPhase1State();
           } else {
@@ -805,8 +807,7 @@
         // Same as LUNGE but single-arm
         bPos.addScaledVector(dir, 8 * dt);
         if (dist < 1.2) {
-          const dashAge = (performance.now() - _dashTimestamp) / 1000;
-          if (dashAge > 0.4) {
+          if (!_isPlayerDashing()) {
             _dealDamageToPlayer(22);
             _playerStunRemaining = 0.6;
           }
@@ -910,7 +911,26 @@
     }
   }
 
-  // ─── Listen for player dash (Space / Shift) ───────────────────────────────────
+  // ─── Check whether the player is actively dashing ────────────────────────────
+  // player-class.js exposes player.isDashing (boolean property at line 435).
+  // Falls back to a recent-keydown timestamp when the property isn't available.
+  function _isPlayerDashing() {
+    if (_player) {
+      // Prefer the actual isDashing flag from player-class.js
+      if (typeof _player.isDashing === 'boolean') {
+        return _player.isDashing;
+      }
+      // Fallback: check nested dash state objects
+      if (_player.dash && typeof _player.dash === 'object') {
+        if ('isActive' in _player.dash) return !!_player.dash.isActive;
+        if ('active'   in _player.dash) return !!_player.dash.active;
+      }
+    }
+    // Legacy fallback: treat any recent Space/Shift press (within 0.4s) as a dash
+    return (performance.now() - _dashTimestamp) / 1000 <= 0.4;
+  }
+
+  // Keep a fallback timestamp for the legacy code path above
   function _initDashListener() {
     document.addEventListener('keydown', function (e) {
       if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
@@ -941,9 +961,10 @@
     },
 
     // Read-only state accessors (useful for UI/debug)
-    getHP:    function () { return _bossHP; },
-    getState: function () { return _bossState; },
-    isDead:   function () { return _bossState === 'DEAD'; }
+    getHP:           function () { return _bossHP; },
+    getState:        function () { return _bossState; },
+    isDead:          function () { return _bossState === 'DEAD'; },
+    getBossPosition: function () { return _bossGroup ? _bossGroup.position : null; }
   };
 
 })();

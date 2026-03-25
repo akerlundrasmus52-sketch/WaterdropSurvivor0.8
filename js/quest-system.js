@@ -4667,7 +4667,7 @@
         id: 'retrieve_grey_egg',
         title: 'Retrieve the Grey Egg',
         description: 'The alien had an egg. Take it.',
-        objectives: [{ type: 'pickup_item', itemId: 'grey_egg' }],
+        objectives: [{ type: 'pickup_item', itemId: 'grey_companion_egg' }],
         reward: { xp: 800, items: ['grey_companion_egg'] }
       }
     );

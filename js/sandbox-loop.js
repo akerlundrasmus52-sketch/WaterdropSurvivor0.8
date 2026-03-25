@@ -658,6 +658,25 @@
         }
       }
       if (hitThisFrame) continue;
+
+      // Grey Boss hit detection
+      if (!hitThisFrame &&
+          typeof GreyBossSystem !== 'undefined' &&
+          !GreyBossSystem.isDead()) {
+        const bossPos = GreyBossSystem.getBossPosition();
+        if (bossPos) {
+          const bx = p.mesh.position.x - bossPos.x;
+          const bz = p.mesh.position.z - bossPos.z;
+          if (bx * bx + bz * bz < COLLISION_THRESHOLD_SQ) {
+            if (typeof window._greyBossTakeDamage === 'function') {
+              window._greyBossTakeDamage(p.damage || 10);
+            }
+            _releaseProjectile(p, i);
+            hitThisFrame = true;
+          }
+        }
+      }
+      if (hitThisFrame) continue;
     }
   }
 
