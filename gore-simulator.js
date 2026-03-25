@@ -1,1739 +1,1228 @@
-/**
- * ============================================================
- *  GORE SIMULATOR v1.0 — Water Drop Survivor
- *  File: js/gore-simulator.js
- *  Load AFTER: blood-system.js, enemy-class.js, weapons.js
- * ============================================================
- *
- *  A physically-simulated, anatomically-aware hit & kill system.
- *  Every weapon behaves differently. Every wound is unique.
- *  Blood obeys gravity, momentum, viscosity, and surface tension.
- *  Enemies have 5 internal organs, each with HP, each producing
- *  a different death reaction when destroyed.
- *
- *  NO external dependencies beyond Three.js (already loaded).
- *  Slots into existing global scope — no ES modules.
- *
- *  INTEGRATION:
- *    1. Add <script src="js/gore-simulator.js"></script> in index.html
- *       AFTER blood-system.js
- *    2. In combat.js where you apply damage, call:
- *       window.GoreSim.onHit(enemy, weapon, hitPoint, hitNormal)
- *    3. In enemy-class.js death handler, call:
- *       window.GoreSim.onKill(enemy, weapon, killerProjectile)
- * ============================================================
- */
+/* ═══════════════════════════════════════════════════════════════════════════
+ *  GoreSim  —  Gore Simulation Layer for Water Drop Survivor
+ *  Works alongside BloodV2 (particle engine).
+ *  Handles flesh chunks, organ-based hit reactions, kill explosions,
+ *  and death descriptions.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
 
-(function() {
-'use strict';
+  /* ── constants ──────────────────────────────────────────────────────── */
+  var MAX_BLOOD_DROPS    = 800;
+  var MAX_DECALS         = 250;
+  var MAX_WOUNDS         = 12;
+  var MAX_MIST_PARTICLES = 500;
+  var MAX_CHUNKS         = 80;
+  var MAX_STREAMS        = 25;
+  var GRAVITY            = -9.8;
+  var BLOOD_VISCOSITY    = 0.72;
+  var SLIME_VISCOSITY    = 0.55;
+  var DRIP_INTERVAL      = 0.18;
+  var PUMP_INTERVAL      = 0.08;
+  var DECAL_FADE_TIME    = 40.0;
+  var GROUND_Y           = 0.02;
 
-// ─────────────────────────────────────────────
-//  CONSTANTS
-// ─────────────────────────────────────────────
-const MAX_BLOOD_DROPS      = 800;   // pooled rigid-body blood drops
-const MAX_DECALS           = 250;   // pooled ground blood decals
-const MAX_WOUNDS           = 12;    // max wounds per enemy simultaneously
-const MAX_MIST_PARTICLES   = 500;   // fine blood mist particles
-const MAX_CHUNKS           = 80;    // flying flesh/slime chunks
-const MAX_STREAMS          = 25;    // pumping arterial streams
-const GRAVITY              = -9.8;
-const BLOOD_VISCOSITY      = 0.72;  // 0=water, 1=honey — slime blood is thick
-const SLIME_VISCOSITY      = 0.55;
-const DRIP_INTERVAL        = 0.18;  // seconds between wound drips
-const PUMP_INTERVAL        = 0.08;  // arterial pump rate
-const DECAL_FADE_TIME      = 40.0;  // seconds before decal fades
+  /* ── enemy gore colour palettes ─────────────────────────────────────── */
+  var ENEMY_GORE_COLORS = {
+    slime:         { chunk: 0x1adb4e, blood: 0x0d8c2e, body: 0x33cc44 },
+    bug:           { chunk: 0xb8e000, blood: 0x6a8000, body: 0xeeff00 },
+    human:         { chunk: 0xcc0a00, blood: 0x7a0000, body: 0xff8866 },
+    alien:         { chunk: 0x8800ee, blood: 0x3d0077, body: 0xcc33ff },
+    robot:         { chunk: 0x6699ff, blood: 0x223388, body: 0xccddff },
+    crawler:       { chunk: 0x8b3a1a, blood: 0x551500, body: 0xcc5522 },
+    leaping_slime: { chunk: 0x00ccff, blood: 0x0077aa, body: 0x00ffff },
+    default:       { chunk: 0xcc0a00, blood: 0x7a0000, body: 0xff8866 }
+  };
 
-// ─────────────────────────────────────────────
-//  WEAPON GORE PROFILES
-//  Every weapon has unique physical properties
-//  that determine how blood and flesh behave
-// ─────────────────────────────────────────────
-const WEAPON_GORE = {
-  // ── FIREARMS ──────────────────────────────
-  pistol: {
-    woundRadius:    0.04,
-    penetration:    0.45,
-    exitWound:      true,
-    exitScale:      1.8,       // exit wound bigger than entry
-    bloodVolume:    0.6,
-    bloodVelocity:  { min: 2.0, max: 5.0 },
-    mistDensity:    0.7,       // fine mist on entry
-    chunkChance:    0.0,
-    pushForce:      0.3,
-    sound:          'thud_wet',
-    killStyle:      'penetration',
-    description:    'Clean entry, ragged exit. Blood channel follows bullet path.',
-  },
-  revolver: {
-    woundRadius:    0.055,
-    penetration:    0.65,
-    exitWound:      true,
-    exitScale:      2.4,
-    bloodVolume:    0.9,
-    bloodVelocity:  { min: 3.5, max: 7.0 },
-    mistDensity:    1.0,
-    chunkChance:    0.05,
-    pushForce:      0.6,
-    sound:          'thud_heavy',
-    killStyle:      'penetration',
-    description:    'Heavy round. Hydrostatic shock wave sends ripple through flesh.',
-  },
-  shotgun: {
-    woundRadius:    0.18,
-    penetration:    0.3,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    3.5,
-    bloodVelocity:  { min: 4.0, max: 12.0 },
-    mistDensity:    2.5,
-    chunkChance:    0.7,       // 70% chance of flesh chunks
-    chunkCount:     { min: 4, max: 9 },
-    pushForce:      2.5,
-    pelletCount:    8,         // spread pattern
-    pelletSpread:   0.4,
-    sound:          'boom_wet',
-    killStyle:      'devastation',
-    description:    'Massive cavity. Flesh vaporizes at center. Chunks fly outward.',
-  },
-  smg: {
-    woundRadius:    0.035,
-    penetration:    0.4,
-    exitWound:      true,
-    exitScale:      1.5,
-    bloodVolume:    0.5,
-    bloodVelocity:  { min: 2.5, max: 6.0 },
-    mistDensity:    0.9,
-    chunkChance:    0.0,
-    pushForce:      0.25,
-    sound:          'thud_fast',
-    killStyle:      'perforation',
-    description:    'Rapid small wounds. Swiss cheese effect. Blood from every hole.',
-  },
-  sniper: {
-    woundRadius:    0.025,
-    penetration:    1.0,       // full penetration, exits clean
-    exitWound:      true,
-    exitScale:      0.9,       // exit nearly same size — supersonic
-    bloodVolume:    1.2,
-    bloodVelocity:  { min: 6.0, max: 18.0 }, // supersonic mist explosion
-    mistDensity:    2.0,
-    chunkChance:    0.15,
-    pushForce:      1.5,
-    sound:          'crack_wet',
-    killStyle:      'supersonic',
-    description:    'Sonic pressure wave. Temporary cavity 10x bullet diameter. Blood erupts then collapses.',
-  },
-  minigun: {
-    woundRadius:    0.03,
-    penetration:    0.35,
-    exitWound:      true,
-    exitScale:      1.3,
-    bloodVolume:    0.4,
-    bloodVelocity:  { min: 2.0, max: 5.5 },
-    mistDensity:    0.8,
-    chunkChance:    0.02,
-    pushForce:      0.2,
-    sound:          'thud_rapid',
-    killStyle:      'saturation',
-    description:    'Constant stream. Body dances. Blood sprays continuously.',
-  },
+  /* ── anatomy definitions ───────────────────────────────────────────── */
+  var SLIME_ANATOMY = {
+    membrane:  { hp: 120, maxHp: 120, yRange: [-1.0, 1.0],  color: 0x33cc44, deathReaction: 'membrane_burst', bleedRate: 0.30 },
+    brain:     { hp: 30,  maxHp: 30,  yRange: [0.65, 1.0],  color: 0xaaffaa, deathReaction: 'brain_death',    bleedRate: 0.20 },
+    heart:     { hp: 40,  maxHp: 40,  yRange: [0.20, 0.65], color: 0xff3333, deathReaction: 'heart_death',    bleedRate: 1.20, pumpBlood: true },
+    guts:      { hp: 70,  maxHp: 70,  yRange: [-0.25, 0.20],color: 0x88ff55, deathReaction: 'gut_death',      bleedRate: 0.65 },
+    coreFluid: { hp: 90,  maxHp: 90,  yRange: [-1.0, -0.25],color: 0x00ff88, deathReaction: 'deflate_death',  bleedRate: 0.80 }
+  };
 
-  // ── EXPLOSIVE ─────────────────────────────
-  grenade: {
-    woundRadius:    0.5,
-    penetration:    0.8,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    8.0,
-    bloodVelocity:  { min: 8.0, max: 25.0 },
-    mistDensity:    5.0,
-    chunkChance:    1.0,       // always chunks
-    chunkCount:     { min: 8, max: 20 },
-    pushForce:      15.0,
-    isExplosive:    true,
-    blastRadius:    3.0,
-    sound:          'blast_wet',
-    killStyle:      'explosion',
-    description:    'Overpressure. Internal organs rupture. Body cavity becomes shrapnel.',
-  },
-  rocket: {
-    woundRadius:    0.8,
-    penetration:    1.0,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    15.0,
-    bloodVelocity:  { min: 15.0, max: 40.0 },
-    mistDensity:    10.0,
-    chunkChance:    1.0,
-    chunkCount:     { min: 15, max: 35 },
-    pushForce:      40.0,
-    isExplosive:    true,
-    blastRadius:    5.0,
-    sound:          'explosion_wet',
-    killStyle:      'vaporize',
-    description:    'Direct hit liquefies. Only chunks remain. Blood rains.',
-  },
+  var CRAWLER_ANATOMY = {
+    head:    { hp: 30,  maxHp: 30,  yRange: [0.65, 1.0],  color: 0x994422, deathReaction: 'head_burst',     bleedRate: 0.20 },
+    thorax:  { hp: 40,  maxHp: 40,  yRange: [0.20, 0.65], color: 0xcc6633, deathReaction: 'thorax_rupture', bleedRate: 1.20, pumpBlood: true },
+    abdomen: { hp: 70,  maxHp: 70,  yRange: [-0.25, 0.20],color: 0xbb7744, deathReaction: 'abdomen_burst',  bleedRate: 0.65 },
+    tail:    { hp: 90,  maxHp: 90,  yRange: [-1.0, -0.25],color: 0x885522, deathReaction: 'tail_sever',     bleedRate: 0.80 }
+  };
 
-  // ── ENERGY ────────────────────────────────
-  laser: {
-    woundRadius:    0.02,
-    penetration:    1.0,
-    exitWound:      true,
-    exitScale:      0.8,
-    bloodVolume:    0.2,       // cauterizes — less blood
-    bloodVelocity:  { min: 0.5, max: 2.0 },
-    mistDensity:    0.1,
-    chunkChance:    0.0,
-    pushForce:      0.1,
-    cauterizes:     true,      // wound smokes, doesn't drip
-    charEffect:     true,
-    sound:          'sizzle',
-    killStyle:      'cauterize',
-    description:    'Cauterized entry. Smoke. Little blood — but organ damage is catastrophic.',
-  },
-  plasma: {
-    woundRadius:    0.12,
-    penetration:    0.7,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    1.5,
-    bloodVelocity:  { min: 3.0, max: 8.0 },
-    mistDensity:    1.5,
-    chunkChance:    0.3,
-    pushForce:      2.0,
-    cauterizes:     false,
-    charEffect:     true,
-    sound:          'plasma_hit',
-    killStyle:      'melt',
-    description:    'Superheated. Tissue flash-boils. Blood vaporizes at wound edge.',
-  },
+  /* ── weapon gore profiles (all 17) ─────────────────────────────────── */
+  var WEAPON_GORE = {
+    pistol: {
+      woundRadius: 0.040, penetration: 0.42, exitWound: true, exitScale: 2.0,
+      bloodVolume: 1.0, bloodVelocity: { min: 4.0, max: 9.0 }, mistDensity: 7,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.40, organDmg: 20,
+      pumpBlood: true, killStyle: 'penetration',
+      description: '9mm round punches clean entry hole, exits with twice the mess.'
+    },
+    revolver: {
+      woundRadius: 0.065, penetration: 0.68, exitWound: true, exitScale: 2.8,
+      bloodVolume: 2.0, bloodVelocity: { min: 6.0, max: 14.0 }, mistDensity: 12,
+      chunkChance: 0.10, chunkCount: { min: 1, max: 2 }, pushForce: 1.0, organDmg: 32,
+      pumpBlood: true, shockwave: true, shockRadius: 1.0, killStyle: 'penetration',
+      description: 'Heavy magnum round \u2014 hydrostatic shock turns insides to jelly.'
+    },
+    shotgun: {
+      woundRadius: 0.28, penetration: 0.20, exitWound: false, exitScale: 1.0,
+      bloodVolume: 5.0, bloodVelocity: { min: 8.0, max: 22.0 }, mistDensity: 38,
+      chunkChance: 0.90, chunkCount: { min: 5, max: 12 }, pushForce: 4.5, organDmg: 65,
+      pelletCount: 9, pelletAngle: 30, pumpBlood: true, killStyle: 'devastation',
+      description: 'Nine pellets shred a fist-sized cavity. Nothing survives close range.'
+    },
+    smg: {
+      woundRadius: 0.030, penetration: 0.40, exitWound: true, exitScale: 1.5,
+      bloodVolume: 0.8, bloodVelocity: { min: 3.5, max: 8.0 }, mistDensity: 6,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.22, organDmg: 14,
+      pumpBlood: true, killStyle: 'perforation',
+      description: 'Small-caliber rapid fire \u2014 swiss-cheeses the target with holes.'
+    },
+    sniper: {
+      woundRadius: 0.018, penetration: 1.0, exitWound: true, exitScale: 0.90,
+      bloodVolume: 3.0, bloodVelocity: { min: 12.0, max: 32.0 }, mistDensity: 25,
+      chunkChance: 0.22, chunkCount: { min: 1, max: 3 }, pushForce: 2.5, organDmg: 90,
+      supersonicCavity: true, cavityRadius: 2.6, pumpBlood: true, killStyle: 'supersonic',
+      description: 'Supersonic round \u2014 sonic cavity tears a path three times the bullet diameter.'
+    },
+    minigun: {
+      woundRadius: 0.025, penetration: 0.35, exitWound: true, exitScale: 1.3,
+      bloodVolume: 0.6, bloodVelocity: { min: 3.5, max: 7.0 }, mistDensity: 5,
+      chunkChance: 0.02, chunkCount: { min: 0, max: 1 }, pushForce: 0.20, organDmg: 11,
+      pumpBlood: true, killStyle: 'saturation',
+      description: 'Saturation fire \u2014 hundreds of small holes add up to total destruction.'
+    },
+    grenade: {
+      woundRadius: 0.60, penetration: 0.88, exitWound: false, exitScale: 1.0,
+      bloodVolume: 8.0, bloodVelocity: { min: 16.0, max: 40.0 }, mistDensity: 60,
+      chunkChance: 1.0, chunkCount: { min: 10, max: 20 }, pushForce: 25.0, organDmg: 220,
+      isExplosive: true, blastRadius: 4.0, killStyle: 'explosion',
+      description: 'Overpressure liquefies organs. Shrapnel does the rest.'
+    },
+    rocket: {
+      woundRadius: 1.00, penetration: 1.0, exitWound: false, exitScale: 1.0,
+      bloodVolume: 15.0, bloodVelocity: { min: 25.0, max: 60.0 }, mistDensity: 120,
+      chunkChance: 1.0, chunkCount: { min: 18, max: 35 }, pushForce: 60.0, organDmg: 9999,
+      isExplosive: true, blastRadius: 7.0, killStyle: 'vaporize',
+      description: 'Direct hit vaporizes the target. Only a red mist remains.'
+    },
+    laser: {
+      woundRadius: 0.016, penetration: 1.0, exitWound: true, exitScale: 0.65,
+      bloodVolume: 0.2, bloodVelocity: { min: 0.2, max: 1.0 }, mistDensity: 0,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.04, organDmg: 50,
+      cauterizes: true, charEffect: true, smokeCount: 14, pumpBlood: false, killStyle: 'cauterize',
+      description: 'Coherent light burns through tissue. Wound self-seals \u2014 minimal blood.'
+    },
+    plasma: {
+      woundRadius: 0.15, penetration: 0.72, exitWound: false, exitScale: 1.0,
+      bloodVolume: 1.5, bloodVelocity: { min: 5.5, max: 15.0 }, mistDensity: 18,
+      chunkChance: 0.38, chunkCount: { min: 2, max: 6 }, pushForce: 3.0, organDmg: 68,
+      charEffect: true, pumpBlood: true, killStyle: 'melt',
+      description: 'Superheated plasma melts tissue on contact. Boiling blood erupts.'
+    },
+    knife: {
+      woundRadius: 0.020, penetration: 0.94, exitWound: false, exitScale: 1.0,
+      bloodVolume: 1.2, bloodVelocity: { min: 0.4, max: 2.0 }, mistDensity: 0,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.07, organDmg: 38,
+      isSlashing: true, slashLength: 0.40, pumpBlood: true, killStyle: 'slash',
+      description: 'Clean stab. Blood wells up slowly, then the arterial pump kicks in.'
+    },
+    sword: {
+      woundRadius: 0.038, penetration: 0.85, exitWound: false, exitScale: 1.0,
+      bloodVolume: 3.0, bloodVelocity: { min: 0.6, max: 3.5 }, mistDensity: 3,
+      chunkChance: 0.12, chunkCount: { min: 1, max: 2 }, pushForce: 1.0, organDmg: 55,
+      isSlashing: true, slashLength: 0.70, pumpBlood: true, killStyle: 'sever',
+      description: 'Deep cut \u2014 may sever limb. Arterial spray arcs two meters.'
+    },
+    axe: {
+      woundRadius: 0.085, penetration: 0.96, exitWound: false, exitScale: 1.0,
+      bloodVolume: 4.0, bloodVelocity: { min: 1.2, max: 5.0 }, mistDensity: 5,
+      chunkChance: 0.45, chunkCount: { min: 2, max: 4 }, pushForce: 2.5, organDmg: 70,
+      isSlashing: true, slashLength: 0.55, pumpBlood: true, killStyle: 'cleave',
+      description: 'Splitting force cleaves through bone. Chunks fly on impact.'
+    },
+    flame: {
+      woundRadius: 0.18, penetration: 0.18, exitWound: false, exitScale: 1.0,
+      bloodVolume: 0.0, bloodVelocity: { min: 0, max: 0 }, mistDensity: 0,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.6, organDmg: 28,
+      cauterizes: true, charEffect: true, burnsEnemy: true, killStyle: 'combust',
+      description: 'Fire chars the surface. No blood \u2014 wounds are instantly cauterized.'
+    },
+    ice: {
+      woundRadius: 0.065, penetration: 0.52, exitWound: false, exitScale: 1.0,
+      bloodVolume: 0.8, bloodVelocity: { min: 0.6, max: 2.5 }, mistDensity: 4,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.35, organDmg: 30,
+      freezesBlood: true, killStyle: 'shatter',
+      description: 'Blood crystallizes on contact. Kill shatters the frozen body.'
+    },
+    lightning: {
+      woundRadius: 0.028, penetration: 1.0, exitWound: true, exitScale: 1.0,
+      bloodVolume: 0.5, bloodVelocity: { min: 1.5, max: 5.0 }, mistDensity: 4,
+      chunkChance: 0.06, chunkCount: { min: 0, max: 1 }, pushForce: 3.5, organDmg: 45,
+      electricEffect: true, killStyle: 'electrocute',
+      description: 'Lightning arcs through tissue. Water in cells flash-boils.'
+    },
+    knife_takedown: {
+      woundRadius: 0.022, penetration: 0.96, exitWound: false, exitScale: 1.0,
+      bloodVolume: 1.5, bloodVelocity: { min: 0.2, max: 0.9 }, mistDensity: 0,
+      chunkChance: 0.0, chunkCount: { min: 0, max: 0 }, pushForce: 0.04, organDmg: 44,
+      isSlashing: true, slashLength: 0.22, isTakedown: true, pumpBlood: true, killStyle: 'execution',
+      description: 'Execution-style stab. Slow, deliberate, fatal.'
+    }
+  };
 
-  // ── MELEE ─────────────────────────────────
-  knife: {
-    woundRadius:    0.02,
-    penetration:    0.9,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    1.8,
-    bloodVelocity:  { min: 0.3, max: 1.5 },
-    mistDensity:    0.0,
-    chunkChance:    0.0,
-    pushForce:      0.1,
-    isSlashing:     true,
-    slashLength:    0.3,
-    pumpBlood:      true,      // arterial pumping if organ hit
-    sound:          'slash_wet',
-    killStyle:      'slash',
-    description:    'Clean cut. Blood wells up. If artery hit — pump spray.',
-  },
-  sword: {
-    woundRadius:    0.04,
-    penetration:    0.8,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    3.0,
-    bloodVelocity:  { min: 0.5, max: 3.0 },
-    mistDensity:    0.1,
-    chunkChance:    0.1,
-    pushForce:      0.8,
-    isSlashing:     true,
-    slashLength:    0.7,
-    pumpBlood:      true,
-    sound:          'slash_heavy',
-    killStyle:      'sever',
-    description:    'Deep cut. May sever limb. Blood arc follows blade momentum.',
-  },
-  axe: {
-    woundRadius:    0.08,
-    penetration:    0.95,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    4.5,
-    bloodVelocity:  { min: 1.0, max: 4.0 },
-    mistDensity:    0.3,
-    chunkChance:    0.4,
-    chunkCount:     { min: 1, max: 3 },
-    pushForce:      2.0,
-    isSlashing:     true,
-    slashLength:    0.5,
-    pumpBlood:      true,
-    sound:          'chop_wet',
-    killStyle:      'cleave',
-    description:    'Splitting force. Bone shatters. Wet crunch. Blood fans out from impact.',
-  },
+  /* ── death description tables ──────────────────────────────────────── */
+  var ORGAN_DESCRIPTIONS = {
+    membrane:  'Outer membrane',
+    brain:     'Central neural cluster',
+    heart:     'Primary circulatory pump',
+    guts:      'Digestive cavity',
+    coreFluid: 'Pressurised core fluid reservoir',
+    head:      'Cranial segment',
+    thorax:    'Thoracic cavity',
+    abdomen:   'Abdominal segment',
+    tail:      'Tail segment'
+  };
 
-  // ── SPECIAL ───────────────────────────────
-  flame: {
-    woundRadius:    0.15,
-    penetration:    0.2,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    0.3,
-    bloodVelocity:  { min: 0.2, max: 1.0 },
-    mistDensity:    0.0,
-    chunkChance:    0.0,
-    pushForce:      0.5,
-    cauterizes:     true,
-    charEffect:     true,
-    burnsEnemy:     true,
-    sound:          'flame_hit',
-    killStyle:      'combust',
-    description:    'Tissue chars. No blood — it vaporizes. Enemy burns, collapses.',
-  },
-  ice: {
-    woundRadius:    0.06,
-    penetration:    0.5,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    0.8,
-    bloodVelocity:  { min: 0.5, max: 2.0 },
-    mistDensity:    0.2,
-    chunkChance:    0.0,
-    pushForce:      0.3,
-    freezesBlood:   true,
-    sound:          'crack_ice',
-    killStyle:      'shatter',
-    description:    'Blood crystallizes on exit. Kill: enemy flash-freezes and shatters.',
-  },
-  lightning: {
-    woundRadius:    0.03,
-    penetration:    1.0,
-    exitWound:      true,
-    exitScale:      1.0,
-    bloodVolume:    0.4,
-    bloodVelocity:  { min: 1.0, max: 4.0 },
-    mistDensity:    0.3,
-    chunkChance:    0.05,
-    pushForce:      3.0,
-    electricEffect: true,
-    sound:          'zap_wet',
-    killStyle:      'electrocute',
-    description:    'Vaporizes water in tissue. Steam burst. Blood boils from wound.',
-  },
+  var DEATH_STRINGS = {
+    membrane_burst: 'The membrane ruptures \u2014 contents spray outward in a green torrent.',
+    brain_death:    'Neural cluster destroyed. The body drops instantly, twitching.',
+    heart_death:    'Heart obliterated \u2014 arterial pressure drops to zero. Blood geysers from every wound.',
+    gut_death:      'Digestive sac bursts. Caustic fluids dissolve surrounding tissue.',
+    deflate_death:  'Core fluid evacuates. The body crumples like a deflating balloon.',
+    head_burst:     'The head bursts open. Ichor sprays in a wide arc.',
+    thorax_rupture: 'Thorax splits \u2014 internal organs spill out in a steaming pile.',
+    abdomen_burst:  'Abdomen detonates. Viscera scatter across the ground.',
+    tail_sever:     'Tail severs at the base. The stump sprays dark fluid rhythmically.'
+  };
 
-  // ── KNIFE TAKEDOWN (your existing ability) ─
-  knife_takedown: {
-    woundRadius:    0.025,
-    penetration:    0.95,
-    exitWound:      false,
-    exitScale:      1.0,
-    bloodVolume:    2.5,
-    bloodVelocity:  { min: 0.2, max: 0.8 },
-    mistDensity:    0.0,
-    chunkChance:    0.0,
-    pushForce:      0.05,
-    isSlashing:     true,
-    slashLength:    0.2,
-    pumpBlood:      true,
-    isTakedown:     true,      // triggers special execution animation
-    sound:          'stab_deep',
-    killStyle:      'execution',
-    description:    'Precision stab. Held in place. Blood wells slowly then gushes.',
-  },
-};
+  /* ── scratch vectors (zero allocations in hot path) ────────────────── */
+  var _v1 = null;
+  var _v2 = null;
+  var _v3 = null;
+  var _v4 = null;
+  var _col = null;
+  var _mat4 = null;
 
-// ─────────────────────────────────────────────
-//  SLIME ANATOMY
-//  The slime has 5 internal zones. Each zone
-//  has HP. Destroy a zone = unique death.
-//  woundZone determines which organ was hit
-//  based on normalized hit position (y axis).
-// ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-//  ENEMY COLOR TABLE — body/chunk/blood color per enemy type
-//  Keyed by enemy.enemyType string (matches sandbox-loop usage)
-// ─────────────────────────────────────────────
-const ENEMY_GORE_COLORS = {
-  'slime':         { body: 0x33cc44, chunk: 0x44FF66, blood: 0x33ee44 },
-  'leaping_slime': { body: 0x00bfff, chunk: 0x00ffff, blood: 0x55ddff },
-  'crawler':       { body: 0x8B4513, chunk: 0xDEB887, blood: 0x6B3410 },
-  'boss':          { body: 0xcc0000, chunk: 0xff4444, blood: 0xff0000 },
-};
-
-function _enemyChunkColor(enemy) {
-  const type = (enemy && enemy.enemyType) || 'slime';
-  return (ENEMY_GORE_COLORS[type] || ENEMY_GORE_COLORS['slime']).chunk;
-}
-function _enemyBloodColor(enemy) {
-  const type = (enemy && enemy.enemyType) || 'slime';
-  return (ENEMY_GORE_COLORS[type] || ENEMY_GORE_COLORS['slime']).blood;
-}
-
-const SLIME_ANATOMY = {
-  membrane: {
-    hp: 35, maxHp: 35,
-    yRange: [-1.0, 1.0],   // outermost — hit anywhere
-    color: 0x33cc44,
-    deathReaction: 'membrane_burst',
-    bleedRate: 0.3,
-    description: 'Outer membrane — protective gel layer',
-  },
-  brain: {
-    hp: 20, maxHp: 20,
-    yRange: [0.55, 1.0],   // top of slime
-    color: 0xaaffaa,
-    deathReaction: 'brain_death',
-    bleedRate: 0.15,
-    description: 'Tiny nucleus — cognitive center',
-  },
-  heart: {
-    hp: 45, maxHp: 45,
-    yRange: [0.1, 0.55],   // upper center
-    color: 0xff3333,
-    deathReaction: 'heart_death',
-    bleedRate: 1.0,        // arterial — pumps hard
-    pumpBlood: true,
-    description: 'Pumping core — arterial bleed if destroyed',
-  },
-  guts: {
-    hp: 65, maxHp: 65,
-    yRange: [-0.3, 0.1],   // center-lower
-    color: 0x88ff55,
-    deathReaction: 'gut_death',
-    bleedRate: 0.6,
-    description: 'Digestive fluid sac — slow deflation death',
-  },
-  coreFluid: {
-    hp: 90, maxHp: 90,
-    yRange: [-1.0, -0.3],  // base/bottom
-    color: 0x00ff88,
-    deathReaction: 'deflate_death',
-    bleedRate: 0.8,
-    description: 'Vital fluid core — death when depleted',
-  },
-};
-
-// ─────────────────────────────────────────────
-//  BLOOD PARTICLE PHYSICS
-//  Each blood drop is a rigid body with:
-//  - initial velocity from impact
-//  - gravity
-//  - drag (air resistance based on viscosity)
-//  - surface tension (drops coalesce on ground)
-//  - bounce (loses energy on each bounce)
-// ─────────────────────────────────────────────
-class BloodDrop {
-  constructor() {
-    this.active    = false;
-    this.pos       = new THREE.Vector3();
-    this.vel       = new THREE.Vector3();
-    this.radius    = 0.02;
+  /* ══════════════════════════════════════════════════════════════════════
+   *  BloodDrop (pooled)
+   * ══════════════════════════════════════════════════════════════════════ */
+  function BloodDrop(mesh) {
+    this.mesh      = mesh;
+    this.px        = 0; this.py = 0; this.pz = 0;
+    this.vx        = 0; this.vy = 0; this.vz = 0;
     this.life      = 0;
     this.maxLife   = 0;
-    this.color     = 0xcc0000;
-    this.viscosity = BLOOD_VISCOSITY;
-    this.bounces   = 0;
-    this.maxBounces = 3;
-    this.onGround  = false;
-    this.groundY   = 0;
-    this.isMist    = false;   // fine mist = no bounce, just settle
-    this.frozen    = false;   // ice weapon
-    this.charred   = false;   // fire/laser weapon
-    this.size      = 1;       // mesh scale multiplier
-    // Three.js mesh assigned by pool
-    this.mesh      = null;
-  }
-
-  reset(pos, vel, options = {}) {
-    this.active     = true;
-    this.pos.copy(pos);
-    this.vel.copy(vel);
-    this.radius     = options.radius    || 0.015 + Math.random() * 0.025;
-    this.maxLife    = options.life      || 3.0 + Math.random() * 2.0;
-    this.life       = this.maxLife;
-    this.color      = options.color     || 0xaa0000;
-    this.viscosity  = options.viscosity || BLOOD_VISCOSITY;
-    this.bounces    = 0;
-    this.maxBounces = options.maxBounces || 3;
-    this.onGround   = false;
-    this.groundY    = options.groundY   || 0.01;
-    this.isMist     = options.isMist    || false;
-    this.frozen     = options.frozen    || false;
-    this.charred    = options.charred   || false;
-    this.size       = this.radius * 60;
-    if (this.mesh) {
-      this.mesh.visible = true;
-      this.mesh.scale.setScalar(this.size);
-      this.mesh.material.color.setHex(this.color);
-      if (this.frozen) this.mesh.material.color.setHex(0x88ccff);
-      if (this.charred) this.mesh.material.color.setHex(0x222222);
-    }
-  }
-
-  update(dt) {
-    if (!this.active) return;
-    this.life -= dt;
-    if (this.life <= 0) { this.deactivate(); return; }
-
-    if (this.onGround) {
-      // Settled on ground — spread into puddle slowly
-      this.size += dt * 0.08;
-      if (this.mesh) this.mesh.scale.set(this.size, 0.1, this.size);
-      // Fade after a while
-      if (this.life < 1.5 && this.mesh) {
-        const alpha = this.life / 1.5;
-        this.mesh.material.opacity = alpha * 0.8;
-      }
-      return;
-    }
-
-    // Gravity
-    this.vel.y += GRAVITY * dt;
-
-    // Air drag — viscous blood resists fast movement
-    const speed    = this.vel.length();
-    const drag     = 1.0 - (1.0 - this.viscosity) * dt * speed * 0.5;
-    this.vel.multiplyScalar(Math.max(0, drag));
-
-    // Integrate position
-    this.pos.addScaledVector(this.vel, dt);
-
-    // Ground collision
-    if (this.pos.y <= this.groundY) {
-      this.pos.y = this.groundY;
-      if (this.isMist) {
-        // Mist just settles
-        this.onGround = true;
-        this.vel.set(0,0,0);
-        if (this.mesh) this.mesh.scale.setScalar(this.size * 0.5);
-      } else if (this.bounces < this.maxBounces) {
-        // Bounce — loses energy based on viscosity
-        this.vel.y = Math.abs(this.vel.y) * (0.35 - this.viscosity * 0.2);
-        // Lateral momentum bleeds off
-        this.vel.x *= 0.6;
-        this.vel.z *= 0.6;
-        this.bounces++;
-        // Spawn ground decal on first bounce
-        if (this.bounces === 1) {
-          GoreSim._spawnDecal(this.pos, this.radius * 1.5, this.color);
-        }
-      } else {
-        // Settle
-        this.vel.set(0,0,0);
-        this.onGround = true;
-        GoreSim._spawnDecal(this.pos, this.radius * 2, this.color);
-        if (this.mesh) {
-          this.mesh.scale.set(this.size, 0.08, this.size);
-        }
-      }
-    }
-
-    // Update mesh
-    if (this.mesh) {
-      this.mesh.position.copy(this.pos);
-      if (!this.onGround) {
-        // Elongate in direction of travel when fast
-        if (speed > 3.0) {
-          const stretch = 1.0 + speed * 0.08;
-          this.mesh.scale.set(this.size, this.size * stretch, this.size);
-          // Orient along velocity
-          this.mesh.lookAt(
-            this.pos.x + this.vel.x,
-            this.pos.y + this.vel.y,
-            this.pos.z + this.vel.z
-          );
-        } else {
-          this.mesh.scale.setScalar(this.size);
-        }
-      }
-    }
-  }
-
-  deactivate() {
-    this.active = false;
-    if (this.mesh) {
-      this.mesh.visible = false;
-      this.mesh.material.opacity = 1.0;
-    }
-  }
-}
-
-// ─────────────────────────────────────────────
-//  FLESH CHUNK — torn pieces of slime body
-// ─────────────────────────────────────────────
-class FleshChunk {
-  constructor() {
-    this.active  = false;
-    this.pos     = new THREE.Vector3();
-    this.vel     = new THREE.Vector3();
-    this.rot     = new THREE.Vector3();
-    this.rotVel  = new THREE.Vector3();
-    this.life    = 0;
-    this.size    = 0.1;
-    this.color   = 0x33cc44;
-    this.mesh    = null;
-    this.bounces = 0;
-    this.groundY = 0.02;
-  }
-
-  reset(pos, vel, options = {}) {
-    this.active  = true;
-    this.pos.copy(pos);
-    this.vel.copy(vel);
-    this.rotVel.set(
-      (Math.random() - 0.5) * 15,
-      (Math.random() - 0.5) * 15,
-      (Math.random() - 0.5) * 15
-    );
-    this.life    = 4.0 + Math.random() * 3.0;
-    this.size    = options.size  || 0.06 + Math.random() * 0.12;
-    this.color   = options.color || 0x22bb33;
-    this.bounces = 0;
-    if (this.mesh) {
-      this.mesh.visible = true;
-      this.mesh.scale.setScalar(this.size);
-      this.mesh.material.color.setHex(this.color);
-      this.mesh.material.opacity = 1.0;
-    }
-  }
-
-  update(dt) {
-    if (!this.active) return;
-    this.life -= dt;
-    if (this.life <= 0) { this.deactivate(); return; }
-
-    // Gravity
-    this.vel.y += GRAVITY * 0.7 * dt;
-
-    // Drag
-    this.vel.multiplyScalar(1.0 - 0.4 * dt);
-
-    // Integrate
-    this.pos.addScaledVector(this.vel, dt);
-
-    // Rotation
-    this.rot.addScaledVector(this.rotVel, dt);
-    this.rotVel.multiplyScalar(0.95);
-
-    // Ground bounce
-    if (this.pos.y <= this.groundY) {
-      this.pos.y = this.groundY;
-      if (this.bounces < 2) {
-        this.vel.y = Math.abs(this.vel.y) * 0.3;
-        this.vel.x *= 0.7;
-        this.vel.z *= 0.7;
-        this.bounces++;
-        // Splat blood on landing
-        GoreSim._spawnBloodBurst(this.pos, this.vel, 3, this.color, 'ground');
-      } else {
-        this.vel.set(0,0,0);
-        this.rotVel.set(0,0,0);
-        if (this.life > 2.0) this.life = 2.0;
-      }
-    }
-
-    if (this.mesh) {
-      this.mesh.position.copy(this.pos);
-      this.mesh.rotation.set(this.rot.x, this.rot.y, this.rot.z);
-      if (this.life < 1.5) {
-        this.mesh.material.opacity = this.life / 1.5;
-      }
-    }
-  }
-
-  deactivate() {
-    this.active = false;
-    if (this.mesh) this.mesh.visible = false;
-  }
-}
-
-// ─────────────────────────────────────────────
-//  ARTERIAL STREAM
-//  High-pressure pumping blood from heart wounds
-//  Simulates fluid jet with gravity arc
-// ─────────────────────────────────────────────
-class ArterialStream {
-  constructor() {
     this.active    = false;
-    this.origin    = new THREE.Vector3();
-    this.direction = new THREE.Vector3();
-    this.pressure  = 1.0;      // 0-1, decreases over time
-    this.timer     = 0;
-    this.interval  = PUMP_INTERVAL;
-    this.enemy     = null;
-    this.life      = 0;
-    this.color     = 0xcc0000;
+    this.settled   = false;
+    this.bounced   = false;
+    this.viscosity = BLOOD_VISCOSITY;
+    this.radius    = 0.02;
+    this.color     = 0x7a0000;
   }
 
-  start(enemy, origin, direction, options = {}) {
+  BloodDrop.prototype.activate = function (x, y, z, vx, vy, vz, life, color, viscosity) {
+    this.px = x;  this.py = y;  this.pz = z;
+    this.vx = vx; this.vy = vy; this.vz = vz;
+    this.life      = life;
+    this.maxLife   = life;
     this.active    = true;
-    this.enemy     = enemy;
-    this.origin.copy(origin);
-    this.direction.copy(direction);
-    this.pressure  = 1.0;
-    this.life      = options.life || 5.0;
-    this.interval  = PUMP_INTERVAL;
-    this.timer     = 0;
-    this.color     = options.color || 0xcc0000;
-  }
+    this.settled   = false;
+    this.bounced   = false;
+    this.viscosity = viscosity !== undefined ? viscosity : BLOOD_VISCOSITY;
+    this.color     = color !== undefined ? color : 0x7a0000;
+    this.radius    = 0.015 + Math.random() * 0.015;
 
-  update(dt) {
-    if (!this.active) return;
+    this.mesh.visible = true;
+    this.mesh.scale.setScalar(this.radius * 2);
+    this.mesh.material.color.setHex(this.color);
+    this.mesh.position.set(x, y, z);
+  };
+
+  BloodDrop.prototype.deactivate = function () {
+    this.active       = false;
+    this.mesh.visible = false;
+  };
+
+  BloodDrop.prototype.update = function (dt) {
+    if (!this.active) return false;
+
     this.life -= dt;
-    if (this.life <= 0 || !this.enemy || !this.enemy.alive) {
-      this.active = false;
-      return;
-    }
+    if (this.life <= 0) { this.deactivate(); return true; }
 
-    // Pressure decreases as enemy loses blood
-    this.pressure = Math.max(0, this.life / 5.0);
+    if (this.settled) return false;
 
-    this.timer += dt;
-    if (this.timer >= this.interval / this.pressure) {
-      this.timer = 0;
-      this._pump();
-    }
-  }
+    // viscosity drag
+    var drag = 1.0 - this.viscosity * dt * 3.0;
+    if (drag < 0) drag = 0;
+    this.vx *= drag;
+    this.vy *= drag;
+    this.vz *= drag;
 
-  _pump() {
-    const speed = 4.0 + this.pressure * 8.0;
-    const count = Math.ceil(this.pressure * 5);
-    for (let i = 0; i < count; i++) {
-      const vel = new THREE.Vector3(
-        this.direction.x + (Math.random() - 0.5) * 0.3,
-        this.direction.y + Math.random() * 0.4 * this.pressure,
-        this.direction.z + (Math.random() - 0.5) * 0.3
-      ).multiplyScalar(speed * (0.7 + Math.random() * 0.6));
+    // gravity
+    this.vy += GRAVITY * dt;
 
-      // Update origin to enemy position
-      const worldOrigin = this.origin.clone();
-      if (this.enemy.mesh) {
-        worldOrigin.add(this.enemy.mesh.position);
+    // integrate
+    this.px += this.vx * dt;
+    this.py += this.vy * dt;
+    this.pz += this.vz * dt;
+
+    // ground collision
+    if (this.py <= GROUND_Y) {
+      this.py = GROUND_Y;
+      if (!this.bounced) {
+        this.bounced = true;
+        _trySpawnDecal(this.px, this.pz, this.radius * 3.0, this.color);
+        this.vy = -this.vy * 0.25;
+        this.vx *= 0.5;
+        this.vz *= 0.5;
+      } else {
+        this.vx = 0; this.vy = 0; this.vz = 0;
+        this.settled = true;
       }
-
-      GoreSim._spawnDrop(worldOrigin, vel, {
-        color:      this.color,
-        radius:     0.025 * this.pressure + Math.random() * 0.015,
-        life:       1.5 + Math.random(),
-        maxBounces: 2,
-        viscosity:  SLIME_VISCOSITY,
-      });
     }
-  }
-}
 
-// ─────────────────────────────────────────────
-//  WOUND — persistent hole in enemy body
-//  Grows on repeated hits at same location
-// ─────────────────────────────────────────────
-class Wound {
-  constructor() {
-    this.active     = false;
-    this.localPos   = new THREE.Vector3(); // position relative to enemy center
-    this.radius     = 0.04;
-    this.depth      = 0.0;
-    this.hits       = 0;
-    this.organ      = null;
-    this.drip_timer = 0;
-    this.isCauterized = false;
-    this.isFrozen   = false;
-    this.color      = 0xaa0000;
-    this.mesh       = null;   // wound hole decal on enemy mesh
-  }
+    this.mesh.position.set(this.px, this.py, this.pz);
+    return false;
+  };
 
-  reset(localPos, radius, organ, options = {}) {
-    this.active     = true;
-    this.localPos.copy(localPos);
-    this.radius     = radius;
-    this.depth      = options.depth      || 0.2;
-    this.hits       = 1;
-    this.organ      = organ;
-    this.drip_timer = 0;
-    this.isCauterized = options.cauterized || false;
-    this.isFrozen   = options.frozen     || false;
-    this.color      = options.color      || 0x880000;
-    if (this.mesh) {
-      this.mesh.visible = true;
-      this.mesh.scale.setScalar(this.radius * 8);
-      this.mesh.material.color.setHex(0x000000);
-    }
+  /* ══════════════════════════════════════════════════════════════════════
+   *  FleshChunk (pooled — THREE.Mesh with DodecahedronGeometry)
+   * ══════════════════════════════════════════════════════════════════════ */
+  var _chunkGeo = null;
+
+  function FleshChunk(mesh) {
+    this.mesh    = mesh;
+    this.px = 0; this.py = 0; this.pz = 0;
+    this.vx = 0; this.vy = 0; this.vz = 0;
+    this.spinX = 0; this.spinY = 0; this.spinZ = 0;
+    this.life    = 0;
+    this.active  = false;
+    this.scale   = 0.06;
+    this.bounces = 0;
   }
 
-  grow(additionalDepth, additionalRadius) {
-    this.hits++;
-    this.depth  = Math.min(this.depth  + additionalDepth,  1.0);
-    this.radius = Math.min(this.radius + additionalRadius, 0.4);
-    if (this.mesh) this.mesh.scale.setScalar(this.radius * 8);
-  }
+  FleshChunk.prototype.activate = function (x, y, z, vx, vy, vz, color, scale) {
+    this.px = x;  this.py = y;  this.pz = z;
+    this.vx = vx; this.vy = vy; this.vz = vz;
+    this.spinX = (Math.random() - 0.5) * 12;
+    this.spinY = (Math.random() - 0.5) * 12;
+    this.spinZ = (Math.random() - 0.5) * 12;
+    this.life    = 5.0 + Math.random() * 5.0;
+    this.active  = true;
+    this.bounces = 0;
+    this.scale   = scale || (0.04 + Math.random() * 0.06);
 
-  update(dt, enemyPos, enemyVelocity) {
-    if (!this.active || this.isCauterized || this.isFrozen) return;
-
-    const anatomy = SLIME_ANATOMY[this.organ];
-    if (!anatomy) return;
-
-    this.drip_timer += dt;
-    const dripInterval = DRIP_INTERVAL / (anatomy.bleedRate * (0.5 + this.depth));
-    if (this.drip_timer >= dripInterval) {
-      this.drip_timer = 0;
-      this._drip(enemyPos, enemyVelocity);
-    }
-  }
-
-  _drip(enemyPos, enemyVelocity) {
-    const worldPos = enemyPos.clone().add(this.localPos);
-
-    // Drip direction: down + enemy velocity influence + small random
-    const vel = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.x * 0.15 : 0),
-      -0.5 - Math.random() * 0.8,
-      (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.z * 0.15 : 0)
+    this.mesh.visible = true;
+    this.mesh.scale.setScalar(this.scale);
+    this.mesh.material.color.setHex(color);
+    this.mesh.position.set(x, y, z);
+    this.mesh.rotation.set(
+      Math.random() * Math.PI * 2,
+      Math.random() * Math.PI * 2,
+      Math.random() * Math.PI * 2
     );
+  };
 
-    GoreSim._spawnDrop(worldPos, vel, {
-      color:      this.color,
-      radius:     0.01 + this.depth * 0.015,
-      life:       2.0 + Math.random(),
-      maxBounces: 2,
-      viscosity:  SLIME_VISCOSITY,
-    });
+  FleshChunk.prototype.deactivate = function () {
+    this.active       = false;
+    this.mesh.visible = false;
+  };
+
+  FleshChunk.prototype.update = function (dt) {
+    if (!this.active) return;
+
+    this.life -= dt;
+    if (this.life <= 0) { this.deactivate(); return; }
+
+    this.vy += GRAVITY * dt;
+
+    var drag = 1.0 - 0.4 * dt;
+    if (drag < 0) drag = 0;
+    this.vx *= drag;
+    this.vz *= drag;
+
+    this.px += this.vx * dt;
+    this.py += this.vy * dt;
+    this.pz += this.vz * dt;
+
+    this.mesh.rotation.x += this.spinX * dt;
+    this.mesh.rotation.y += this.spinY * dt;
+    this.mesh.rotation.z += this.spinZ * dt;
+
+    if (this.py <= GROUND_Y + this.scale * 0.5) {
+      this.py = GROUND_Y + this.scale * 0.5;
+      if (this.bounces < 3) {
+        this.bounces++;
+        this.vy = -this.vy * 0.3;
+        this.vx *= 0.6;
+        this.vz *= 0.6;
+        this.spinX *= 0.5;
+        this.spinY *= 0.5;
+        this.spinZ *= 0.5;
+        _trySpawnDecal(this.px, this.pz, this.scale * 2.5, this.mesh.material.color.getHex());
+      } else {
+        this.vx = 0; this.vy = 0; this.vz = 0;
+        this.spinX = 0; this.spinY = 0; this.spinZ = 0;
+      }
+    }
+
+    this.mesh.position.set(this.px, this.py, this.pz);
+  };
+
+  /* ══════════════════════════════════════════════════════════════════════
+   *  MistParticle (pooled)
+   * ══════════════════════════════════════════════════════════════════════ */
+  function MistParticle(mesh) {
+    this.mesh    = mesh;
+    this.px = 0; this.py = 0; this.pz = 0;
+    this.vx = 0; this.vy = 0; this.vz = 0;
+    this.life    = 0;
+    this.maxLife = 0;
+    this.active  = false;
   }
-}
 
-// ─────────────────────────────────────────────
-//  ENEMY GORE STATE
-//  Attached to each enemy instance.
-//  Tracks wounds, anatomy HP, bleed state.
-// ─────────────────────────────────────────────
-class EnemyGoreState {
-  constructor(enemy) {
+  MistParticle.prototype.activate = function (x, y, z, vx, vy, vz, life, color) {
+    this.px = x;  this.py = y;  this.pz = z;
+    this.vx = vx; this.vy = vy; this.vz = vz;
+    this.life    = life;
+    this.maxLife = life;
+    this.active  = true;
+    this.mesh.visible = true;
+    this.mesh.material.color.setHex(color);
+    this.mesh.material.opacity = 0.6;
+    this.mesh.position.set(x, y, z);
+    this.mesh.scale.setScalar(0.04 + Math.random() * 0.04);
+  };
+
+  MistParticle.prototype.deactivate = function () {
+    this.active       = false;
+    this.mesh.visible = false;
+  };
+
+  MistParticle.prototype.update = function (dt) {
+    if (!this.active) return;
+
+    this.life -= dt;
+    if (this.life <= 0) { this.deactivate(); return; }
+
+    var drag = 1.0 - 2.5 * dt;
+    if (drag < 0) drag = 0;
+    this.vx *= drag;
+    this.vy *= drag;
+    this.vz *= drag;
+    this.vy += GRAVITY * 0.05 * dt;
+
+    this.px += this.vx * dt;
+    this.py += this.vy * dt;
+    this.pz += this.vz * dt;
+    if (this.py < GROUND_Y) this.py = GROUND_Y;
+
+    var t = this.life / this.maxLife;
+    this.mesh.material.opacity = t * 0.6;
+    this.mesh.scale.setScalar((0.04 + Math.random() * 0.02) * (2.0 - t));
+    this.mesh.position.set(this.px, this.py, this.pz);
+  };
+
+  /* ══════════════════════════════════════════════════════════════════════
+   *  ArterialStream
+   * ══════════════════════════════════════════════════════════════════════ */
+  function ArterialStream() {
+    this.active   = false;
+    this.enemy    = null;
+    this.organ    = null;
+    this.offsetY  = 0;
+    this.color    = 0x7a0000;
+    this.timer    = 0;
+    this.duration = 0;
+    this.rate     = 0;
+  }
+
+  ArterialStream.prototype.start = function (enemy, organ, color, rate, duration) {
+    this.active   = true;
     this.enemy    = enemy;
+    this.organ    = organ;
+    this.color    = color;
+    this.timer    = 0;
+    this.rate     = rate || PUMP_INTERVAL;
+    this.duration = duration || (2.0 + Math.random() * 3.0);
+    this.offsetY  = organ ? (organ.yRange[0] + organ.yRange[1]) * 0.5 : 0.5;
+  };
+
+  ArterialStream.prototype.stop = function () {
+    this.active = false;
+    this.enemy  = null;
+    this.organ  = null;
+  };
+
+  ArterialStream.prototype.update = function (dt) {
+    if (!this.active) return;
+    this.duration -= dt;
+    if (this.duration <= 0) { this.stop(); return; }
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = this.rate;
+      var epos = this.enemy && this.enemy.mesh ? this.enemy.mesh.position : null;
+      if (!epos) { this.stop(); return; }
+
+      var bx = epos.x;
+      var by = epos.y + this.offsetY;
+      var bz = epos.z;
+      var angle = Math.random() * Math.PI * 2;
+      var speed = 3.0 + Math.random() * 5.0;
+      for (var i = 0; i < 4; i++) {
+        var a = angle + (Math.random() - 0.5) * 0.6;
+        _activateBloodDrop(
+          bx + Math.cos(a) * 0.05,
+          by + Math.random() * 0.1,
+          bz + Math.sin(a) * 0.05,
+          Math.cos(a) * speed * (0.7 + Math.random() * 0.6),
+          speed * 0.6 + Math.random() * speed * 0.4,
+          Math.sin(a) * speed * (0.7 + Math.random() * 0.6),
+          1.0 + Math.random() * 1.5,
+          this.color,
+          BLOOD_VISCOSITY
+        );
+      }
+    }
+  };
+
+  /* ══════════════════════════════════════════════════════════════════════
+   *  EnemyGoreState
+   * ══════════════════════════════════════════════════════════════════════ */
+  function EnemyGoreState(enemy) {
+    this.enemy    = enemy;
+    this.type     = (enemy && enemy.enemyType) ? enemy.enemyType : 'default';
+    this.organs   = {};
     this.wounds   = [];
-    this.streams  = [];
-    this.anatomy  = {};
-    this.alive    = true;
     this.killedBy = null;
 
-    // Copy anatomy from template
-    for (const [key, data] of Object.entries(SLIME_ANATOMY)) {
-      this.anatomy[key] = { hp: data.hp, maxHp: data.maxHp };
+    var anat = _getAnatomyFor(this.type);
+    var keys = Object.keys(anat);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var src = anat[k];
+      this.organs[k] = {
+        name: k, hp: src.hp, maxHp: src.maxHp,
+        yRange: [src.yRange[0], src.yRange[1]],
+        color: src.color, deathReaction: src.deathReaction,
+        bleedRate: src.bleedRate, pumpBlood: !!src.pumpBlood
+      };
     }
   }
 
-  getOrganAt(localY) {
-    // localY: -1 = bottom, +1 = top
-    for (const [key, data] of Object.entries(SLIME_ANATOMY)) {
-      if (localY >= data.yRange[0] && localY <= data.yRange[1]) {
-        return key;
-      }
-    }
-    return 'membrane';
-  }
-
-  damageOrgan(organ, amount) {
-    if (!this.anatomy[organ]) return false;
-    this.anatomy[organ].hp -= amount;
-    if (this.anatomy[organ].hp <= 0) {
-      this.anatomy[organ].hp = 0;
-      this.killedBy = organ;
-      return true; // organ destroyed
-    }
-    return false;
-  }
-
-  addWound(localPos, radius, organ, options) {
-    // Check if a wound already exists near this point
-    const MERGE_DIST = 0.12;
-    for (const w of this.wounds) {
-      if (!w.active) continue;
-      if (w.localPos.distanceTo(localPos) < MERGE_DIST) {
-        // Grow existing wound
-        w.grow(options.depth * 0.4, radius * 0.3);
-        return w;
-      }
-    }
-    // Find inactive wound slot
-    let wound = this.wounds.find(w => !w.active);
-    if (!wound) {
-      if (this.wounds.length < MAX_WOUNDS) {
-        wound = new Wound();
-        this.wounds.push(wound);
-      } else {
-        // Recycle oldest
-        wound = this.wounds[0];
-      }
-    }
-    wound.reset(localPos, radius, organ, options);
-    return wound;
-  }
-
-  update(dt) {
-    if (!this.alive) return;
-    const pos = this.enemy.mesh ? this.enemy.mesh.position : new THREE.Vector3();
-    const vel = this.enemy.velocity || new THREE.Vector3();
-    for (const w of this.wounds) w.update(dt, pos, vel);
-    for (const s of this.streams) s.update(dt);
-  }
-
-  cleanup() {
-    this.alive = false;
-    for (const w of this.wounds) w.active = false;
-    for (const s of this.streams) s.active = false;
-  }
-}
-
-// ─────────────────────────────────────────────
-//  GORE SIMULATOR — MAIN PUBLIC API
-// ─────────────────────────────────────────────
-const GoreSim = {
-  scene:          null,
-  camera:         null,
-  _drops:         [],
-  _chunks:        [],
-  _streams:       [],
-  _decalMeshes:   [],
-  _decalIndex:    0,
-  _dropMeshes:    [],
-  _dropIndex:     0,
-  _chunkMeshes:   [],
-  _chunkIndex:    0,
-  _enemyGoreMap:  new Map(),  // enemy.id -> EnemyGoreState
-  _dropPool:      [],
-  _chunkPool:     [],
-  _initialized:   false,
-
-  // ────────────────────────────────────────
-  //  INIT — call once after Three.js scene exists
-  // ────────────────────────────────────────
-  init(scene, camera) {
-    if (this._initialized) return;
-    this.scene  = scene;
-    this.camera = camera;
-    this._buildPools();
-    this._initialized = true;
-    console.log('[GoreSim] Initialized — Realistic Gore Simulator v1.0 ready.');
-  },
-
-  _buildPools() {
-    // Blood drop pool
-    const dropGeo  = new THREE.SphereGeometry(0.5, 6, 5); // low-poly sphere, scaled per drop
-    const dropMat  = new THREE.MeshBasicMaterial({ color: 0xaa0000, transparent: true, opacity: 0.9 });
-    for (let i = 0; i < MAX_BLOOD_DROPS; i++) {
-      const mesh   = new THREE.Mesh(dropGeo, dropMat.clone());
-      mesh.visible = false;
-      this.scene.add(mesh);
-      const drop   = new BloodDrop();
-      drop.mesh    = mesh;
-      this._drops.push(drop);
-    }
-
-    // Flesh chunk pool
-    const chunkGeo = new THREE.DodecahedronGeometry(0.5, 0);
-    const chunkMat = new THREE.MeshLambertMaterial({ color: 0x22aa33, transparent: true });
-    for (let i = 0; i < MAX_CHUNKS; i++) {
-      const mesh   = new THREE.Mesh(chunkGeo, chunkMat.clone());
-      mesh.visible = false;
-      this.scene.add(mesh);
-      const chunk  = new FleshChunk();
-      chunk.mesh   = mesh;
-      this._chunks.push(chunk);
-    }
-
-    // Ground decal pool
-    const decalGeo = new THREE.CircleGeometry(0.5, 16);
-    const decalMat = new THREE.MeshBasicMaterial({
-      color:       0x880000,
-      transparent: true,
-      opacity:     0.75,
-      depthWrite:  false,
-    });
-    for (let i = 0; i < MAX_DECALS; i++) {
-      const mesh   = new THREE.Mesh(decalGeo, decalMat.clone());
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.position.y = 0.02;
-      mesh.renderOrder = 1;
-      mesh.visible = false;
-      this.scene.add(mesh);
-      this._decalMeshes.push(mesh);
-    }
-
-    console.log(`[GoreSim] Pools built: ${MAX_BLOOD_DROPS} drops, ${MAX_CHUNKS} chunks, ${MAX_DECALS} decals.`);
-  },
-
-  // ────────────────────────────────────────
-  //  PUBLIC: Hit Event
-  //  Call from combat.js when projectile hits enemy
-  // ────────────────────────────────────────
-  onHit(enemy, weaponType, hitPoint, hitNormal) {
-    if (!this._initialized || !enemy) return;
-
-    const profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
-
-    // Get or create gore state for this enemy
-    let gore = this._enemyGoreMap.get(enemy.id || enemy.uuid);
-    if (!gore) {
-      gore = new EnemyGoreState(enemy);
-      this._enemyGoreMap.set(enemy.id || enemy.uuid, gore);
-    }
-
-    const hp = this.scene; // sanity
-    if (!hp) return;
-
-    // Determine which organ was hit based on hit Y position relative to enemy
-    const enemyPos  = enemy.mesh ? enemy.mesh.position : new THREE.Vector3();
-    const enemyScale = enemy.mesh ? enemy.mesh.scale.y : 1.0;
-    const localY    = hitPoint
-      ? Math.max(-1, Math.min(1, (hitPoint.y - enemyPos.y) / (enemyScale * 0.5 + 0.01)))
-      : 0;
-    const organHit  = gore.getOrganAt(localY);
-
-    // Calculate organ damage (weapon penetration determines how much organ damage)
-    const organDamage = profile.penetration * 20 + Math.random() * 10;
-    const organDead   = gore.damageOrgan(organHit, organDamage);
-
-    // Calculate local wound position
-    const localPos = hitPoint
-      ? hitPoint.clone().sub(enemyPos)
-      : new THREE.Vector3((Math.random()-0.5)*0.2, localY*0.3, (Math.random()-0.5)*0.2);
-
-    // Add wound to enemy
-    const wound = gore.addWound(localPos, profile.woundRadius, organHit, {
-      depth:      profile.penetration,
-      cauterized: profile.cauterizes || false,
-      frozen:     profile.freezesBlood || false,
-      color:      SLIME_ANATOMY[organHit] ? SLIME_ANATOMY[organHit].color : 0x880000,
-    });
-
-    // ── SPAWN BLOOD BASED ON WEAPON TYPE ──────
-    if (profile.isExplosive) {
-      this._explosionBlood(hitPoint || enemyPos, profile, gore, _enemyBloodColor(enemy));
-    } else if (profile.isSlashing) {
-      this._slashBlood(hitPoint || enemyPos, hitNormal, profile, gore);
-    } else if (profile.cauterizes) {
-      this._cauterizeEffect(hitPoint || enemyPos, profile);
-    } else if (profile.electricEffect) {
-      this._electricEffect(hitPoint || enemyPos, profile);
-    } else if (profile.freezesBlood) {
-      this._iceEffect(hitPoint || enemyPos, profile);
-    } else {
-      this._bulletBlood(hitPoint || enemyPos, hitNormal, profile, gore, organHit, localY);
-    }
-
-    // ── FLESH CHUNKS ──────────────────────────
-    if (Math.random() < profile.chunkChance) {
-      const count = profile.chunkCount
-        ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
-        : 2;
-      this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, _enemyChunkColor(enemy));
-    }
-
-    // ── ARTERIAL PUMP if heart hit ─────────────
-    if (organHit === 'heart' && profile.pumpBlood !== false && SLIME_ANATOMY.heart.bleedRate > 0.5) {
-      const existingStream = gore.streams.find(s => s.active);
-      if (!existingStream) {
-        const stream = new ArterialStream();
-        const streamDir = hitNormal
-          ? hitNormal.clone().negate()
-          : new THREE.Vector3(Math.random()-0.5, 0.5, Math.random()-0.5).normalize();
-        stream.start(enemy, localPos, streamDir, {
-          life:  8.0,
-          color: 0xcc1100,
-        });
-        gore.streams.push(stream);
-        this._streams.push(stream);
-      }
-    }
-
-    // ── ORGAN DEATH reaction ───────────────────
-    if (organDead && !enemy.dead) {
-      this._organDeathReaction(enemy, gore, organHit, hitPoint, profile);
-    }
-
-    return { organHit, organDead, wound };
-  },
-
-  // ────────────────────────────────────────
-  //  PUBLIC: Kill Event
-  // ────────────────────────────────────────
-  onKill(enemy, weaponType, projectile) {
-    if (!this._initialized) return;
-
-    const profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
-    const gore    = this._enemyGoreMap.get(enemy.id || enemy.uuid);
-    const pos     = enemy.mesh ? enemy.mesh.position.clone() : new THREE.Vector3();
-    const killedBy = gore ? gore.killedBy : 'membrane';
-
-    // Stop all bleeds
-    if (gore) {
-      for (const s of gore.streams) s.active = false;
-    }
-
-    this._killExplosion(pos, profile, killedBy, enemy, _enemyChunkColor(enemy), _enemyBloodColor(enemy));
-    if (gore) gore.cleanup();
-    this._enemyGoreMap.delete(enemy.id || enemy.uuid);
-  },
-
-  // ────────────────────────────────────────
-  //  BULLET HIT BLOOD
-  // ────────────────────────────────────────
-  _bulletBlood(pos, normal, profile, gore, organ, localY) {
-    const count = Math.ceil(profile.bloodVolume * 20);
-    const speed = profile.bloodVelocity;
-    // Use enemy blood color when available (via gore state → enemy ref)
-    const enemyBloodCol = gore && gore.enemy ? _enemyBloodColor(gore.enemy) : (SLIME_ANATOMY[organ]?.color || 0xaa0000);
-
-    // Entry wound spray — forward cone opposite to normal
-    const hitDir = normal ? normal.clone().negate() : new THREE.Vector3(0, 0, 1);
-
-    for (let i = 0; i < count; i++) {
-      const spread = profile.woundRadius * 4;
-      const vel = new THREE.Vector3(
-        hitDir.x * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random()-0.5) * spread * 6,
-        hitDir.y * (speed.min + Math.random() * (speed.max - speed.min)) + Math.random() * 1.5,
-        hitDir.z * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random()-0.5) * spread * 6
-      );
-
-      const isMist = Math.random() < profile.mistDensity * 0.3;
-      this._spawnDrop(pos, vel, {
-        color:      enemyBloodCol,
-        radius:     isMist ? 0.005 + Math.random() * 0.008 : 0.012 + Math.random() * 0.025,
-        life:       isMist ? 1.0 + Math.random() * 0.5 : 2.5 + Math.random() * 1.5,
-        maxBounces: isMist ? 0 : 3,
-        viscosity:  SLIME_VISCOSITY,
-        isMist,
-      });
-    }
-
-    // Exit wound spray if applicable
-    if (profile.exitWound) {
-      const exitCount = Math.ceil(count * 0.6 * profile.exitScale);
-      const exitDir = normal ? normal.clone() : new THREE.Vector3(0, 0, -1);
-      for (let i = 0; i < exitCount; i++) {
-        const vel = new THREE.Vector3(
-          exitDir.x * (speed.min + Math.random() * speed.max) * profile.exitScale + (Math.random()-0.5)*3,
-          exitDir.y * (speed.min + Math.random() * speed.max) * profile.exitScale + Math.random() * 2,
-          exitDir.z * (speed.min + Math.random() * speed.max) * profile.exitScale + (Math.random()-0.5)*3
-        );
-        this._spawnDrop(pos, vel, {
-          color:     enemyBloodCol,
-          radius:    0.018 + Math.random() * 0.03,
-          life:      2.0 + Math.random() * 2,
-          maxBounces: 4,
-          viscosity: SLIME_VISCOSITY,
-        });
-      }
-    }
-
-    // Supersonic weapon: temporary cavity blood burst then collapse
-    if (profile.killStyle === 'supersonic') {
-      this._supersonicCavity(pos, profile);
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  SUPERSONIC CAVITY EFFECT (sniper)
-  // ────────────────────────────────────────
-  _supersonicCavity(pos, profile) {
-    // Huge outward burst
-    const burstCount = 40;
-    for (let i = 0; i < burstCount; i++) {
-      const angle = (i / burstCount) * Math.PI * 2;
-      const r     = 1.5 + Math.random() * 2;
-      const vel   = new THREE.Vector3(
-        Math.cos(angle) * r,
-        Math.random() * 2.5,
-        Math.sin(angle) * r
-      );
-      this._spawnDrop(pos, vel, {
-        color:      0xcc2200,
-        radius:     0.008 + Math.random() * 0.015,
-        life:       1.2 + Math.random(),
-        maxBounces: 1,
-        viscosity:  SLIME_VISCOSITY * 0.5, // fast — less viscous in mist
-        isMist:     true,
-      });
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  SLASH/STAB BLOOD
-  // ────────────────────────────────────────
-  _slashBlood(pos, normal, profile, gore) {
-    // Slash produces a sheeting arc of blood following blade direction
-    const count = Math.ceil(profile.bloodVolume * 15);
-    for (let i = 0; i < count; i++) {
-      // Arc upward and to the side — simulates blade pulling blood off
-      const t = i / count;
-      const vel = new THREE.Vector3(
-        (Math.cos(t * Math.PI) * 2 + (Math.random()-0.5)) * 1.5,
-        1.5 + Math.random() * 2.5,
-        (Math.sin(t * Math.PI) * 2 + (Math.random()-0.5)) * 1.5
-      );
-      this._spawnDrop(pos, vel, {
-        color:     0xbb1100,
-        radius:    0.015 + Math.random() * 0.03,
-        life:      2.5 + Math.random() * 1.5,
-        maxBounces: 3,
-        viscosity: SLIME_VISCOSITY,
-      });
-    }
-
-    // Additional drips falling straight down from wound
-    for (let i = 0; i < 5; i++) {
-      const vel = new THREE.Vector3(
-        (Math.random()-0.5) * 0.2,
-        -0.3 - Math.random() * 0.4,
-        (Math.random()-0.5) * 0.2
-      );
-      this._spawnDrop(pos, vel, {
-        color:     0xaa0000,
-        radius:    0.012 + Math.random() * 0.02,
-        life:      3.0 + Math.random(),
-        maxBounces: 1,
-        viscosity: SLIME_VISCOSITY * 1.2,
-      });
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  EXPLOSION BLOOD
-  // ────────────────────────────────────────
-  _explosionBlood(pos, profile, gore, bloodColor) {
-    const col     = bloodColor || 0xcc1100;
-    const colMist = bloodColor || 0xaa1100;
-    const count = Math.ceil(profile.bloodVolume * 25);
-    for (let i = 0; i < count; i++) {
-      const angle  = Math.random() * Math.PI * 2;
-      const elev   = (Math.random() - 0.2) * Math.PI;
-      const speed  = profile.bloodVelocity.min + Math.random() * (profile.bloodVelocity.max - profile.bloodVelocity.min);
-      const vel    = new THREE.Vector3(
-        Math.cos(angle) * Math.cos(elev) * speed,
-        Math.abs(Math.sin(elev)) * speed + 2,
-        Math.sin(angle) * Math.cos(elev) * speed
-      );
-      this._spawnDrop(pos, vel, {
-        color:      col,
-        radius:     0.015 + Math.random() * 0.04,
-        life:       3.0 + Math.random() * 2,
-        maxBounces: 4,
-        viscosity:  SLIME_VISCOSITY,
-      });
-    }
-    // Mist cloud
-    for (let i = 0; i < 60; i++) {
-      const vel = new THREE.Vector3(
-        (Math.random()-0.5) * 12,
-        Math.random() * 6,
-        (Math.random()-0.5) * 12
-      );
-      this._spawnDrop(pos, vel, {
-        color:     colMist,
-        radius:    0.006 + Math.random() * 0.010,
-        life:      1.5 + Math.random(),
-        maxBounces: 0,
-        viscosity: 0.2,
-        isMist:    true,
-      });
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  CAUTERIZE EFFECT (laser / flame)
-  // ────────────────────────────────────────
-  _cauterizeEffect(pos, profile) {
-    // Smoking sizzle — no blood drops, just dark char particles
-    for (let i = 0; i < 8; i++) {
-      const vel = new THREE.Vector3(
-        (Math.random()-0.5) * 0.5,
-        0.5 + Math.random() * 1.0,
-        (Math.random()-0.5) * 0.5
-      );
-      this._spawnDrop(pos, vel, {
-        color:     0x111111,
-        radius:    0.01 + Math.random() * 0.015,
-        life:      1.0 + Math.random(),
-        maxBounces: 0,
-        viscosity: 0.9,
-        charred:   true,
-        isMist:    true,
-      });
-    }
-    // Small flash of white-hot
-    for (let i = 0; i < 3; i++) {
-      const vel = new THREE.Vector3(
-        (Math.random()-0.5) * 2,
-        1.5 + Math.random(),
-        (Math.random()-0.5) * 2
-      );
-      this._spawnDrop(pos, vel, {
-        color:     0xffffff,
-        radius:    0.006,
-        life:      0.3 + Math.random() * 0.2,
-        maxBounces: 0,
-        viscosity: 0.1,
-        isMist:    true,
-      });
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  ICE EFFECT
-  // ────────────────────────────────────────
-  _iceEffect(pos, profile) {
-    const count = Math.ceil(profile.bloodVolume * 12);
-    for (let i = 0; i < count; i++) {
-      const vel = new THREE.Vector3(
-        (Math.random()-0.5) * 3,
-        Math.random() * 2,
-        (Math.random()-0.5) * 3
-      );
-      this._spawnDrop(pos, vel, {
-        color:     0x88ccff,
-        radius:    0.01 + Math.random() * 0.02,
-        life:      4.0 + Math.random() * 2,
-        maxBounces: 2,
-        viscosity: 0.9, // thick — crystallizing
-        frozen:    true,
-      });
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  ELECTRIC EFFECT
-  // ────────────────────────────────────────
-  _electricEffect(pos, profile) {
-    // Blood boils from wound — steam + few drops
-    for (let i = 0; i < 15; i++) {
-      const vel = new THREE.Vector3(
-        (Math.random()-0.5) * 4,
-        1 + Math.random() * 3,
-        (Math.random()-0.5) * 4
-      );
-      this._spawnDrop(pos, vel, {
-        color:     0xffdd00,
-        radius:    0.007 + Math.random() * 0.012,
-        life:      0.5 + Math.random() * 0.5,
-        maxBounces: 0,
-        viscosity: 0.05,
-        isMist:    true,
-      });
-    }
-    // Some actual blood drops after arc
-    setTimeout(() => {
-      for (let i = 0; i < 8; i++) {
-        const vel = new THREE.Vector3(
-          (Math.random()-0.5) * 2,
-          0.5 + Math.random() * 1.5,
-          (Math.random()-0.5) * 2
-        );
-        this._spawnDrop(pos, vel, {
-          color:     0xaa0000,
-          radius:    0.015 + Math.random() * 0.02,
-          life:      2.0 + Math.random(),
-          maxBounces: 3,
-          viscosity:  SLIME_VISCOSITY,
-        });
-      }
-    }, 150);
-  },
-
-  // ────────────────────────────────────────
-  //  ORGAN DEATH REACTION
-  //  Unique behavior when each organ is destroyed
-  // ────────────────────────────────────────
-  _organDeathReaction(enemy, gore, organ, pos, profile) {
-    const p = pos || (enemy.mesh ? enemy.mesh.position : new THREE.Vector3());
-
-    switch (organ) {
-      case 'brain':
-        // Sudden massive mist burst from top of slime — neural fluid
-        this._spawnBloodBurst(p, null, 25, 0xaaffaa, 'brain');
-        // Enemy immediately goes limp — handled externally by calling code checking killedBy
-        break;
-
-      case 'heart':
-        // Massive arterial pump — 3 huge spurts before death
-        const pumpPos = p.clone().add(new THREE.Vector3(0, 0.2, 0));
-        for (let pulse = 0; pulse < 3; pulse++) {
-          setTimeout(() => {
-            if (!this.scene) return;
-            for (let i = 0; i < 20; i++) {
-              const vel = new THREE.Vector3(
-                (Math.random()-0.5) * 5,
-                3 + Math.random() * 4,
-                (Math.random()-0.5) * 5
-              );
-              this._spawnDrop(pumpPos, vel, {
-                color:     0xff0000,
-                radius:    0.03 + Math.random() * 0.02,
-                life:      3.0 + Math.random(),
-                maxBounces: 3,
-                viscosity:  SLIME_VISCOSITY,
-              });
-            }
-          }, pulse * 180);
+  EnemyGoreState.prototype.getOrganAt = function (localY) {
+    var keys = Object.keys(this.organs);
+    var best = null;
+    for (var i = 0; i < keys.length; i++) {
+      var o = this.organs[keys[i]];
+      if (localY >= o.yRange[0] && localY <= o.yRange[1]) {
+        if (!best || (o.yRange[1] - o.yRange[0]) < (best.yRange[1] - best.yRange[0])) {
+          best = o;
         }
-        break;
-
-      case 'guts':
-        // Slow deflation — constant low trickle, enemy shrinks
-        // Spawn many slow dripping drops downward
-        for (let i = 0; i < 30; i++) {
-          setTimeout(() => {
-            if (!this.scene) return;
-            const vel = new THREE.Vector3(
-              (Math.random()-0.5) * 0.5,
-              -0.2 - Math.random() * 0.8,
-              (Math.random()-0.5) * 0.5
-            );
-            this._spawnDrop(p, vel, {
-              color:     0x55cc33,
-              radius:    0.012 + Math.random() * 0.018,
-              life:      3.0 + Math.random(),
-              maxBounces: 1,
-              viscosity:  SLIME_VISCOSITY * 1.3,
-            });
-          }, i * 60);
-        }
-        break;
-
-      case 'membrane':
-        // Outer burst — spray outward in all directions
-        this._spawnBloodBurst(p, null, 35, 0x33ee44, 'membrane');
-        break;
-
-      case 'coreFluid':
-        // Vital core gone — full deflation burst
-        this._spawnBloodBurst(p, null, 50, 0x00ff88, 'core');
-        break;
-    }
-  },
-
-  // ────────────────────────────────────────
-  //  KILL EXPLOSION
-  //  Final death — depends on weapon and killedBy organ
-  // ────────────────────────────────────────
-  _killExplosion(pos, profile, killedBy, enemy, chunkColor, bloodColor) {
-    // Use enemy-specific colors when provided, fall back to green slime defaults
-    const _chunkCol = chunkColor || 0x22aa33;
-    const _bloodCol = bloodColor || 0x33ee44;
-
-    if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
-      // MASSIVE chunk explosion — use enemy-specific colors for both chunks and blood
-      this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile, _chunkCol);
-      this._explosionBlood(pos, profile, null, _bloodCol);
-      return;
-    }
-
-    if (profile.killStyle === 'combust') {
-      // Burning collapse — dark particles rising
-      for (let i = 0; i < 40; i++) {
-        const vel = new THREE.Vector3(
-          (Math.random()-0.5) * 1.5,
-          0.5 + Math.random() * 3,
-          (Math.random()-0.5) * 1.5
-        );
-        this._spawnDrop(pos, vel, {
-          color:     Math.random() < 0.5 ? 0x222222 : 0xff4400,
-          radius:    0.01 + Math.random() * 0.02,
-          life:      1.5 + Math.random(),
-          maxBounces: 0,
-          viscosity: 0.05,
-          charred:   true,
-          isMist:    true,
-        });
       }
-      return;
     }
+    return best || this.organs[keys[0]];
+  };
 
-    if (profile.killStyle === 'shatter') {
-      // ICE SHATTER — frozen chunks + blue mist
-      for (let i = 0; i < 12; i++) {
-        const vel = new THREE.Vector3(
-          (Math.random()-0.5) * 8,
-          2 + Math.random() * 6,
-          (Math.random()-0.5) * 8
-        );
-        this._spawnChunk(pos, vel, {
-          color: 0x88ddff,
-          size:  0.05 + Math.random() * 0.12,
-        });
-      }
-      for (let i = 0; i < 30; i++) {
-        const vel = new THREE.Vector3(
-          (Math.random()-0.5) * 5,
-          Math.random() * 4,
-          (Math.random()-0.5) * 5
-        );
-        this._spawnDrop(pos, vel, {
-          color:     0x88ccff,
-          radius:    0.008 + Math.random() * 0.015,
-          life:      3.0 + Math.random() * 2,
-          maxBounces: 0,
-          viscosity: 0.95,
-          frozen:    true,
-          isMist:    true,
-        });
-      }
-      return;
+  EnemyGoreState.prototype.damageOrgan = function (organ, dmg) {
+    if (!organ) return false;
+    var wasDead = organ.hp <= 0;
+    organ.hp -= dmg;
+    if (organ.hp < 0) organ.hp = 0;
+    return (!wasDead && organ.hp <= 0);
+  };
+
+  EnemyGoreState.prototype.addWound = function (wound) {
+    if (this.wounds.length >= MAX_WOUNDS) {
+      this.wounds.shift();
     }
+    this.wounds.push(wound);
+  };
 
-    // DEFAULT DEATH — use enemy-specific blood/chunk colors
-    const deathBloodCount  = 60 + Math.floor(profile.bloodVolume * 20);
-    const deathColor       = _bloodCol;
+  EnemyGoreState.prototype.update = function (dt) {
+    for (var i = this.wounds.length - 1; i >= 0; i--) {
+      var w = this.wounds[i];
+      w.life -= dt;
+      if (w.life <= 0) { this.wounds.splice(i, 1); continue; }
+      w.dripTimer -= dt;
+      if (w.dripTimer <= 0) {
+        w.dripTimer = DRIP_INTERVAL;
+        var epos = this.enemy && this.enemy.mesh ? this.enemy.mesh.position : null;
+        if (epos) {
+          _activateBloodDrop(
+            epos.x + w.localX + (Math.random() - 0.5) * 0.02,
+            epos.y + w.localY,
+            epos.z + w.localZ + (Math.random() - 0.5) * 0.02,
+            (Math.random() - 0.5) * 0.3,
+            -0.5 - Math.random() * 0.3,
+            (Math.random() - 0.5) * 0.3,
+            0.8 + Math.random() * 0.6,
+            w.color,
+            w.viscosity
+          );
+        }
+      }
+    }
+  };
 
-    switch (killedBy) {
+  EnemyGoreState.prototype.cleanup = function () {
+    this.wounds.length = 0;
+    this.enemy = null;
+  };
 
-      case 'brain':
-        // First burst: pale/luminous brain-fluid color (distinct from body blood).
-        // Second burst: body blood in enemy-specific color for the main splatter.
-        this._spawnBloodBurst(pos, null, deathBloodCount, 0xaaffaa, 'brain_death'); // brain neural fluid
-        this._spawnBloodBurst(pos, null, 20, deathColor, 'normal');                  // body blood
+  /* ══════════════════════════════════════════════════════════════════════
+   *  Module-level pools & state
+   * ══════════════════════════════════════════════════════════════════════ */
+  var _scene        = null;
+  var _camera       = null;
+  var _drops        = [];
+  var _dropIdx      = 0;
+  var _chunks       = [];
+  var _chunkIdx     = 0;
+  var _mist         = [];
+  var _mistIdx      = 0;
+  var _decals       = [];
+  var _decalIdx     = 0;
+  var _decalBirths  = [];
+  var _streams      = [];
+  var _enemyGoreMap = null;
+  var _initialized  = false;
+  var _time         = 0;
+
+  /* ── helpers ────────────────────────────────────────────────────────── */
+  function _rand(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function _randInt(min, max) {
+    return Math.floor(min + Math.random() * (max - min + 1));
+  }
+
+  function _getAnatomyFor(type) {
+    if (type === 'crawler') return CRAWLER_ANATOMY;
+    return SLIME_ANATOMY;
+  }
+
+  function _resolveBloodColor(enemyType) {
+    var gc = ENEMY_GORE_COLORS[enemyType] || ENEMY_GORE_COLORS['default'];
+    if (window.BloodV2 && window.BloodV2.ENEMY_BLOOD) {
+      var bv = window.BloodV2.ENEMY_BLOOD[enemyType];
+      if (bv) return bv.dark !== undefined ? bv.dark : gc.blood;
+    }
+    return gc.blood;
+  }
+
+  function _resolveChunkColor(enemyType) {
+    var gc = ENEMY_GORE_COLORS[enemyType] || ENEMY_GORE_COLORS['default'];
+    return gc.chunk;
+  }
+
+  function _getViscosity(enemyType) {
+    if (enemyType === 'slime' || enemyType === 'leaping_slime') return SLIME_VISCOSITY;
+    return BLOOD_VISCOSITY;
+  }
+
+  /* ── pool activation helpers (zero alloc) ──────────────────────────── */
+  function _activateBloodDrop(x, y, z, vx, vy, vz, life, color, viscosity) {
+    var tries = MAX_BLOOD_DROPS;
+    while (tries-- > 0) {
+      var d = _drops[_dropIdx];
+      _dropIdx = (_dropIdx + 1) % MAX_BLOOD_DROPS;
+      if (!d.active) {
+        d.activate(x, y, z, vx, vy, vz, life, color, viscosity);
+        return d;
+      }
+    }
+    var d2 = _drops[_dropIdx];
+    _dropIdx = (_dropIdx + 1) % MAX_BLOOD_DROPS;
+    d2.activate(x, y, z, vx, vy, vz, life, color, viscosity);
+    return d2;
+  }
+
+  function _activateMist(x, y, z, vx, vy, vz, life, color) {
+    var tries = MAX_MIST_PARTICLES;
+    while (tries-- > 0) {
+      var m = _mist[_mistIdx];
+      _mistIdx = (_mistIdx + 1) % MAX_MIST_PARTICLES;
+      if (!m.active) {
+        m.activate(x, y, z, vx, vy, vz, life, color);
+        return m;
+      }
+    }
+    var m2 = _mist[_mistIdx];
+    _mistIdx = (_mistIdx + 1) % MAX_MIST_PARTICLES;
+    m2.activate(x, y, z, vx, vy, vz, life, color);
+    return m2;
+  }
+
+  function _activateChunk(x, y, z, vx, vy, vz, color, scale) {
+    var tries = MAX_CHUNKS;
+    while (tries-- > 0) {
+      var c = _chunks[_chunkIdx];
+      _chunkIdx = (_chunkIdx + 1) % MAX_CHUNKS;
+      if (!c.active) {
+        c.activate(x, y, z, vx, vy, vz, color, scale);
+        return c;
+      }
+    }
+    var c2 = _chunks[_chunkIdx];
+    _chunkIdx = (_chunkIdx + 1) % MAX_CHUNKS;
+    c2.activate(x, y, z, vx, vy, vz, color, scale);
+    return c2;
+  }
+
+  function _trySpawnDecal(x, z, radius, color) {
+    var decal = _decals[_decalIdx];
+    if (!decal) return;
+    decal.visible = true;
+    decal.position.set(x, GROUND_Y, z);
+    var s = radius * (0.8 + Math.random() * 0.5);
+    decal.scale.set(s, s, 1);
+    decal.rotation.z = Math.random() * Math.PI * 2;
+    decal.material.color.setHex(color);
+    decal.material.opacity = 0.85;
+    _decalBirths[_decalIdx] = _time;
+    _decalIdx = (_decalIdx + 1) % MAX_DECALS;
+  }
+
+  function _getStream() {
+    for (var i = 0; i < _streams.length; i++) {
+      if (!_streams[i].active) return _streams[i];
+    }
+    return null;
+  }
+
+  function _getOrCreateState(enemy) {
+    var id = enemy._goreId;
+    if (id === undefined) {
+      id = enemy.id !== undefined ? enemy.id : Math.random();
+      enemy._goreId = id;
+    }
+    var state = _enemyGoreMap.get(id);
+    if (!state) {
+      state = new EnemyGoreState(enemy);
+      _enemyGoreMap.set(id, state);
+    }
+    return state;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   *  Spawn helpers
+   * ══════════════════════════════════════════════════════════════════════ */
+  function _spawnBloodBurst(pos, normal, count, profile, color, viscosity) {
+    var velMin = profile.bloodVelocity.min;
+    var velMax = profile.bloodVelocity.max;
+    for (var i = 0; i < count; i++) {
+      var speed = _rand(velMin, velMax);
+      var spread = 0.8;
+      var nx = (normal ? normal.x : 0) + (Math.random() - 0.5) * spread;
+      var ny = (normal ? normal.y : 0.5) + Math.random() * 0.5;
+      var nz = (normal ? normal.z : 0) + (Math.random() - 0.5) * spread;
+      var len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+      _activateBloodDrop(
+        pos.x + nx * 0.05, pos.y + ny * 0.05, pos.z + nz * 0.05,
+        (nx / len) * speed, (ny / len) * speed, (nz / len) * speed,
+        0.8 + Math.random() * 1.5,
+        color, viscosity
+      );
+    }
+  }
+
+  function _spawnMistCloud(pos, count, color) {
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = 0.5 + Math.random() * 2.0;
+      _activateMist(
+        pos.x + (Math.random() - 0.5) * 0.1,
+        pos.y + Math.random() * 0.15,
+        pos.z + (Math.random() - 0.5) * 0.1,
+        Math.cos(a) * sp, Math.random() * sp * 0.5, Math.sin(a) * sp,
+        0.5 + Math.random() * 0.8,
+        color
+      );
+    }
+  }
+
+  function _spawnChunks(pos, count, color, force, enemy) {
+    var enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'default';
+    var cc = _resolveChunkColor(enemyType);
+    if (color !== undefined && color !== null) cc = color;
+
+    for (var i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var up = 2.0 + Math.random() * force * 0.4;
+      var sp = force * (0.3 + Math.random() * 0.7);
+      var sc = 0.03 + Math.random() * 0.07;
+      _activateChunk(
+        pos.x + (Math.random() - 0.5) * 0.15,
+        pos.y + Math.random() * 0.1,
+        pos.z + (Math.random() - 0.5) * 0.15,
+        Math.cos(a) * sp, up, Math.sin(a) * sp,
+        cc, sc
+      );
+    }
+  }
+
+  function _spawnDecal(pos, radius, color) {
+    _trySpawnDecal(pos.x, pos.z, radius, color);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   *  _killExplosion — style-based
+   * ══════════════════════════════════════════════════════════════════════ */
+  function _killExplosion(pos, profile, killedBy, enemy) {
+    var enemyType = (enemy && enemy.enemyType) ? enemy.enemyType : 'default';
+    var bloodCol  = _resolveBloodColor(enemyType);
+    var chunkCol  = _resolveChunkColor(enemyType);
+    var visc      = _getViscosity(enemyType);
+    var style     = profile.killStyle || 'penetration';
+
+    switch (style) {
+      case 'vaporize':
+        _spawnBloodBurst(pos, null, 120, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 80, bloodCol);
+        _spawnChunks(pos, _randInt(18, 35), chunkCol, 15.0, enemy);
+        _spawnDecal(pos, 2.5, bloodCol);
+        _spawnDecal(pos, 1.8, chunkCol);
         break;
 
-      case 'heart':
-        // 3 massive cardiac pulses then collapse
-        for (let p = 0; p < 4; p++) {
-          setTimeout(() => {
-            this._spawnBloodBurst(pos, null, 20, deathColor, 'pump');
-          }, p * 150);
-        }
+      case 'explosion':
+        _spawnBloodBurst(pos, null, 80, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 50, bloodCol);
+        _spawnChunks(pos, _randInt(10, 20), chunkCol, 10.0, enemy);
+        _spawnDecal(pos, 2.0, bloodCol);
         break;
 
-      case 'guts':
-        // Deflation — slowly leaking everywhere
-        for (let i = 0; i < 80; i++) {
-          setTimeout(() => {
-            if (!this.scene) return;
-            const vel = new THREE.Vector3(
-              (Math.random()-0.5) * 1,
-              -0.1 - Math.random() * 0.5,
-              (Math.random()-0.5) * 1
-            );
-            this._spawnDrop(pos, vel, {
-              color:     _bloodCol,
-              radius:    0.01 + Math.random() * 0.02,
-              life:      3.5 + Math.random(),
-              maxBounces: 1,
-              viscosity: SLIME_VISCOSITY * 1.4,
-            });
-          }, i * 40);
+      case 'devastation':
+        _spawnBloodBurst(pos, null, 60, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 35, bloodCol);
+        _spawnChunks(pos, _randInt(5, 12), chunkCol, 6.0, enemy);
+        _spawnDecal(pos, 1.5, bloodCol);
+        break;
+
+      case 'supersonic':
+        _v1.set(0, 0, 1);
+        _spawnBloodBurst(pos, _v1, 50, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 25, bloodCol);
+        _spawnChunks(pos, _randInt(1, 3), chunkCol, 8.0, enemy);
+        _spawnDecal(pos, 1.2, bloodCol);
+        break;
+
+      case 'penetration':
+        _spawnBloodBurst(pos, null, 30, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 10, bloodCol);
+        _spawnDecal(pos, 0.6, bloodCol);
+        break;
+
+      case 'perforation':
+        for (var pf = 0; pf < 6; pf++) {
+          _v1.set(
+            pos.x + (Math.random() - 0.5) * 0.3,
+            pos.y + Math.random() * 0.3,
+            pos.z + (Math.random() - 0.5) * 0.3
+          );
+          _spawnBloodBurst(_v1, null, 8, profile, bloodCol, visc);
         }
+        _spawnMistCloud(pos, 12, bloodCol);
+        _spawnDecal(pos, 0.8, bloodCol);
+        break;
+
+      case 'saturation':
+        for (var sf = 0; sf < 10; sf++) {
+          _v1.set(
+            pos.x + (Math.random() - 0.5) * 0.4,
+            pos.y + Math.random() * 0.3,
+            pos.z + (Math.random() - 0.5) * 0.4
+          );
+          _spawnBloodBurst(_v1, null, 5, profile, bloodCol, visc);
+        }
+        _spawnMistCloud(pos, 15, bloodCol);
+        _spawnDecal(pos, 1.0, bloodCol);
+        break;
+
+      case 'sever':
+      case 'cleave':
+      case 'slash':
+        _v1.set(1, 0.5, 0).normalize();
+        _spawnBloodBurst(pos, _v1, 40, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 6, bloodCol);
+        if (profile.chunkChance > 0) {
+          _spawnChunks(pos, _randInt(profile.chunkCount.min, profile.chunkCount.max), chunkCol, profile.pushForce, enemy);
+        }
+        _spawnDecal(pos, 0.9, bloodCol);
+        break;
+
+      case 'execution':
+        _spawnBloodBurst(pos, null, 15, profile, bloodCol, visc);
+        _spawnDecal(pos, 0.4, bloodCol);
+        break;
+
+      case 'cauterize':
+      case 'combust':
+        _spawnMistCloud(pos, 20, 0x444444);
+        _spawnDecal(pos, 0.3, 0x222222);
+        break;
+
+      case 'melt':
+        _spawnBloodBurst(pos, null, 35, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 20, 0xff6600);
+        _spawnChunks(pos, _randInt(2, 6), chunkCol, 3.0, enemy);
+        _spawnDecal(pos, 1.0, bloodCol);
+        break;
+
+      case 'shatter':
+        _spawnChunks(pos, _randInt(12, 25), 0xaaddff, 8.0, enemy);
+        _spawnMistCloud(pos, 15, 0xccffff);
+        _spawnDecal(pos, 1.5, 0x88bbff);
+        break;
+
+      case 'electrocute':
+        _spawnBloodBurst(pos, null, 20, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 10, 0xffffaa);
+        _spawnDecal(pos, 0.7, bloodCol);
         break;
 
       default:
-        // Normal violent death burst
-        this._spawnBloodBurst(pos, null, deathBloodCount, deathColor, 'normal');
-        // Some chunks for drama
-        if (Math.random() < 0.5) {
-          this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile, _chunkCol);
-        }
+        _spawnBloodBurst(pos, null, 25, profile, bloodCol, visc);
+        _spawnMistCloud(pos, 8, bloodCol);
+        _spawnDecal(pos, 0.5, bloodCol);
         break;
     }
-  },
+  }
 
-  // ────────────────────────────────────────
-  //  INTERNAL HELPERS
-  // ────────────────────────────────────────
-  _spawnDrop(pos, vel, options = {}) {
-    let drop = this._drops.find(d => !d.active);
-    if (!drop) {
-      // Recycle oldest active drop
-      let oldest = null, oldestLife = Infinity;
-      for (const d of this._drops) {
-        if (d.active && d.life < oldestLife) { oldest = d; oldestLife = d.life; }
-      }
-      drop = oldest || this._drops[0];
-      if (drop) drop.deactivate();
-      drop = this._drops.find(d => !d.active) || this._drops[0];
+  /* ══════════════════════════════════════════════════════════════════════
+   *  PUBLIC API
+   * ══════════════════════════════════════════════════════════════════════ */
+  var GoreSim = {};
+
+  /* ── init ───────────────────────────────────────────────────────────── */
+  GoreSim.init = function (scene, camera) {
+    if (_initialized) return;
+    _initialized = true;
+    _scene  = scene;
+    _camera = camera;
+
+    if (typeof THREE === 'undefined') {
+      console.warn('[GoreSim] THREE.js not found — gore simulation disabled.');
+      return;
     }
-    if (drop) drop.reset(pos, vel, options);
-    return drop;
-  },
 
-  _spawnDecal(pos, radius, color) {
-    const mesh = this._decalMeshes[this._decalIndex % MAX_DECALS];
-    this._decalIndex++;
-    mesh.position.set(pos.x, 0.012, pos.z);
-    mesh.scale.setScalar(radius * 8 + Math.random() * 0.3);
-    mesh.material.color.setHex(color || 0x880000);
-    mesh.material.opacity = 0.7 + Math.random() * 0.2;
-    mesh.visible = true;
-    // Fade after DECAL_FADE_TIME
-    const m = mesh;
-    const start = performance.now();
-    const fade = () => {
-      const elapsed = (performance.now() - start) / 1000;
-      if (elapsed >= DECAL_FADE_TIME) { m.visible = false; return; }
-      if (elapsed > DECAL_FADE_TIME - 3.0) {
-        m.material.opacity = Math.max(0, (DECAL_FADE_TIME - elapsed) / 3.0 * 0.7);
+    _v1   = new THREE.Vector3();
+    _v2   = new THREE.Vector3();
+    _v3   = new THREE.Vector3();
+    _v4   = new THREE.Vector3();
+    _col  = new THREE.Color();
+    _mat4 = new THREE.Matrix4();
+
+    _enemyGoreMap = new Map();
+
+    // blood drop pool
+    var dropGeo = new THREE.SphereGeometry(0.5, 4, 3);
+    for (var d = 0; d < MAX_BLOOD_DROPS; d++) {
+      var dMat  = new THREE.MeshBasicMaterial({ color: 0x7a0000 });
+      var dMesh = new THREE.Mesh(dropGeo, dMat);
+      dMesh.visible = false;
+      scene.add(dMesh);
+      _drops.push(new BloodDrop(dMesh));
+    }
+
+    // flesh chunk pool
+    _chunkGeo = new THREE.DodecahedronGeometry(0.5, 0);
+    for (var c = 0; c < MAX_CHUNKS; c++) {
+      var cMat  = new THREE.MeshStandardMaterial({ color: 0xcc0a00, roughness: 0.9, metalness: 0.05 });
+      var cMesh = new THREE.Mesh(_chunkGeo, cMat);
+      cMesh.visible = false;
+      scene.add(cMesh);
+      _chunks.push(new FleshChunk(cMesh));
+    }
+
+    // decal pool (circle on ground)
+    var decGeo = new THREE.CircleGeometry(0.5, 8);
+    decGeo.rotateX(-Math.PI * 0.5);
+    for (var dc = 0; dc < MAX_DECALS; dc++) {
+      var dcMat  = new THREE.MeshBasicMaterial({
+        color: 0x7a0000, transparent: true, opacity: 0.85,
+        depthWrite: false, side: THREE.DoubleSide
+      });
+      var dcMesh = new THREE.Mesh(decGeo, dcMat);
+      dcMesh.visible = false;
+      dcMesh.position.y = GROUND_Y;
+      dcMesh.renderOrder = -1;
+      scene.add(dcMesh);
+      _decals.push(dcMesh);
+      _decalBirths.push(0);
+    }
+
+    // mist particle pool
+    var mistGeo = new THREE.SphereGeometry(0.5, 4, 3);
+    for (var mi = 0; mi < MAX_MIST_PARTICLES; mi++) {
+      var miMat  = new THREE.MeshBasicMaterial({
+        color: 0x7a0000, transparent: true, opacity: 0.6
+      });
+      var miMesh = new THREE.Mesh(mistGeo, miMat);
+      miMesh.visible = false;
+      scene.add(miMesh);
+      _mist.push(new MistParticle(miMesh));
+    }
+
+    // arterial stream pool
+    for (var s = 0; s < MAX_STREAMS; s++) {
+      _streams.push(new ArterialStream());
+    }
+
+    console.log('[GoreSim] Initialised — drops:' + MAX_BLOOD_DROPS +
+      ' chunks:' + MAX_CHUNKS + ' decals:' + MAX_DECALS +
+      ' mist:' + MAX_MIST_PARTICLES + ' streams:' + MAX_STREAMS);
+  };
+
+  /* ── onHit ──────────────────────────────────────────────────────────── */
+  GoreSim.onHit = function (enemy, weaponType, hitPoint, hitNormal) {
+    if (!_initialized || !_scene) return { organHit: null, organDead: false, wound: null };
+
+    var profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
+    var state   = _getOrCreateState(enemy);
+    var eType   = state.type;
+
+    // resolve organ from hit Y position
+    var localY = 0;
+    if (hitPoint && enemy.mesh) {
+      localY = (hitPoint.y - enemy.mesh.position.y);
+      var eHeight = enemy.height || 2.0;
+      localY = (localY / (eHeight * 0.5));
+      if (localY < -1) localY = -1;
+      if (localY > 1) localY = 1;
+    }
+
+    var organ     = state.getOrganAt(localY);
+    var organDead = state.damageOrgan(organ, profile.organDmg);
+
+    var bloodColor = _resolveBloodColor(eType);
+    var visc       = _getViscosity(eType);
+
+    var dropCount = Math.round(8 * profile.bloodVolume);
+
+    if (profile.cauterizes) {
+      dropCount = Math.max(1, Math.round(dropCount * 0.1));
+    }
+
+    var hp = hitPoint || (enemy.mesh ? enemy.mesh.position : _v1.set(0, 0, 0));
+    var hn = hitNormal || _v2.set(0, 1, 0);
+
+    _spawnBloodBurst(hp, hn, dropCount, profile, bloodColor, visc);
+
+    if (profile.mistDensity > 0) {
+      _spawnMistCloud(hp, profile.mistDensity, bloodColor);
+    }
+
+    // exit wound
+    if (profile.exitWound && enemy.mesh) {
+      _v3.copy(hn).negate().multiplyScalar(0.3);
+      _v3.add(hp);
+      var exitCount = Math.round(dropCount * profile.exitScale);
+      _v4.copy(hn).negate();
+      _spawnBloodBurst(_v3, _v4, exitCount, profile, bloodColor, visc);
+    }
+
+    // pellet spread (shotgun)
+    if (profile.pelletCount) {
+      var pellets = profile.pelletCount;
+      var angleSpread = (profile.pelletAngle || 30) * (Math.PI / 180);
+      for (var p = 0; p < pellets; p++) {
+        _v3.set(
+          hn.x + (Math.random() - 0.5) * angleSpread,
+          hn.y + Math.random() * 0.3,
+          hn.z + (Math.random() - 0.5) * angleSpread
+        ).normalize();
+        _v4.set(
+          hp.x + (Math.random() - 0.5) * 0.15,
+          hp.y + (Math.random() - 0.5) * 0.15,
+          hp.z + (Math.random() - 0.5) * 0.15
+        );
+        _spawnBloodBurst(_v4, _v3, Math.round(dropCount / pellets) + 1, profile, bloodColor, visc);
       }
-      requestAnimationFrame(fade);
+    }
+
+    // arterial pump stream
+    if (profile.pumpBlood && organ && organ.pumpBlood) {
+      var stream = _getStream();
+      if (stream) {
+        stream.start(enemy, organ, bloodColor, PUMP_INTERVAL, 2.0 + Math.random() * 3.0);
+      }
+    }
+
+    // explosive radial burst
+    if (profile.isExplosive) {
+      _spawnBloodBurst(hp, null, Math.round(dropCount * 3), profile, bloodColor, visc);
+      _spawnMistCloud(hp, profile.mistDensity * 2, bloodColor);
+      var blastChunks = _randInt(profile.chunkCount.min, profile.chunkCount.max);
+      if (blastChunks > 0) {
+        _spawnChunks(hp, blastChunks, null, profile.pushForce, enemy);
+      }
+    }
+
+    // wound entry
+    var wound = {
+      localX: hitPoint ? (hitPoint.x - (enemy.mesh ? enemy.mesh.position.x : 0)) : 0,
+      localY: hitPoint ? (hitPoint.y - (enemy.mesh ? enemy.mesh.position.y : 0)) : 0,
+      localZ: hitPoint ? (hitPoint.z - (enemy.mesh ? enemy.mesh.position.z : 0)) : 0,
+      radius: profile.woundRadius,
+      organ: organ ? organ.name : 'unknown',
+      life: 4.0 + Math.random() * 3.0,
+      dripTimer: 0,
+      color: bloodColor,
+      viscosity: visc,
+      bleedRate: organ ? organ.bleedRate : 0.3
     };
-    requestAnimationFrame(fade);
-  },
+    state.addWound(wound);
 
-  _spawnChunk(pos, vel, options = {}) {
-    let chunk = this._chunks.find(c => !c.active);
-    if (!chunk) {
-      chunk = this._chunks.find(c => c.active && c.life < 1.0) || this._chunks[0];
-      if (chunk) chunk.deactivate();
-      chunk = this._chunks.find(c => !c.active) || this._chunks[0];
+    return {
+      organHit: organ ? organ.name : null,
+      organDead: organDead,
+      wound: wound
+    };
+  };
+
+  /* ── onKill ─────────────────────────────────────────────────────────── */
+  GoreSim.onKill = function (enemy, weaponType, projectile) {
+    if (!_initialized || !_scene) return;
+
+    var profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
+    var id      = enemy._goreId;
+    var state   = id !== undefined ? _enemyGoreMap.get(id) : null;
+
+    // stop all active streams for this enemy
+    for (var s = 0; s < _streams.length; s++) {
+      if (_streams[s].active && _streams[s].enemy === enemy) {
+        _streams[s].stop();
+      }
     }
-    if (chunk) chunk.reset(pos, vel, options);
-    return chunk;
-  },
 
-  _spawnChunks(pos, normal, count, profile, chunkColor) {
-    const col = chunkColor || 0x22aa33;
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const elev  = 0.3 + Math.random() * 0.5;
-      const speed = 3 + Math.random() * (profile.bloodVelocity?.max || 8) * 0.5;
-      const vel   = new THREE.Vector3(
-        Math.cos(angle) * Math.cos(elev) * speed,
-        Math.sin(elev) * speed + 1,
-        Math.sin(angle) * Math.cos(elev) * speed
-      );
-      this._spawnChunk(pos, vel, {
-        color: col,
-        size:  0.04 + Math.random() * 0.14,
+    var pos = (enemy.mesh ? enemy.mesh.position : null) ||
+              (projectile && projectile.position ? projectile.position : _v1.set(0, 0.5, 0));
+
+    _killExplosion(pos, profile, state ? state.killedBy : null, enemy);
+
+    if (Math.random() < profile.chunkChance) {
+      var chunkN = _randInt(profile.chunkCount.min, profile.chunkCount.max);
+      if (chunkN > 0) {
+        _spawnChunks(pos, chunkN, null, profile.pushForce, enemy);
+      }
+    }
+
+    var bloodCol = _resolveBloodColor((enemy && enemy.enemyType) ? enemy.enemyType : 'default');
+    _spawnDecal(pos, 0.5 + profile.woundRadius * 3, bloodCol);
+
+    if (state) {
+      state.cleanup();
+    }
+    if (id !== undefined) {
+      _enemyGoreMap.delete(id);
+    }
+  };
+
+  /* ── update ─────────────────────────────────────────────────────────── */
+  GoreSim.update = function (dt) {
+    if (!_initialized || !_scene) return;
+    _time += dt;
+
+    for (var d = 0; d < MAX_BLOOD_DROPS; d++) {
+      _drops[d].update(dt);
+    }
+
+    for (var c = 0; c < MAX_CHUNKS; c++) {
+      _chunks[c].update(dt);
+    }
+
+    for (var mi = 0; mi < MAX_MIST_PARTICLES; mi++) {
+      _mist[mi].update(dt);
+    }
+
+    for (var s = 0; s < MAX_STREAMS; s++) {
+      _streams[s].update(dt);
+    }
+
+    if (_enemyGoreMap) {
+      _enemyGoreMap.forEach(function (state) {
+        state.update(dt);
       });
     }
-  },
 
-  _spawnBloodBurst(pos, direction, count, color, style) {
-    for (let i = 0; i < count; i++) {
-      let vel;
-      if (style === 'pump' || style === 'heart_death') {
-        // Upward fountain
-        vel = new THREE.Vector3(
-          (Math.random()-0.5) * 4,
-          3 + Math.random() * 5,
-          (Math.random()-0.5) * 4
-        );
-      } else if (style === 'brain_death') {
-        // Spray outward from top
-        const a = Math.random() * Math.PI * 2;
-        vel = new THREE.Vector3(
-          Math.cos(a) * (1 + Math.random() * 3),
-          1 + Math.random() * 4,
-          Math.sin(a) * (1 + Math.random() * 3)
-        );
-      } else if (style === 'ground') {
-        // Splat outward flat
-        const a = Math.random() * Math.PI * 2;
-        vel = new THREE.Vector3(
-          Math.cos(a) * (0.5 + Math.random() * 2),
-          0.1 + Math.random() * 0.5,
-          Math.sin(a) * (0.5 + Math.random() * 2)
-        );
-      } else {
-        // Default radial burst
-        const a = Math.random() * Math.PI * 2;
-        const e = (Math.random() - 0.3) * Math.PI;
-        const s = 2 + Math.random() * 6;
-        vel = new THREE.Vector3(
-          Math.cos(a) * Math.cos(e) * s,
-          Math.abs(Math.sin(e)) * s + Math.random() * 2,
-          Math.sin(a) * Math.cos(e) * s
-        );
+    for (var dc = 0; dc < MAX_DECALS; dc++) {
+      if (!_decals[dc].visible) continue;
+      var age = _time - _decalBirths[dc];
+      if (age > DECAL_FADE_TIME) {
+        _decals[dc].visible = false;
+      } else if (age > DECAL_FADE_TIME * 0.6) {
+        _decals[dc].material.opacity = 0.85 * (1.0 - (age - DECAL_FADE_TIME * 0.6) / (DECAL_FADE_TIME * 0.4));
       }
-      this._spawnDrop(pos, vel, {
-        color,
-        radius:     0.012 + Math.random() * 0.03,
-        life:       2.5 + Math.random() * 2.0,
-        maxBounces: 3,
-        viscosity:  SLIME_VISCOSITY,
-      });
     }
-  },
+  };
 
-  // ────────────────────────────────────────
-  //  UPDATE LOOP — call from game-loop.js
-  // ────────────────────────────────────────
-  update(dt) {
-    if (!this._initialized) return;
-    for (const d of this._drops)   d.update(dt);
-    for (const c of this._chunks)  c.update(dt);
-    for (const s of this._streams) s.update(dt);
-    for (const [id, gore] of this._enemyGoreMap) gore.update(dt);
-  },
+  /* ── reset ──────────────────────────────────────────────────────────── */
+  GoreSim.reset = function () {
+    for (var d = 0; d < _drops.length; d++) {
+      _drops[d].deactivate();
+    }
+    _dropIdx = 0;
 
-  // ────────────────────────────────────────
-  //  CLEANUP — call when scene resets
-  // ────────────────────────────────────────
-  reset() {
-    for (const d of this._drops)   d.deactivate();
-    for (const c of this._chunks)  c.deactivate();
-    for (const s of this._streams) s.active = false;
-    for (const m of this._decalMeshes) m.visible = false;
-    this._enemyGoreMap.clear();
-    this._streams = [];
-  },
+    for (var c = 0; c < _chunks.length; c++) {
+      _chunks[c].deactivate();
+    }
+    _chunkIdx = 0;
 
-  // ────────────────────────────────────────
-  //  UTILITY — get kill description text
-  //  Use this for UI death messages / AI narration
-  // ────────────────────────────────────────
-  getKillDescription(weaponType, organ) {
-    const w = WEAPON_GORE[weaponType];
-    const o = SLIME_ANATOMY[organ];
-    const weaponDesc = w ? w.description : 'Unknown weapon.';
-    const organDesc  = o ? o.description : 'unknown organ';
+    for (var m = 0; m < _mist.length; m++) {
+      _mist[m].deactivate();
+    }
+    _mistIdx = 0;
 
-    const deaths = {
-      brain:     'Neural fluid erupts. The slime cross-eyes, wobbles, and melts from the top down.',
-      heart:     'The pumping core ruptures. Three massive spurts of arterial green. Collapse.',
-      guts:      'The digestive sac deflates. Slow, wet, inevitable. Fluid pools beneath it.',
-      membrane:  'The outer gel layer explodes outward. Raw exposed tissue. Instant agony.',
-      coreFluid: 'Vital fluid drains away. The slime sags, shrinks, and dissolves into nothing.',
-    };
+    for (var dc = 0; dc < _decals.length; dc++) {
+      _decals[dc].visible = false;
+    }
+    _decalIdx = 0;
+
+    for (var s = 0; s < _streams.length; s++) {
+      _streams[s].stop();
+    }
+
+    if (_enemyGoreMap) {
+      _enemyGoreMap.forEach(function (state) { state.cleanup(); });
+      _enemyGoreMap.clear();
+    }
+
+    _time = 0;
+  };
+
+  /* ── getKillDescription ─────────────────────────────────────────────── */
+  GoreSim.getKillDescription = function (weaponType, organ) {
+    var profile = WEAPON_GORE[weaponType] || WEAPON_GORE.pistol;
+    var weaponDesc = profile.description || 'Unknown weapon effect.';
+    var organDesc  = ORGAN_DESCRIPTIONS[organ] || 'Unknown region';
+    var deathKey   = null;
+
+    if (SLIME_ANATOMY[organ]) {
+      deathKey = SLIME_ANATOMY[organ].deathReaction;
+    } else if (CRAWLER_ANATOMY[organ]) {
+      deathKey = CRAWLER_ANATOMY[organ].deathReaction;
+    }
+
+    var deathDesc = deathKey ? (DEATH_STRINGS[deathKey] || 'Target destroyed.') : 'Target destroyed.';
 
     return {
       weapon: weaponDesc,
-      organ:  organDesc,
-      death:  deaths[organ] || 'It dies.',
+      organ: organDesc,
+      death: deathDesc
     };
-  },
+  };
 
-  // ────────────────────────────────────────
-  //  EXPOSE PROFILES for weapons.js to extend
-  // ────────────────────────────────────────
-  WEAPON_GORE,
-  SLIME_ANATOMY,
-};
+  /* ── expose data tables ─────────────────────────────────────────────── */
+  GoreSim.WEAPON_GORE     = WEAPON_GORE;
+  GoreSim.SLIME_ANATOMY   = SLIME_ANATOMY;
+  GoreSim.CRAWLER_ANATOMY = CRAWLER_ANATOMY;
 
-// Expose globally
-window.GoreSim = GoreSim;
+  /* ── expose on window ──────────────────────────────────────────────── */
+  window.GoreSim = GoreSim;
 
-// ─────────────────────────────────────────────
-//  INTEGRATION INSTRUCTIONS (printed to console)
-// ─────────────────────────────────────────────
-console.log(`
-╔══════════════════════════════════════════════════════════╗
-║            GORE SIMULATOR v1.0  —  LOADED               ║
-╠══════════════════════════════════════════════════════════╣
-║                                                          ║
-║  1. In index.html, add AFTER blood-system.js:           ║
-║     <script src="js/gore-simulator.js"></script>        ║
-║                                                          ║
-║  2. In game-screens.js init():                          ║
-║     window.GoreSim.init(scene, camera);                 ║
-║                                                          ║
-║  3. In combat.js when bullet hits enemy:                ║
-║     window.GoreSim.onHit(                               ║
-║       enemy,        // enemy object with .mesh          ║
-║       'pistol',     // weapon type key                  ║
-║       hitPoint,     // THREE.Vector3 world pos          ║
-║       hitNormal     // THREE.Vector3 surface normal     ║
-║     );                                                   ║
-║                                                          ║
-║  4. In enemy-class.js death handler:                    ║
-║     window.GoreSim.onKill(enemy, weaponType);           ║
-║                                                          ║
-║  5. In game-loop.js animate():                          ║
-║     window.GoreSim.update(deltaTime);                   ║
-║                                                          ║
-║  6. On game reset:                                       ║
-║     window.GoreSim.reset();                             ║
-║                                                          ║
-║  WEAPON KEYS AVAILABLE:                                 ║
-║  pistol, revolver, shotgun, smg, sniper, minigun,       ║
-║  grenade, rocket, laser, plasma, knife, sword, axe,     ║
-║  flame, ice, lightning, knife_takedown                  ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
-`);
-
-})(); // end IIFE
+})();
