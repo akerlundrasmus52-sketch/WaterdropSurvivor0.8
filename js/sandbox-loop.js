@@ -3055,10 +3055,6 @@
     const settingsModal = document.getElementById('settings-modal');
     const closeBtn      = document.getElementById('settings-close-btn');
     const uiCalBtn      = document.getElementById('ui-calibration-btn');
-    const campBtn       = document.getElementById('settings-go-to-camp-btn');
-    const qualitySelect = document.getElementById('graphics-quality-select');
-    const qualityDesc   = document.getElementById('quality-desc');
-    const applyQualBtn  = document.getElementById('apply-quality-btn');
 
     if (!settingsBtn || !settingsModal || !closeBtn) return;
 
@@ -3067,40 +3063,18 @@
     // NOTE: Open/close/Escape handlers are managed by settings-ui.js.
     // Do NOT add duplicate listeners here — they conflict and break the modal.
 
-    // Return to Camp
-    if (campBtn) {
-      campBtn.addEventListener('click', function () {
-        window.location.href = 'index.html';
-      });
-    }
+    // Override updateCampScreen so settings-ui.js's "Go to Camp" handler navigates
+    // back to index.html (the camp hub) instead of trying to run the in-page camp
+    // flow.  A single handler in settings-ui.js is sufficient; no duplicate listener
+    // is added here.
+    window.updateCampScreen = function () {
+      window.location.href = 'index.html';
+    };
 
-    // Quality dropdown — update description text live
-    if (qualitySelect) {
-      // Load persisted quality
-      let saved = null;
-      try { saved = localStorage.getItem('sandboxGraphicsQuality'); } catch (_) {}
-      if (saved && QUALITY_DESCS[saved]) {
-        qualitySelect.value = saved;
-        if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[saved];
-      }
-      qualitySelect.addEventListener('change', function () {
-        if (qualityDesc) qualityDesc.textContent = QUALITY_DESCS[this.value] || '';
-      });
-    }
-
-    // Apply quality button
-    if (applyQualBtn && qualitySelect) {
-      applyQualBtn.addEventListener('click', function () {
-        _applyGraphicsQuality(qualitySelect.value);
-        // Flash button to confirm
-        applyQualBtn.textContent = '✔ APPLIED!';
-        applyQualBtn.style.background = 'linear-gradient(to bottom,#1a9f3f,#158230)';
-        setTimeout(function () {
-          applyQualBtn.textContent = 'APPLY QUALITY';
-          applyQualBtn.style.background = 'linear-gradient(to bottom,#1a6e9f,#155a82)';
-        }, 1200);
-      });
-    }
+    // NOTE: Graphics quality is managed entirely by settings-ui.js (which reads
+    // #quality-select and persists via saveData).  No duplicate wiring is needed
+    // here — the IDs it uses (graphics-quality-select, quality-desc, apply-quality-btn)
+    // do not exist in sandbox.html.
 
     if (uiCalBtn) {
       uiCalBtn.addEventListener('click', function () {
