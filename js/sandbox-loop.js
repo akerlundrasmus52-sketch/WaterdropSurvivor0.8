@@ -210,13 +210,10 @@
       if (playerStats.exp >= playerStats.expReq) {
         playerStats.exp -= playerStats.expReq;
         playerStats.lvl++;
-        // Adjusted leveling curve: power-law formula so max level ~60-65 is achievable end-game.
-        // Base 45 with exponent 1.85 creates steep progression:
-        // - Level 1→2: 45 XP (very fast start)
-        // - Level 30: ~5,000 XP (mid-game)
-        // - Level 60: ~25,000 XP (hard to reach, requires sustained combat)
-        // - Level 65: ~30,000 XP (extreme late-game grind)
-        playerStats.expReq = Math.floor(45 * Math.pow(playerStats.lvl, 1.85));
+        // Soft early-game curve: L1→2 uses GAME_CONFIG.baseExpReq (45 XP, ~2–3 common gems),
+        // then L2→3+ follow: 60 + 20*(lvl - 1)^1.3, balanced for ~65 max level.
+        // L1→2: 45 XP (~2–3 gems) | L2→3: 80 XP (4 gems) | L3→4: ~109 (5–6 gems) | L10: ~356 | L65: ~4000
+        playerStats.expReq = Math.floor(60 + 20 * Math.pow(playerStats.lvl - 1, 1.3));
         _onLevelUp();
       }
     };

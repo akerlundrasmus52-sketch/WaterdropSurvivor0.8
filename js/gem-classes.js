@@ -7,6 +7,10 @@
     let _expGemStarMaterial = null;
     let _expGemOutlineGeometry = null;
 
+    // Launch-style table — hoisted once to avoid per-gem allocations/GC churn
+    // Weighted: 'pop' appears twice so it fires ~33% of the time
+    const _GEM_LAUNCH_STYLES = ['pop', 'pop', 'lob', 'drop', 'tumble', 'overhead'];
+
     // EXP gem tier colours — colour-coded by enemy difficulty tier
     // Common (tier 0): Grey | Green (tier 1) | Blue (tier 2) | Purple (tier 3) | Orange (tier 4) | Red (tier 5) | Mythical (tier 6)
     const GEM_TIER_COLORS = [
@@ -45,11 +49,11 @@
 
     class ExpGem {
       constructor(x, z, sourceWeapon, hitForce, enemyType) {
-        // Use shared star geometry (created once) — 15% larger than previous size
+        // Use shared star geometry (created once) — 50% larger than previous size
         if (!_expGemStarGeometry) {
           const starPoints = 5;
-          const outerR = 0.28 * 0.4025; // 15% larger (0.35 * 1.15 = 0.4025)
-          const innerR = 0.12 * 0.4025;
+          const outerR = 0.28 * 0.4025 * 1.5; // 50% larger
+          const innerR = 0.12 * 0.4025 * 1.5;
           const starShape = new THREE.Shape();
           for (let i = 0; i < starPoints * 2; i++) {
             const angle = (i / (starPoints * 2)) * Math.PI * 2 - Math.PI / 2;
@@ -58,7 +62,7 @@
             else starShape.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
           }
           starShape.closePath();
-          const extrudeSettings = { depth: 0.04025, bevelEnabled: true, bevelSize: 0.01265, bevelThickness: 0.01265, bevelSegments: 2 };
+          const extrudeSettings = { depth: 0.04025 * 1.5, bevelEnabled: true, bevelSize: 0.01265 * 1.5, bevelThickness: 0.01265 * 1.5, bevelSegments: 2 };
           _expGemStarGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
           _expGemStarGeometry.center();
           _expGemStarMaterial = new THREE.MeshPhysicalMaterial({
@@ -89,13 +93,13 @@
 
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
-        // Pop out from enemy body in random direction
+        // Pop out from enemy body in random direction — X/Z set now; Y after launch style
         var popAngle = Math.random() * Math.PI * 2;
         var popDist  = 0.3 + Math.random() * 0.5;
         var startX   = x + Math.cos(popAngle) * popDist;
         var startZ   = z + Math.sin(popAngle) * popDist;
-        // Start invisible, grow to full size
-        this.mesh.position.set(startX, 0.6 + Math.random() * 0.8, startZ);
+        // Temporary position — Y will be overwritten after launch style selection
+        this.mesh.position.set(startX, 0.5, startZ);
         this.mesh.scale.set(0.01, 0.01, 0.01);
         this._growTimer = 0;
         this._grown = false;
@@ -104,7 +108,7 @@
         // Outline geometry is shared across all ExpGem instances (created once)
         if (!_expGemOutlineGeometry) {
           const s = new THREE.Shape();
-          const pts = 5, outerO = 0.33 * 0.4025, innerO = 0.14 * 0.4025;
+          const pts = 5, outerO = 0.33 * 0.4025 * 1.5, innerO = 0.14 * 0.4025 * 1.5;
           for (let i = 0; i < pts * 2; i++) {
             const ang = (i / (pts * 2)) * Math.PI * 2 - Math.PI / 2;
             const r = i % 2 === 0 ? outerO : innerO;
@@ -140,24 +144,58 @@
 
         this.active = true;
 
-        // Dynamic spin based on weapon force — spins in all 3 axes (360 in any direction)
+        // Dynamic spin based on weapon force — chaotic multi-axis tumble
         var force = hitForce || 1.0;
         var isCritical = force > 1.5;
         var isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
-        var spinMult = isCritical ? 2.5 : isExplosive ? 3.5 : 1.5;
-        this.rotSpeedX = (Math.random() * 0.18 + 0.08) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedY = (Math.random() * 0.22 + 0.14) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedZ = (Math.random() * 0.16 + 0.06) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        var spinMult = isCritical ? 3.5 : isExplosive ? 5.0 : 2.0;
+        // 30% chance of super-chaotic backwards/over-axis spin
+        var extraChaos = Math.random() < 0.3 ? 2.2 : 1.0;
+        this.rotSpeedX = (Math.random() * 0.25 + 0.10) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.30 + 0.15) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.20 + 0.08) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
 
-        // Physics: explosive casino-coin pop — outward 3D velocity, hard gravity, bouncing
-        // Previous values: popSpeed ~0.02-0.045 (slow hover). Now 0.06-0.13 (3× more explosive).
-        var popSpeed = (0.06 + Math.random() * 0.07) * force; // was 0.02 + rand*0.025
+        // Random launch style — uses module-level table to avoid per-gem allocations
+        // Adds variety: some fly over enemy head, some drop near, some tumble on ground
+        var launchStyle = _GEM_LAUNCH_STYLES[Math.floor(Math.random() * _GEM_LAUNCH_STYLES.length)];
+        this._launchStyle = launchStyle;
+
+        var popSpeed, startY;
+        if (launchStyle === 'lob' || launchStyle === 'overhead') {
+          // High arc — flies upward, maybe over the head of the enemy
+          popSpeed = (0.025 + Math.random() * 0.03) * force;
+          this.vy = (0.20 + Math.random() * 0.14) * force;
+          startY = 0.5;
+          this.gravity = -0.016;
+          this.groundFriction = 0.50;
+        } else if (launchStyle === 'drop') {
+          // Mostly drops near enemy with slight spread
+          popSpeed = (0.008 + Math.random() * 0.015) * force;
+          this.vy = (0.07 + Math.random() * 0.05) * force;
+          startY = 0.8 + Math.random() * 0.5;
+          this.gravity = -0.030;
+          this.groundFriction = 0.45;
+        } else if (launchStyle === 'tumble') {
+          // Rolls along ground quickly then stops
+          popSpeed = (0.04 + Math.random() * 0.04) * force;
+          this.vy = (0.08 + Math.random() * 0.04) * force;
+          startY = 0.4;
+          this.gravity = -0.026;
+          this.groundFriction = 0.72;
+        } else {
+          // 'pop' — classic short outward burst
+          popSpeed = (0.04 + Math.random() * 0.05) * force;
+          this.vy = (0.12 + Math.random() * 0.07) * force;
+          startY = 0.5 + Math.random() * 0.3;
+          this.gravity = -0.022;
+          this.groundFriction = 0.58;
+        }
         this.vx = Math.cos(popAngle) * popSpeed;
-        this.vy = 0.10 + Math.random() * 0.08 * force; // strong upward arc
         this.vz = Math.sin(popAngle) * popSpeed;
-        this.gravity = -0.022; // normal gravity so arc looks natural
         this.onGround = false;
-        this.groundFriction = 0.62; // some slide then stop
+        this._bounceCount = 0; // Track bounces for realistic settling
+        // Apply startY — different launch styles start at different heights
+        this.mesh.position.y = startY;
 
         this.bobPhase = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
@@ -188,25 +226,31 @@
           this.mesh.position.y += this.vy;
           this.mesh.position.z += this.vz;
 
-          // Hit ground — bounce like a casino coin then lay flat
+          // Hit ground — bounce like a tumbling coin then settle
           if (this.mesh.position.y <= 0.08) {
             this.mesh.position.y = 0.08;
+            this._bounceCount++;
             // Bounce: invert vertical velocity with damping coefficient
-            this.vy = -this.vy * 0.42;
+            this.vy = -this.vy * 0.38;
             this.vx *= this.groundFriction;
             this.vz *= this.groundFriction;
+            // Keep spinning on X/Z during bounce — dramatic tumble feel
+            if (this._bounceCount <= 2) {
+              this.rotSpeedX *= 0.85;
+              this.rotSpeedZ *= 0.85;
+            }
             // Stop bouncing when velocity is negligible
-            if (Math.abs(this.vy) < 0.005) {
+            if (Math.abs(this.vy) < 0.006 || this._bounceCount > 4) {
               this.vy = 0;
               this.vx = 0;
               this.vz = 0;
               this.onGround = true;
-              // Coin lands flat: kill X/Z spin, keep gentle Y spin
+              // Coin lands: kill X/Z spin gradually, keep gentle Y spin
               this.rotSpeedX = 0;
               this.rotSpeedZ = 0;
-              this.rotSpeedY *= 0.3;
-              // Tilt star to lay flat on ground (rotate to near-horizontal)
-              this.mesh.rotation.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.3;
+              this.rotSpeedY *= 0.25;
+              // Tilt star to lay on its side on ground
+              this.mesh.rotation.x = -Math.PI / 2 + (Math.random() - 0.5) * 0.4;
               this.mesh.rotation.z = Math.random() * Math.PI * 2;
             }
           }
@@ -320,14 +364,11 @@
         this._isMythic = rarCol.mythic;
         this.value = gemBaseValue;
 
-        // Reposition with pop
+        // Reposition with pop — X/Z set now; Y will be set after launch-style is chosen
         const popAngle = Math.random() * Math.PI * 2;
         const popDist  = 0.3 + Math.random() * 0.5;
-        this.mesh.position.set(
-          x + Math.cos(popAngle) * popDist,
-          0.6 + Math.random() * 0.8,
-          z + Math.sin(popAngle) * popDist
-        );
+        const posX = x + Math.cos(popAngle) * popDist;
+        const posZ = z + Math.sin(popAngle) * popDist;
         this.mesh.scale.set(0.01, 0.01, 0.01);
         this.mesh.visible = true;
 
@@ -339,19 +380,46 @@
         const force = hitForce || 1.0;
         const isCritical  = force > 1.5;
         const isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
-        const spinMult = isCritical ? 2.0 : isExplosive ? 2.5 : 1.0;
-        this.rotSpeedX = (Math.random() * 0.12 + 0.04) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedY = (Math.random() * 0.15 + 0.10) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedZ = (Math.random() * 0.10 + 0.03) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        const spinMult = isCritical ? 3.5 : isExplosive ? 5.0 : 2.0;
+        const extraChaos = Math.random() < 0.3 ? 2.2 : 1.0;
+        this.rotSpeedX = (Math.random() * 0.25 + 0.10) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.30 + 0.15) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.20 + 0.08) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
 
-        // Reset physics
-        const popSpeed = (0.02 + Math.random() * 0.025) * force;
+        // Reset physics with varied launch styles — module-level table, no per-reset allocation
+        const launchStyle = _GEM_LAUNCH_STYLES[Math.floor(Math.random() * _GEM_LAUNCH_STYLES.length)];
+        this._launchStyle = launchStyle;
+        let popSpeed, startY;
+        if (launchStyle === 'lob' || launchStyle === 'overhead') {
+          popSpeed = (0.025 + Math.random() * 0.03) * force;
+          this.vy = (0.20 + Math.random() * 0.14) * force;
+          startY = 0.5;
+          this.gravity = -0.016;
+          this.groundFriction = 0.50;
+        } else if (launchStyle === 'drop') {
+          popSpeed = (0.008 + Math.random() * 0.015) * force;
+          this.vy = (0.07 + Math.random() * 0.05) * force;
+          startY = 0.8 + Math.random() * 0.5;
+          this.gravity = -0.030;
+          this.groundFriction = 0.45;
+        } else if (launchStyle === 'tumble') {
+          popSpeed = (0.04 + Math.random() * 0.04) * force;
+          this.vy = (0.08 + Math.random() * 0.04) * force;
+          startY = 0.4;
+          this.gravity = -0.026;
+          this.groundFriction = 0.72;
+        } else {
+          popSpeed = (0.04 + Math.random() * 0.05) * force;
+          this.vy = (0.12 + Math.random() * 0.07) * force;
+          startY = 0.5 + Math.random() * 0.3;
+          this.gravity = -0.022;
+          this.groundFriction = 0.58;
+        }
+        this.mesh.position.set(posX, startY, posZ);
         this.vx = Math.cos(popAngle) * popSpeed;
-        this.vy = 0.04 + Math.random() * 0.02 * force;
         this.vz = Math.sin(popAngle) * popSpeed;
-        this.gravity      = -0.039;
         this.onGround     = false;
-        this.groundFriction = 0.55;
+        this._bounceCount = 0;
         this.bobPhase     = Math.random() * Math.PI * 2;
         this.sparklePhase = Math.random() * Math.PI * 2;
         this.active       = true;

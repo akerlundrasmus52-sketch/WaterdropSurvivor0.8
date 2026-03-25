@@ -223,11 +223,11 @@
       document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
       document.getElementById('quit-to-menu-btn').style.display = isFirstRun ? 'none' : '';
       document.getElementById('goto-camp-btn').style.display = '';
-      document.getElementById('final-score').innerText = `⏱️ Survived: ${survivalTime}s`;
-      document.getElementById('final-kills').innerText = `⚔️ Kills: ${playerStats.kills}`;
-      document.getElementById('final-level').innerText = `📊 Final Level: ${playerStats.lvl}`;
-      document.getElementById('gold-earned').innerText = `💰 Gold Earned: ${goldEarned}`;
-      document.getElementById('total-gold').innerText = `💵 Total Gold: ${saveData.gold}`;
+      document.getElementById('final-score').innerText = `${survivalTime}s`;
+      document.getElementById('final-kills').innerText = `${playerStats.kills}`;
+      document.getElementById('final-level').innerText = `${playerStats.lvl}`;
+      document.getElementById('gold-earned').innerText = `${goldEarned}`;
+      document.getElementById('total-gold').innerText = `${saveData.gold}`;
       
       // Display loot summary
       const lootItemsDiv = document.getElementById('loot-items');
