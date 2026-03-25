@@ -3781,6 +3781,9 @@
         GameRageCombat.update(dt);
       }
 
+      // Grey Boss system tick
+      if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.update(dt); }
+
       // Damage numbers
       if (window.DopamineSystem && window.DopamineSystem.DamageNumbers) {
         window.DopamineSystem.DamageNumbers.update(dt);
@@ -4125,6 +4128,9 @@
         CrawlerPool.init(scene, 15);
         console.log('[🎮 SandboxLoop] ✓ Crawler pool built (15 slots)');
       }
+
+      // Initialize Grey Boss system
+      if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.init(scene, camera, player); }
 
       console.log('[🎮 SandboxLoop] Spawning first wave...');
       _spawnWave();          // Spawn first wave immediately

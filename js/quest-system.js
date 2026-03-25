@@ -4649,3 +4649,25 @@
     window.checkAINarratorTick    = checkAINarratorTick;
     window.resetLakeBounceQuest   = resetLakeBounceQuest;
     window.showNarratorLine       = _showNarratorLine;
+
+    // ── World / Field Quest Definitions ────────────────────────────────────────
+    // Array used by GreyBossSystem and any future field-quest checker to determine
+    // whether a given quest is active. External systems can also push to this array.
+    if (!window.WORLD_QUESTS) window.WORLD_QUESTS = [];
+    window.WORLD_QUESTS.push(
+      {
+        id: 'investigate_ufo_crash',
+        title: 'Investigate the UFO Crash Site',
+        description: 'Something crashed in the eastern fields. Investigate.',
+        objectives: [{ type: 'reach_location', locationId: 'ufo_crash', radius: 18 }],
+        reward: { xp: 500 },
+        unlocks: 'retrieve_grey_egg'
+      },
+      {
+        id: 'retrieve_grey_egg',
+        title: 'Retrieve the Grey Egg',
+        description: 'The alien had an egg. Take it.',
+        objectives: [{ type: 'pickup_item', itemId: 'grey_egg' }],
+        reward: { xp: 800, items: ['grey_companion_egg'] }
+      }
+    );
