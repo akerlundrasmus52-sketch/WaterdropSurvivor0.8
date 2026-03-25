@@ -2489,65 +2489,111 @@
     }, 1800); // 1.8s delay to let the fiery text play
   }
 
-  // ── Fiery LEVEL UP text: massive burning text with ember particles ──
+  // ── Fiery LEVEL UP text: Grind Survivors style with Eye of Horus ──
   function _spawnFireLevelUpText() {
-    const el = document.createElement('div');
-    el.textContent = 'LEVEL UP';
-    el.style.cssText = [
+    // Wrap container: both eye + text vertically centered
+    const container = document.createElement('div');
+    container.style.cssText = [
       'position:fixed',
       'left:50%',
-      'top:40%',
-      'transform:translate(-50%,-50%) scale(0)',
-      'font-family:Impact,"Arial Black",sans-serif',
-      'font-size:clamp(48px,10vw,90px)',
-      'font-weight:900',
-      'letter-spacing:8px',
-      'color:#FFD700',
-      'text-shadow:0 0 20px #FF4500,0 0 40px #FF6600,0 0 60px #FF8C00,0 0 80px rgba(255,69,0,0.5),2px 2px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000',
+      'top:38%',
+      'transform:translate(-50%,-50%) scale(0) translateY(30px)',
+      'display:flex',
+      'flex-direction:column',
+      'align-items:center',
       'z-index:10000',
       'pointer-events:none',
       'opacity:0',
       'will-change:transform,opacity',
-      'white-space:nowrap',
     ].join(';');
-    document.body.appendChild(el);
 
-    // Ember particles container (pooled via DOM reuse)
+    // Eye of Horus SVG (black/gold, glowing) above the text
+    const eyeEl = document.createElement('div');
+    eyeEl.innerHTML = [
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="clamp(60px,12vw,120px)" height="clamp(30px,6vw,60px)" style="width:clamp(60px,12vw,120px);height:auto;filter:drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 18px #FF8C00);margin-bottom:4px;">',
+      '  <defs>',
+      '    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
+      '      <stop offset="0%" style="stop-color:#B8860B"/>',
+      '      <stop offset="50%" style="stop-color:#FFD700"/>',
+      '      <stop offset="100%" style="stop-color:#B8860B"/>',
+      '    </linearGradient>',
+      '  </defs>',
+      '  <!-- Eye outline (outer shape) -->',
+      '  <path d="M10,30 Q30,4 60,4 Q90,4 110,30 Q90,56 60,56 Q30,56 10,30 Z" fill="url(#eyeGrad)" stroke="#000" stroke-width="2"/>',
+      '  <!-- Eye white -->',
+      '  <ellipse cx="60" cy="30" rx="24" ry="18" fill="#F8F0D0"/>',
+      '  <!-- Iris -->',
+      '  <circle cx="60" cy="30" r="13" fill="#1a0800"/>',
+      '  <!-- Pupil glow -->',
+      '  <circle cx="60" cy="30" r="7" fill="#000"/>',
+      '  <circle cx="55" cy="25" r="3" fill="#FFD700" opacity="0.9"/>',
+      '  <!-- Horus mark below eye — vertical line -->',
+      '  <line x1="60" y1="48" x2="60" y2="56" stroke="url(#eyeGrad)" stroke-width="2.5"/>',
+      '  <!-- Horus curl left -->',
+      '  <path d="M60,56 Q45,60 38,54 Q34,50 38,46" fill="none" stroke="url(#eyeGrad)" stroke-width="2.5" stroke-linecap="round"/>',
+      '  <!-- Horus tear drop right -->',
+      '  <path d="M60,56 Q70,58 72,52" fill="none" stroke="url(#eyeGrad)" stroke-width="2" stroke-linecap="round"/>',
+      '</svg>'
+    ].join('');
+    eyeEl.style.cssText = 'display:block;text-align:center;';
+    container.appendChild(eyeEl);
+
+    // Main LEVEL UP text
+    const el = document.createElement('div');
+    el.textContent = 'LEVEL UP';
+    el.style.cssText = [
+      'font-family:"Cinzel Decorative","Bangers","Impact","Arial Black",sans-serif',
+      'font-size:clamp(44px,9vw,88px)',
+      'font-weight:900',
+      'letter-spacing:8px',
+      'color:#FFD700',
+      'text-shadow:0 0 14px #FF4500,0 0 30px #FF6600,0 0 55px #FF8C00,0 0 90px rgba(255,69,0,0.4),3px 3px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000',
+      'white-space:nowrap',
+      'line-height:1',
+    ].join(';');
+    container.appendChild(el);
+
+    document.body.appendChild(container);
+
+    // Ash/ember particles
     const embers = [];
-    const EMBER_COUNT = 24;
+    const EMBER_COUNT = 36;
     for (let i = 0; i < EMBER_COUNT; i++) {
       const ember = document.createElement('div');
-      const size = 3 + Math.random() * 5;
+      const size = 2 + Math.random() * 6;
+      const isAsh = Math.random() < 0.4;
       ember.style.cssText = [
         'position:fixed',
         'width:' + size + 'px',
-        'height:' + size + 'px',
-        'background:' + (['#FF4500','#FFD700','#FF6600','#FFA500'][Math.floor(Math.random() * 4)]),
-        'border-radius:50%',
+        'height:' + (isAsh ? size * 0.5 : size) + 'px',
+        'background:' + (isAsh ? '#999' : (['#FF4500','#FFD700','#FF6600','#FFA500'][Math.floor(Math.random() * 4)])),
+        'border-radius:' + (isAsh ? '1px' : '50%'),
         'pointer-events:none',
         'z-index:10001',
         'opacity:0',
         'will-change:transform,opacity',
-        'box-shadow:0 0 6px 2px rgba(255,100,0,0.6)',
+        'box-shadow:0 0 ' + (isAsh ? '2px 1px rgba(150,150,150,0.5)' : '5px 2px rgba(255,100,0,0.7)'),
       ].join(';');
       document.body.appendChild(ember);
       embers.push({
         el: ember,
         x: 0, y: 0,
-        vx: (Math.random() - 0.5) * 200,
-        vy: -80 - Math.random() * 160,
-        life: 0.5 + Math.random() * 0.8,
+        vx: (Math.random() - 0.5) * (isAsh ? 80 : 240),
+        vy: -(isAsh ? 20 : 60) - Math.random() * (isAsh ? 100 : 180),
+        rot: Math.random() * 360,
+        rotV: (Math.random() - 0.5) * 400,
+        life: 0.4 + Math.random() * (isAsh ? 1.0 : 0.7),
         maxLife: 0,
+        isAsh,
       });
     }
 
-    // Animation
     const startTime = performance.now();
     let _lastFrameTime = startTime;
     const totalDuration = 1700; // ms
 
     function _cleanupLevelUpFX() {
-      if (el.parentNode) el.parentNode.removeChild(el);
+      if (container.parentNode) container.parentNode.removeChild(container);
       for (let i = 0; i < embers.length; i++) {
         if (embers[i].el.parentNode) embers[i].el.parentNode.removeChild(embers[i].el);
       }
@@ -2556,67 +2602,83 @@
     function animFrame() {
       const now = performance.now();
       const elapsed = now - startTime;
-      const dt = Math.min(0.05, (now - _lastFrameTime) / 1000); // actual dt in seconds, capped
+      const dt = Math.min(0.05, (now - _lastFrameTime) / 1000);
       _lastFrameTime = now;
       const t = elapsed / totalDuration;
 
-      if (t < 0.15) {
-        // Phase 1: explosive scale-in
-        const p = t / 0.15;
-        const scale = p * 1.4;
-        el.style.opacity = '' + Math.min(1, p * 2);
-        el.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
-      } else if (t < 0.3) {
-        // Phase 2: bounce settle
-        const p = (t - 0.15) / 0.15;
-        const scale = 1.4 - 0.3 * p;
-        el.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
-        el.style.opacity = '1';
-        // Spawn embers from text center
-        if (p < 0.5) {
+      if (t < 0.18) {
+        // Phase 1: explosive pop-in from below, rising upward
+        const p = t / 0.18;
+        const easeP = 1 - Math.pow(1 - p, 3); // ease-out cubic
+        const scale = easeP * 1.3;
+        const yOff = (1 - easeP) * 60; // rises from 60px below
+        container.style.opacity = '' + Math.min(1, p * 3);
+        container.style.transform = 'translate(-50%,-50%) scale(' + scale + ') translateY(' + yOff + 'px)';
+      } else if (t < 0.32) {
+        // Phase 2: bounce settle + spawn embers/ash
+        const p = (t - 0.18) / 0.14;
+        const scale = 1.3 - 0.2 * p;
+        container.style.transform = 'translate(-50%,-50%) scale(' + scale + ') translateY(0)';
+        container.style.opacity = '1';
+        if (p < 0.6) {
           const cx = window.innerWidth / 2;
-          const cy = window.innerHeight * 0.4;
+          const cy = window.innerHeight * 0.38;
           for (let i = 0; i < embers.length; i++) {
             const em = embers[i];
             if (em.maxLife === 0) {
               em.maxLife = em.life;
-              em.x = cx + (Math.random() - 0.5) * 120;
-              em.y = cy + (Math.random() - 0.5) * 40;
+              em.x = cx + (Math.random() - 0.5) * 160;
+              em.y = cy + (Math.random() - 0.5) * 50;
               em.el.style.opacity = '1';
             }
           }
         }
-      } else if (t < 0.7) {
-        // Phase 3: hold with glow pulse
-        const p = (t - 0.3) / 0.4;
-        const pulse = 1.1 + 0.05 * Math.sin(p * Math.PI * 4);
-        el.style.transform = 'translate(-50%,-50%) scale(' + pulse + ')';
-        el.style.opacity = '1';
+      } else if (t < 0.72) {
+        // Phase 3: hold, pulsing glow, continues rising slowly
+        const p = (t - 0.32) / 0.40;
+        const pulse = 1.1 + 0.04 * Math.sin(p * Math.PI * 5);
+        const yRise = -18 * p; // slowly drifts upward
+        container.style.transform = 'translate(-50%,calc(-50% + ' + yRise + 'px)) scale(' + pulse + ')';
+        container.style.opacity = '1';
+        // Gradually shift from gold to ashen grey (burning to ash)
+        const ashBlend = Math.max(0, (p - 0.5) / 0.5);
+        if (ashBlend > 0) {
+          const r = Math.round(255 * (1 - ashBlend * 0.5));
+          const g = Math.round(215 * (1 - ashBlend * 0.6));
+          const b = Math.round(0 + ashBlend * 60);
+          el.style.color = 'rgb(' + r + ',' + g + ',' + b + ')';
+        }
       } else if (t < 1) {
-        // Phase 4: fade out upward
-        const p = (t - 0.7) / 0.3;
-        const yOffset = -40 * p;
-        el.style.transform = 'translate(-50%,calc(-50% + ' + yOffset + 'px)) scale(' + (1.1 - 0.3 * p) + ')';
-        el.style.opacity = '' + (1 - p);
+        // Phase 4: disintegrate upward — text turns to ash and vanishes
+        const p = (t - 0.72) / 0.28;
+        const yRise = -18 - 80 * p; // accelerates upward
+        const scale = 1.1 + 0.15 * p; // grows slightly as it rises
+        const fadeOut = 1 - Math.pow(p, 1.5);
+        container.style.transform = 'translate(-50%,calc(-50% + ' + yRise + 'px)) scale(' + scale + ')';
+        container.style.opacity = '' + Math.max(0, fadeOut);
+        // Full ash: grey, desaturated
+        const gr = Math.round(160 + 50 * p);
+        el.style.color = 'rgb(' + gr + ',' + gr + ',' + gr + ')';
+        el.style.textShadow = '0 0 ' + (8 + 20 * p) + 'px rgba(180,180,180,' + (0.5 * (1 - p)) + ')';
       } else {
         _cleanupLevelUpFX();
-        return; // stop animation loop
+        return;
       }
 
-      // Update ember particles using actual frame dt
+      // Update ember/ash particles
       for (let i = 0; i < embers.length; i++) {
         const em = embers[i];
         if (em.maxLife === 0) continue;
         em.life -= dt;
-        if (em.life <= 0) {
-          em.el.style.opacity = '0';
-          continue;
-        }
+        if (em.life <= 0) { em.el.style.opacity = '0'; continue; }
         em.x += em.vx * dt;
         em.y += em.vy * dt;
-        em.vy += 30 * dt; // slight gravity
+        em.vy += (em.isAsh ? 10 : 25) * dt; // ash drifts slower
+        em.vx *= em.isAsh ? 0.995 : 0.99; // ash drifts on air
+        em.rot += em.rotV * dt;
         em.el.style.left = em.x + 'px';
         em.el.style.top = em.y + 'px';
+        em.el.style.transform = 'rotate(' + em.rot + 'deg)';
         em.el.style.opacity = '' + Math.max(0, em.life / em.maxLife);
       }
 

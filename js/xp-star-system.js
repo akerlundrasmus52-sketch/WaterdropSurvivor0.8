@@ -29,13 +29,15 @@
 
 const XP_CFG = {
   // Rarity tiers: Common → Mythical
+  // xp base values — multiplied by GAME_CONFIG.expValue at spawn (default 20)
+  // so Common gives 20 XP, Uncommon 40, Rare 60, etc.
   RARITIES: [
-    { name: 'Common',    color: 0xCCCCCC, emissive: 0x888888, xp: 1   }, // Grey/White
-    { name: 'Uncommon',  color: 0x44FF66, emissive: 0x22AA33, xp: 2   }, // Green
-    { name: 'Rare',      color: 0x5DADE2, emissive: 0x2E86C1, xp: 3   }, // Blue
-    { name: 'Epic',      color: 0xAA44FF, emissive: 0x6600CC, xp: 5   }, // Purple
-    { name: 'Legendary', color: 0xFF8800, emissive: 0xCC5500, xp: 10  }, // Orange/Yellow
-    { name: 'Mythical',  color: 0xFF2222, emissive: 0xAA0000, xp: 40  }  // Red (highest)
+    { name: 'Common',    color: 0xEEEEFF, emissive: 0xBBCCFF, xp: 1   }, // Bright white-grey
+    { name: 'Uncommon',  color: 0x66FF88, emissive: 0x33AA44, xp: 2   }, // Bright green
+    { name: 'Rare',      color: 0x88CCFF, emissive: 0x4499DD, xp: 3   }, // Bright blue
+    { name: 'Epic',      color: 0xCC88FF, emissive: 0x9933CC, xp: 5   }, // Bright purple
+    { name: 'Legendary', color: 0xFFCC44, emissive: 0xFF8800, xp: 10  }, // Bright gold/orange
+    { name: 'Mythical',  color: 0xFF5555, emissive: 0xCC0000, xp: 40  }  // Bright red
   ],
 
   // Physics constants
@@ -49,8 +51,8 @@ const XP_CFG = {
   MAX_DISTANCE: 2.5,           // Maximum spawn distance (enemy lengths)
   MAX_HEIGHT: 1.7,             // Maximum spawn height (enemy heights)
 
-  // Size and visuals
-  STAR_SIZE: 0.15,             // Base star size
+  // Size and visuals — 2x the original 0.15 size
+  STAR_SIZE: 0.30,             // Base star size (2x larger)
   STAR_POINTS: 5,              // 5-pointed star
 
   // Magnetism
@@ -65,9 +67,18 @@ const XP_CFG = {
 // Enemy-specific rarity mapping
 const ENEMY_RARITIES = {
   'slime':         0,  // Common (grey/white)
-  'leaping_slime': 0,  // Common (grey/white)
-  'crawler':       1,  // Uncommon (green)
+  'leaping_slime': 2,  // Rare (blue — matches blue slime body)
+  'crawler':       3,  // Epic tier — but overridden by ENEMY_STAR_COLORS to brown
   'boss':          5,  // Mythical (red)
+};
+
+// Enemy-specific star COLOR override — uses the enemy's actual body color
+// so XP stars visually match the enemy they came from.
+const ENEMY_STAR_COLORS = {
+  'slime':         { color: 0xEEEEFF, emissive: 0xBBCCFF }, // Bright white-grey (slime body)
+  'leaping_slime': { color: 0x00CFFF, emissive: 0x0099DD }, // Bright sky-blue (blue slime body)
+  'crawler':       { color: 0xC8A060, emissive: 0x8B5A2B }, // Warm brown/amber (worm body)
+  'boss':          { color: 0xFF5555, emissive: 0xCC0000 }, // Bright red (boss body)
 };
 
 // Enemy-specific size table (used for physics scaling: distance/height)
@@ -117,11 +128,12 @@ function _buildSharedAssets() {
   _rarityMaterials = XP_CFG.RARITIES.map(r => new THREE.MeshPhysicalMaterial({
     color: r.color,
     emissive: r.emissive,
-    emissiveIntensity: 0.5,
-    metalness: 0.4,
-    roughness: 0.1,
+    emissiveIntensity: 0.8,  // Brighter for visibility
+    metalness: 0.2,
+    roughness: 0.05,
     clearcoat: 1.0,
-    clearcoatRoughness: 0.05
+    clearcoatRoughness: 0.05,
+    transparent: false,
   }));
 }
 
@@ -164,16 +176,27 @@ class XPStar {
     // Determine rarity based on enemy type
     this.rarity = ENEMY_RARITIES[enemyType] || 0;
     const rarityData = XP_CFG.RARITIES[this.rarity];
-    this.xpValue = rarityData.xp;
+    // Multiply xp by GAME_CONFIG.expValue so balance matches the designed
+    // "~2.25 kills for first level" when expValue=20 and baseExpReq=45.
+    const expMult = (typeof GAME_CONFIG !== 'undefined' && GAME_CONFIG.expValue) ? GAME_CONFIG.expValue : 20;
+    this.xpValue = rarityData.xp * expMult;
 
     // Create or update mesh
     if (!this.mesh) {
       this._createMesh();
     }
 
-    // Set color based on rarity
-    this.mesh.material.color.setHex(rarityData.color);
-    this.mesh.material.emissive.setHex(rarityData.emissive);
+    // Set color: use enemy-specific color if available, otherwise rarity default
+    const starColor = ENEMY_STAR_COLORS[enemyType];
+    if (starColor) {
+      this.mesh.material.color.setHex(starColor.color);
+      this.mesh.material.emissive.setHex(starColor.emissive);
+    } else {
+      this.mesh.material.color.setHex(rarityData.color);
+      this.mesh.material.emissive.setHex(rarityData.emissive);
+    }
+    // Bright emissive intensity for visibility
+    this.mesh.material.emissiveIntensity = 0.8;
 
     // Spawn physics based on kill shot damage
     // Damage determines launch force: higher damage = more speed and distance
@@ -185,13 +208,13 @@ class XPStar {
     // Random launch angle
     const angle = Math.random() * Math.PI * 2;
 
-    // Distance: MIN_DISTANCE to MAX_DISTANCE enemy lengths
+    // Distance: MIN_DISTANCE to MAX_DISTANCE enemy lengths (capped at 50% of original)
     const minDist = XP_CFG.MIN_DISTANCE * enemySize;
-    const maxDist = XP_CFG.MAX_DISTANCE * enemySize;
+    const maxDist = XP_CFG.MAX_DISTANCE * enemySize * 0.5; // 50% max horizontal distance
     const distance = minDist + (maxDist - minDist) * force;
 
-    // Launch velocity based on damage (physics-consistent with GRAVITY)
-    const launchSpeed = 1.5 + force * 2.0; // 1.5 to 3.5 units/s horizontal
+    // Launch velocity: 50% of original horizontal speed
+    const launchSpeed = (0.75 + force * 1.0); // Was 1.5 + force * 2.0 → halved
     this.vx = Math.cos(angle) * launchSpeed;
     this.vz = Math.sin(angle) * launchSpeed;
 
@@ -266,9 +289,9 @@ class XPStar {
     this.mesh.rotation.y += this.rotSpeedY * dt * 60;
     this.mesh.rotation.z += this.rotSpeedZ * dt * 60;
 
-    // Pulsing emissive
+    // Pulsing emissive — bright light glow inside all star colors
     this.pulsePhase += dt * 3;
-    const pulse = 0.3 + Math.sin(this.pulsePhase) * 0.2;
+    const pulse = 0.6 + Math.sin(this.pulsePhase) * 0.4; // 0.2–1.0 range (brighter)
     this.mesh.material.emissiveIntensity = pulse;
 
     // Mythical stars pulse color
