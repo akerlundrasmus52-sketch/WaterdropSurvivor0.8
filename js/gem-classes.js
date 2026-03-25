@@ -94,8 +94,9 @@
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
         // Pop out from enemy body in random direction — X/Z set now; Y after launch style
+        // Short hop: max ~0.8 units away from enemy
         var popAngle = Math.random() * Math.PI * 2;
-        var popDist  = 0.3 + Math.random() * 0.5;
+        var popDist  = 0.2 + Math.random() * 0.6; // 0.2-0.8 units
         var startX   = x + Math.cos(popAngle) * popDist;
         var startZ   = z + Math.sin(popAngle) * popDist;
         // Temporary position — Y will be overwritten after launch style selection
@@ -145,15 +146,17 @@
         this.active = true;
 
         // Dynamic spin based on weapon force — chaotic multi-axis tumble
+        // Enhanced for more variety: every axis spins differently every time
         var force = hitForce || 1.0;
         var isCritical = force > 1.5;
         var isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
-        var spinMult = isCritical ? 3.5 : isExplosive ? 5.0 : 2.0;
-        // 30% chance of super-chaotic backwards/over-axis spin
-        var extraChaos = Math.random() < 0.3 ? 2.2 : 1.0;
-        this.rotSpeedX = (Math.random() * 0.25 + 0.10) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedY = (Math.random() * 0.30 + 0.15) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedZ = (Math.random() * 0.20 + 0.08) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
+        var spinMult = isCritical ? 4.5 : isExplosive ? 6.0 : 3.0; // Increased spin multipliers
+        // 50% chance of super-chaotic backwards/over-axis spin (increased from 30%)
+        var extraChaos = Math.random() < 0.5 ? 2.8 : 1.0; // More chaos, more often
+        // More variation in each axis — wider random ranges for truly unique spins
+        this.rotSpeedX = (Math.random() * 0.35 + 0.15) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.45 + 0.20) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.30 + 0.12) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
 
         // Random launch style — uses module-level table to avoid per-gem allocations
         // Adds variety: some fly over enemy head, some drop near, some tumble on ground
@@ -162,32 +165,34 @@
 
         var popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
-          // High arc — flies upward, maybe over the head of the enemy
-          popSpeed = (0.025 + Math.random() * 0.03) * force;
-          this.vy = (0.20 + Math.random() * 0.14) * force;
-          startY = 0.5;
-          this.gravity = -0.016;
+          // High arc — flies upward over enemy head (~2.0-2.5 units high max)
+          // Enemy height ~1.5-2.0, so this goes slightly above head
+          popSpeed = (0.015 + Math.random() * 0.025) * force; // Reduced horizontal speed
+          this.vy = (0.28 + Math.random() * 0.18) * force; // Increased vertical speed for higher arc
+          startY = 0.8 + Math.random() * 0.3; // Start higher
+          this.gravity = -0.020; // Slightly stronger gravity for realistic arc
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
-          // Mostly drops near enemy with slight spread
-          popSpeed = (0.008 + Math.random() * 0.015) * force;
-          this.vy = (0.07 + Math.random() * 0.05) * force;
-          startY = 0.8 + Math.random() * 0.5;
-          this.gravity = -0.030;
+          // Mostly drops near enemy with slow "plopping" feel — varies speed
+          popSpeed = (0.005 + Math.random() * 0.018) * force; // Sometimes very slow
+          this.vy = (0.10 + Math.random() * 0.08) * force; // Moderate height
+          startY = 1.0 + Math.random() * 0.5; // Variable start height
+          this.gravity = -0.024; // Stronger gravity for quick drop
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
-          // Rolls along ground quickly then stops
-          popSpeed = (0.04 + Math.random() * 0.04) * force;
-          this.vy = (0.08 + Math.random() * 0.04) * force;
-          startY = 0.4;
-          this.gravity = -0.026;
+          // Rolls along ground quickly with spinning rotation
+          popSpeed = (0.03 + Math.random() * 0.05) * force; // Fast horizontal
+          this.vy = (0.05 + Math.random() * 0.08) * force; // Low arc
+          startY = 0.3 + Math.random() * 0.2;
+          this.gravity = -0.022;
           this.groundFriction = 0.72;
         } else {
-          // 'pop' — classic short outward burst
-          popSpeed = (0.04 + Math.random() * 0.05) * force;
-          this.vy = (0.12 + Math.random() * 0.07) * force;
-          startY = 0.5 + Math.random() * 0.3;
-          this.gravity = -0.022;
+          // 'pop' — classic burst with varied speed (sometimes fast, sometimes slow)
+          var speedVariation = Math.random(); // 0-1 for speed variance
+          popSpeed = (0.02 + speedVariation * 0.06) * force; // Huge variance: 0.02-0.08
+          this.vy = (0.15 + Math.random() * 0.12) * force; // Medium height
+          startY = 0.6 + Math.random() * 0.4;
+          this.gravity = -0.020;
           this.groundFriction = 0.58;
         }
         this.vx = Math.cos(popAngle) * popSpeed;
@@ -365,8 +370,9 @@
         this.value = gemBaseValue;
 
         // Reposition with pop — X/Z set now; Y will be set after launch-style is chosen
+        // Short hop: max ~0.8 units away from enemy
         const popAngle = Math.random() * Math.PI * 2;
-        const popDist  = 0.3 + Math.random() * 0.5;
+        const popDist  = 0.2 + Math.random() * 0.6; // 0.2-0.8 units
         const posX = x + Math.cos(popAngle) * popDist;
         const posZ = z + Math.sin(popAngle) * popDist;
         this.mesh.scale.set(0.01, 0.01, 0.01);
@@ -377,42 +383,49 @@
         this._grown = false;
 
         // Reset spin based on weapon force
+        // Enhanced for more variety: every axis spins differently every time
         const force = hitForce || 1.0;
         const isCritical  = force > 1.5;
         const isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
-        const spinMult = isCritical ? 3.5 : isExplosive ? 5.0 : 2.0;
-        const extraChaos = Math.random() < 0.3 ? 2.2 : 1.0;
-        this.rotSpeedX = (Math.random() * 0.25 + 0.10) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedY = (Math.random() * 0.30 + 0.15) * spinMult * (Math.random() < 0.5 ? 1 : -1);
-        this.rotSpeedZ = (Math.random() * 0.20 + 0.08) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
+        const spinMult = isCritical ? 4.5 : isExplosive ? 6.0 : 3.0; // Increased spin multipliers
+        const extraChaos = Math.random() < 0.5 ? 2.8 : 1.0; // More chaos, more often
+        // More variation in each axis — wider random ranges for truly unique spins
+        this.rotSpeedX = (Math.random() * 0.35 + 0.15) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedY = (Math.random() * 0.45 + 0.20) * spinMult * (Math.random() < 0.5 ? 1 : -1);
+        this.rotSpeedZ = (Math.random() * 0.30 + 0.12) * spinMult * extraChaos * (Math.random() < 0.5 ? 1 : -1);
 
         // Reset physics with varied launch styles — module-level table, no per-reset allocation
         const launchStyle = _GEM_LAUNCH_STYLES[Math.floor(Math.random() * _GEM_LAUNCH_STYLES.length)];
         this._launchStyle = launchStyle;
         let popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
-          popSpeed = (0.025 + Math.random() * 0.03) * force;
-          this.vy = (0.20 + Math.random() * 0.14) * force;
-          startY = 0.5;
-          this.gravity = -0.016;
+          // High arc — flies upward over enemy head (~2.0-2.5 units high max)
+          popSpeed = (0.015 + Math.random() * 0.025) * force; // Reduced horizontal speed
+          this.vy = (0.28 + Math.random() * 0.18) * force; // Increased vertical speed for higher arc
+          startY = 0.8 + Math.random() * 0.3; // Start higher
+          this.gravity = -0.020; // Slightly stronger gravity for realistic arc
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
-          popSpeed = (0.008 + Math.random() * 0.015) * force;
-          this.vy = (0.07 + Math.random() * 0.05) * force;
-          startY = 0.8 + Math.random() * 0.5;
-          this.gravity = -0.030;
+          // Mostly drops near enemy with slow "plopping" feel — varies speed
+          popSpeed = (0.005 + Math.random() * 0.018) * force; // Sometimes very slow
+          this.vy = (0.10 + Math.random() * 0.08) * force; // Moderate height
+          startY = 1.0 + Math.random() * 0.5; // Variable start height
+          this.gravity = -0.024; // Stronger gravity for quick drop
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
-          popSpeed = (0.04 + Math.random() * 0.04) * force;
-          this.vy = (0.08 + Math.random() * 0.04) * force;
-          startY = 0.4;
-          this.gravity = -0.026;
+          // Rolls along ground quickly with spinning rotation
+          popSpeed = (0.03 + Math.random() * 0.05) * force; // Fast horizontal
+          this.vy = (0.05 + Math.random() * 0.08) * force; // Low arc
+          startY = 0.3 + Math.random() * 0.2;
+          this.gravity = -0.022;
           this.groundFriction = 0.72;
         } else {
-          popSpeed = (0.04 + Math.random() * 0.05) * force;
-          this.vy = (0.12 + Math.random() * 0.07) * force;
-          startY = 0.5 + Math.random() * 0.3;
-          this.gravity = -0.022;
+          // 'pop' — classic burst with varied speed (sometimes fast, sometimes slow)
+          const speedVariation = Math.random(); // 0-1 for speed variance
+          popSpeed = (0.02 + speedVariation * 0.06) * force; // Huge variance: 0.02-0.08
+          this.vy = (0.15 + Math.random() * 0.12) * force; // Medium height
+          startY = 0.6 + Math.random() * 0.4;
+          this.gravity = -0.020;
           this.groundFriction = 0.58;
         }
         this.mesh.position.set(posX, startY, posZ);

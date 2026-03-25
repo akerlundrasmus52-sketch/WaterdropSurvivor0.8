@@ -694,6 +694,70 @@ function init() {
   }, 2000);
 }
 
+// ── setupMenus ────────────────────────────────────────────────────────────────
+// Wire up main-menu button handlers. Called once from init().
+// START GAME routes to the camp screen (the Engine 2.0 entry point).
+// CAMP button also opens the camp screen.
+function setupMenus() {
+  var startBtn = document.getElementById('start-game-btn');
+  var campBtn  = document.getElementById('camp-btn');
+
+  function _showCamp() {
+    var mainMenu = document.getElementById('main-menu');
+    if (mainMenu) mainMenu.style.display = 'none';
+    var campScreen = document.getElementById('camp-screen');
+    if (campScreen) {
+      campScreen.classList.remove('camp-subsection-active');
+      campScreen.style.display = 'flex';
+    }
+    if (typeof updateCampScreen === 'function') {
+      try { updateCampScreen(); } catch (e) { console.error('[setupMenus] Camp update error:', e); }
+    }
+  }
+
+  if (startBtn && !startBtn._menuSetup) {
+    startBtn._menuSetup = true;
+    startBtn.addEventListener('click', _showCamp);
+  }
+
+  if (campBtn && !campBtn._menuSetup) {
+    campBtn._menuSetup = true;
+    campBtn.addEventListener('click', _showCamp);
+  }
+}
+
+// ── showLoadScreen / showCamp ─────────────────────────────────────────────────
+// Convenience helpers used by the DOMContentLoaded startup flow.
+function showLoadScreen(onComplete) {
+  var ls = document.getElementById('loading-screen');
+  if (ls) ls.style.display = 'flex';
+  if (typeof onComplete === 'function') {
+    // Delegate to the existing loading.js timing; call onComplete when loading finishes.
+    var _orig = window.loadingComplete;
+    var _check = setInterval(function () {
+      if (window.loadingComplete) {
+        clearInterval(_check);
+        onComplete();
+      }
+    }, 100);
+  }
+}
+
+function showCamp() {
+  var ls = document.getElementById('loading-screen');
+  if (ls) { ls.classList.add('fade-out'); setTimeout(function () { ls.style.display = 'none'; }, 500); }
+  var mainMenu = document.getElementById('main-menu');
+  if (mainMenu) mainMenu.style.display = 'none';
+  var campScreen = document.getElementById('camp-screen');
+  if (campScreen) {
+    campScreen.classList.remove('camp-subsection-active');
+    campScreen.style.display = 'flex';
+  }
+  if (typeof updateCampScreen === 'function') {
+    try { updateCampScreen(); } catch (e) { console.error('[showCamp] error:', e); }
+  }
+}
+
 function showMainMenu() {
   document.getElementById('main-menu').style.display = 'flex';
   updateGoldDisplays();

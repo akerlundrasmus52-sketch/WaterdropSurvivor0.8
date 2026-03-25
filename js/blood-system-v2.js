@@ -652,7 +652,7 @@ _dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
 );
 _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
-_dropIM.count = CFG.DROP_COUNT;
+_dropIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active drops
 _scene.add(_dropIM);
 
 // Pre-create drop data objects
@@ -682,7 +682,7 @@ _mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
 );
 _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
-_mistIM.count = CFG.MIST_COUNT;
+_mistIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active mist
 _scene.add(_mistIM);
 
 _mistData = [];
@@ -729,6 +729,7 @@ var mat = new THREE.MeshBasicMaterial({
 transparent: true,
 opacity:     0.80,
 depthWrite:  false,
+depthTest:   true,
 polygonOffset: true,
 polygonOffsetFactor: -1,
 polygonOffsetUnits: -1,
@@ -920,6 +921,7 @@ _updateDrop(d, dt, _dropIM, false);
 dirty = true;
 }
 if (dirty) {
+  _dropIM.count = CFG.DROP_COUNT;
   _dropIM.instanceMatrix.needsUpdate = true;
   if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
 }
@@ -933,6 +935,7 @@ _updateDrop(d, dt, _mistIM, true);
 mistDirty = true;
 }
 if (mistDirty) {
+  _mistIM.count = CFG.MIST_COUNT;
   _mistIM.instanceMatrix.needsUpdate = true;
   if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
 }

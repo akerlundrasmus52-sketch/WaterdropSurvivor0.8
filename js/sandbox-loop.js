@@ -681,6 +681,25 @@
         }
       }
       if (hitThisFrame) continue;
+
+      // Grey Boss hit detection
+      if (!hitThisFrame &&
+          typeof GreyBossSystem !== 'undefined' &&
+          !GreyBossSystem.isDead()) {
+        const bossPos = GreyBossSystem.getBossPosition();
+        if (bossPos) {
+          const bx = p.mesh.position.x - bossPos.x;
+          const bz = p.mesh.position.z - bossPos.z;
+          if (bx * bx + bz * bz < COLLISION_THRESHOLD_SQ) {
+            if (typeof window._greyBossTakeDamage === 'function') {
+              window._greyBossTakeDamage(p.damage || 10);
+            }
+            _releaseProjectile(p, i);
+            hitThisFrame = true;
+          }
+        }
+      }
+      if (hitThisFrame) continue;
     }
   }
 
@@ -4017,6 +4036,9 @@
         GameRageCombat.update(dt);
       }
 
+      // Grey Boss system tick
+      if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.update(dt); }
+
       // Damage numbers
       if (window.DopamineSystem && window.DopamineSystem.DamageNumbers) {
         window.DopamineSystem.DamageNumbers.update(dt);
@@ -4368,6 +4390,8 @@
         LeapingSlimePool.init(scene, 20);
         console.log('[🎮 SandboxLoop] ✓ Leaping slime pool built (20 slots)');
       }
+      // Initialize Grey Boss system
+      if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.init(scene, camera, player); }
 
       console.log('[🎮 SandboxLoop] Spawning first wave...');
       _spawnWave();          // Spawn first wave immediately
