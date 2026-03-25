@@ -197,7 +197,7 @@
     <!-- Camp header action buttons: Menu / Account / Continue -->
     <div class="camp-header-btns">
       <button class="camp-header-btn" id="camp-menu-btn">☰ MENU</button>
-      <button class="camp-header-btn" id="camp-account-btn">👤 PROFILE</button>
+      <button class="camp-header-btn" id="camp-account-btn" onclick="if(typeof showAccountBuildingOverlay==='function'){showAccountBuildingOverlay();}else if(typeof showAccountSection==='function'){showAccountSection();}">👤 PROFILE</button>
       <button class="camp-header-btn" id="camp-action-btn" onclick="window.location.href='sandbox.html'">▶ NEW RUN</button>
     </div>
 
