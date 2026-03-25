@@ -1227,31 +1227,18 @@
     const _cbSlot = _acquireCorpseBlood(x, 0.06, z, 0x550000);
     _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh: _cbSlot?.mesh || null, poolMat: _cbSlot?.mat || null, poolSlot: _cbSlot || null, x, z });
 
-    // ── EXP star drop: 1 guaranteed star + 15% chance for a bonus star per kill ──
-    // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
-    // Stars scatter physically based on the enemy's death velocity and weapon used.
-    let gemEnemyType = ENEMY_TYPES ? ENEMY_TYPES.BALANCED : DEFAULT_ENEMY_TYPE;
-    if (hitForce > 2.0)      gemEnemyType = 5; // rare (gold)
-    else if (hitForce > 1.5) gemEnemyType = 3; // uncommon (blue)
-    // Use the pre-allocated pool — no new THREE.Mesh during gameplay
-    const _droppedGem = _acquireExpGem(x, z, 'gun', hitForce, gemEnemyType);
-    if (_droppedGem) {
-      // Apply death velocity to scatter XP stars in the kill direction
-      if (killVX || killVZ) {
-        _droppedGem.vx += killVX * 0.04;
-        _droppedGem.vz += killVZ * 0.04;
-      }
-      expGems.push(_droppedGem);
-    }
-    // +15% drop rate bonus: 15% chance for an extra star on every kill
-    if (Math.random() < BONUS_XP_DROP_RATE) {
-      const _bonusGem = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemEnemyType);
-      if (_bonusGem) {
-        if (killVX || killVZ) {
-          _bonusGem.vx += killVX * 0.03;
-          _bonusGem.vz += killVZ * 0.03;
-        }
-        expGems.push(_bonusGem);
+    // ══════════ NEW XP STAR SYSTEM V2 ══════════
+    // Spawn XP stars instantly when HP reaches 0
+    // Stars spawn with physics based on kill damage and proper enemy colors
+    const killDamage = slot.maxHp * hitForce; // Estimate kill damage from hitForce
+
+    // Spawn primary star (guaranteed)
+    if (window.XPStarSystem) {
+      XPStarSystem.spawn(x, y, z, 'slime', killDamage, killVX || 0, killVZ || 0);
+
+      // Bonus star (17.25% chance)
+      if (Math.random() < BONUS_XP_DROP_RATE) {
+        XPStarSystem.spawn(x, y, z, 'slime', killDamage * 0.8, killVX || 0, killVZ || 0);
       }
     }
 
@@ -1382,18 +1369,17 @@
     const _cbSlot2 = _acquireCorpseBlood(x, 0.03, z, 0x442200, 0.7);
     _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: _cbSlot2?.mesh || null, poolMat: _cbSlot2?.mat || null, poolSlot: _cbSlot2 || null, x, z });
 
-    // Drop XP
-    const gemType = hitForce > 2.0 ? 5 : (hitForce > 1.5 ? 3 : 2);
-    const gem = _acquireExpGem(x, z, 'gun', hitForce, gemType);
-    if (gem) {
-      gem.vx += killVX * 0.04;
-      gem.vz += killVZ * 0.04;
-      expGems.push(gem);
-    }
-    // Bonus drop
-    if (Math.random() < BONUS_XP_DROP_RATE * 1.5) {
-      const bonus = _acquireExpGem(x, z, 'gun', hitForce * 0.8, gemType);
-      if (bonus) expGems.push(bonus);
+    // ══════════ NEW XP STAR SYSTEM V2 ══════════
+    // Crawler drops green stars
+    const killDamage = 250 * hitForce; // Crawler has 250 HP
+
+    if (window.XPStarSystem) {
+      XPStarSystem.spawn(x, y, z, 'crawler', killDamage, killVX || 0, killVZ || 0);
+
+      // Bonus drop (higher rate for crawler: 25.875%)
+      if (Math.random() < BONUS_XP_DROP_RATE * 1.5) {
+        XPStarSystem.spawn(x, y, z, 'crawler', killDamage * 0.8, killVX || 0, killVZ || 0);
+      }
     }
 
     playerStats.kills++;
@@ -1587,17 +1573,17 @@
       poolMesh: _cbSlot3?.mesh || null, poolMat: _cbSlot3?.mat || null, poolSlot: _cbSlot3 || null, x, z
     });
 
-    // Drop XP gem (slightly less XP than green slime — 25% smaller enemy)
-    const gemType = hitForce > 2.0 ? 4 : (hitForce > 1.5 ? 2 : 1);
-    const gem = _acquireExpGem(x, z, 'gun', hitForce, gemType);
-    if (gem) {
-      gem.vx += killVX * 0.04;
-      gem.vz += killVZ * 0.04;
-      expGems.push(gem);
-    }
-    if (Math.random() < BONUS_XP_DROP_RATE) {
-      const bonus = _acquireExpGem(x, z, 'gun', hitForce * 0.7, gemType);
-      if (bonus) expGems.push(bonus);
+    // ══════════ NEW XP STAR SYSTEM V2 ══════════
+    // Leaping slime drops grey/white stars (common)
+    const killDamage = enemy.maxHp * hitForce;
+
+    if (window.XPStarSystem) {
+      XPStarSystem.spawn(x, y, z, 'leaping_slime', killDamage, killVX || 0, killVZ || 0);
+
+      // Bonus star (17.25% chance)
+      if (Math.random() < BONUS_XP_DROP_RATE) {
+        XPStarSystem.spawn(x, y, z, 'leaping_slime', killDamage * 0.7, killVX || 0, killVZ || 0);
+      }
     }
 
     playerStats.kills++;
@@ -2445,64 +2431,35 @@
     }
   }
 
-  // ─── EXP gem update & pickup ─────────────────────────────────────────────────
+  // ══════════ NEW XP STAR SYSTEM V2 UPDATE ══════════
   function _updateGems(dt) {
-    if (!expGems || !player) return;
+    if (!player || !window.XPStarSystem) return;
+
     const px = player.mesh.position.x;
+    const py = player.mesh.position.y + 0.5; // Player center height
     const pz = player.mesh.position.z;
-    const py = player.mesh.position.y;
 
-    for (let i = expGems.length - 1; i >= 0; i--) {
-      const g = expGems[i];
-      if (!g || !g.active) { expGems.splice(i, 1); continue; }
+    // Update XP stars and collect any that are ready
+    const collected = XPStarSystem.update(dt, px, py, pz);
 
-      // Magnetism: pull toward player when within range
-      if (g.onGround) {
-        const gx = g.mesh.position.x, gz = g.mesh.position.z;
-        const ddx = px - gx, ddz = pz - gz;
-        const distToPlayer = Math.sqrt(ddx * ddx + ddz * ddz);
-        // xpCollectionRadius (v2 stat) takes priority; falls back to pickupRange then 1.0
-        const radiusMult = (playerStats.xpCollectionRadius || playerStats.pickupRange || 1.0);
-        if (distToPlayer < PICKUP_RANGE * radiusMult) {
-          const pullSpeed = MAGNETISM_SPEED * dt;
-          g.mesh.position.x += (ddx / distToPlayer) * pullSpeed;
-          g.mesh.position.z += (ddz / distToPlayer) * pullSpeed;
-          g.mesh.position.y = 0.08;
-          // Pickup when very close
-          if (distToPlayer < 0.55) {
-            _collectGem(g, i);
-            continue;
-          }
-        }
+    // Process collected stars
+    for (let i = 0; i < collected.length; i++) {
+      const star = collected[i];
+
+      // Add XP
+      if (typeof window.addExp === 'function') {
+        window.addExp(star.xp);
       }
 
-      g.update(player.mesh.position);
+      // Play sound
+      if (typeof window.playSound === 'function') {
+        window.playSound('collect');
+      }
+
+      // Show floating text
+      _tmpV3b.set(star.position.x, star.position.y, star.position.z);
+      createFloatingText('+' + star.xp + ' XP', _tmpV3b, '#5DADE2');
     }
-  }
-
-  function _collectGem(gem, idx) {
-    const expGain = gem.value || (typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.expValue : 15);
-    // Reuse _tmpV3b for gem position (avoids .clone() allocation)
-    if (gem.mesh) {
-      _tmpV3b.copy(gem.mesh.position);
-    } else {
-      _tmpV3b.set(0, 0, 0);
-    }
-
-    if (typeof gem.collect === 'function') {
-      // gem.collect() removes the mesh and calls addExp() internally
-      gem.collect();
-    } else {
-      gem.active = false;
-      if (gem.mesh) scene.remove(gem.mesh);
-      // addExp handles EXP gain, bar refresh and level-up check
-      addExp(expGain);
-      playSound('exp_pickup');
-    }
-
-    createFloatingText('+' + expGain + ' EXP', _tmpV3b, '#5DADE2');
-
-    if (idx !== undefined) expGems.splice(idx, 1);
   }
 
   function _refreshExpBar() {
@@ -3888,14 +3845,16 @@
     _buildCorpseBloodPool();
     // Build pre-allocated bullet hole decal pool (ground impacts at miss positions)
     _buildBulletHolePool();
-    // Build pre-allocated EXP gem pool (critical for XP drops to work)
-    // If ExpGem is not yet defined (rare race), retry on window load.
-    _buildExpGemPool();
-    if (typeof ExpGem === 'undefined') {
-      window.addEventListener('load', function () {
-        if (typeof ExpGem !== 'undefined' && _expGemPool.length === 0) _buildExpGemPool();
-      });
+
+    // ═══ NEW XP STAR SYSTEM V2 ═══
+    // Initialize the brand new XP star system (no old map conflicts)
+    if (typeof XPStarSystem !== 'undefined') {
+      XPStarSystem.init(scene);
+      console.log('[SandboxLoop] XP Star System V2 initialized');
+    } else {
+      console.error('[SandboxLoop] XPStarSystem not loaded!');
     }
+
     // Build pooled PointLight flash pool (muzzle flashes, hit lights)
     _buildFlashPool();
     // Initialize spatial hash for O(1) projectile→enemy collision
