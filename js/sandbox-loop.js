@@ -372,12 +372,12 @@
   let _auraEffectTimer    = 0;   // aura damage tick
   // ─── Gore: Corpse Linger System ──────────────────────────────────────────────
   // Corpses linger 5-8 seconds after death with heartbeat blood pumping.
-  const _activeCorpses = [];       // { slot, timer, lingerDuration, bloodTimer, poolMesh, poolMat }
+  const _activeCorpses = [];       // { slot, timer, lingerDuration, bloodTimer, poolMesh, poolMat, poolSlot }
 
   // ─── Corpse Blood Pool ────────────────────────────────────────────────────────
   const CORPSE_BLOOD_POOL_SIZE = 30;
   const _corpseBloodPool = [];
-  let _corpseBloodHead = 0;
+  const _corpseBloodFreeList = [];  // free-list: contains unused slot objects
 
   // Pre-allocated reusable Vector3 objects — ZERO new THREE.Vector3() during gameplay
   // Declared as plain objects first; upgraded to THREE.Vector3 after THREE is available
@@ -871,6 +871,7 @@
           if (c.slot.mesh.material.opacity <= 0) {
             // Fully faded — return slot to pool
             if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
+            if (c.poolSlot) _corpseBloodFreeList.push(c.poolSlot);
             // Restore slot mesh for reuse
             c.slot.mesh.visible = false;
             c.slot.mesh.material.opacity = 0.92;
@@ -887,6 +888,7 @@
         } else {
           // No material — just clean up immediately
           if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
+          if (c.poolSlot) _corpseBloodFreeList.push(c.poolSlot);
           _activeCorpses.splice(i, 1);
         }
       }
@@ -1182,7 +1184,7 @@
     // HP bars removed
     // Growing blood pool under corpse
     const _cbSlot = _acquireCorpseBlood(x, 0.06, z, 0x550000);
-    _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh: _cbSlot.mesh, poolMat: _cbSlot.mat, x, z });
+    _activeCorpses.push({ slot, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh: _cbSlot?.mesh || null, poolMat: _cbSlot?.mat || null, poolSlot: _cbSlot || null, x, z });
 
     // ── EXP star drop: 1 guaranteed star + 15% chance for a bonus star per kill ──
     // Tier scales with hit force: high-force kills drop rarer (more valuable) stars.
@@ -1332,8 +1334,8 @@
     if (cidx !== -1) _activeCrawlers.splice(cidx, 1);
 
     // Corpse stays 15 seconds
-    const _cbSlot2 = _acquireCorpseBlood(x, 0.03, z, 0x442200);
-    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: _cbSlot2.mesh, poolMat: _cbSlot2.mat, x, z });
+    const _cbSlot2 = _acquireCorpseBlood(x, 0.03, z, 0x442200, 0.7);
+    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: _cbSlot2?.mesh || null, poolMat: _cbSlot2?.mat || null, poolSlot: _cbSlot2 || null, x, z });
 
     // Drop XP
     const gemType = hitForce > 2.0 ? 5 : (hitForce > 1.5 ? 3 : 2);
@@ -1631,13 +1633,15 @@
       mesh.position.set(0, 0.06, 0);
       mesh.visible = false;
       scene.add(mesh);
-      _corpseBloodPool.push({ mesh, mat });
+      const slot = { mesh, mat };
+      _corpseBloodPool.push(slot);
+      _corpseBloodFreeList.push(slot);
     }
   }
 
   function _acquireCorpseBlood(x, y, z, color, opacity) {
-    const slot = _corpseBloodPool[_corpseBloodHead % CORPSE_BLOOD_POOL_SIZE];
-    _corpseBloodHead++;
+    if (_corpseBloodFreeList.length === 0) return null;
+    const slot = _corpseBloodFreeList.pop();
     slot.mesh.scale.set(0.2, 0.2, 0.2);
     slot.mesh.position.set(x, y, z);
     slot.mat.color.setHex(color || 0x550000);
