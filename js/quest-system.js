@@ -4649,3 +4649,41 @@
     window.checkAINarratorTick    = checkAINarratorTick;
     window.resetLakeBounceQuest   = resetLakeBounceQuest;
     window.showNarratorLine       = _showNarratorLine;
+
+    // ─── World Quests (sandbox in-game quests used by GreyBossSystem etc.) ──────
+    var WORLD_QUESTS = [
+      {
+        id: 'investigate_ufo_crash',
+        title: 'Investigate the UFO Crash Site',
+        description: 'Something crashed in the eastern fields. Investigate.',
+        objectives: [{ type: 'reach_location', locationId: 'ufo_crash', radius: 18 }],
+        reward: { xp: 500 },
+        unlocks: 'retrieve_grey_egg'
+      },
+      {
+        id: 'retrieve_grey_egg',
+        title: 'Retrieve the Grey Egg',
+        description: 'The alien had an egg. Take it.',
+        objectives: [{ type: 'pickup_item', itemId: 'grey_egg' }],
+        reward: { xp: 800, items: ['grey_companion_egg'] }
+      }
+    ];
+
+    window.WORLD_QUESTS = WORLD_QUESTS;
+    window.WORLD_QUESTS_ACTIVE = window.WORLD_QUESTS_ACTIVE || [];
+
+    window.activateWorldQuest = function (id) {
+      if (!window.WORLD_QUESTS_ACTIVE) window.WORLD_QUESTS_ACTIVE = [];
+      if (window.WORLD_QUESTS_ACTIVE.indexOf(id) === -1) {
+        window.WORLD_QUESTS_ACTIVE.push(id);
+        window._activeWorldQuest = id;
+      }
+    };
+
+    window.completeWorldQuest = function (id) {
+      if (!window.WORLD_QUESTS_ACTIVE) return;
+      var idx = window.WORLD_QUESTS_ACTIVE.indexOf(id);
+      if (idx !== -1) window.WORLD_QUESTS_ACTIVE.splice(idx, 1);
+      var quest = WORLD_QUESTS.find(function (q) { return q.id === id; });
+      if (quest && quest.unlocks) window.activateWorldQuest(quest.unlocks);
+    };

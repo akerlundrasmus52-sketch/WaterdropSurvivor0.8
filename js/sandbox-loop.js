@@ -3791,6 +3791,11 @@
         WorldObjects.update(dt);
       }
 
+      // Grey Boss System tick
+      if (typeof GreyBossSystem !== 'undefined') {
+        GreyBossSystem.update(dt);
+      }
+
       // Atmospheric weather particles and dynamic sky cycle
       try { if (_weatherActive) _updateWeatherSystem(dt, nowMs); } catch(e) {}
       try { _updateSkyCycle(dt); } catch(e) {}
@@ -4150,6 +4155,12 @@
       // Start loop
       _lastTime = performance.now();
       _rafId = requestAnimationFrame(_animate);
+
+      // Initialize Grey Boss System if available
+      if (typeof GreyBossSystem !== 'undefined') {
+        GreyBossSystem.init(scene, camera, player);
+        console.log('[🎮 SandboxLoop] ✓ GreyBossSystem initialized');
+      }
 
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');
       console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');

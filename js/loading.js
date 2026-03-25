@@ -102,31 +102,9 @@
         setTimeout(function() {
           loadingScreen.style.display = 'none';
 
-          // If init failed, always fall back to main menu
-          if (!initOk) {
-            var mainMenu = document.getElementById('main-menu');
-            if (mainMenu) mainMenu.style.display = 'flex';
-            var buttons = mainMenu ? mainMenu.querySelectorAll('.menu-btn') : [];
-            for (var i = 0; i < buttons.length; i++) {
-              window._applyFallbackButtonStyles(buttons[i]);
-            }
-            var statusDiv = document.createElement('div');
-            statusDiv.style.color = '#ff6666';
-            statusDiv.style.fontSize = '12px';
-            statusDiv.style.textAlign = 'center';
-            statusDiv.style.fontFamily = 'monospace';
-            statusDiv.style.position = 'absolute';
-            statusDiv.style.bottom = '10%';
-            statusDiv.style.left = '0';
-            statusDiv.style.right = '0';
-            statusDiv.textContent = '⚠️ Game engine failed to load — tap buttons to retry';
-            var menuButtons = mainMenu ? mainMenu.querySelector('.menu-buttons') : null;
-            if (menuButtons) menuButtons.appendChild(statusDiv);
-            return;
-          }
-
           // ── All players: route to camp after loading ──
-          // The flow is: Menu → Loadscreen → Camp. From camp, "New Run" loads Engine 2.0.
+          // The flow is: Loadscreen → Camp → sandbox.html for a run.
+          // Camp screen is independent of game-loop; route there even if game-loop init failed.
           if (typeof window.updateCampScreen === 'function') {
             console.log('[Loading] Routing to camp screen');
             var campScreen = document.getElementById('camp-screen');
@@ -140,7 +118,18 @@
             return;
           }
 
-          // Fallback: show main menu if camp system is unavailable
+          // If init failed and camp system is not available, fall back to main menu
+          if (!initOk) {
+            var mainMenu = document.getElementById('main-menu');
+            if (mainMenu) mainMenu.style.display = 'flex';
+            var buttons = mainMenu ? mainMenu.querySelectorAll('.menu-btn') : [];
+            for (var i = 0; i < buttons.length; i++) {
+              window._applyFallbackButtonStyles(buttons[i]);
+            }
+            return;
+          }
+
+          // Final fallback: show main menu
           var mainMenu = document.getElementById('main-menu');
           if (mainMenu) mainMenu.style.display = 'flex';
         }, 500);
