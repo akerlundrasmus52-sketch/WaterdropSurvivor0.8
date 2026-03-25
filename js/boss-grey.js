@@ -10,6 +10,14 @@
   var _initialized = false;
   var _tick = 0;
 
+  // Tuning constants
+  var LASER_BOLT_DAMAGE  = 25;
+  var LUNGE_HIT_RADIUS   = 1.2;
+  var EGG_PICKUP_RADIUS  = 1.5;
+  var BOSS_LOOK_HEIGHT   = 1.5;
+  var INTRO_CAM_LERP     = 0.04;
+  var INTRO_CAM_RETURN   = 0.05;
+
   // UFO crash site
   var _ufoGroup = null;
   var _eggMesh = null;
@@ -55,7 +63,6 @@
     LUNGE: 'LUNGE',
     REPOSITION: 'REPOSITION',
     PHASE2_TRIGGER: 'PHASE2_TRIGGER',
-    CIRCLE_RUN: 'CIRCLE_RUN',
     CIRCLE_SHOOT: 'CIRCLE_SHOOT',
     PHASE3_TRIGGER: 'PHASE3_TRIGGER',
     PHASE3_ATTACK: 'PHASE3_ATTACK',
@@ -95,13 +102,13 @@
   var _introTimer = 0;
 
   // World positions
-  var UFO_X = 45, UFO_Y = 0, UFO_Z = -30;
-  var SPAWN_X = UFO_X + 3, SPAWN_Y = 0.5, SPAWN_Z = UFO_Z + 5;
+  var _UFO_X = 45, _UFO_Y = 0, _UFO_Z = -30;
+  var _SPAWN_X = _UFO_X + 3, _SPAWN_Y = 0.5, _SPAWN_Z = _UFO_Z + 5;
 
   // ─── UFO Crash Site ──────────────────────────────────────────────────────────
   function _buildUFO() {
     _ufoGroup = new THREE.Group();
-    _ufoGroup.position.set(UFO_X, UFO_Y, UFO_Z);
+    _ufoGroup.position.set(_UFO_X, _UFO_Y, _UFO_Z);
 
     // Main disk
     var diskGeo = new THREE.CylinderGeometry(4.5, 4.5, 0.6, 24);
@@ -137,7 +144,7 @@
     var eggMat = new THREE.MeshLambertMaterial({ color: 0xddccaa, emissive: 0x332200 });
     _eggMesh = new THREE.Mesh(eggGeo, eggMat);
     _eggMesh.scale.set(1, 1.4, 1);
-    _eggMesh.position.set(UFO_X + 5, UFO_Y + 0.49, UFO_Z + 2);
+    _eggMesh.position.set(_UFO_X + 5, _UFO_Y + 0.49, _UFO_Z + 2);
     _eggMesh.castShadow = true;
     _scene.add(_eggMesh);
   }
@@ -263,7 +270,7 @@
     _leftLeg = buildLeg('left');
     _rightLeg = buildLeg('right');
 
-    _bossGroup.position.set(SPAWN_X, SPAWN_Y, SPAWN_Z);
+    _bossGroup.position.set(_SPAWN_X, _SPAWN_Y, _SPAWN_Z);
     _bossGroup.visible = false;
     _scene.add(_bossGroup);
   }
@@ -386,7 +393,7 @@
         var dx = _player.mesh.position.x - b.mesh.position.x;
         var dz = _player.mesh.position.z - b.mesh.position.z;
         if (Math.sqrt(dx * dx + dz * dz) < 0.7) {
-          _damagePlayer(25);
+          _damagePlayer(LASER_BOLT_DAMAGE);
           _scene.remove(b.mesh);
           _laserBolts.splice(i, 1);
         }
@@ -593,8 +600,8 @@
     if (_introPhase === 1) {
       // Lerp camera toward boss at 0.04/frame rate
       if (_introTargetPos) {
-        _camera.position.lerp(_introTargetPos, 0.04);
-        _camera.lookAt(_bossGroup.position.x, _bossGroup.position.y + 1.5, _bossGroup.position.z);
+        _camera.position.lerp(_introTargetPos, INTRO_CAM_LERP);
+        _camera.lookAt(_bossGroup.position.x, _bossGroup.position.y + BOSS_LOOK_HEIGHT, _bossGroup.position.z);
       }
       if (_introTimer >= 0.8 && !_introPanel) {
         _buildIntroPanel();
@@ -615,7 +622,7 @@
       }
     } else if (_introPhase === 3) {
       // Lerp camera back over 1.0s
-      if (_introCamOrigPos) _camera.position.lerp(_introCamOrigPos, 0.05);
+      if (_introCamOrigPos) _camera.position.lerp(_introCamOrigPos, INTRO_CAM_RETURN);
       if (_introTimer >= 1.0) {
         if (_introCamOrigPos) _camera.position.copy(_introCamOrigPos);
         window._bossIntroActive = false;
@@ -656,7 +663,7 @@
     if (!_player || !_player.mesh) return;
     var dx = _player.mesh.position.x - _eggMesh.position.x;
     var dz = _player.mesh.position.z - _eggMesh.position.z;
-    if (Math.sqrt(dx * dx + dz * dz) < 1.5) {
+    if (Math.sqrt(dx * dx + dz * dz) < EGG_PICKUP_RADIUS) {
       _eggAlive = false;
       _scene.remove(_eggMesh);
       _eggMesh = null;
@@ -667,7 +674,7 @@
         window.playerInventory.push('grey_companion_egg');
       }
       var msg = document.createElement('div');
-      msg.textContent = 'You found The Grey Egg 🥚';
+      msg.textContent = 'You found the Grey Egg 🥚';
       msg.style.cssText = [
         'position:fixed',
         'bottom:120px',
@@ -806,7 +813,7 @@
         }
 
         var dToPlayer = _distToPlayer();
-        if (dToPlayer < 1.2) {
+        if (dToPlayer < LUNGE_HIT_RADIUS) {
           if (!_dashPressedRecently) {
             _damagePlayer(lungeDmg);
             _stunPlayer(0.6);
@@ -820,12 +827,12 @@
 
       case STATES.REPOSITION: {
         var repAngle = Math.atan2(
-          _bossGroup.position.x - UFO_X,
-          _bossGroup.position.z - UFO_Z
+          _bossGroup.position.x - _UFO_X,
+          _bossGroup.position.z - _UFO_Z
         ) + dt * 2.2;
         var repR = 7;
-        _bossGroup.position.x = UFO_X + Math.sin(repAngle) * repR;
-        _bossGroup.position.z = UFO_Z + Math.cos(repAngle) * repR;
+        _bossGroup.position.x = _UFO_X + Math.sin(repAngle) * repR;
+        _bossGroup.position.z = _UFO_Z + Math.cos(repAngle) * repR;
         _facePlayer();
         if (_stateTimer >= _phase1Durations.REPOSITION) _nextPhase1State();
         break;
@@ -835,8 +842,8 @@
         // Circle around UFO for 3 laps
         var prevA = _circleAngle;
         _circleAngle += (6.5 / 6) * dt;
-        _bossGroup.position.x = UFO_X + Math.sin(_circleAngle) * 6;
-        _bossGroup.position.z = UFO_Z + Math.cos(_circleAngle) * 6;
+        _bossGroup.position.x = _UFO_X + Math.sin(_circleAngle) * 6;
+        _bossGroup.position.z = _UFO_Z + Math.cos(_circleAngle) * 6;
         _facePlayer();
         // Count laps (angle wraps every 2π)
         if (Math.floor(_circleAngle / (Math.PI * 2)) > Math.floor(prevA / (Math.PI * 2))) {
