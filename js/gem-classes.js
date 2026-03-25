@@ -224,7 +224,7 @@
           // Hit ground — bounce like a tumbling coin then settle
           if (this.mesh.position.y <= 0.08) {
             this.mesh.position.y = 0.08;
-            this._bounceCount = (this._bounceCount || 0) + 1;
+            this._bounceCount++;
             // Bounce: invert vertical velocity with damping coefficient
             this.vy = -this.vy * 0.38;
             this.vx *= this.groundFriction;
