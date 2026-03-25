@@ -1635,13 +1635,13 @@
     }
   }
 
-  function _acquireCorpseBlood(x, y, z, color) {
+  function _acquireCorpseBlood(x, y, z, color, opacity) {
     const slot = _corpseBloodPool[_corpseBloodHead % CORPSE_BLOOD_POOL_SIZE];
     _corpseBloodHead++;
     slot.mesh.scale.set(0.2, 0.2, 0.2);
     slot.mesh.position.set(x, y, z);
     slot.mat.color.setHex(color || 0x550000);
-    slot.mat.opacity = 0.75;
+    slot.mat.opacity = (typeof opacity === 'number') ? opacity : 0.75;
     slot.mesh.visible = true;
     return slot;
   }
