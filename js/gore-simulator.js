@@ -1592,6 +1592,7 @@ mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;
 mesh.visible = true;
 mesh.userData.decalBirth = performance.now();
+mesh.userData.decalLife = DECAL_FADE_TIME;
 },
 
 _spawnChunk(pos, vel, options = {}) {
@@ -1684,11 +1685,16 @@ for (var _di = 0; _di < this._decalMeshes.length; _di++) {
   if (!_dm.visible) continue;
   if (_dm.userData.decalBirth == null) { _dm.visible = false; continue; }
   var _age = (now - _dm.userData.decalBirth) / 1000;
-  if (_age >= DECAL_FADE_TIME) {
+  var _life = (typeof _dm.userData.decalLife === 'number' && _dm.userData.decalLife > 0)
+    ? _dm.userData.decalLife
+    : DECAL_FADE_TIME;
+  var _fadeDuration = Math.min(3.0, _life);
+  var _fadeStartAge = _life - _fadeDuration;
+  if (_age >= _life) {
     _dm.visible = false;
-  } else if (_age > DECAL_FADE_TIME - 3.0) {
+  } else if (_age > _fadeStartAge) {
     _dm.material.opacity = Math.max(0,
-      (DECAL_FADE_TIME - _age) / 3.0 * 0.75
+      (_life - _age) / _fadeDuration * 0.75
     );
   }
 }
