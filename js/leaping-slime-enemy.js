@@ -50,10 +50,10 @@ var LEAP_CFG = {
   ATTACK_RANGE:     0.9,         // contact radius
   ATTACK_COOLDOWN:  500,         // ms between contact damage ticks
 
-  // Jump physics
+  // Jump physics (reduced by 25% for shorter, lower jumps)
   GRAVITY:          -25.0,       // strong gravity for snappy, heavy landings
-  JUMP_FORCE:       12.0,        // upward velocity on launch
-  LEAP_FORCE:       8.0,         // forward velocity on launch
+  JUMP_FORCE:       9.0,         // upward velocity on launch (was 12.0)
+  LEAP_FORCE:       6.0,         // forward velocity on launch (was 8.0)
 
   // State timings (seconds)
   IDLE_TIME_MIN:    0.5,
@@ -139,6 +139,7 @@ function LeapingSlimeEnemy() {
   this.leftEye         = null;
   this.rightEye        = null;
   this.mouth           = null;
+  this.mouthInterior   = null;   // red interior of mouth
   this.shadowMesh      = null;
 
   // isDead getter/setter for player auto-aim compatibility
@@ -189,6 +190,7 @@ LeapingSlimeEnemy.prototype.spawn = function(x, z, waveLevel) {
 
   // Reset mouth to closed
   this.mouth.scale.set(this.size, this.size * 0.05, this.size);
+  if (this.mouthInterior) this.mouthInterior.scale.set(this.size, this.size * 0.05, this.size);
 
   // Update material colour
   this.body.material.color.setHex(LEAP_CFG.COLOR_HEALTHY);
@@ -265,6 +267,7 @@ LeapingSlimeEnemy.prototype._stateIdle = function(dt) {
   // Smoothly close mouth
   _v1.set(this.size, this.size * 0.05, this.size);
   this.mouth.scale.lerp(_v1, Math.min(15 * dt, 1.0));
+  if (this.mouthInterior) this.mouthInterior.scale.lerp(_v1, Math.min(15 * dt, 1.0));
 
   if (this.stateTimer <= 0) {
     this.state      = 'PREPARING_JUMP';
@@ -285,6 +288,7 @@ LeapingSlimeEnemy.prototype._statePreparing = function(dt, playerPos) {
 
   // Slightly open mouth in anticipation
   this.mouth.scale.set(this.size, this.size * 0.5 * chargeProgress, this.size);
+  if (this.mouthInterior) this.mouthInterior.scale.set(this.size, this.size * 0.5 * chargeProgress, this.size);
 
   if (this.stateTimer <= 0) {
     this._doJump(playerPos);
@@ -315,6 +319,7 @@ LeapingSlimeEnemy.prototype._stateJumping = function(dt) {
   // Mouth wide open mid-air: attack pose
   _v1.set(this.size * 1.4, this.size * 1.4, this.size * 1.4);
   this.mouth.scale.lerp(_v1, Math.min(15 * dt, 1.0));
+  if (this.mouthInterior) this.mouthInterior.scale.lerp(_v1, Math.min(15 * dt, 1.0));
 
   // Ground collision
   if (this.mesh.position.y <= 0) {
@@ -333,6 +338,7 @@ LeapingSlimeEnemy.prototype._stateLanding = function(dt) {
   // Close mouth on impact
   _v1.set(this.size, this.size * 0.05, this.size);
   this.mouth.scale.lerp(_v1, Math.min(20 * dt, 1.0));
+  if (this.mouthInterior) this.mouthInterior.scale.lerp(_v1, Math.min(20 * dt, 1.0));
 
   if (this.stateTimer <= 0) {
     this.state      = 'IDLE';
@@ -568,7 +574,7 @@ var LeapingSlimePool = {
     e.rightEye = rightEye;
 
     // ── MOUTH (hidden at rest, opens mid-air) ─────────────────────────────
-    // Half-sphere open downward, dark interior
+    // Outer dark lips/edge
     var mouthGeo = new THREE.SphereGeometry(0.32, 14, 14, 0, Math.PI * 2, 0, Math.PI / 2);
     var mouthMat = new THREE.MeshStandardMaterial({
       color:       0x05051a,
@@ -581,6 +587,21 @@ var LeapingSlimePool = {
     mouth.scale.set(s, s * 0.05, s); // closed (flat)
     group.add(mouth);
     e.mouth = mouth;
+
+    // Red interior (gums/flesh) - slightly smaller hemisphere, bright red
+    var mouthInteriorGeo = new THREE.SphereGeometry(0.28, 12, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+    var mouthInteriorMat = new THREE.MeshStandardMaterial({
+      color:       0xff2222,  // bright red interior
+      emissive:    0x550000,  // subtle glow
+      side:        THREE.BackSide,  // render inside only
+      roughness:   0.7,
+    });
+    var mouthInterior = new THREE.Mesh(mouthInteriorGeo, mouthInteriorMat);
+    mouthInterior.position.set(0, s * 0.72, s * 0.88);
+    mouthInterior.rotation.x = Math.PI / 2;
+    mouthInterior.scale.set(s, s * 0.05, s); // closed (flat)
+    group.add(mouthInterior);
+    e.mouthInterior = mouthInterior;
 
     // ── GROUND SHADOW ─────────────────────────────────────────────────────
     var shadowGeo = new THREE.CircleGeometry(s * 0.95, 10);

@@ -975,9 +975,11 @@
        SANDBOX GAME LOOP — minimal, fully pool-enforced
        • Spawns player + one Slime dummy (respawns when killed)
        • Gun auto-targets Slime; projectiles live in a pre-allocated pool
-       • Kill triggers BloodSystem burst + dynamic ExpGem drop physics
-       • ExpGem magnetism pulls gems to player → EXP gain → Level-Up modal
+       • Kill triggers BloodSystem burst + NEW XP Star System V2
+       • XP Star magnetism pulls stars to player → EXP gain → Level-Up modal
        ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- NEW: XP Star System V2 - Complete rebuild, no old map conflicts -->
+  <script src="js/xp-star-system.js"></script>
   <script src="js/sandbox-loop.js"></script>
   <script src="js/boss-grey.js"></script>
 
