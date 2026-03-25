@@ -132,10 +132,16 @@
     /* 4 cards in a row — large standing card layout */
     #upgrade-list, #level-up-choices {
       display: flex !important;
-      flex-wrap: nowrap !important;
+      flex-wrap: wrap !important;
       justify-content: center;
       gap: 14px !important;
       padding: 4px 0;
+    }
+    @media (min-width: 900px) {
+      #upgrade-list,
+      #level-up-choices {
+        flex-wrap: nowrap !important;
+      }
     }
     /* Larger cards: standing portrait cards */
     .upgrade-card {
