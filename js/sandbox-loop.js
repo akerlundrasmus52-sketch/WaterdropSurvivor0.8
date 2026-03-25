@@ -1123,10 +1123,16 @@
       slot.bloodSplatters.push(_bsmesh);
       if (slot.bloodSplatters.length > 9) {
         var _oldSplat = slot.bloodSplatters.shift();
-        if (_oldSplat && _oldSplat.parent) {
-          _oldSplat.parent.remove(_oldSplat);
-          _oldSplat.geometry.dispose();
-          _oldSplat.material.dispose();
+        if (_oldSplat) {
+          if (_oldSplat.parent) {
+            _oldSplat.parent.remove(_oldSplat);
+          }
+          if (_oldSplat.geometry) {
+            _oldSplat.geometry.dispose();
+          }
+          if (_oldSplat.material) {
+            _oldSplat.material.dispose();
+          }
         }
       }
     }
