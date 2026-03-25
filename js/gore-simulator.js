@@ -1592,7 +1592,6 @@ mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;
 mesh.visible = true;
 mesh.userData.decalBirth = performance.now();
-mesh.userData.decalLife = DECAL_FADE_TIME * 1000;
 },
 
 _spawnChunk(pos, vel, options = {}) {
