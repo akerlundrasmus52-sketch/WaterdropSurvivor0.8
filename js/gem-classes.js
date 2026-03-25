@@ -49,7 +49,7 @@
 
     class ExpGem {
       constructor(x, z, sourceWeapon, hitForce, enemyType) {
-        // Use shared star geometry (created once) — 25% larger than previous size
+        // Use shared star geometry (created once) — 25% larger than base size (reduced from prior 50% increase)
         if (!_expGemStarGeometry) {
           const starPoints = 5;
           const outerR = 0.28 * 0.4025 * 1.25; // 25% larger
@@ -94,7 +94,7 @@
         this.mesh = new THREE.Mesh(_expGemStarGeometry, starMaterial);
 
         // Pop out from enemy body in random direction — X/Z set now; Y after launch style
-        // Max ~2.5 units away from enemy (1.5 enemy height = typical visual range)
+        // Initial horizontal offset 0.5–2.5 units from enemy (1.5 enemy height = typical visual range)
         var popAngle = Math.random() * Math.PI * 2;
         var popDist  = 0.5 + Math.random() * 2.0; // 0.5-2.5 units
         var startX   = x + Math.cos(popAngle) * popDist;
@@ -148,6 +148,7 @@
         // Dynamic spin based on weapon force — chaotic multi-axis tumble
         // Enhanced for more variety: every axis spins differently every time
         var force = hitForce || 1.0;
+        var physForce = Math.min(force, 1.5); // Cap physics force to keep stars within visible/collectible range
         var isCritical = force > 1.5;
         var isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
         var spinMult = isCritical ? 4.5 : isExplosive ? 6.0 : 3.0; // Increased spin multipliers
@@ -165,31 +166,31 @@
 
         var popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
-          // High arc — flies upward to about enemy head height (~1.3-1.5 units max)
-          popSpeed = (0.01 + Math.random() * 0.015) * force; // Reduced horizontal speed
-          this.vy = (0.20 + Math.random() * 0.08) * force; // Reduced vertical speed for lower arc
+          // High arc — flies upward to about enemy head height (~1.3-1.5 units, capped at physForce=1.5)
+          popSpeed = (0.01 + Math.random() * 0.015) * physForce; // Reduced horizontal speed
+          this.vy = (0.20 + Math.random() * 0.08) * physForce; // Reduced vertical speed for lower arc
           startY = 0.8 + Math.random() * 0.3; // Start higher
           this.gravity = -0.018; // Lighter gravity for smoother arc
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
           // Mostly drops near enemy with slow "plopping" feel — varies speed
-          popSpeed = (0.005 + Math.random() * 0.012) * force; // Very slow
-          this.vy = (0.08 + Math.random() * 0.06) * force; // Low height
+          popSpeed = (0.005 + Math.random() * 0.012) * physForce; // Very slow
+          this.vy = (0.08 + Math.random() * 0.06) * physForce; // Low height
           startY = 1.0 + Math.random() * 0.5; // Variable start height
           this.gravity = -0.020; // Moderate gravity
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
           // Rolls along ground quickly with spinning rotation
-          popSpeed = (0.02 + Math.random() * 0.03) * force; // Medium horizontal
-          this.vy = (0.04 + Math.random() * 0.06) * force; // Very low arc
+          popSpeed = (0.02 + Math.random() * 0.03) * physForce; // Medium horizontal
+          this.vy = (0.04 + Math.random() * 0.06) * physForce; // Very low arc
           startY = 0.3 + Math.random() * 0.2;
           this.gravity = -0.019;
           this.groundFriction = 0.72;
         } else {
           // 'pop' — classic burst with varied speed
           var speedVariation = Math.random(); // 0-1 for speed variance
-          popSpeed = (0.015 + speedVariation * 0.04) * force; // Moderate variance: 0.015-0.055
-          this.vy = (0.12 + Math.random() * 0.10) * force; // Medium height (~1.0-1.4 units)
+          popSpeed = (0.015 + speedVariation * 0.04) * physForce; // Moderate variance: 0.015-0.055
+          this.vy = (0.12 + Math.random() * 0.10) * physForce; // Medium height (~1.0-1.4 units)
           startY = 0.6 + Math.random() * 0.4;
           this.gravity = -0.018;
           this.groundFriction = 0.58;
@@ -369,7 +370,7 @@
         this.value = gemBaseValue;
 
         // Reposition with pop — X/Z set now; Y will be set after launch-style is chosen
-        // Max ~2.5 units away from enemy (1.5 enemy height = typical visual range)
+        // Initial offset 0.5–2.5 units from enemy (1.5 enemy height = typical visual range)
         const popAngle = Math.random() * Math.PI * 2;
         const popDist  = 0.5 + Math.random() * 2.0; // 0.5-2.5 units
         const posX = x + Math.cos(popAngle) * popDist;
@@ -384,6 +385,7 @@
         // Reset spin based on weapon force
         // Enhanced for more variety: every axis spins differently every time
         const force = hitForce || 1.0;
+        const physForce = Math.min(force, 1.5); // Cap physics force to keep stars within visible/collectible range
         const isCritical  = force > 1.5;
         const isExplosive = (sourceWeapon === 'homingMissile' || sourceWeapon === 'meteor' || sourceWeapon === 'fireball');
         const spinMult = isCritical ? 4.5 : isExplosive ? 6.0 : 3.0; // Increased spin multipliers
@@ -398,31 +400,31 @@
         this._launchStyle = launchStyle;
         let popSpeed, startY;
         if (launchStyle === 'lob' || launchStyle === 'overhead') {
-          // High arc — flies upward to about enemy head height (~1.3-1.5 units max)
-          popSpeed = (0.01 + Math.random() * 0.015) * force; // Reduced horizontal speed
-          this.vy = (0.20 + Math.random() * 0.08) * force; // Reduced vertical speed for lower arc
+          // High arc — flies upward to about enemy head height (~1.3-1.5 units, capped at physForce=1.5)
+          popSpeed = (0.01 + Math.random() * 0.015) * physForce; // Reduced horizontal speed
+          this.vy = (0.20 + Math.random() * 0.08) * physForce; // Reduced vertical speed for lower arc
           startY = 0.8 + Math.random() * 0.3; // Start higher
           this.gravity = -0.018; // Lighter gravity for smoother arc
           this.groundFriction = 0.50;
         } else if (launchStyle === 'drop') {
           // Mostly drops near enemy with slow "plopping" feel — varies speed
-          popSpeed = (0.005 + Math.random() * 0.012) * force; // Very slow
-          this.vy = (0.08 + Math.random() * 0.06) * force; // Low height
+          popSpeed = (0.005 + Math.random() * 0.012) * physForce; // Very slow
+          this.vy = (0.08 + Math.random() * 0.06) * physForce; // Low height
           startY = 1.0 + Math.random() * 0.5; // Variable start height
           this.gravity = -0.020; // Moderate gravity
           this.groundFriction = 0.45;
         } else if (launchStyle === 'tumble') {
           // Rolls along ground quickly with spinning rotation
-          popSpeed = (0.02 + Math.random() * 0.03) * force; // Medium horizontal
-          this.vy = (0.04 + Math.random() * 0.06) * force; // Very low arc
+          popSpeed = (0.02 + Math.random() * 0.03) * physForce; // Medium horizontal
+          this.vy = (0.04 + Math.random() * 0.06) * physForce; // Very low arc
           startY = 0.3 + Math.random() * 0.2;
           this.gravity = -0.019;
           this.groundFriction = 0.72;
         } else {
           // 'pop' — classic burst with varied speed
           const speedVariation = Math.random(); // 0-1 for speed variance
-          popSpeed = (0.015 + speedVariation * 0.04) * force; // Moderate variance: 0.015-0.055
-          this.vy = (0.12 + Math.random() * 0.10) * force; // Medium height (~1.0-1.4 units)
+          popSpeed = (0.015 + speedVariation * 0.04) * physForce; // Moderate variance: 0.015-0.055
+          this.vy = (0.12 + Math.random() * 0.10) * physForce; // Medium height (~1.0-1.4 units)
           startY = 0.6 + Math.random() * 0.4;
           this.gravity = -0.018;
           this.groundFriction = 0.58;
