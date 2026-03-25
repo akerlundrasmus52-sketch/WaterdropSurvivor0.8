@@ -239,6 +239,7 @@
       if (window.SlimePool && typeof window.SlimePool.reset === 'function') window.SlimePool.reset();
       if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
       if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
+      if (window.LeapingSlimePool && typeof window.LeapingSlimePool.reset === 'function') window.LeapingSlimePool.reset();
       const b = document.getElementById('you-died-banner');
       if (b) {
         b.style.display = 'block';
@@ -356,6 +357,7 @@
   let _escalationTimer = ESCALATION_INTERVAL; // seconds until next difficulty escalation
   let _allFleshChunks = [];        // global flying flesh chunk list (from all pool slots)
   let _activeCrawlers = [];        // live list of active crawler enemies
+  let _activeLeapingSlimes = [];   // live list of active leaping slime enemies
   let _projPool = [];              // reusable projectile objects
   let _activeProjList = [];        // currently flying projectiles
   let _animateErrorShown = false;  // prevent spamming error display every frame
@@ -381,6 +383,8 @@
   // (THREE loads before sandbox-loop.js, so they become real Vector3s at IIFE boot time)
   let _tmpV3  = null; // general-purpose temp vector (set in _initScene)
   let _tmpV3b = null; // second reusable temp vector (set in _initScene)
+  let _leapHitNormal = null; // scratch for leaping slime hit normal (no per-hit allocation)
+  let _leapBulletDir = null; // scratch for leaping slime bullet direction (no per-hit allocation)
 
   // Reusable world-space position object for blood emission (avoids new {} per hit)
   const _reusableBloodPos = { x: 0, y: 0, z: 0 };
@@ -498,6 +502,10 @@
     for (let i = 0; i < _activeCrawlers.length; i++) {
       _enemySpatialHash.insert(_activeCrawlers[i]);
     }
+    // Also insert active leaping slimes into spatial hash
+    for (let i = 0; i < _activeLeapingSlimes.length; i++) {
+      _enemySpatialHash.insert(_activeLeapingSlimes[i]);
+    }
   }
 
   // ─── Hit-Stop & Screen Shake helpers ─────────────────────────────────────────
@@ -609,7 +617,7 @@
 
       // Collision with enemies — use spatial hash if available (O(1) per projectile)
       let hitThisFrame = false;
-      if (_enemySpatialHash && (_activeSlimes.length > 0 || _activeCrawlers.length > 0)) {
+      if (_enemySpatialHash && (_activeSlimes.length > 0 || _activeCrawlers.length > 0 || _activeLeapingSlimes.length > 0)) {
         const nearby = _enemySpatialHash.query(p.mesh.position.x, p.mesh.position.z, COLLISION_QUERY_RADIUS);
         for (let si = 0; si < nearby.length; si++) {
           const s = nearby[si];
@@ -619,6 +627,8 @@
           if (ex * ex + ez * ez < COLLISION_THRESHOLD_SQ) {
             if (s.enemyType === 'crawler') {
               _hitCrawler(p, s);
+            } else if (s.enemyType === 'leaping_slime') {
+              _hitLeapingSlime(p, s);
             } else {
               _hitSlime(p, s);
             }
@@ -650,6 +660,21 @@
             const cz = p.mesh.position.z - c.mesh.position.z;
             if (cx * cx + cz * cz < COLLISION_THRESHOLD_SQ) {
               _hitCrawler(p, c);
+              _releaseProjectile(p, i);
+              hitThisFrame = true;
+              break;
+            }
+          }
+        }
+        if (!hitThisFrame) {
+          // Also check leaping slimes in brute-force mode
+          for (let li = 0; li < _activeLeapingSlimes.length; li++) {
+            const l = _activeLeapingSlimes[li];
+            if (!l.active || l.dead) continue;
+            const lx = p.mesh.position.x - l.mesh.position.x;
+            const lz = p.mesh.position.z - l.mesh.position.z;
+            if (lx * lx + lz * lz < COLLISION_THRESHOLD_SQ) {
+              _hitLeapingSlime(p, l);
               _releaseProjectile(p, i);
               hitThisFrame = true;
               break;
@@ -1415,6 +1440,214 @@
             player.takeDamage(crawlerDmg, 'crawler', c.mesh.position);
           } else {
             playerStats.hp -= crawlerDmg;
+          }
+          if (playerStats && playerStats.hp <= 0) {
+            playerStats.hp = 0;
+            gameOver();
+          }
+        }
+      }
+    }
+  }
+
+  // ─── LEAPING SLIME ENEMY ─────────────────────────────────────────────────────
+
+  /** Apply a projectile hit to a leaping slime. */
+  function _hitLeapingSlime(projectile, enemy) {
+    if (!enemy || !enemy.active || enemy.dead || enemy.dying) return;
+
+    const weaponKey   = (weapons && weapons.gun) ? 'gun' : 'pistol';
+    const weaponLevel = (weapons && weapons.gun) ? (weapons.gun.level || 1) : 1;
+    const hitForce    = 1.0 + (weaponLevel - 1) * 0.15;
+
+    // Build hit-point and direction vectors from projectile position
+    _tmpV3.set(
+      enemy.mesh.position.x,
+      enemy.mesh.position.y + enemy.size,
+      enemy.mesh.position.z
+    );
+    var hitNormal = null;
+    var bulletDir = null;
+    if (projectile && projectile.vx !== undefined) {
+      const spd = Math.sqrt(projectile.vx * projectile.vx + projectile.vz * projectile.vz) || 1;
+      hitNormal = _leapHitNormal.set(-projectile.vx / spd, 0, -projectile.vz / spd);
+      bulletDir = _leapBulletDir.set(projectile.vx / spd, 0, projectile.vz / spd);
+    }
+
+    // Critical hit check (uses same playerStats as slimes)
+    const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
+    const isCrit = Math.random() < critChance;
+    const critMult = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
+
+    // Apply hit — the LeapingSlimeEnemy.receiveHit applies base damage; scale by crit
+    const result = window.LeapingSlimePool
+      ? window.LeapingSlimePool.hit(enemy, weaponKey, weaponLevel, _tmpV3, hitNormal, bulletDir)
+      : null;
+
+    const actualDmg = result
+      ? Math.round(result.damage * (isCrit ? critMult : 1.0))
+      : Math.round(15 * hitForce * critMult);
+
+    // Extra crit damage not already applied inside receiveHit.
+    // Apply even on killing blows so HP reduction matches the displayed crit damage,
+    // but clamp HP to zero to avoid negative values.
+    if (isCrit && result) {
+      const extraCritDmg = Math.round(result.damage * (critMult - 1.0));
+      if (extraCritDmg > 0) {
+        enemy.hp -= extraCritDmg;
+        if (enemy.hp < 0) enemy.hp = 0;
+      }
+    }
+
+    // Floating damage text — reuse _tmpV3b to avoid _tmpV3.clone() allocation
+    _tmpV3b.set(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z);
+    if (isCrit) {
+      createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+      _tmpV3b.y += 0.4;
+      createFloatingText('Critical', _tmpV3b, '#FF4400', 0);
+    } else {
+      createFloatingText(actualDmg, _tmpV3b, '#00CFFF', actualDmg);
+    }
+
+    // Light-blue blood burst (DeepSkyBlue) — use BloodV2 rawBurst if available
+    const bx = enemy.mesh.position.x, by = enemy.mesh.position.y + enemy.size, bz = enemy.mesh.position.z;
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(bx, by, bz, 6, { color: 0x00bfff });
+    } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+      BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
+    }
+
+    // GoreSim hit reaction
+    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+      GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
+    }
+
+    // Screen shake (lighter than green slime — it's smaller)
+    const hpRatio = enemy.hp / enemy.maxHp;
+    const shakeAmt = hpRatio < 0.33 ? SHAKE_HEAVY_INTENSITY * 0.6
+                   : hpRatio < 0.66 ? SHAKE_MID_INTENSITY   * 0.6
+                   :                  SHAKE_LIGHT_INTENSITY  * 0.6;
+    _triggerShake(shakeAmt);
+
+    if (enemy.hp <= 0) {
+      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
+    }
+  }
+
+  /** Kill a leaping slime, spawn loot and effects. */
+  function _killLeapingSlime(enemy, hitForce, killVX, killVZ) {
+    if (!enemy || enemy.dead) return;
+    const x = enemy.mesh.position.x;
+    const y = enemy.mesh.position.y + enemy.size;
+    const z = enemy.mesh.position.z;
+
+    // Hit-stop & camera shake (lighter than green slime kill)
+    _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 0.8);
+    _triggerShake(SHAKE_KILL_BASE * 0.7 + Math.min(SHAKE_KILL_CAP * 0.7, (hitForce - 1) * SHAKE_KILL_SCALE));
+
+    // Light-blue gore burst
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(x, y, z, 18, { color: 0x00bfff });
+    } else if (window.BloodSystem) {
+      if (typeof BloodSystem.emitBurst === 'function') {
+        BloodSystem.emitBurst({ x, y, z }, 18, { spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100 });
+      }
+      if (typeof BloodSystem.emitGuts === 'function') {
+        BloodSystem.emitGuts({ x, y, z }, 6);
+      }
+    }
+
+    // GoreSim kill
+    if (window.GoreSim && typeof GoreSim.onKill === 'function') {
+      GoreSim.onKill(enemy, 'pistol', null);
+    }
+
+    _placeBloodStain(x, z);
+
+    // Remove from active list
+    const idx = _activeLeapingSlimes.indexOf(enemy);
+    if (idx !== -1) _activeLeapingSlimes.splice(idx, 1);
+
+    // Trigger death animation inside the instance — set _tmpV3 to kill position first
+    _tmpV3.set(x, y, z);
+    enemy._die('pistol', _tmpV3);
+
+    // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
+    const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
+    _activeCorpses.push({
+      slot: enemy, timer: 0, lingerDuration: 8, bloodTimer: 0,
+      poolMesh: _cbSlot3?.mesh || null, poolMat: _cbSlot3?.mat || null, poolSlot: _cbSlot3 || null, x, z
+    });
+
+    // Drop XP gem (slightly less XP than green slime — 25% smaller enemy)
+    const gemType = hitForce > 2.0 ? 4 : (hitForce > 1.5 ? 2 : 1);
+    const gem = _acquireExpGem(x, z, 'gun', hitForce, gemType);
+    if (gem) {
+      gem.vx += killVX * 0.04;
+      gem.vz += killVZ * 0.04;
+      expGems.push(gem);
+    }
+    if (Math.random() < BONUS_XP_DROP_RATE) {
+      const bonus = _acquireExpGem(x, z, 'gun', hitForce * 0.7, gemType);
+      if (bonus) expGems.push(bonus);
+    }
+
+    playerStats.kills++;
+    if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
+      GameRageCombat.addRage(8);
+    }
+  }
+
+  /** Spawn one leaping slime near the player. */
+  function _spawnLeapingSlime() {
+    if (!window.LeapingSlimePool || !player || !player.mesh) return;
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = 9 + Math.random() * 6;
+    const px    = player.mesh.position.x;
+    const pz    = player.mesh.position.z;
+    const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    const waveLevel = Math.floor(_waveSize / 3) + 1;
+    const e = LeapingSlimePool.spawn(rx, rz, waveLevel);
+    if (e && _activeLeapingSlimes.indexOf(e) === -1) {
+      _activeLeapingSlimes.push(e);
+    }
+  }
+
+  /** Update leaping slimes: pool tick, contact damage to player, cleanup dead. */
+  function _updateLeapingSlimes(dt) {
+    if (!window.LeapingSlimePool || !player || !player.mesh) return;
+    const playerPos = player.mesh.position;
+    LeapingSlimePool.update(dt, playerPos);
+
+    const LEAPING_CONTACT_RADIUS =
+      window.LEAP_CFG && typeof LEAP_CFG.ATTACK_RANGE === 'number'
+        ? LEAP_CFG.ATTACK_RANGE
+        : 1.0; // fallback: smaller than green slime (0.75 base size)
+    const LEAPING_DAMAGE  = window.LEAP_CFG ? LEAP_CFG.BASE_DAMAGE    : 15;
+    const LEAPING_COOLDOWN = window.LEAP_CFG ? LEAP_CFG.ATTACK_COOLDOWN : 500;
+
+    for (let i = _activeLeapingSlimes.length - 1; i >= 0; i--) {
+      const e = _activeLeapingSlimes[i];
+      if (!e.active || e.dead) {
+        _activeLeapingSlimes.splice(i, 1);
+        continue;
+      }
+      // Skip dying ones (still animating their death)
+      if (e.dying) continue;
+
+      // Contact damage to player
+      const dx   = playerPos.x - e.mesh.position.x;
+      const dz   = playerPos.z - e.mesh.position.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < LEAPING_CONTACT_RADIUS && !player.invulnerable) {
+        const now = Date.now();
+        if (now - e.lastDamageTime > LEAPING_COOLDOWN) {
+          e.lastDamageTime = now;
+          if (typeof player.takeDamage === 'function') {
+            player.takeDamage(LEAPING_DAMAGE, 'leaping_slime', e.mesh.position);
+          } else {
+            playerStats.hp -= LEAPING_DAMAGE;
           }
           if (playerStats && playerStats.hp <= 0) {
             playerStats.hp = 0;
@@ -2837,6 +3070,8 @@
     // Allocate pre-shared Vector3 objects — must be after THREE.js is available
     _tmpV3  = new THREE.Vector3();
     _tmpV3b = new THREE.Vector3();
+    _leapHitNormal = new THREE.Vector3();
+    _leapBulletDir = new THREE.Vector3();
 
     // Renderer - expose as window global for gem-classes.js and other systems
     window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -3662,6 +3897,7 @@
   // architecture — all spawns go through _spawnWave / _activateSlime.
   const WaveManager = {
     _crawlerSpawnTimer: 0,
+    _leapingSpawnTimer: 6,  // initial delay before first leaping slime spawn
     /** Tick wave timers and escalation.  Call once per frame from _animate. */
     update: function(dt) {
       _spawnTimer -= dt;
@@ -3676,6 +3912,14 @@
       if (this._crawlerSpawnTimer <= 0 && _waveSize >= CRAWLER_SPAWN_WAVE_THRESHOLD) {
         this._crawlerSpawnTimer = 8 + Math.random() * 4;
         _spawnCrawler();
+      }
+
+      // Leaping slime spawn: every 6-10 seconds from wave 3 onward
+      this._leapingSpawnTimer -= dt;
+      var LEAPING_SPAWN_WAVE_THRESHOLD = 3;
+      if (this._leapingSpawnTimer <= 0 && _waveSize >= LEAPING_SPAWN_WAVE_THRESHOLD) {
+        this._leapingSpawnTimer = 6 + Math.random() * 4;
+        _spawnLeapingSlime();
       }
 
       _escalationTimer -= dt;
@@ -3748,6 +3992,7 @@
 
       _updateSlime(dt);
       _updateCrawlers(dt);
+      _updateLeapingSlimes(dt);
       _tryFire(dt);
       _updateProjectiles(dt);
       _updateWeaponEffects(dt); // sword/samurai/aura active weapon effects
@@ -3758,7 +4003,11 @@
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
-        player.update(dt, _activeSlimes, _activeProjList, expGems);
+        // Pass all active enemies so auto-aim can target leaping slimes too
+        const _allEnemies = _activeLeapingSlimes.length > 0
+          ? _activeSlimes.concat(_activeLeapingSlimes)
+          : _activeSlimes;
+        player.update(dt, _allEnemies, _activeProjList, expGems);
       }
 
       // Blood system tick
@@ -4148,6 +4397,12 @@
         console.log('[🎮 SandboxLoop] ✓ Crawler pool built (15 slots)');
       }
 
+      // Initialize leaping slime enemy pool
+      if (window.LeapingSlimePool && typeof LeapingSlimePool.init === 'function') {
+        console.log('[🎮 SandboxLoop] Building leaping slime pool...');
+        LeapingSlimePool.init(scene, 20);
+        console.log('[🎮 SandboxLoop] ✓ Leaping slime pool built (20 slots)');
+      }
       // Initialize Grey Boss system
       if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.init(scene, camera, player); }
 
