@@ -321,7 +321,7 @@
   const BONUS_XP_DROP_RATE = 0.1725; // 17.25% chance for a bonus star per kill (+15% increase)
 
   // XP magnetism range - used by ExpGem class for pickup
-  let magnetRange = 4.0; // Base magnetism range (world units)
+  magnetRange = 4.0; // Base magnetism range (world units) — uses global from main.js
 
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)

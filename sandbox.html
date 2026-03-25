@@ -107,8 +107,8 @@
       pointer-events: auto;
     }
 
-    /* ── Sandbox: Level-Up modal — dramatic 1×4 card layout ──────────────
-       4 cards always side-by-side in one row. Big dark backdrop.
+    /* ── Sandbox: Level-Up modal — 2×2 card grid layout ─────────────────
+       4 cards always in a 2×2 square grid. Big dark backdrop.
        Real playing-card proportions. Full dopamine feel.
        ─────────────────────────────────────────────────────────────────── */
 
@@ -119,8 +119,8 @@
     }
 
     #levelup-modal .modal-content {
-      width: min(98vw, 1340px);
-      max-width: min(98vw, 1340px);
+      width: min(98vw, 800px);
+      max-width: min(98vw, 800px);
       background: linear-gradient(160deg, rgba(12,10,30,0.98) 0%, rgba(4,3,14,0.99) 100%) !important;
       border: 2px solid rgba(255,215,0,0.5) !important;
       box-shadow:
@@ -153,29 +153,26 @@
       100% { transform: scale(1.0) translateY(0); opacity: 1; }
     }
 
-    /* 4 cards always in ONE row — never wrap */
+    /* 2×2 grid — 4 cards always in a square arrangement */
     #upgrade-list, #level-up-choices {
-      display: flex !important;
-      flex-direction: row !important;
-      flex-wrap: nowrap !important;
-      justify-content: center !important;
-      align-items: stretch !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
       gap: clamp(10px, 2vw, 22px) !important;
       padding: 8px 4px 4px;
       width: 100%;
+      justify-items: center;
     }
 
     /* ── Playing-card style upgrade cards ── */
     .upgrade-card {
-      width:  clamp(150px, 21vw, 290px) !important;
-      min-height: clamp(220px, 38vh, 380px) !important;
-      height: clamp(220px, 42vh, 400px) !important;
+      width: 100% !important;
+      max-width: clamp(220px, 38vw, 340px) !important;
+      min-height: clamp(200px, 32vh, 340px) !important;
+      height: clamp(200px, 36vh, 360px) !important;
       background: linear-gradient(160deg, #1a162e 0%, #0d0a1e 60%, #080614 100%) !important;
       border-width: 2px !important;
       border-radius: 16px !important;
       padding: 18px 14px 16px !important;
-      flex-shrink: 1 !important;
-      flex-grow: 0 !important;
       min-width: 0 !important;
       display: flex !important;
       flex-direction: column !important;
@@ -241,16 +238,21 @@
       line-height: 1.4;
     }
 
-    /* On very narrow screens (phone portrait) — 2 cards per row */
+    /* On very narrow screens (phone portrait) — compact 2×2 grid */
     @media (max-width: 599px) {
+      #levelup-modal .modal-content {
+        width: 98vw !important;
+        max-width: 98vw !important;
+        padding: 16px 10px 20px !important;
+      }
       #upgrade-list, #level-up-choices {
-        flex-wrap: wrap !important;
         gap: 8px !important;
       }
       .upgrade-card {
-        width: clamp(130px, 44vw, 185px) !important;
-        min-height: clamp(180px, 50vw, 240px) !important;
+        max-width: none !important;
+        min-height: clamp(160px, 42vw, 220px) !important;
         height: auto !important;
+        padding: 12px 10px !important;
       }
     }
 
