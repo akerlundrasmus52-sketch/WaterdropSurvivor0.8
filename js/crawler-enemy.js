@@ -15,12 +15,12 @@ var CRAWLER_CFG = {
   RUSH_SPEED:     4.5,      // burst speed when rushing
   BASE_DAMAGE:    18,       // much more than slimes (8)
   SEGMENT_COUNT:  6,        // body segments (not including head)
-  SEGMENT_RADIUS: 0.22,
-  HEAD_RADIUS:    0.32,
-  SEGMENT_GAP:    0.38,     // distance between segment centers
+  SEGMENT_RADIUS: 0.253,    // 0.22 * 1.15 = 0.253 (15% bigger)
+  HEAD_RADIUS:    0.368,    // 0.32 * 1.15 = 0.368 (15% bigger)
+  SEGMENT_GAP:    0.437,    // 0.38 * 1.15 = 0.437 (15% bigger)
   UNDULATE_SPEED: 5.0,
-  UNDULATE_AMP:   0.12,     // vertical wave amplitude
-  ATTACK_RANGE:   1.5,
+  UNDULATE_AMP:   0.138,    // 0.12 * 1.15 = 0.138 (15% bigger)
+  ATTACK_RANGE:   1.725,    // 1.5 * 1.15 = 1.725 (15% bigger)
   ATTACK_COOLDOWN: 2.0,
   RUSH_COOLDOWN:  6.0,      // seconds between rush attacks
   RUSH_DURATION:  0.8,      // how long the rush lasts
@@ -440,12 +440,14 @@ CrawlerEnemy.prototype.update = function(dt, playerPos) {
       } else {
         this.group.position.x += this.rushDirX * CRAWLER_CFG.RUSH_SPEED * dt;
         this.group.position.z += this.rushDirZ * CRAWLER_CFG.RUSH_SPEED * dt;
-        // Mouth open during rush
-        this.mouthOpen = Math.min(1, this.mouthOpen + dt * CRAWLER_CFG.MOUTH_OPEN_SPEED);
+        // Mouth WIDE open during rush - terrifying attack pose with 1.2x max scale
+        this.mouthOpen = Math.min(1.2, this.mouthOpen + dt * CRAWLER_CFG.MOUTH_OPEN_SPEED * 2.5);
       }
     } else if (dist < CRAWLER_CFG.AGGRO_RANGE) {
-      // Close mouth when not rushing
-      this.mouthOpen = Math.max(0, this.mouthOpen - dt * CRAWLER_CFG.MOUTH_OPEN_SPEED * 0.5);
+      // Close mouth when not rushing or attacking
+      if (this.state !== 'attack') {
+        this.mouthOpen = Math.max(0, this.mouthOpen - dt * CRAWLER_CFG.MOUTH_OPEN_SPEED * 0.5);
+      }
       
       // Try rush
       if (dist < 8 && dist > 3 && this.rushTimer <= 0) {
@@ -461,10 +463,11 @@ CrawlerEnemy.prototype.update = function(dt, playerPos) {
         this.state = 'flank';
         this.flankDir = Math.random() < 0.5 ? 1 : -1;
       }
-      // Attack
+      // Attack - dramatically open mouth showing teeth
       else if (dist < CRAWLER_CFG.ATTACK_RANGE && this.attackTimer <= 0) {
         this.state = 'attack';
-        this.mouthOpen = Math.min(1, this.mouthOpen + dt * CRAWLER_CFG.MOUTH_OPEN_SPEED * 2);
+        // Wide open mouth during attack - 1.5x speed for dramatic effect
+        this.mouthOpen = Math.min(1.2, this.mouthOpen + dt * CRAWLER_CFG.MOUTH_OPEN_SPEED * 3);
       }
       // Chase
       else if (this.state !== 'flank') {
