@@ -652,7 +652,7 @@ _dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
 );
 _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
-_dropIM.count = CFG.DROP_COUNT;
+_dropIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active drops
 _scene.add(_dropIM);
 
 // Pre-create drop data objects
@@ -682,7 +682,7 @@ _mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
 );
 _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
-_mistIM.count = CFG.MIST_COUNT;
+_mistIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active mist
 _scene.add(_mistIM);
 
 _mistData = [];
@@ -729,6 +729,7 @@ var mat = new THREE.MeshBasicMaterial({
 transparent: true,
 opacity:     0.80,
 depthWrite:  false,
+depthTest:   true,  // FIXED: Explicitly enable depth test to prevent z-fighting
 polygonOffset: true,
 polygonOffsetFactor: -1,
 polygonOffsetUnits: -1,
@@ -911,28 +912,34 @@ _goreMap.delete(eId);
   _frame++;
 
 var dirty = false;
+var activeDropCount = 0; // Track active drops for dynamic InstancedMesh.count
 
 // ── Update blood drops ───────────────────
 for (var i = 0; i < _dropData.length; i++) {
 var d = _dropData[i];
 if (!d.alive) continue;
 _updateDrop(d, dt, _dropIM, false);
+activeDropCount++;
 dirty = true;
 }
 if (dirty) {
+  _dropIM.count = activeDropCount; // FIXED: Dynamically set count to only render active drops
   _dropIM.instanceMatrix.needsUpdate = true;
   if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
 }
 
 // ── Update mist ──────────────────────────
 var mistDirty = false;
+var activeMistCount = 0; // Track active mist for dynamic InstancedMesh.count
 for (var i = 0; i < _mistData.length; i++) {
 var d = _mistData[i];
 if (!d.alive) continue;
 _updateDrop(d, dt, _mistIM, true);
+activeMistCount++;
 mistDirty = true;
 }
 if (mistDirty) {
+  _mistIM.count = activeMistCount; // FIXED: Dynamically set count to only render active mist
   _mistIM.instanceMatrix.needsUpdate = true;
   if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
 }
