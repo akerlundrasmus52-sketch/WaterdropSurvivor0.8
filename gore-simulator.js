@@ -22,7 +22,7 @@
   var DECAL_FADE_TIME    = 40.0;
   var GROUND_Y           = 0.02;
 
-  /* ── enemy gore colour palettes ─────────────────────────────────────── */
+  /* ── enemy gore color palettes ────────────────────────────────────────── */
   var ENEMY_GORE_COLORS = {
     slime:         { chunk: 0x1adb4e, blood: 0x0d8c2e, body: 0x33cc44 },
     bug:           { chunk: 0xb8e000, blood: 0x6a8000, body: 0xeeff00 },
@@ -179,7 +179,7 @@
     brain:     'Central neural cluster',
     heart:     'Primary circulatory pump',
     guts:      'Digestive cavity',
-    coreFluid: 'Pressurised core fluid reservoir',
+    coreFluid: 'Pressurized core fluid reservoir',
     head:      'Cranial segment',
     thorax:    'Thoracic cavity',
     abdomen:   'Abdominal segment',
