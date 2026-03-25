@@ -2033,7 +2033,18 @@ function levelUp(freeLevel = false) {
     return;
   }
   
-  playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 1.8));
+  // XP curve tuned for 65 level max: fast early (1-20), moderate mid (20-40), slow late (40-65)
+  // Uses hybrid formula with linear + polynomial scaling
+  if (playerStats.lvl <= 20) {
+    // Fast early game: levels 1-20 are quick
+    playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 1.4));
+  } else if (playerStats.lvl <= 40) {
+    // Moderate mid game: levels 20-40 slow down
+    playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 1.75));
+  } else {
+    // Slow late game: levels 40-65 are very slow
+    playerStats.expReq = Math.floor(GAME_CONFIG.baseExpReq * Math.pow(playerStats.lvl, 2.1));
+  }
   
   if (playerStats.lvl >= 15 && saveData.tutorialQuests &&
       saveData.tutorialQuests.currentQuest === 'quest_eggHunt' &&
