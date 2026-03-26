@@ -937,7 +937,7 @@
           // Enhanced water droplet trail when moving - MORE PARTICLES
           if (this.velocity.length() > 0.01) {
             this.trailTimer += dt;
-            if (this.trailTimer > 0.25) { // Trail frequency (was 0.12)
+            if (this.trailTimer > 0.25) { // Trail frequency (was 0.15)
               this.trailTimer = 0;
               spawnWaterDroplet(this.mesh.position);
               // Add extra splash particles during movement

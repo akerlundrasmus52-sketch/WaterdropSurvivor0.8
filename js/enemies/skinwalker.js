@@ -529,8 +529,8 @@
         var p = this.parts;
         var PI = Math.PI;
 
-        // Body rocks side-to-side as weight shifts between limb pairs
-        var bodySway = Math.sin(t * 1.4) * 0.06; // half-freq of limb cycle = subtle roll
+        // Body rocks side-to-side as weight shifts between limb pairs (half limb freq = 0.9)
+        var bodySway = Math.sin(t * 0.9) * 0.06; // half-freq of limb cycle = subtle roll
         p.root.rotation.x  = PI * 0.38;
         p.root.rotation.z  = bodySway;
         p.torso.position.y = 0.60 + Math.abs(Math.sin(t * 2.8)) * 0.04; // slight vertical bounce
