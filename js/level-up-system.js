@@ -1506,6 +1506,43 @@ window.spawnBossChest = function(x, z) {
         holdRingEl.className = 'hold-ring';
         card.appendChild(holdRingEl);
 
+        // Hold-progress indicator (border fills during 1.2s hold)
+        const holdProgressEl = document.createElement('div');
+        holdProgressEl.className = 'hold-progress';
+        card.appendChild(holdProgressEl);
+
+        // Animated spinning border glow (conic gradient sweep)
+        const borderFlowEl = document.createElement('div');
+        borderFlowEl.className = 'border-flow';
+        card.appendChild(borderFlowEl);
+
+        // Melting drip drops hanging from the bottom border
+        const _rarityDripCounts = { common: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
+        const _dripCount = rarityInfo ? (_rarityDripCounts[rarityInfo.name] || 2) : 2;
+        for (let _d = 0; _d < _dripCount; _d++) {
+          const dripEl = document.createElement('div');
+          dripEl.className = 'card-drip';
+          dripEl.style.setProperty('--drip-dur',   (1.6 + Math.random() * 1.4).toFixed(2) + 's');
+          dripEl.style.setProperty('--drip-delay',  (_d * 0.3 + Math.random() * 0.6).toFixed(2) + 's');
+          dripEl.style.left  = (8 + Math.random() * 84) + '%';
+          dripEl.style.width = (4 + Math.random() * 5) + 'px';
+          card.appendChild(dripEl);
+        }
+
+        // Side melt streaks on epic/legendary/mythic cards
+        if (rarityInfo && (rarityInfo.name === 'epic' || rarityInfo.name === 'legendary' || rarityInfo.name === 'mythic')) {
+          [['left', '-2px'], ['right', '-2px']].forEach(([side, val]) => {
+            const stEl = document.createElement('div');
+            stEl.className = 'card-streak';
+            stEl.style.setProperty('--streak-dur',   (2.2 + Math.random() * 1.8).toFixed(2) + 's');
+            stEl.style.setProperty('--streak-delay',  (Math.random() * 1.8).toFixed(2) + 's');
+            stEl.style.top    = (20 + Math.random() * 40) + '%';
+            stEl.style.height = (25 + Math.random() * 30) + 'px';
+            stEl.style[side]  = val;
+            card.appendChild(stEl);
+          });
+        }
+
         // Shared "apply and close" logic called when hold completes
         const applyUpgradeAndClose = () => {
           const allCards = list.querySelectorAll('.upgrade-card');
@@ -1669,7 +1706,7 @@ window.spawnBossChest = function(x, z) {
             if (card.dataset.selected === '1' && modal.style.display !== 'none') {
               applyUpgradeAndClose();
             }
-          }, 450);
+          }, 1200);
           activeHold = { timer: holdTimer, card };
         });
 

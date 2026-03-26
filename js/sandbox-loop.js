@@ -1127,7 +1127,8 @@
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit = Math.random() < critChance;
     const critMultiplier = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
-    const actualDmg = Math.round(damage * hitForce * critMultiplier);
+    const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+    const actualDmg = Math.round(damage * hitForce * critMultiplier * strMult);
 
     slot.hp -= actualDmg;
     slot.flashTimer = 0.1;
@@ -1344,7 +1345,8 @@
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit = Math.random() < critChance;
     const critMultiplier = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
-    const actualDmg = Math.round(damage * hitForce * critMultiplier);
+    const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+    const actualDmg = Math.round(damage * hitForce * critMultiplier * strMult);
 
     crawler.hp -= actualDmg;
     crawler.flashTimer = 0.1;
@@ -1550,17 +1552,16 @@
       ? window.LeapingSlimePool.hit(enemy, weaponKey, weaponLevel, _tmpV3, hitNormal, bulletDir)
       : null;
 
+    const leapStrMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
     const actualDmg = result
-      ? Math.round(result.damage * (isCrit ? critMult : 1.0))
-      : Math.round(15 * hitForce * critMult);
+      ? Math.round(result.damage * (isCrit ? critMult : 1.0) * leapStrMult)
+      : Math.round(15 * hitForce * critMult * leapStrMult);
 
-    // Extra crit damage not already applied inside receiveHit.
-    // Apply even on killing blows so HP reduction matches the displayed crit damage,
-    // but clamp HP to zero to avoid negative values.
-    if (isCrit && result) {
-      const extraCritDmg = Math.round(result.damage * (critMult - 1.0));
-      if (extraCritDmg > 0) {
-        enemy.hp -= extraCritDmg;
+    // Extra crit+strength damage not already applied inside receiveHit.
+    if (result) {
+      const extraDmg = Math.round(result.damage * ((isCrit ? critMult : 1.0) * leapStrMult - 1.0));
+      if (extraDmg > 0) {
+        enemy.hp -= extraDmg;
         if (enemy.hp < 0) enemy.hp = 0;
       }
     }
@@ -4135,7 +4136,8 @@
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit   = Math.random() < critChance;
     const critMult = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
-    const actualDmg = Math.round(damage * hitForce * critMult);
+    const swStrMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+    const actualDmg = Math.round(damage * hitForce * critMult * swStrMult);
 
     sw.takeDamage(actualDmg);
 
