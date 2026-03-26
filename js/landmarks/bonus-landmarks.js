@@ -490,18 +490,59 @@
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // update(dt) — called every frame from the sandbox animate loop
+    // update(dt, playerPos) — called every frame from the sandbox animate loop
     // ══════════════════════════════════════════════════════════════════════════
-    update(dt) {
+    update(dt, playerPos) {
       const THREE = global.THREE;
 
       this.fireTime   += dt;
       this.debrisTime += dt;
       this.wellTime   += dt;
 
-      this._updateFireCircle(dt);
-      this._updateAlienCrash(dt);
-      this._updateStoneWell(dt);
+      // Performance: skip particle updates if player is too far away
+      const MAX_PARTICLE_DIST = 60; // Only animate particles within 60 units
+      const MAX_PARTICLE_DIST_SQ = MAX_PARTICLE_DIST * MAX_PARTICLE_DIST;
+
+      // Fire Circle at (-18, 0, -28)
+      var fireDistSq = Infinity;
+      if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
+        var dx = -18 - playerPos.x;
+        var dz = -28 - playerPos.z;
+        fireDistSq = dx * dx + dz * dz;
+      }
+      if (fireDistSq < MAX_PARTICLE_DIST_SQ) {
+        this._updateFireCircle(dt);
+      } else {
+        // Still update light flicker for distant fire
+        if (this._fireLight) {
+          const t = this.fireTime;
+          const flicker = 1.0 + Math.sin(t * 8.5) * 0.25 + Math.sin(t * 13.2) * 0.12;
+          this._fireLight.intensity = 1.4 * flicker;
+          if (this._fireLight2) this._fireLight2.intensity = 0.3 * flicker;
+        }
+      }
+
+      // Alien Crash at (-30, 0, -55)
+      var debrisDistSq = Infinity;
+      if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
+        var dx2 = -30 - playerPos.x;
+        var dz2 = -55 - playerPos.z;
+        debrisDistSq = dx2 * dx2 + dz2 * dz2;
+      }
+      if (debrisDistSq < MAX_PARTICLE_DIST_SQ) {
+        this._updateAlienCrash(dt);
+      }
+
+      // Stone Well at (10, 0, 25)
+      var wellDistSq = Infinity;
+      if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
+        var dx3 = 10 - playerPos.x;
+        var dz3 = 25 - playerPos.z;
+        wellDistSq = dx3 * dx3 + dz3 * dz3;
+      }
+      if (wellDistSq < MAX_PARTICLE_DIST_SQ) {
+        this._updateStoneWell(dt);
+      }
     }
 
     // ── Fire Circle update ────────────────────────────────────────────────────
