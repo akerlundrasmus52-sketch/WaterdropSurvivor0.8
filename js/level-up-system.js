@@ -1691,6 +1691,11 @@ window.spawnBossChest = function(x, z) {
       modal.style.animation = existingAnimation
         ? existingAnimation + ', ' + wallFadeInAnim
         : wallFadeInAnim;
+      // Trigger entrance animation on cards
+      modal.classList.remove('lvl-entering');
+      void modal.offsetHeight;
+      modal.classList.add('lvl-entering');
+      setTimeout(function() { modal.classList.remove('lvl-entering'); }, 700);
 
       // --- Dopamine level-up FX: time dilation, camera zoom, chromatic aberration ---
       if (window.DopamineSystem && window.DopamineSystem.LevelUpFX) {
