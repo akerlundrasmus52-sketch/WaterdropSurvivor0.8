@@ -29,7 +29,6 @@
       this._debrisCores      = [];
       this._debrisCoreLights = [];
       this._debrisSteam      = [];
-      this._debrisSteamLights = [];
 
       this._wellRopeSegs     = [];
       this._wellGlowLight    = null;
@@ -73,6 +72,9 @@
         lintelPairs.push([idx, idx + 1]);
       }
 
+      // Pre-compute stone heights so lintels can use the real neighbor heights
+      const stoneHeights = Array.from({ length: 9 }, () => 1.8 + rand() * 0.6);
+
       for (let i = 0; i < 9; i++) {
         const angle = (i / 9) * PI * 2;
         const r     = 4.5;
@@ -80,7 +82,7 @@
         const sz    = Math.sin(angle) * r;
 
         const w = 0.5 + rand() * 0.2;
-        const h = 1.8 + rand() * 0.6;
+        const h = stoneHeights[i];
         const d = 0.35 + rand() * 0.15;
 
         const stoneGeo  = new THREE.BoxGeometry(w, h, d);
@@ -109,8 +111,8 @@
             const midX     = (sx + sx2) / 2;
             const midZ     = (sz + sz2) / 2;
 
-            // Heights of the two stones
-            const h2 = 1.8 + rand() * 0.6;
+            // Use the actual pre-computed height of the neighboring stone
+            const h2 = stoneHeights[i + 1];
             const topY = Math.min(h, h2) + 0.175;
 
             const lintelGeo  = new THREE.BoxGeometry(1.2, 0.35, 0.4);
@@ -187,7 +189,6 @@
         const angle = rand() * PI * 2;
         const r     = rand() * 0.35;
         e.position.set(Math.cos(angle) * r, rand() * 0.3, Math.sin(angle) * r);
-        e.userData.vy      = 0.2 + rand() * 0.2;
         e.userData.life    = rand(); // 0–1 normalised progress
         e.userData.baseX   = e.position.x;
         e.userData.baseZ   = e.position.z;
@@ -203,7 +204,6 @@
         const angle = rand() * PI * 2;
         const r     = rand() * 0.4;
         s.position.set(Math.cos(angle) * r, rand() * 2.5, Math.sin(angle) * r);
-        s.userData.vy        = 0.15 + rand() * 0.15;
         s.userData.life      = rand(); // normalised 0–1 (fraction of 3s lifetime)
         s.userData.baseX     = s.position.x;
         s.userData.baseZ     = s.position.z;
@@ -318,8 +318,7 @@
       }
 
       // ── Steam vents ───────────────────────────────────────────────────────
-      this._debrisSteam       = [];
-      this._debrisSteamLights = [];
+      this._debrisSteam = [];
       const VENT_COUNT = 4;
       const ventPositions = [
         [-1.5, 0, -1.5],
@@ -339,7 +338,6 @@
             vy + rand() * 2.5,
             vz + (rand() - 0.5) * 0.2
           );
-          sMesh.userData.vy   = 0.3 + rand() * 0.4;
           sMesh.userData.life = rand(); // normalised 0–1 over 2.5s
           sMesh.userData.baseX = vx;
           sMesh.userData.baseZ = vz;
@@ -351,7 +349,6 @@
         const vLight = new THREE.PointLight(0x4488ff, 0.2, 3);
         vLight.position.set(vx, vy + 0.3, vz);
         root.add(vLight);
-        this._debrisSteamLights.push(vLight);
       }
 
       // ── Warning panel ─────────────────────────────────────────────────────
@@ -402,7 +399,7 @@
       outerWall.position.y = 0.5;
       root.add(outerWall);
 
-      const voidGeo  = new THREE.CylinderGeometry(0.85, 0.85, 1.1, 12);
+      const voidGeo  = new THREE.CylinderGeometry(0.85, 0.85, 1.1, 12, 1, true);
       const voidMat  = new THREE.MeshBasicMaterial({ color: 0x020202, side: THREE.BackSide });
       const voidMesh = new THREE.Mesh(voidGeo, voidMat);
       voidMesh.position.y = 0.55;
@@ -564,10 +561,11 @@
         s.material.opacity = Math.max(0, 0.4 * (1.0 - s.userData.life));
       }
 
-      // Fire light flicker
+      // Fire light flicker (both lights)
       if (this._fireLight) {
         const flicker = 1.0 + Math.sin(t * 8.5) * 0.25 + Math.sin(t * 13.2) * 0.12;
         this._fireLight.intensity = 1.4 * flicker;
+        if (this._fireLight2) this._fireLight2.intensity = 0.3 * flicker;
       }
     }
 
