@@ -4184,6 +4184,10 @@
         }
       }
 
+      // Ancient Pyramid animation
+      var engine2Inst = window._engine2Instance;
+      if (engine2Inst && engine2Inst._pyramid) { engine2Inst._pyramid.update(dt); }
+
       // Camera shake & pooled flash updates
       _updateCameraShake(dt);
       _updateFlashPool(dt);

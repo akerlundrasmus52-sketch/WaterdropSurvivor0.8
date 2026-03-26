@@ -826,6 +826,12 @@ class Engine2Sandbox {
     };
 
     console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
+
+    // ===== LANDMARK 4: ANCIENT PYRAMID =====
+    if (typeof AncientPyramid !== 'undefined') {
+      this._pyramid = new AncientPyramid(this.scene);
+    }
+
     console.log('[Engine2] ✓ All landmarks created successfully');
   }
 
