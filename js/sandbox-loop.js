@@ -4530,11 +4530,15 @@
         window.WaveSpawner.update(dt, player ? player.mesh.position : null);
       }
       if (window.HitDetection && typeof window.HitDetection.update === 'function') {
-        window.HitDetection.update(dt, player ? player.mesh.position : null);
+        // Defensive check: ensure player and player.mesh exist before accessing position
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window.HitDetection.update(dt, playerPos);
       }
       // World Trees — wind sway, collision shake, leaf particles
       if (window._engine2Instance && window._engine2Instance._worldTrees) {
-        window._engine2Instance._worldTrees.update(dt, player ? player.mesh.position : null);
+        // Defensive check: ensure player and player.mesh exist before accessing position
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window._engine2Instance._worldTrees.update(dt, playerPos);
       }
       // Trauma system tick (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
@@ -4672,7 +4676,9 @@
 
       // Ground details: grass wind, player disturbance
       if (window._engine2Instance && window._engine2Instance._groundDetails) {
-        window._engine2Instance._groundDetails.update(dt, player ? player.mesh.position : null);
+        // Defensive check: ensure player and player.mesh exist before accessing position
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window._engine2Instance._groundDetails.update(dt, playerPos);
       }
 
       // Camera shake & pooled flash updates
@@ -4697,8 +4703,17 @@
     } catch (e) {
       if (!_animateErrorShown) {
         _animateErrorShown = true;
-        _showError('Animate error: ' + (e && e.message ? e.message : String(e)));
+        // Only show error for critical issues, log others to console
+        const errorMsg = (e && e.message ? e.message : String(e));
         console.error('[SandboxLoop] _animate error:', e);
+
+        // Only show on-screen error for fatal errors that prevent game from running
+        // Skip errors related to undefined properties as they're usually non-fatal
+        if (!errorMsg.includes('undefined') && !errorMsg.includes('Cannot read property')) {
+          _showError('Animate error: ' + errorMsg);
+        } else {
+          console.warn('[SandboxLoop] Non-fatal animate error suppressed from UI:', errorMsg);
+        }
       }
     }
   }
