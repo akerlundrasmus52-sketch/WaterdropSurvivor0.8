@@ -838,6 +838,7 @@ class Engine2Sandbox {
     // Ground details: tall grass, fallen logs, rock clusters, scatter debris
     if (typeof GroundDetails !== 'undefined') {
       this._groundDetails = new GroundDetails(this.scene);
+    }
     // ══════════════════════════════════════════════════════════════
     // 4. ANNUNAKI TABLET — Southwest area (-35, 15)
     // ══════════════════════════════════════════════════════════════
