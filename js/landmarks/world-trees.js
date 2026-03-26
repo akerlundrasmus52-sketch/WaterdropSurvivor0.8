@@ -500,8 +500,21 @@
   // UPDATE — called each frame from sandbox-loop.js
   // ==========================================================================
   WorldTrees.prototype.update = function(dt, playerPos) {
+    // Performance: skip every other frame for distant tree updates
+    this._frameSkip = (this._frameSkip || 0) + 1;
+    var skipFrame = (this._frameSkip % 2 === 0);
+
     for (var i = 0; i < this._trees.length; i++) {
       var tree = this._trees[i];
+
+      // Calculate distance to player for LOD
+      var distToPlayerSq = Infinity;
+      if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
+        var dx_player = tree.pos.x - playerPos.x;
+        var dz_player = tree.pos.z - playerPos.z;
+        distToPlayerSq = dx_player * dx_player + dz_player * dz_player;
+      }
+      var isNear = distToPlayerSq < 50 * 50; // Within 50 units
 
       // ── Wind sway ──────────────────────────────────────────────────────────
       tree.windTime += dt;
@@ -513,22 +526,25 @@
       tree.foliageRoot.rotation.x = windX;
       tree.foliageRoot.rotation.z = windZ;
 
-      // Per-cluster micro-sway
-      var clusterTime = tree.windTime * tree.scale;
-      for (var c = 0; c < tree.clusters.length; c++) {
-        var ct = clusterTime + c * 0.45;
-        tree.clusters[c].rotation.x = Math.sin(ct * 1.8) * 0.018;
-        tree.clusters[c].rotation.z = Math.cos(ct * 1.5) * 0.015;
+      // Per-cluster micro-sway (skip for distant trees on alternating frames)
+      if (isNear || !skipFrame) {
+        var clusterTime = tree.windTime * tree.scale;
+        for (var c = 0; c < tree.clusters.length; c++) {
+          var ct = clusterTime + c * 0.45;
+          tree.clusters[c].rotation.x = Math.sin(ct * 1.8) * 0.018;
+          tree.clusters[c].rotation.z = Math.cos(ct * 1.5) * 0.015;
+        }
       }
 
       // ── Collision shake ────────────────────────────────────────────────────
-      if (playerPos) {
+      // Extra safety: check playerPos exists and has valid x/z properties
+      if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
         var dx = playerPos.x - tree.pos.x;
         var dz = playerPos.z - tree.pos.z;
-        var distSq = (dx * dx + dz * dz) / (tree.scale * tree.scale);
+        var collideDistSq = (dx * dx + dz * dz) / (tree.scale * tree.scale);
         var collideSq = COLLIDE_RADIUS * COLLIDE_RADIUS;
 
-        if (distSq < collideSq && tree.shakeTime <= 0) {
+        if (collideDistSq < collideSq && tree.shakeTime <= 0) {
           tree.shakeTime = 0.8;
           tree.shakeIntensity = 0.12;
 

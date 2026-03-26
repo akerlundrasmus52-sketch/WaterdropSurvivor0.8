@@ -445,13 +445,30 @@
     var dummy        = this._dummy;
     var blades       = this._blades;
     var t0           = this.globalTime;
-    var checkPlayer  = (this._frameCount % 4 === 0) && !!playerPos;
+    // Extra safety: check playerPos exists and has valid x/z properties
+    var checkPlayer  = (this._frameCount % 4 === 0) &&
+                       !!playerPos &&
+                       typeof playerPos.x === 'number' &&
+                       typeof playerPos.z === 'number';
+
+    // Performance optimization: only update blades within reasonable distance
+    var MAX_UPDATE_DIST_SQ = 80 * 80; // Only update grass within 80 units
+    var px = playerPos ? playerPos.x : 0;
+    var pz = playerPos ? playerPos.z : 0;
 
     for (var i = 0; i < blades.length; i++) {
       var blade = blades[i];
 
-      // ── Player disturbance check (every 4 frames) ──────────────────────
-      if (checkPlayer) {
+      // Skip distant blades for performance (static wind animation only)
+      var distSq = 0;
+      if (playerPos) {
+        var dx_cam = blade.px - px;
+        var dz_cam = blade.pz - pz;
+        distSq = dx_cam * dx_cam + dz_cam * dz_cam;
+      }
+
+      // ── Player disturbance check (every 4 frames, only for nearby blades) ──
+      if (checkPlayer && distSq < MAX_UPDATE_DIST_SQ) {
         var dx = blade.px - playerPos.x;
         var dz = blade.pz - playerPos.z;
         var d2 = dx * dx + dz * dz;

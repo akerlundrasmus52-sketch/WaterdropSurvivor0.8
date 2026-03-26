@@ -157,10 +157,12 @@
       const ws = (typeof weapons    !== 'undefined') ? weapons    : null;
       const now = Date.now();
 
-      // Build weapon slots
+      // Build weapon slots (skip default gun, only show upgrades)
       const weaponSlots = [];
       if (ws) {
         for (const key of Object.keys(_WEAPON_ICONS)) {
+          // Skip default gun - it's standard equipment, not an upgrade
+          if (key === 'gun') continue;
           const w = ws[key];
           if (!w || !w.active) continue;
           const def = _WEAPON_ICONS[key];
@@ -169,79 +171,89 @@
           const elapsed = now - last;
           const cdPct = cd > 0 ? Math.max(0, Math.min(100, ((cd - elapsed) / cd) * 100)) : 0;
           const isReady = cdPct <= 0;
-          weaponSlots.push({ id: 'w_' + key, icon: def.icon, label: def.label, cdPct, isReady });
+          const remainingMs = cd > 0 ? Math.max(0, cd - elapsed) : 0;
+          weaponSlots.push({ id: 'w_' + key, icon: def.icon, label: def.label, cdPct, remainingMs, isReady });
         }
       }
+      // Show at most 4 weapons (sandbox allows four active concurrently)
+      const limitedWeapons = weaponSlots.slice(0, 4);
 
       // Build passive slots
       const passiveSlots = [];
       if (ps) {
         for (const def of _PASSIVE_ICONS) {
           if (def.check(ps)) {
-            passiveSlots.push({ id: 'p_' + def.id, icon: def.icon, label: def.label, cdPct: 0, isReady: true });
+            passiveSlots.push({ id: 'p_' + def.id, icon: def.icon, label: def.label, cdPct: 0, remainingMs: 0, isReady: true });
           }
         }
       }
 
       // Rebuild panel if slot count changed (avoids thrashing DOM every frame)
-      const allSlots = [...weaponSlots, ...passiveSlots];
-      const panelKey = allSlots.map(s => s.id).join(',');
+      const panelKey = limitedWeapons.map(s => s.id).join(',') + '|' + passiveSlots.map(s => s.id).join(',');
       if (panel._panelKey !== panelKey) {
         panel._panelKey = panelKey;
         panel.innerHTML = '';
-        if (weaponSlots.length > 0) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'skill-icons-wrapper';
+        panel.appendChild(wrapper);
+        if (limitedWeapons.length > 0) {
+          const section = document.createElement('div');
+          section.className = 'skill-icons-section weapons-section';
           const label = document.createElement('div');
-          label.className = 'skill-row-label';
-          label.textContent = 'WEAPONS';
-          panel.appendChild(label);
-          const row = document.createElement('div');
-          row.className = 'skill-icons-row';
-          row.id = 'skill-row-weapons';
-          panel.appendChild(row);
+          label.className = 'skill-section-title';
+          label.textContent = 'Active Weapons';
+          const grid = document.createElement('div');
+          grid.className = 'skill-icons-grid weapon-grid';
+          grid.id = 'skill-grid-weapons';
+          section.appendChild(label);
+          section.appendChild(grid);
+          wrapper.appendChild(section);
         }
         if (passiveSlots.length > 0) {
+          const section = document.createElement('div');
+          section.className = 'skill-icons-section passives-section';
           const label = document.createElement('div');
-          label.className = 'skill-row-label';
-          label.textContent = 'PASSIVES';
-          panel.appendChild(label);
-          const row = document.createElement('div');
-          row.className = 'skill-icons-row';
-          row.id = 'skill-row-passives';
-          panel.appendChild(row);
+          label.className = 'skill-section-title';
+          label.textContent = 'Passive Upgrades';
+          const grid = document.createElement('div');
+          grid.className = 'skill-icons-grid passive-grid';
+          grid.id = 'skill-grid-passives';
+          section.appendChild(label);
+          section.appendChild(grid);
+          wrapper.appendChild(section);
         }
       }
 
-      // Update weapon row slots
-      const weapRow = document.getElementById('skill-row-weapons');
-      if (weapRow) {
-        // Sync slot count
-        while (weapRow.children.length < weaponSlots.length) {
-          const slot = _makeSkillSlot();
-          weapRow.appendChild(slot);
+      // Update weapon grid slots
+      const weapGrid = document.getElementById('skill-grid-weapons');
+      if (weapGrid) {
+        while (weapGrid.children.length < limitedWeapons.length) {
+          const slot = _makeSkillSlot(true);
+          weapGrid.appendChild(slot);
         }
-        while (weapRow.children.length > weaponSlots.length) {
-          weapRow.removeChild(weapRow.lastChild);
+        while (weapGrid.children.length > limitedWeapons.length) {
+          weapGrid.removeChild(weapGrid.lastChild);
         }
-        weaponSlots.forEach((s, i) => _updateSlotEl(weapRow.children[i], s, now));
+        limitedWeapons.forEach((s, i) => _updateSlotEl(weapGrid.children[i], s, now, true));
       }
 
-      // Update passive row slots
-      const passRow = document.getElementById('skill-row-passives');
-      if (passRow) {
-        while (passRow.children.length < passiveSlots.length) {
-          const slot = _makeSkillSlot();
-          passRow.appendChild(slot);
+      // Update passive grid slots
+      const passGrid = document.getElementById('skill-grid-passives');
+      if (passGrid) {
+        while (passGrid.children.length < passiveSlots.length) {
+          const slot = _makeSkillSlot(false);
+          passGrid.appendChild(slot);
         }
-        while (passRow.children.length > passiveSlots.length) {
-          passRow.removeChild(passRow.lastChild);
+        while (passGrid.children.length > passiveSlots.length) {
+          passGrid.removeChild(passGrid.lastChild);
         }
-        passiveSlots.forEach((s, i) => _updateSlotEl(passRow.children[i], s, now));
+        passiveSlots.forEach((s, i) => _updateSlotEl(passGrid.children[i], s, now, false));
       }
     }
 
-    function _makeSkillSlot() {
+    function _makeSkillSlot(isWeapon) {
       const slot = document.createElement('div');
-      slot.className = 'skill-icon-slot';
+      slot.className = 'skill-icon-slot ' + (isWeapon ? 'weapon-slot' : 'passive-slot');
       const iconEl = document.createElement('span');
       iconEl.className = 'skill-icon-emoji';
       slot.appendChild(iconEl);
@@ -251,15 +263,22 @@
       const cdText = document.createElement('div');
       cdText.className = 'skill-icon-cd-text';
       slot.appendChild(cdText);
+      const label = document.createElement('div');
+      label.className = 'skill-icon-label';
+      slot.appendChild(label);
       return slot;
     }
 
-    function _updateSlotEl(el, s, now) {
+    function _updateSlotEl(el, s, now, isWeapon) {
       if (!el) return;
+      el.classList.toggle('weapon-slot', !!isWeapon);
+      el.classList.toggle('passive-slot', !isWeapon);
       const iconEl  = el.querySelector('.skill-icon-emoji');
       const cdEl    = el.querySelector('.skill-icon-cd');
       const cdText  = el.querySelector('.skill-icon-cd-text');
+      const labelEl = el.querySelector('.skill-icon-label');
       if (iconEl) iconEl.textContent = s.icon;
+      if (labelEl) labelEl.textContent = s.label;
       el.title = s.label;
 
       const wasReady = _iconPrevReady[s.id];
@@ -284,7 +303,7 @@
         cdEl.style.display = s.cdPct > 0 ? 'block' : 'none';
       }
       if (cdText) {
-        cdText.textContent = '';
+        cdText.textContent = s.cdPct > 0 ? Math.max(0, Math.ceil((s.remainingMs || 0) / 1000)).toString() : '';
       }
     }
 
@@ -1681,4 +1700,3 @@ window.GameMilestones = (function () {
 
   return { getStats, getMilestones, tick, recordKill, recordDamageDealt, recordDamageTaken, recordLevel, checkMilestones, showMilestonePopup };
 }());
-

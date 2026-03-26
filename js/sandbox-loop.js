@@ -324,6 +324,13 @@
   // XP magnetism range - used by ExpGem class for pickup
   magnetRange = 4.0; // Base magnetism range (world units) — uses global from main.js
 
+  // Minimal HP bar updater (prevents missing function errors, stores hp ratio for future UI hooks)
+  function _updateSlimeHPBar(slot) {
+    if (!slot) return;
+    const max = slot.maxHp || SLIME_HP;
+    slot._hpRatio = max > 0 ? Math.max(0, Math.min(1, slot.hp / max)) : 0;
+  }
+
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
   const SHAKE_DURATION_SCALE       = 0.2;  // intensity × this = shake duration in seconds
@@ -2925,7 +2932,11 @@
   let _smoothInputZ = 0;    // lerped input direction Z
 
   function _tryFire(dt) {
-    if (!player) return;
+    if (!player || !player.mesh) return;
+
+    // Player position for aim calculations
+    const px = player.mesh.position.x;
+    const pz = player.mesh.position.z;
 
     // Effective magazine size and reload time — read from playerStats if available
     const _effMaxAmmo    = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
@@ -2966,7 +2977,7 @@
     _gunCooldown = cooldown;
     if (weapons && weapons.gun) weapons.gun.lastShot = Date.now(); // track for skill-icon cooldown overlay
 
-    // Manual aim: joystick takes priority, then mouse. No auto-aim fallback.
+    // Manual aim: joystick takes priority, then mouse, then auto-aim to nearest enemy.
     let tx, tz;
     if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
       tx = px + _aimJoy.dx * 10;
@@ -2975,7 +2986,34 @@
       tx = _mouse.worldX;
       tz = _mouse.worldZ;
     } else {
-      return; // no aim input — don't fire
+      // Auto-aim fallback: find nearest enemy within gun range
+      const gunRange = (weapons && weapons.gun && weapons.gun.range) || 12;
+      const gunRangeSq = gunRange * gunRange;
+      let nearestEnemy = null;
+      let nearestDistSq = gunRangeSq;
+
+      // Iterate each active-enemy array directly to avoid GC allocation from .concat()
+      const enemySources = [_activeSlimes, _activeLeapingSlimes, _activeCrawlers, _activeSkinwalkers];
+      for (let s = 0; s < enemySources.length; s++) {
+        const arr = enemySources[s];
+        if (!Array.isArray(arr)) continue;
+        for (let i = 0; i < arr.length; i++) {
+          const e = arr[i];
+          if (!e || !e.mesh) continue;
+          const dx = e.mesh.position.x - px;
+          const dz = e.mesh.position.z - pz;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < nearestDistSq) {
+            nearestDistSq = distSq;
+            nearestEnemy = e;
+          }
+        }
+      }
+
+      if (!nearestEnemy) return; // no enemies in range — don't fire
+
+      tx = nearestEnemy.mesh.position.x;
+      tz = nearestEnemy.mesh.position.z;
     }
 
     _revolverAmmo--;
@@ -3436,6 +3474,17 @@
     const applyQualBtn  = document.getElementById('apply-quality-btn');
 
     if (!settingsBtn || !settingsModal || !closeBtn) return;
+
+    // Provide desktop-friendly defaults in sandbox; actual firing is driven by _aimJoy/mouse,
+    // not controlType. Only set these if they haven't been initialized yet (e.g., from saves).
+    if (window.gameSettings) {
+      if (typeof window.gameSettings.autoAim === 'undefined') {
+        window.gameSettings.autoAim = true;
+      }
+      if (typeof window.gameSettings.controlType === 'undefined') {
+        window.gameSettings.controlType = 'keyboard';
+      }
+    }
 
     settingsBtn.style.display = 'block';
 
@@ -4485,11 +4534,15 @@
         window.WaveSpawner.update(dt, player ? player.mesh.position : null);
       }
       if (window.HitDetection && typeof window.HitDetection.update === 'function') {
-        window.HitDetection.update(dt, player ? player.mesh.position : null);
+        // Defensive check: ensure player and player.mesh exist before accessing position
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window.HitDetection.update(dt, playerPos);
       }
       // World Trees — wind sway, collision shake, leaf particles
       if (window._engine2Instance && window._engine2Instance._worldTrees) {
-        window._engine2Instance._worldTrees.update(dt, player ? player.mesh.position : null);
+        // Defensive check: ensure player and player.mesh exist before accessing position
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window._engine2Instance._worldTrees.update(dt, playerPos);
       }
       // Trauma system tick (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
@@ -4627,13 +4680,16 @@
 
       // Ground details: grass wind, player disturbance
       if (window._engine2Instance && window._engine2Instance._groundDetails) {
-        window._engine2Instance._groundDetails.update(dt, player ? player.mesh.position : null);
+        // Defensive check: ensure player and player.mesh exist before accessing position
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window._engine2Instance._groundDetails.update(dt, playerPos);
       }
 
       // Camera shake & pooled flash updates
-      // BonusLandmarks animated update (fire, debris, well)
+      // BonusLandmarks animated update (fire, debris, well) - pass playerPos for LOD
       if (window._engine2Instance && window._engine2Instance._bonusLandmarks) {
-        window._engine2Instance._bonusLandmarks.update(dt);
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window._engine2Instance._bonusLandmarks.update(dt, playerPos);
       }
 
       _updateCameraShake(dt);
@@ -4652,8 +4708,21 @@
     } catch (e) {
       if (!_animateErrorShown) {
         _animateErrorShown = true;
-        _showError('Animate error: ' + (e && e.message ? e.message : String(e)));
+        // Only show error for critical issues, log others to console
+        const errorMsg = (e && e.message ? e.message : String(e));
         console.error('[SandboxLoop] _animate error:', e);
+
+        // Only show on-screen error for fatal errors that prevent game from running.
+        // Suppress property-access errors (TypeError: Cannot read ... of undefined/null)
+        // but always surface ReferenceErrors so missing globals are visible.
+        const isPropertyAccessError =
+          /Cannot read (propert(?:y|ies)) of (undefined|null)/i.test(errorMsg);
+
+        if (!isPropertyAccessError) {
+          _showError('Animate error: ' + errorMsg);
+        } else {
+          console.warn('[SandboxLoop] Non-fatal animate error suppressed from UI:', errorMsg);
+        }
       }
     }
   }
