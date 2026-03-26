@@ -4483,6 +4483,10 @@
       if (window.HitDetection && typeof window.HitDetection.update === 'function') {
         window.HitDetection.update(dt, player ? player.mesh.position : null);
       }
+      // World Trees — wind sway, collision shake, leaf particles
+      if (window._engine2Instance && window._engine2Instance._worldTrees) {
+        window._engine2Instance._worldTrees.update(dt, player ? player.mesh.position : null);
+      }
       // Trauma system tick (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
         TraumaSystem.update(dt);

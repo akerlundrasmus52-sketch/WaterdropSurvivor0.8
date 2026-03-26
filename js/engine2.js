@@ -826,6 +826,13 @@ class Engine2Sandbox {
     };
 
     console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
+
+    // World Trees landmark system
+    if (typeof WorldTrees !== 'undefined') {
+      this._worldTrees = new WorldTrees(this.scene);
+      console.log('[Engine2] ✓ WorldTrees initialised');
+    }
+
     console.log('[Engine2] ✓ All landmarks created successfully');
   }
 
