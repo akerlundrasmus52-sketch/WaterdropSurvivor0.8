@@ -2932,7 +2932,11 @@
   let _smoothInputZ = 0;    // lerped input direction Z
 
   function _tryFire(dt) {
-    if (!player) return;
+    if (!player || !player.mesh) return;
+
+    // Player position for aim calculations
+    const px = player.mesh.position.x;
+    const pz = player.mesh.position.z;
 
     // Effective magazine size and reload time — read from playerStats if available
     const _effMaxAmmo    = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
@@ -4682,9 +4686,10 @@
       }
 
       // Camera shake & pooled flash updates
-      // BonusLandmarks animated update (fire, debris, well)
+      // BonusLandmarks animated update (fire, debris, well) - pass playerPos for LOD
       if (window._engine2Instance && window._engine2Instance._bonusLandmarks) {
-        window._engine2Instance._bonusLandmarks.update(dt);
+        const playerPos = (player && player.mesh && player.mesh.position) ? player.mesh.position : null;
+        window._engine2Instance._bonusLandmarks.update(dt, playerPos);
       }
 
       _updateCameraShake(dt);
