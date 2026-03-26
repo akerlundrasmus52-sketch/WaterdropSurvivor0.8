@@ -324,6 +324,13 @@
   // XP magnetism range - used by ExpGem class for pickup
   magnetRange = 4.0; // Base magnetism range (world units) — uses global from main.js
 
+  // Minimal HP bar updater (prevents missing function errors, stores hp ratio for future UI hooks)
+  function _updateSlimeHPBar(slot) {
+    if (!slot) return;
+    const max = slot.maxHp || SLIME_HP;
+    slot._hpRatio = max > 0 ? Math.max(0, Math.min(1, slot.hp / max)) : 0;
+  }
+
   // ─── Game-feel tuning constants ──────────────────────────────────────────────
   const HIT_STOP_KILL_DURATION_MS  = 12;   // ms to freeze simulation on kill (impactful feel)
   const SHAKE_DURATION_SCALE       = 0.2;  // intensity × this = shake duration in seconds
@@ -3436,6 +3443,17 @@
     const applyQualBtn  = document.getElementById('apply-quality-btn');
 
     if (!settingsBtn || !settingsModal || !closeBtn) return;
+
+    // Provide desktop-friendly defaults in sandbox; actual firing is driven by _aimJoy/mouse,
+    // not controlType. Only set these if they haven't been initialized yet (e.g., from saves).
+    if (window.gameSettings) {
+      if (typeof window.gameSettings.autoAim === 'undefined') {
+        window.gameSettings.autoAim = true;
+      }
+      if (typeof window.gameSettings.controlType === 'undefined') {
+        window.gameSettings.controlType = 'keyboard';
+      }
+    }
 
     settingsBtn.style.display = 'block';
 
