@@ -882,17 +882,6 @@
   }
 
   function _deactivateSlime(slot) {
-    if (slot.bloodSplatters) {
-      for (var _bsi = 0; _bsi < slot.bloodSplatters.length; _bsi++) {
-        var _bsOld = slot.bloodSplatters[_bsi];
-        if (_bsOld && _bsOld.parent) {
-          _bsOld.parent.remove(_bsOld);
-          _bsOld.geometry.dispose();
-          _bsOld.material.dispose();
-        }
-      }
-      slot.bloodSplatters = [];
-    }
     // Hide all pre-allocated splatter meshes (pooled — no dispose needed)
     slot.splatIndex = 0;
     if (slot.splatPool) {
@@ -926,18 +915,7 @@
       // Grow blood pool from small to large as corpse bleeds out
       const poolRadius = 0.1 + lifeRatio * 0.6; // grows from 0.1 to 0.7 units (reduced from 1.8)
       if (c.poolMesh) {
-        if (!c._poolShapeSet && lifeRatio > 0.2) {
-          c._poolShapeSet = true;
-          var _psx = 0.7 + Math.random() * 0.6;
-          var _psz = 0.7 + Math.random() * 0.6;
-          c._poolScaleX = _psx;
-          c._poolScaleZ = _psz;
-        }
-        c.poolMesh.scale.set(
-          poolRadius * 2 * (c._poolScaleX || 1),
-          poolRadius * 2 * (c._poolScaleZ || 1),
-          1
-        );
+        c.poolMesh.scale.set(poolRadius * 2, poolRadius * 2, 1); // scale the fixed-size geo (reduced from 10)
         // Darken pool as time passes (more blood = darker)
         c.poolMat.opacity = 0.75 * (1 - lifeRatio * 0.3);
       }
@@ -1105,13 +1083,6 @@
       GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
     }
 
-    _applyBloodToNearbyEnemies(
-      slot.mesh.position.x,
-      slot.mesh.position.z,
-      slot.enemyType === 'slime' ? 0x22cc44 : 0xcc1100,
-      2.5
-    );
-
     // ── BULLET HOLE GENERATION: Create a NEW visible bullet hole on slime mesh per shot ──
     // This ensures EVERY single gun shot dynamically generates a visible bullet hole
     if (slot.woundPool && slot.woundCount < slot.woundPool.length) {
@@ -1139,43 +1110,31 @@
 
       // Scale down for bullet hole size (smaller than normal wounds)
       wound.scale.setScalar(0.28);
-      if (!slot.bloodSplatters) slot.bloodSplatters = [];
-      var _bsg = new THREE.CircleGeometry(0.09, 7);
-      var _bsm = new THREE.MeshBasicMaterial({
-        color: 0x440000,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false,
-        side: THREE.DoubleSide
-      });
-      var _bsmesh = new THREE.Mesh(_bsg, _bsm);
-      _bsmesh.renderOrder = 4;
-      var _bsAngle = Math.atan2(hitDirZ, hitDirX);
-      var _bsRadius = 0.65 + Math.random() * 0.15;
-      var _bsHeight = 0.0 + Math.random() * 0.6 - 0.2;
-      _bsmesh.position.set(
-        Math.cos(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1,
-        _bsHeight,
-        Math.sin(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1
-      );
-      _bsmesh.lookAt(
-        Math.cos(_bsAngle) * 2,
-        _bsHeight,
-        Math.sin(_bsAngle) * 2
-      );
-      var _bsScale = 0.6 + Math.random() * 0.8;
-      _bsmesh.scale.set(_bsScale, _bsScale * 1.4, 1);
-      _bsmesh.rotation.z = Math.random() * Math.PI * 2;
-      _bsmesh.userData.fadeTimer = 50 + Math.random() * 20;
-      slot.mesh.add(_bsmesh);
-      slot.bloodSplatters.push(_bsmesh);
-      if (slot.bloodSplatters.length > 9) {
-        var _oldSplat = slot.bloodSplatters.shift();
-        if (_oldSplat && _oldSplat.parent) {
-          _oldSplat.parent.remove(_oldSplat);
-          _oldSplat.geometry.dispose();
-          _oldSplat.material.dispose();
-        }
+
+      // Recycle a pre-allocated splatter mesh from the pool (ring buffer)
+      if (slot.splatPool && slot.splatPool.length > 0) {
+        var _bsmesh = slot.splatPool[slot.splatIndex % slot.splatPool.length];
+        slot.splatIndex++;
+        var _bsAngle = Math.atan2(hitDirZ, hitDirX);
+        var _bsRadius = 0.65 + Math.random() * 0.15;
+        var _bsHeight = 0.0 + Math.random() * 0.6 - 0.2;
+        _bsmesh.position.set(
+          Math.cos(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1,
+          _bsHeight,
+          Math.sin(_bsAngle) * _bsRadius + (Math.random()-0.5)*0.1
+        );
+        _bsmesh.lookAt(
+          Math.cos(_bsAngle) * 2,
+          _bsHeight,
+          Math.sin(_bsAngle) * 2
+        );
+        var _bsScale = 0.6 + Math.random() * 0.8;
+        _bsmesh.scale.set(_bsScale, _bsScale * 1.4, 1);
+        _bsmesh.rotation.z = Math.random() * Math.PI * 2;
+        _bsmesh.material.opacity = 0.9;
+        _bsmesh.material.color.setHex(0x440000);
+        _bsmesh.userData.fadeTimer = 50 + Math.random() * 20;
+        _bsmesh.visible = true;
       }
     }
 
@@ -1217,8 +1176,6 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(slot, 'pistol', null);
     }
-
-    _applyBloodToNearbyEnemies(x, z, slot.enemyType === 'slime' ? 0x22cc44 : 0xcc1100, 4.0);
 
     // DISABLED: Flying flesh chunks removed for realistic gore (user request)
     // User wants realistic slime death without chunks - just blood and corpse
@@ -1282,41 +1239,6 @@
 
   function _updateSlimeHPBar(slot) {
     // HP bars removed - function kept for compatibility but does nothing
-  }
-
-  function _applyBloodToNearbyEnemies(sourceX, sourceZ, sourceColor, radius) {
-    if (!_activeSlimes || _activeSlimes.length === 0) return;
-    var radiusSq = radius * radius;
-    for (var _nsi = 0; _nsi < _activeSlimes.length; _nsi++) {
-      var _ns = _activeSlimes[_nsi];
-      if (!_ns || !_ns.active || _ns.dead) continue;
-      var _ndx = sourceX - _ns.mesh.position.x;
-      var _ndz = sourceZ - _ns.mesh.position.z;
-      var _nDistSq = _ndx * _ndx + _ndz * _ndz;
-      if (_nDistSq < radiusSq && _nDistSq > 0.1) {
-        var _nSplatCount = 1 + Math.floor(Math.random() * 3);
-        for (var _nsp = 0; _nsp < _nSplatCount; _nsp++) {
-          if (!_ns.splatPool || _ns.splatPool.length === 0) break;
-          var _nbsmesh = _ns.splatPool[_ns.splatIndex % _ns.splatPool.length];
-          _ns.splatIndex++;
-          var _nAngle = Math.atan2(_ndz, _ndx) + (Math.random()-0.5)*1.2;
-          var _nR = 0.55 + Math.random() * 0.25;
-          var _nH = -0.2 + Math.random() * 0.7;
-          _nbsmesh.position.set(
-            Math.cos(_nAngle) * _nR,
-            _nH,
-            Math.sin(_nAngle) * _nR
-          );
-          _nbsmesh.lookAt(Math.cos(_nAngle)*2, _nH, Math.sin(_nAngle)*2);
-          var _nScale = 0.3 + Math.random() * 0.9;
-          _nbsmesh.scale.set(_nScale, _nScale * (0.5 + Math.random()*0.8), 1);
-          _nbsmesh.rotation.z = Math.random() * Math.PI * 2;
-          _nbsmesh.material.color.setHex(sourceColor || 0x440000);
-          _nbsmesh.material.opacity = 0.5 + Math.random() * 0.4;
-          _nbsmesh.visible = true;
-        }
-      }
-    }
   }
 
   // ─── CRAWLER HIT & KILL ───────────────────────────────────────────────────────
@@ -1571,14 +1493,13 @@
     _triggerShake(shakeAmt);
 
     if (enemy.hp <= 0) {
-      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0, weaponKey);
+      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
     }
   }
 
   /** Kill a leaping slime, spawn loot and effects. */
-  function _killLeapingSlime(enemy, hitForce, killVX, killVZ, weaponKey) {
+  function _killLeapingSlime(enemy, hitForce, killVX, killVZ) {
     if (!enemy || enemy.dead) return;
-    const wk = weaponKey || 'pistol';
     const x = enemy.mesh.position.x;
     const y = enemy.mesh.position.y + enemy.size;
     const z = enemy.mesh.position.z;
@@ -1601,7 +1522,7 @@
 
     // GoreSim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(enemy, wk, null);
+      GoreSim.onKill(enemy, 'pistol', null);
     }
 
     // Spawn blue slime flesh chunks
@@ -1616,7 +1537,7 @@
 
     // Trigger death animation inside the instance — set _tmpV3 to kill position first
     _tmpV3.set(x, y, z);
-    enemy._die(wk, _tmpV3);
+    enemy._die('pistol', _tmpV3);
 
     // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
     const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
@@ -2303,28 +2224,6 @@
         s.mesh.material.color.setHex(0xFFFFFF);
       } else {
         s.mesh.material.color.setHex(colors[s.damageStage] || 0x55EE44);
-      }
-
-      // Drip trail — wounds drip down slime body between hits
-      if (s.damageStage >= 1) {
-        s.dripTimer = (s.dripTimer || 0) + dt;
-        if (s.dripTimer > (0.3 / (s.damageStage + 1))) {
-          s.dripTimer = 0;
-          if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
-            BloodV2.rawBurst(
-              s.mesh.position.x + (Math.random()-0.5)*0.3,
-              s.mesh.position.y + 0.2 + Math.random()*0.4,
-              s.mesh.position.z + (Math.random()-0.5)*0.3,
-              1,
-              {
-                color: s.enemyType === 'leaping_slime' ? 0x00bfff : 0x22cc44,
-                spdMin: 0.1, spdMax: 0.4,
-                rMin: 0.006, rMax: 0.012,
-                life: 2.5, visc: 0.88
-              }
-            );
-          }
-        }
       }
 
       // Attack timer cooldown
@@ -3558,32 +3457,6 @@
     // Set up weapons
     if (typeof getDefaultWeapons === 'function') {
       weapons = getDefaultWeapons();
-    }
-
-    // ── Apply permanent stat bonuses to weapon defaults ───────────────────
-    // This ensures camp/skill-tree atkSpeed, weaponDamage, etc. are
-    // reflected in weapon cooldowns and damage from the very first frame.
-    if (weapons && playerStats) {
-      var _aspdMult   = playerStats.atkSpeed   || 1.0;
-      var _fireMult   = playerStats.fireRate    || 1.0;
-      var _dmgMult    = playerStats.strength    || 1.0;
-      var _wdBonus    = playerStats.weaponDamage|| 0;   // additive fraction
-
-      // Use the greater of atkSpeed and fireRate as fire rate multiplier
-      var _frMult = Math.max(_aspdMult, _fireMult);
-
-      Object.keys(weapons).forEach(function (wKey) {
-        var w = weapons[wKey];
-        if (!w) return;
-        // Scale cooldown: higher atkSpeed = lower cooldown (faster fire)
-        if (_frMult > 1.0 && w.cooldown != null) {
-          w.cooldown = Math.max(50, Math.round(w.cooldown / _frMult));
-        }
-        // Scale weapon damage by player strength and weapon-damage bonus
-        if (w.damage != null) {
-          w.damage = Math.round(w.damage * _dmgMult * (1 + _wdBonus));
-        }
-      });
     }
     // Create player using the existing Player class
     if (typeof Player === 'function') {
