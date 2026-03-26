@@ -4708,8 +4708,13 @@
         console.error('[SandboxLoop] _animate error:', e);
 
         // Only show on-screen error for fatal errors that prevent game from running
-        // Skip errors related to undefined properties as they're usually non-fatal
-        if (!errorMsg.includes('undefined') && !errorMsg.includes('Cannot read property')) {
+        // Skip errors related to undefined/null property access as they're usually non-fatal
+        const isPropertyAccessError = errorMsg.includes('undefined') ||
+                                       errorMsg.includes('Cannot read propert') ||  // matches both "property" and "properties"
+                                       errorMsg.includes('null') ||
+                                       errorMsg.includes('is not defined');
+
+        if (!isPropertyAccessError) {
           _showError('Animate error: ' + errorMsg);
         } else {
           console.warn('[SandboxLoop] Non-fatal animate error suppressed from UI:', errorMsg);

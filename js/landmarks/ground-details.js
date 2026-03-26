@@ -445,7 +445,11 @@
     var dummy        = this._dummy;
     var blades       = this._blades;
     var t0           = this.globalTime;
-    var checkPlayer  = (this._frameCount % 4 === 0) && !!playerPos;
+    // Extra safety: check playerPos exists and has valid x/z properties
+    var checkPlayer  = (this._frameCount % 4 === 0) &&
+                       !!playerPos &&
+                       typeof playerPos.x === 'number' &&
+                       typeof playerPos.z === 'number';
 
     for (var i = 0; i < blades.length; i++) {
       var blade = blades[i];

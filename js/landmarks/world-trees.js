@@ -522,7 +522,8 @@
       }
 
       // ── Collision shake ────────────────────────────────────────────────────
-      if (playerPos) {
+      // Extra safety: check playerPos exists and has valid x/z properties
+      if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
         var dx = playerPos.x - tree.pos.x;
         var dz = playerPos.z - tree.pos.z;
         var distSq = (dx * dx + dz * dz) / (tree.scale * tree.scale);
