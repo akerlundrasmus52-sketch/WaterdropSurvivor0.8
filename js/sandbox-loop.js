@@ -635,18 +635,21 @@
       scene.add(m);
       _projPool.push({
         mesh: m,
-        mat: mat, // store reference for color update
+        mat: mat,          // store reference for color update
         active: false,
         vx: 0,
         vz: 0,
         distSq: 0,
         ox: 0,
         oz: 0,
+        weaponKey: 'gun',  // which weapon fired this projectile
+        weaponDmg: 0,      // pre-computed base damage (0 = fall back to gun stats)
+        explosionRadius: 0, // >0 triggers an AoE on impact (fireball)
       });
     }
   }
 
-  function _fireProjectile(fromX, fromZ, toX, toZ) {
+  function _fireProjectile(fromX, fromZ, toX, toZ, weaponKey, weaponDmg, explosionRadius) {
     const p = _projPool.find(function (o) { return !o.active; });
     if (!p) return;
     const dx = toX - fromX, dz = toZ - fromZ;
@@ -657,6 +660,9 @@
     p.oz = fromZ;
     p.distSq = 0;
     p.active = true;
+    p.weaponKey      = weaponKey      || 'gun';
+    p.weaponDmg      = weaponDmg      || 0;
+    p.explosionRadius = explosionRadius || 0;
     p.mesh.position.set(fromX, 0.5, fromZ);
     p.mesh.visible = true;
     _activeProjList.push(p);
@@ -819,6 +825,9 @@
   function _releaseProjectile(p, idx) {
     p.active = false;
     p.mesh.visible = false;
+    p.weaponKey = 'gun';
+    p.weaponDmg = 0;
+    p.explosionRadius = 0;
     if (idx !== undefined) _activeProjList.splice(idx, 1);
   }
 
@@ -1142,7 +1151,10 @@
 
     // Determine hit force from weapon (gun = 1.0)
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
-    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
+    const damage = (projectile && projectile.weaponDmg > 0)
+      ? projectile.weaponDmg
+      : (weapons && weapons.gun ? weapons.gun.damage : 15);
 
     // Critical hit chance — playerStats.critChance is the total chance (0.0–1.0)
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
@@ -1193,7 +1205,7 @@
         _leapHitNormal.set(-projectile.vx, 0, -projectile.vz).normalize();
         hitNormal = _leapHitNormal;
       }
-      GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
+      GoreSim.onHit(slot, (projectile && projectile.weaponKey) || 'pistol', _tmpV3, hitNormal);
     }
 
     // ── BULLET HOLE GENERATION: Create a NEW visible bullet hole on slime mesh per shot ──
@@ -1272,8 +1284,10 @@
     }
 
     if (slot.hp <= 0) {
+      _triggerProjectileExplosion(projectile, slot.mesh.position.x, slot.mesh.position.z);
       _killSlime(slot, hitForce, projectile.vx || 0, projectile.vz || 0);
     } else {
+      _triggerProjectileExplosion(projectile, slot.mesh.position.x, slot.mesh.position.z);
       _updateSlimeHPBar(slot);
     }
   }
@@ -1363,7 +1377,10 @@
     if (!crawler || !crawler.active || crawler.dead || crawler.dying) return;
 
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
-    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
+    const damage = (projectile && projectile.weaponDmg > 0)
+      ? projectile.weaponDmg
+      : (weapons && weapons.gun ? weapons.gun.damage : 15);
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit = Math.random() < critChance;
     const critMultiplier = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
@@ -1405,7 +1422,7 @@
         _leapHitNormal.set(-projectile.vx, 0, -projectile.vz).normalize();
         hitNormal = _leapHitNormal;
       }
-      GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
+      GoreSim.onHit(crawler, (projectile && projectile.weaponKey) || 'pistol', _tmpV3, hitNormal);
     }
 
     // Bullet hole on crawler
@@ -1423,8 +1440,10 @@
     }
 
     if (crawler.hp <= 0) {
+      _triggerProjectileExplosion(projectile, cx, cz);
       _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0);
     } else {
+      _triggerProjectileExplosion(projectile, cx, cz);
       _placeBloodStain(cx, cz, 0.15 + Math.random() * 0.25);
     }
   }
@@ -1547,8 +1566,8 @@
 
     if (enemy.woundPool && enemy.woundCount >= enemy.woundPool.length) enemy.woundCount = 0;
 
-    const weaponKey   = (weapons && weapons.gun) ? 'gun' : 'pistol';
-    const weaponLevel = (weapons && weapons.gun) ? (weapons.gun.level || 1) : 1;
+    const weaponKey   = (projectile && projectile.weaponKey) || (weapons && weapons.gun ? 'gun' : 'pistol');
+    const weaponLevel = (weapons && weapons[weaponKey] && weapons[weaponKey].level) || (weapons && weapons.gun ? (weapons.gun.level || 1) : 1);
     const hitForce    = 1.0 + (weaponLevel - 1) * 0.15;
 
     // Build hit-point and direction vectors from projectile position
@@ -1620,8 +1639,10 @@
     _triggerShake(shakeAmt);
 
     if (enemy.hp <= 0) {
+      _triggerProjectileExplosion(projectile, enemy.mesh.position.x, enemy.mesh.position.z);
       _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
     } else {
+      _triggerProjectileExplosion(projectile, enemy.mesh.position.x, enemy.mesh.position.z);
       _placeBloodStain(enemy.mesh.position.x, enemy.mesh.position.z, 0.15 + Math.random() * 0.25);
     }
   }
@@ -2874,6 +2895,22 @@
   }
 
   /**
+   * If a projectile has explosionRadius > 0, trigger the AoE explosion at (ix, iz).
+   * This runs on impact so the explosion is "explode on hit" not "explode on cast".
+   */
+  function _triggerProjectileExplosion(projectile, ix, iz) {
+    if (!projectile || !(projectile.explosionRadius > 0)) return;
+    const eRadius = projectile.explosionRadius;
+    const dmg = projectile.weaponDmg || 0;
+    _weaponAoeDamage(ix, iz, eRadius * eRadius, dmg, '#FF4400');
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(ix, 0.5, iz, 15, { color: 0xFF6600, spdMin: 1, spdMax: 5 });
+    }
+    // Clear radius so it doesn't retrigger on the same projectile after release
+    projectile.explosionRadius = 0;
+  }
+
+  /**
    * Apply `dmg` damage to a single enemy (any type) and show floating text.
    * Caller is responsible for multiplying by strMult before passing `dmg`.
    */
@@ -2886,8 +2923,12 @@
       BloodV2.rawBurst(ex, 0.5, ez, 4, {});
     }
     if (e.parts && e.parts.root) {
-      // Skinwalker — its own takeDamage handles hp and triggers onDeath→_killSkinwalker
+      // Skinwalker — its own takeDamage handles hp and sets e.dead when HP reaches zero.
+      // _updateSkinwalkers removes dead skinwalkers before calling sw.update(), so
+      // onDeath (and _killSkinwalker) might never fire from the animation loop.
+      // Call _killSkinwalker immediately if this hit killed it (it guards with _killProcessed).
       e.takeDamage(dmg);
+      if (e.dead) _killSkinwalker(e);
     } else {
       e.hp -= dmg;
       if (e.flashTimer !== undefined) e.flashTimer = 0.1;
@@ -2906,8 +2947,8 @@
   }
 
   /**
-   * Deal `dmg` to every active enemy within `rangeSq` of (cx, cz).
-   * strMult is applied internally.
+   * Deal `dmg` (already pre-multiplied by playerStats.strength where needed)
+   * to every active enemy within `rangeSq` of (cx, cz).
    */
   function _weaponAoeDamage(cx, cz, rangeSq, dmg, color) {
     for (let si = _activeSlimes.length - 1; si >= 0; si--) {
@@ -3096,7 +3137,9 @@
         const range = weapons.iceSpear.range || 15;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest));
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.iceSpear.damage || 20) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'iceSpear', dmg);
         }
       }
     } else { _iceSpearTimer = 0; }
@@ -3188,7 +3231,9 @@
         const range = weapons.bow.range || 16;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest));
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.bow.damage || 22) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'bow', dmg);
         }
       }
     } else { _bowTimer = 0; }
@@ -3202,7 +3247,9 @@
         const range = weapons.minigun.range || 12;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest));
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.minigun.damage || 6) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'minigun', dmg);
         }
       }
     } else { _minigunTimer = 0; }
@@ -3220,9 +3267,11 @@
           : player.mesh.rotation.y;
         const spread = weapons.pumpShotgun.spread || 0.7;
         const pellets = weapons.pumpShotgun.pellets || 8;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.pumpShotgun.damage || 14) * strMult);
         for (let pi = 0; pi < pellets; pi++) {
           const a = baseAngle + (Math.random() - 0.5) * spread;
-          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10);
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'pumpShotgun', dmg);
         }
       }
     } else { _pumpShotgunTimer = 0; }
@@ -3240,9 +3289,11 @@
           : player.mesh.rotation.y;
         const spread = weapons.autoShotgun.spread || 0.6;
         const pellets = weapons.autoShotgun.pellets || 6;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.autoShotgun.damage || 10) * strMult);
         for (let pi = 0; pi < pellets; pi++) {
           const a = baseAngle + (Math.random() - 0.5) * spread;
-          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10);
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'autoShotgun', dmg);
         }
       }
     } else { _autoShotgunTimer = 0; }
@@ -3256,7 +3307,9 @@
         const range = weapons.uzi.range || 10;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest));
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.uzi.damage || 8) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'uzi', dmg);
         }
       }
     } else { _uziTimer = 0; }
@@ -3270,7 +3323,9 @@
         const range = weapons.sniperRifle.range || 30;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest));
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.sniperRifle.damage || 95) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'sniperRifle', dmg);
         }
       }
     } else { _sniperTimer = 0; }
@@ -3371,9 +3426,11 @@
           : player.mesh.rotation.y;
         const spread = weapons.doubleBarrel.spread || 0.55;
         const pellets = weapons.doubleBarrel.pellets || 12;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.doubleBarrel.damage || 12) * strMult);
         for (let pi = 0; pi < pellets; pi++) {
           const a = baseAngle + (Math.random() - 0.5) * spread;
-          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10);
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'doubleBarrel', dmg);
         }
       }
     } else { _doubleBarrelTimer = 0; }
@@ -3389,7 +3446,9 @@
         const bAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
           : player.mesh.rotation.y;
-        _fireProjectile(px, pz, px + Math.sin(bAngle) * 10, pz + Math.cos(bAngle) * 10);
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.boomerang.damage || 25) * strMult);
+        _fireProjectile(px, pz, px + Math.sin(bAngle) * 10, pz + Math.cos(bAngle) * 10, 'boomerang', dmg);
       }
     } else { _boomerangTimer = 0; }
 
@@ -3405,9 +3464,11 @@
         const baseAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
           : player.mesh.rotation.y;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.shuriken.damage || 12) * strMult);
         for (let si = 0; si < numProj; si++) {
           const a = baseAngle + (si / numProj) * Math.PI * 2;
-          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10);
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'shuriken', dmg);
         }
       }
     } else { _shurikenTimer = 0; }
@@ -3434,7 +3495,9 @@
         const range = weapons.homingMissile.range || 20;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest));
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.homingMissile.damage || 50) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'homingMissile', dmg);
         }
       }
     } else { _homingMissileTimer = 0; }
@@ -3452,7 +3515,7 @@
       }
     } else { _poisonTimer = 0; }
 
-    // ── FIREBALL: fires projectile + immediate AoE explosion at target ────────
+    // ── FIREBALL: fires a tagged projectile; AoE triggers on impact ──────────
     if (weapons.fireball && weapons.fireball.active) {
       _fireballTimer -= dt * 1000;
       if (_fireballTimer <= 0) {
@@ -3461,16 +3524,12 @@
         const range = weapons.fireball.range || 14;
         const nearest = _weaponFindNearest(px, pz, range * range);
         if (nearest) {
-          const tx = _weaponEnemyX(nearest), tz = _weaponEnemyZ(nearest);
-          _fireProjectile(px, pz, tx, tz);
-          // Immediate explosion AoE centered on the target
-          const eRadius = weapons.fireball.explosionRadius || 3;
           const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
           const dmg = Math.round((weapons.fireball.damage || 35) * strMult);
-          _weaponAoeDamage(tx, tz, eRadius * eRadius, dmg, '#FF4400');
-          if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
-            BloodV2.rawBurst(tx, 0.5, tz, 15, { color: 0xFF6600, spdMin: 1, spdMax: 5 });
-          }
+          const eRadius = weapons.fireball.explosionRadius || 3;
+          // Tag the projectile so _hit* handlers apply fireball damage + AoE on impact
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest),
+            'fireball', dmg, eRadius);
         }
       }
     } else { _fireballTimer = 0; }
@@ -4717,7 +4776,10 @@
   function _hitSkinwalker(projectile, sw) {
     if (!sw || sw.dead) return;
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
-    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
+    const damage = (projectile && projectile.weaponDmg > 0)
+      ? projectile.weaponDmg
+      : (weapons && weapons.gun ? weapons.gun.damage : 15);
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit   = Math.random() < critChance;
     const critMult = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
@@ -4725,6 +4787,12 @@
     const actualDmg = Math.round(damage * hitForce * critMult * swStrMult);
 
     sw.takeDamage(actualDmg);
+    // Fireball explosion on impact
+    _triggerProjectileExplosion(projectile, sw.parts.root.position.x, sw.parts.root.position.z);
+    // If this hit killed the skinwalker, ensure kill processing runs immediately.
+    // _updateSkinwalkers removes dead skinwalkers before calling sw.update(), which
+    // means onDeath (and _killSkinwalker) might never fire from the animation loop.
+    if (sw.dead) _killSkinwalker(sw);
 
     // Floating damage text
     const hx = sw.parts.root.position.x;
