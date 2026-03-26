@@ -581,7 +581,7 @@ var LeapingSlimePool = {
     // Outer dark lips/edge
     var mouthGeo = new THREE.SphereGeometry(0.32, 14, 14, 0, Math.PI * 2, 0, Math.PI / 2);
     var mouthMat = new THREE.MeshStandardMaterial({
-      color:       0x05051a,
+      color:       0x3d0000,
       side:        THREE.DoubleSide,
       roughness:   0.9,
     });

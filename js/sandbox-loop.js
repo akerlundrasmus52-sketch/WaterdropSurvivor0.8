@@ -1169,7 +1169,8 @@
       _tmpV3.set(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
-        hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
+        _leapHitNormal.set(-projectile.vx, 0, -projectile.vz).normalize();
+        hitNormal = _leapHitNormal;
       }
       GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
     }
@@ -1380,7 +1381,8 @@
       _tmpV3.set(cx, 0.4, cz);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
-        hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
+        _leapHitNormal.set(-projectile.vx, 0, -projectile.vz).normalize();
+        hitNormal = _leapHitNormal;
       }
       GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
     }
