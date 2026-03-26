@@ -1044,7 +1044,7 @@ if (d.py <= CFG.GROUND_Y) {
 d.py = CFG.GROUND_Y;
 if (d.bounces < d.maxBounces && !isMist) {
 // Realistic bounce: lose 60-70% energy, lateral bleeds off
-var bounceY = Math.abs(d.vy) * (0.28 - d.viscosity * 0.12);
+var bounceY = Math.abs(d.vy) * Math.max(0.05, 0.35 - d.viscosity * 0.25);
 d.vy = bounceY;
 d.vx *= 0.55;
 d.vz *= 0.55;
@@ -1252,7 +1252,7 @@ d.life      = d.maxLife;
 d.viscosity = 0.60;
 d.bounces   = 0; d.maxBounces = 3;
 d.onGround  = false;
-d.color     = (Math.random() < 0.15) ? col.dark : col.base;
+d.color     = (i % 3 === 0) ? col.dark : col.base;
 d.frozen    = false; d.charred = false;
 }
 
@@ -2297,4 +2297,5 @@ emitSwordSlashFX: function (pos, dir) {
 };
 
 console.log('[BloodV2] BloodSystem shim installed — all BloodSystem.* calls now route to BloodV2');
+console.log('[GORE PATCH v1 REALISTIC] Applied successfully');
 }());

@@ -470,7 +470,7 @@ this.viscosity  = options.viscosity || BLOOD_VISCOSITY;
 this.bounces    = 0;
 this.maxBounces = options.maxBounces || 3;
 this.onGround   = false;
-this.groundY    = options.groundY   || 0.01;
+this.groundY    = options.groundY   || 0.015;
 this.isMist     = options.isMist    || false;
 this.frozen     = options.frozen    || false;
 this.charred    = options.charred   || false;
@@ -491,7 +491,7 @@ if (this.life <= 0) { this.deactivate(); return; }
 
 if (this.onGround) {
   // Settled on ground — spread into puddle slowly
-  this.size += dt * 0.08;
+  this.size = Math.min(this.size + dt * 0.008, 0.12);
   if (this.mesh) this.mesh.scale.set(this.size, 0.1, this.size);
   // Fade after a while
   if (this.life < 1.5 && this.mesh) {
@@ -981,7 +981,7 @@ const decalMat = new THREE.MeshBasicMaterial({
 for (let i = 0; i < MAX_DECALS; i++) {
   const mesh   = new THREE.Mesh(decalGeo, decalMat.clone());
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = 0.02;
+  mesh.position.y = 0.025;
   mesh.renderOrder = 1;
   mesh.visible = false;
   this.scene.add(mesh);
@@ -1056,7 +1056,10 @@ if (Math.random() < profile.chunkChance) {
   const count = profile.chunkCount
     ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
     : 2;
-  this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile);
+  var hitChunkColor = (enemy && enemy.enemyType) ?
+    { slime: 0x22aa33, crawler: 0x8B4513, leaping_slime: 0x00bfff }[enemy.enemyType] || 0x22aa33
+    : 0x22aa33;
+  this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, hitChunkColor);
 }
 
 // ── ARTERIAL PUMP if heart hit ─────────────
@@ -1121,9 +1124,10 @@ for (let i = 0; i < count; i++) {
   const spread = profile.woundRadius * 4;
   const vel = new THREE.Vector3(
     hitDir.x * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random()-0.5) * spread * 6,
-    hitDir.y * (speed.min + Math.random() * (speed.max - speed.min)) + Math.random() * 1.5,
+    hitDir.y * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random() - 0.6) * 1.2,
     hitDir.z * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random()-0.5) * spread * 6
   );
+  vel.y -= 0.4;
 
   const isMist = Math.random() < profile.mistDensity * 0.3;
   this._spawnDrop(pos, vel, {
@@ -1154,6 +1158,62 @@ if (profile.exitWound) {
       viscosity: SLIME_VISCOSITY,
     });
   }
+}
+
+// ENHANCEMENT 1 — Directional side spray (6 drops perpendicular to hit direction)
+const sideVec = new THREE.Vector3(-hitDir.z, 0, hitDir.x).normalize();
+for (let i = 0; i < 6; i++) {
+  const sign  = (i % 2 === 0) ? 1 : -1;
+  const spd2  = 2 + Math.random() * 3;
+  const vel2  = new THREE.Vector3(
+    sideVec.x * sign * spd2,
+    -0.2,
+    sideVec.z * sign * spd2
+  );
+  this._spawnDrop(pos, vel2, {
+    color:      SLIME_ANATOMY[organ]?.color || 0xaa0000,
+    radius:     0.008 + Math.random() * 0.010,
+    life:       1.8 + Math.random() * 0.7,
+    maxBounces: 0,
+    viscosity:  0.65,
+    isMist:     false,
+  });
+}
+
+// ENHANCEMENT 2 — Wound drip trail (4 slow drops falling straight down)
+for (let i = 0; i < 4; i++) {
+  const vel3 = new THREE.Vector3(
+    Math.random() * 0.15 - 0.075,
+    -0.3 - Math.random() * 0.5,
+    Math.random() * 0.15 - 0.075
+  );
+  this._spawnDrop(pos, vel3, {
+    color:      SLIME_ANATOMY[organ]?.color || 0xaa0000,
+    radius:     0.006 + Math.random() * 0.006,
+    life:       2.5 + Math.random() * 1.5,
+    maxBounces: 0,
+    viscosity:  0.90,
+    isMist:     false,
+  });
+}
+
+// ENHANCEMENT 3 — Mist cloud (14 drops, 180-degree spread in hit normal plane)
+for (let i = 0; i < 14; i++) {
+  const angle4 = (Math.random() - 0.5) * Math.PI;
+  const mSpd   = 0.8 + Math.random() * 1.7;
+  const vel4   = new THREE.Vector3(
+    (hitDir.x * Math.cos(angle4) - hitDir.z * Math.sin(angle4)) * mSpd,
+    -0.05,
+    (hitDir.z * Math.cos(angle4) + hitDir.x * Math.sin(angle4)) * mSpd
+  );
+  this._spawnDrop(pos, vel4, {
+    color:      SLIME_ANATOMY[organ]?.color || 0xaa0000,
+    radius:     0.003 + Math.random() * 0.004,
+    life:       0.6 + Math.random() * 0.6,
+    maxBounces: 0,
+    viscosity:  0.20,
+    isMist:     true,
+  });
 }
 
 // Supersonic weapon: temporary cavity blood burst then collapse
@@ -1448,9 +1508,13 @@ switch (organ) {
 // ────────────────────────────────────────
 _killExplosion(pos, profile, killedBy, enemy) {
 
+var chunkColor = (enemy && enemy.enemyType) ?
+  { slime: 0x22aa33, crawler: 0x8B4513, leaping_slime: 0x00bfff }[enemy.enemyType] || 0x22aa33
+  : 0x22aa33;
+
 if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
   // MASSIVE chunk explosion
-  this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile);
+  this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile, chunkColor);
   this._explosionBlood(pos, profile, null);
   return;
 }
@@ -1556,7 +1620,7 @@ switch (killedBy) {
     this._spawnBloodBurst(pos, null, deathBloodCount, deathColor, 'normal');
     // Some chunks for drama
     if (Math.random() < 0.5) {
-      this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile);
+      this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile, chunkColor);
     }
     break;
 }
@@ -1616,7 +1680,7 @@ if (chunk) chunk.reset(pos, vel, options);
 return chunk;
 },
 
-_spawnChunks(pos, normal, count, profile) {
+_spawnChunks(pos, normal, count, profile, enemyColor) {
 for (let i = 0; i < count; i++) {
 const angle = Math.random() * Math.PI * 2;
 const elev  = 0.3 + Math.random() * 0.5;
@@ -1627,7 +1691,7 @@ Math.sin(elev) * speed + 1,
 Math.sin(angle) * Math.cos(elev) * speed
 );
 this._spawnChunk(pos, vel, {
-color: 0x22aa33,
+color: enemyColor !== undefined ? enemyColor : 0x22aa33,
 size:  0.04 + Math.random() * 0.14,
 });
 }
@@ -1739,6 +1803,8 @@ CRAWLER_ANATOMY,
 
 // Expose globally
 window.GoreSim = GoreSim;
+
+console.log('[GORE PATCH v1 REALISTIC] Applied successfully');
 
 // ─────────────────────────────────────────────
 //  INTEGRATION INSTRUCTIONS (printed to console)
