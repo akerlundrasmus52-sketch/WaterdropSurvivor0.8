@@ -722,15 +722,10 @@ this.direction.y + Math.random() * 0.4 * this.pressure,
 this.direction.z + (Math.random() - 0.5) * 0.3
 ).multiplyScalar(speed * (0.7 + Math.random() * 0.6));
 
-  // Update origin to enemy position using world transform
-  const worldOrigin = new THREE.Vector3();
+  // Update origin to enemy position
+  const worldOrigin = this.origin.clone();
   if (this.enemy.mesh) {
-    // Get world position of the local wound origin
-    const tempVec = this.origin.clone();
-    this.enemy.mesh.localToWorld(tempVec);
-    worldOrigin.copy(tempVec);
-  } else {
-    worldOrigin.copy(this.origin);
+    worldOrigin.add(this.enemy.mesh.position);
   }
 
   GoreSim._spawnDrop(worldOrigin, vel, {
@@ -807,11 +802,11 @@ if (this.drip_timer >= dripInterval) {
 _drip(enemyPos, enemyVelocity) {
 const worldPos = enemyPos.clone().add(this.localPos);
 
-// Drip direction: straight down with minimal spread
+// Drip direction: down + enemy velocity influence + small random
 const vel = new THREE.Vector3(
-  (Math.random() - 0.5) * 0.1,
-  -1.0,
-  (Math.random() - 0.5) * 0.1
+  (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.x * 0.15 : 0),
+  -0.5 - Math.random() * 0.8,
+  (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.z * 0.15 : 0)
 );
 
 GoreSim._spawnDrop(worldPos, vel, {
@@ -908,53 +903,11 @@ for (const s of this.streams) s.active = false;
 }
 }
 
-// Chunk colors per enemy type to keep gore matching body color
-const ENEMY_CHUNK_COLORS = {
-slime:         [0x22cc44, 0x1a992f, 0x33ee66],
-leaping_slime: [0x00bfff, 0x0090cc, 0x55ddff],
-crawler:       [0x8b4513, 0x6b3410, 0x5c3010, 0xdeb887],
-};
-
 // Helper: get anatomy color for enemy type and organ
 function _getAnatomyColor(enemyType, organ) {
   if (enemyType === 'slime' && SLIME_ANATOMY[organ]) return SLIME_ANATOMY[organ].color;
   if (enemyType === 'crawler' && CRAWLER_ANATOMY[organ]) return CRAWLER_ANATOMY[organ].color;
-  if (enemyType === 'leaping_slime') return 0x00bfff;
   return 0x880000;
-}
-
-// Helper: pull BloodV2 palette if loaded so gore colors match blood-system-v2
-function _getBloodV2Palette(enemyType) {
-  if (!enemyType || !window.BloodV2 || !BloodV2.ENEMY_BLOOD) return null;
-  return BloodV2.ENEMY_BLOOD[enemyType] || null;
-}
-
-function _resolveChunkColor(enemyType) {
-  if (!enemyType) return null;
-  var palette = _getBloodV2Palette(enemyType);
-  if (palette && palette.chunkColors) return palette.chunkColors;
-  if (ENEMY_CHUNK_COLORS[enemyType]) return ENEMY_CHUNK_COLORS[enemyType];
-  if (palette && palette.base) return palette.base;
-  return null;
-}
-
-function _pickChunkColor(value) {
-  if (!value) return value;
-  if (Array.isArray(value) && value.length > 0) {
-    return value[Math.floor(Math.random() * value.length)];
-  }
-  if (typeof value === 'object' && value !== null) {
-    if (value.base) return value.base;
-    if (value.color) return value.color;
-  }
-  return value;
-}
-
-// Helper: resolve a base blood/chunk color with palette fallback
-function _resolveBloodColor(enemyType, organ) {
-  const palette = _getBloodV2Palette(enemyType);
-  if (palette) return (typeof palette === 'object' && palette !== null) ? (palette.base || palette) : palette;
-  return _getAnatomyColor(enemyType, organ);
 }
 
 // ─────────────────────────────────────────────
@@ -1004,7 +957,7 @@ this._drops.push(drop);
 
 // Flesh chunk pool
 const chunkGeo = new THREE.DodecahedronGeometry(0.5, 0);
-const chunkMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, vertexColors: false });
+const chunkMat = new THREE.MeshLambertMaterial({ color: 0x22aa33, transparent: true });
 for (let i = 0; i < MAX_CHUNKS; i++) {
   const mesh   = new THREE.Mesh(chunkGeo, chunkMat.clone());
   mesh.visible = false;
@@ -1103,9 +1056,7 @@ if (Math.random() < profile.chunkChance) {
   const count = profile.chunkCount
     ? Math.floor(profile.chunkCount.min + Math.random() * (profile.chunkCount.max - profile.chunkCount.min))
     : 2;
-  const _chunkColorLookup = _resolveChunkColor(enemy.enemyType) || _resolveBloodColor(enemy.enemyType, organHit);
-  const _enemyChunkColor = _pickChunkColor(_chunkColorLookup);
-  this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile, _enemyChunkColor);
+  this._spawnChunks(hitPoint || enemyPos, hitNormal, count, profile);
 }
 
 // ── ARTERIAL PUMP if heart hit ─────────────
@@ -1176,7 +1127,7 @@ for (let i = 0; i < count; i++) {
 
   const isMist = Math.random() < profile.mistDensity * 0.3;
   this._spawnDrop(pos, vel, {
-    color:      _getAnatomyColor(gore.enemy ? gore.enemy.enemyType || 'slime' : 'slime', organ),
+    color:      SLIME_ANATOMY[organ]?.color || 0xaa0000,
     radius:     isMist ? 0.005 + Math.random() * 0.008 : 0.012 + Math.random() * 0.025,
     life:       isMist ? 1.0 + Math.random() * 0.5 : 2.5 + Math.random() * 1.5,
     maxBounces: isMist ? 0 : 3,
@@ -1441,7 +1392,7 @@ switch (organ) {
         for (let i = 0; i < 20; i++) {
           const vel = new THREE.Vector3(
             (Math.random()-0.5) * 5,
-            (Math.random() < 0.5) ? 1.5 + Math.random() * 2.5 : -0.5 - Math.random() * 1.0,
+            3 + Math.random() * 4,
             (Math.random()-0.5) * 5
           );
           this._spawnDrop(pumpPos, vel, {
@@ -1454,24 +1405,6 @@ switch (organ) {
         }
       }, pulse * 180);
     }
-    setTimeout(() => {
-      if (!this.scene) return;
-      for (var _hf = 0; _hf < 12; _hf++) {
-        var _ha = Math.random() * Math.PI * 2;
-        var _hspd = 2.0 + Math.random() * 4.0;
-        GoreSim._spawnDrop(pumpPos, new THREE.Vector3(
-          Math.cos(_ha) * _hspd,
-          -0.2 - Math.random() * 0.5,
-          Math.sin(_ha) * _hspd
-        ), {
-          color: 0xff0000,
-          radius: 0.018 + Math.random() * 0.025,
-          life: 1.5 + Math.random(),
-          maxBounces: 2,
-          viscosity: 0.55,
-        });
-      }
-    }, 520);
     break;
 
   case 'guts':
@@ -1515,14 +1448,9 @@ switch (organ) {
 // ────────────────────────────────────────
 _killExplosion(pos, profile, killedBy, enemy) {
 
-const _ekCol = enemy && enemy.enemyType
-  ? (_resolveChunkColor(enemy.enemyType) || _resolveBloodColor(enemy.enemyType, 'membrane'))
-  : 0x22aa33;
-const _enemyKillColor = _pickChunkColor(_ekCol);
-
 if (profile.killStyle === 'vaporize' || profile.killStyle === 'explosion') {
   // MASSIVE chunk explosion
-  this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile, _enemyKillColor);
+  this._spawnChunks(pos, null, 15 + Math.floor(Math.random() * 10), profile);
   this._explosionBlood(pos, profile, null);
   return;
 }
@@ -1628,7 +1556,7 @@ switch (killedBy) {
     this._spawnBloodBurst(pos, null, deathBloodCount, deathColor, 'normal');
     // Some chunks for drama
     if (Math.random() < 0.5) {
-      this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile, _enemyKillColor);
+      this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile);
     }
     break;
 }
@@ -1659,15 +1587,22 @@ const mesh = this._decalMeshes[this._decalIndex % MAX_DECALS];
 this._decalIndex++;
 const decalY = (pos && typeof pos.y === 'number') ? pos.y : 0.06;
 mesh.position.set(pos.x, decalY, pos.z);
-var _dsx = radius * (2.0 + Math.random() * 3.0);
-var _dsz = radius * (0.8 + Math.random() * 2.5);
-mesh.scale.set(_dsx, 1, _dsz);
-mesh.rotation.y = Math.random() * Math.PI * 2;
+mesh.scale.setScalar(radius * 3 + Math.random() * 0.15);
 mesh.material.color.setHex(color || 0x880000);
 mesh.material.opacity = 0.7 + Math.random() * 0.2;
 mesh.visible = true;
-mesh.userData.decalBirth = performance.now();
-mesh.userData.decalLife = DECAL_FADE_TIME * 1000;
+// Fade after DECAL_FADE_TIME
+const m = mesh;
+const start = performance.now();
+const fade = () => {
+const elapsed = (performance.now() - start) / 1000;
+if (elapsed >= DECAL_FADE_TIME) { m.visible = false; return; }
+if (elapsed > DECAL_FADE_TIME - 3.0) {
+m.material.opacity = Math.max(0, (DECAL_FADE_TIME - elapsed) / 3.0 * 0.7);
+}
+requestAnimationFrame(fade);
+};
+requestAnimationFrame(fade);
 },
 
 _spawnChunk(pos, vel, options = {}) {
@@ -1681,26 +1616,19 @@ if (chunk) chunk.reset(pos, vel, options);
 return chunk;
 },
 
-_spawnChunks(pos, normal, count, profile, enemyColor) {
+_spawnChunks(pos, normal, count, profile) {
 for (let i = 0; i < count; i++) {
 const angle = Math.random() * Math.PI * 2;
-const elev  = Math.random() < 0.3
-  ? -0.1 + Math.random() * 0.25
-  : 0.2 + Math.random() * 0.8;
+const elev  = 0.3 + Math.random() * 0.5;
 const speed = 3 + Math.random() * (profile.bloodVelocity?.max || 8) * 0.5;
 const vel   = new THREE.Vector3(
 Math.cos(angle) * Math.cos(elev) * speed,
 Math.sin(elev) * speed + 1,
 Math.sin(angle) * Math.cos(elev) * speed
 );
-var _chunkRoll = Math.random();
-var _chunkSize = _chunkRoll < 0.15 ? 0.008 + Math.random()*0.015
-               : _chunkRoll < 0.50 ? 0.025 + Math.random()*0.035
-               : _chunkRoll < 0.85 ? 0.04 + Math.random()*0.05
-               : 0.07 + Math.random()*0.08;
 this._spawnChunk(pos, vel, {
-color: enemyColor || 0x22aa33,
-size:  _chunkSize,
+color: 0x22aa33,
+size:  0.04 + Math.random() * 0.14,
 });
 }
 },
@@ -1755,26 +1683,13 @@ viscosity:  SLIME_VISCOSITY,
 // ────────────────────────────────────────
 //  UPDATE LOOP — call from game-loop.js
 // ────────────────────────────────────────
-  update(dt) {
-  if (!this._initialized) return;
-  for (const d of this._drops)   d.update(dt);
-  for (const c of this._chunks)  c.update(dt);
-  for (const s of this._streams) s.update(dt);
-  for (const [id, gore] of this._enemyGoreMap) gore.update(dt);
-  var now = performance.now();
-  for (var _di = 0; _di < this._decalMeshes.length; _di++) {
-    var _dm = this._decalMeshes[_di];
-    if (!_dm.visible) continue;
-    var _age = (now - _dm.userData.decalBirth) / 1000;
-    if (_age >= DECAL_FADE_TIME) {
-      _dm.visible = false;
-    } else if (_age > DECAL_FADE_TIME - 3.0) {
-      _dm.material.opacity = Math.max(0,
-        (DECAL_FADE_TIME - _age) / 3.0 * 0.75
-      );
-    }
-  }
-  },
+update(dt) {
+if (!this._initialized) return;
+for (const d of this._drops)   d.update(dt);
+for (const c of this._chunks)  c.update(dt);
+for (const s of this._streams) s.update(dt);
+for (const [id, gore] of this._enemyGoreMap) gore.update(dt);
+},
 
 // ────────────────────────────────────────
 //  CLEANUP — call when scene resets
