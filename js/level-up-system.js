@@ -1698,7 +1698,7 @@ window.spawnBossChest = function(x, z) {
           // Start melt-shadow animation on this card
           card.classList.add('holding');
 
-          // Confirm after 450ms hold duration
+          // Confirm after 1200ms hold duration
           holdTimer = setTimeout(() => {
             holdTimer = null;
             activeHold = null;

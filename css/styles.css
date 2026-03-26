@@ -2423,7 +2423,7 @@
       transform-style: preserve-3d;
     }
 
-    /* Inner content area clips to card bounds so text/shimmer don't leak out */
+    /* Ensure inner content elements layer above border-flow/drip effects (z-index layering, not clipping) */
     .upgrade-card .upgrade-rarity-header,
     .upgrade-card .upgrade-title,
     .upgrade-card .upgrade-icon,
