@@ -4184,7 +4184,9 @@
         }
 
         // Annunaki Tablet glow + glyph shimmer + dust motes
-        if (engine2._annunakiTablet) engine2._annunakiTablet.update(deltaTime);
+        if (window._engine2Instance && window._engine2Instance._annunakiTablet) {
+          window._engine2Instance._annunakiTablet.update(dt);
+        }
       }
 
       // Camera shake & pooled flash updates
