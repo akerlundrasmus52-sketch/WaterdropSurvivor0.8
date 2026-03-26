@@ -1571,13 +1571,14 @@
     _triggerShake(shakeAmt);
 
     if (enemy.hp <= 0) {
-      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
+      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0, weaponKey);
     }
   }
 
   /** Kill a leaping slime, spawn loot and effects. */
-  function _killLeapingSlime(enemy, hitForce, killVX, killVZ) {
+  function _killLeapingSlime(enemy, hitForce, killVX, killVZ, weaponKey) {
     if (!enemy || enemy.dead) return;
+    const wk = weaponKey || 'pistol';
     const x = enemy.mesh.position.x;
     const y = enemy.mesh.position.y + enemy.size;
     const z = enemy.mesh.position.z;
@@ -1600,7 +1601,7 @@
 
     // GoreSim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(enemy, 'pistol', null);
+      GoreSim.onKill(enemy, wk, null);
     }
 
     // Spawn blue slime flesh chunks
@@ -1615,7 +1616,7 @@
 
     // Trigger death animation inside the instance — set _tmpV3 to kill position first
     _tmpV3.set(x, y, z);
-    enemy._die('pistol', _tmpV3);
+    enemy._die(wk, _tmpV3);
 
     // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
     const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
