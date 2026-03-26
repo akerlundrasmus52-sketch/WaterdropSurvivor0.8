@@ -4605,6 +4605,12 @@
         }
       }
 
+      // Ancient Pyramid animation (registered in window._engine2Landmarks)
+      if (window._engine2Landmarks && window._engine2Landmarks.pyramid &&
+          typeof window._engine2Landmarks.pyramid.update === 'function') {
+        window._engine2Landmarks.pyramid.update(dt);
+      }
+
       // Ground details: grass wind, player disturbance
       if (window._engine2Instance && window._engine2Instance._groundDetails) {
         window._engine2Instance._groundDetails.update(dt, player ? player.mesh.position : null);

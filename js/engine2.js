@@ -827,9 +827,18 @@ class Engine2Sandbox {
 
     console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
 
+    // ===== LANDMARK 4: ANCIENT PYRAMID =====
+    if (typeof AncientPyramid !== 'undefined') {
+      this._pyramid = new AncientPyramid(this.scene);
+      // Register in centralized landmark registry so sandbox-loop can animate it
+      if (window._engine2Landmarks) {
+        window._engine2Landmarks.pyramid = this._pyramid;
+      }
+    }
     // Ground details: tall grass, fallen logs, rock clusters, scatter debris
     if (typeof GroundDetails !== 'undefined') {
       this._groundDetails = new GroundDetails(this.scene);
+    }
     // ══════════════════════════════════════════════════════════════
     // 4. ANNUNAKI TABLET — Southwest area (-35, 15)
     // ══════════════════════════════════════════════════════════════
