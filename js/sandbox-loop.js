@@ -4692,6 +4692,19 @@
         window._engine2Instance._bonusLandmarks.update(dt, playerPos);
       }
 
+      // Expose sandbox enemies so game-hud.js minimap / quest arrow and other systems can see them.
+      // Reuse the same array instance each frame to avoid per-frame allocations.
+      if (!window.enemies || !Array.isArray(window.enemies)) {
+        window.enemies = [];
+      }
+      window.enemies.length = 0;
+      for (var _ei = 0; _ei < _activeSlimes.length; _ei++) { window.enemies.push(_activeSlimes[_ei]); }
+      for (var _ej = 0; _ej < _activeCrawlers.length; _ej++) { window.enemies.push(_activeCrawlers[_ej]); }
+      for (var _ek = 0; _ek < _activeLeapingSlimes.length; _ek++) { window.enemies.push(_activeLeapingSlimes[_ek]); }
+      for (var _em = 0; _em < _activeSkinwalkers.length; _em++) { window.enemies.push(_activeSkinwalkers[_em]); }
+      // Also update the lexical `enemies` binding declared in main.js so game-hud.js reads it correctly.
+      if (typeof enemies !== 'undefined') { enemies = window.enemies; }
+
       _updateCameraShake(dt);
       _updateFlashPool(dt);
 
