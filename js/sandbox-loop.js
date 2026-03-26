@@ -1142,6 +1142,8 @@
     // ── 5-PART PROGRESSIVE DAMAGE SYSTEM ──────────────────────────────────────
     // (hpPercent already declared above before blood system section)
 
+    _placeBloodStain(slot.mesh.position.x, slot.mesh.position.z, 0.15 + Math.random() * 0.25);
+
     if (hpPercent <= 0.75 && slot.damageStage === 0) {
       slot.damageStage = 1;
       _applyDamageStage1(slot);
@@ -1309,6 +1311,8 @@
 
     if (crawler.hp <= 0) {
       _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0);
+    } else {
+      _placeBloodStain(cx, cz, 0.15 + Math.random() * 0.25);
     }
   }
 
@@ -1504,6 +1508,8 @@
 
     if (enemy.hp <= 0) {
       _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
+    } else {
+      _placeBloodStain(enemy.mesh.position.x, enemy.mesh.position.z, 0.15 + Math.random() * 0.25);
     }
   }
 
@@ -1706,6 +1712,8 @@
     }
 
     _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 4), false, slot.mesh.material.color.getHex());
+    var stageColor2 = slot.mesh.material.color.getHex();
+    _spawnFleshChunks(slot, 2 + Math.floor(Math.random() * 2), false, [stageColor2]);
 
     const _bPos2 = _reusableBloodPos;
     _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
@@ -1741,6 +1749,8 @@
     }
 
     _spawnFleshChunks(slot, 6 + Math.floor(Math.random() * 6), false, slot.mesh.material.color.getHex());
+    var stageColor3 = slot.mesh.material.color.getHex();
+    _spawnFleshChunks(slot, 3 + Math.floor(Math.random() * 3), false, [stageColor3]);
 
     const _bPos3 = _reusableBloodPos;
     _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
@@ -1790,6 +1800,8 @@
     }
 
     _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 6), true, slot.mesh.material.color.getHex());
+    var stageColor4 = slot.mesh.material.color.getHex();
+    _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 3), true, [stageColor4]);
 
     const _bPos4 = _reusableBloodPos;
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
@@ -1883,11 +1895,11 @@
    * Place a blood stain at (x, z) when an enemy dies.
    * Stains fade in quickly and then very slowly fade out over ~20 seconds.
    */
-  function _placeBloodStain(x, z) {
+  function _placeBloodStain(x, z, sizeOverride) {
     const slot = _bloodStainPool[_bloodStainHead % BLOOD_STAIN_POOL_SIZE];
     _bloodStainHead++;
     if (!slot) return;
-    const size = 0.6 + Math.random() * 0.9;
+    const size = sizeOverride !== undefined ? sizeOverride : (0.6 + Math.random() * 0.9);
     slot.mesh.scale.set(size, size, size);
     slot.mesh.position.set(x + (Math.random() - 0.5) * 0.3, 0.06, z + (Math.random() - 0.5) * 0.3);
     slot.mesh.rotation.z = Math.random() * Math.PI * 2;
@@ -4470,6 +4482,7 @@
       console.log('[🎮 SandboxLoop] ✓ Blood/gore systems ready');
       console.log('[🎮 SandboxLoop] Type runSandboxDiagnostics() for full report');
       console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
+      console.log('[GORE PATCH v1 REALISTIC] Applied successfully');
     } catch (e) {
       _showError('Boot error: ' + (e && e.message ? e.message : String(e)));
       console.error('[SandboxLoop] _boot error:', e);
