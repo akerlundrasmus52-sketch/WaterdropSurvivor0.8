@@ -831,6 +831,11 @@ class Engine2Sandbox {
     // 4. ANNUNAKI TABLET — Southwest area (-35, 15)
     // ══════════════════════════════════════════════════════════════
     if (typeof AnnunakiTablet !== 'undefined') { this._annunakiTablet = new AnnunakiTablet(this.scene); }
+    // World Trees landmark system
+    if (typeof WorldTrees !== 'undefined') {
+      this._worldTrees = new WorldTrees(this.scene);
+      console.log('[Engine2] ✓ WorldTrees initialised');
+    }
 
     console.log('[Engine2] ✓ All landmarks created successfully');
   }
