@@ -4692,6 +4692,9 @@
         window._engine2Instance._bonusLandmarks.update(dt, playerPos);
       }
 
+      // Expose sandbox enemies to window.enemies so game-hud.js minimap can show them
+      window.enemies = _activeSlimes.concat(_activeCrawlers, _activeLeapingSlimes, _activeSkinwalkers);
+
       _updateCameraShake(dt);
       _updateFlashPool(dt);
 

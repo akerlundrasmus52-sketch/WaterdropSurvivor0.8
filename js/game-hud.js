@@ -9,6 +9,9 @@
     
     let lastHudUpdateMs = 0;
     function updateHUD() {
+      // Guard: skip HUD update if core state is not ready
+      if (typeof playerStats === 'undefined' || !playerStats) return;
+
       // Minimap and quest arrow run every frame for smooth real-time updates
       updateMinimap();
       updateQuestArrow();
@@ -363,9 +366,10 @@
       // Determine if the target is currently visible on screen using NDC projection
       let isOnScreen = false;
       if (window.THREE && camera) {
-        const vec = new window.THREE.Vector3(targetPos.x, 0, targetPos.z);
-        vec.project(camera);
-        isOnScreen = Math.abs(vec.x) < _NDC_ON_SCREEN && Math.abs(vec.y) < _NDC_ON_SCREEN;
+        if (!_questArrowV3) _questArrowV3 = new window.THREE.Vector3();
+        _questArrowV3.set(targetPos.x, 0, targetPos.z);
+        _questArrowV3.project(camera);
+        isOnScreen = Math.abs(_questArrowV3.x) < _NDC_ON_SCREEN && Math.abs(_questArrowV3.y) < _NDC_ON_SCREEN;
       }
 
       // Calculate angle using Math.atan2 (x→screen-right, z→screen-down for top-down camera)
@@ -429,25 +433,45 @@
       const px = player.mesh.position.x;
       const pz = player.mesh.position.z;
       
-      // Define regions based on map areas
-      let region = 'Forest'; // Default
-      
-      if (Math.abs(px) < 15 && Math.abs(pz) < 15) {
-        region = 'Central Plaza';
-      } else if (px > 50 && pz > 50) {
-        region = 'Stonehenge';
-      } else if (px > 35 && pz > 35 && px < 50 && pz < 50) {
-        region = 'Windmill';
-      } else if (px < -30 && pz < -30) {
-        region = 'Dark Woods';
-      } else if (Math.abs(px - 30) < 15 && Math.abs(pz) < 15) {
-        region = 'Eastern Forest';
-      } else if (Math.abs(px + 30) < 15 && Math.abs(pz) < 15) {
-        region = 'Western Forest';
-      } else if (Math.abs(px) < 15 && pz > 20) {
-        region = 'Northern Plains';
-      } else if (Math.abs(px) < 15 && pz < -20) {
-        region = 'Southern Woods';
+      let region;
+
+      if (window._engine2SandboxMode) {
+        // ── Sandbox 2.0 (Engine 2.0 arena) region names ──────────────────────
+        // Landmarks: UFO crash (-50, 25), Obelisk (25, -35), Lake (30, -30),
+        //            Annunaki Tablet (-35, 0, 15), spawn hole at (0, 0)
+        if (Math.abs(px) < 12 && Math.abs(pz) < 12) {
+          region = 'Spawn Arena';
+        } else if (Math.hypot(px + 50, pz - 25) < 18) {
+          region = 'UFO Crash Site';
+        } else if (Math.hypot(px - 25, pz + 35) < 18) {
+          region = 'Obelisk Grounds';
+        } else if (Math.hypot(px - 30, pz + 30) < 15) {
+          region = 'Reflective Lake';
+        } else if (Math.hypot(px + 35, pz - 15) < 15) {
+          region = 'Annunaki Ruins';
+        } else {
+          region = 'Alien Arena';
+        }
+      } else {
+        // ── Full-game (world-gen.js) region names ─────────────────────────────
+        region = 'Forest'; // Default
+        if (Math.abs(px) < 15 && Math.abs(pz) < 15) {
+          region = 'Central Plaza';
+        } else if (px > 50 && pz > 50) {
+          region = 'Stonehenge';
+        } else if (px > 35 && pz > 35 && px < 50 && pz < 50) {
+          region = 'Windmill';
+        } else if (px < -30 && pz < -30) {
+          region = 'Dark Woods';
+        } else if (Math.abs(px - 30) < 15 && Math.abs(pz) < 15) {
+          region = 'Eastern Forest';
+        } else if (Math.abs(px + 30) < 15 && Math.abs(pz) < 15) {
+          region = 'Western Forest';
+        } else if (Math.abs(px) < 15 && pz > 20) {
+          region = 'Northern Plains';
+        } else if (Math.abs(px) < 15 && pz < -20) {
+          region = 'Southern Woods';
+        }
       }
       
       // Update when region changes
@@ -469,6 +493,8 @@
     const _MM_BOSS_PULSE_FREQ = 0.005;
     // NDC threshold: target is "on-screen" when projected |x|,|y| are within this value
     const _NDC_ON_SCREEN = 0.95;
+    // Reusable Vector3 for quest arrow NDC projection — avoids per-frame heap allocation
+    let _questArrowV3 = null;
 
     function _getOrCreateMinimapCanvas() {
       const minimap = document.getElementById('minimap');
