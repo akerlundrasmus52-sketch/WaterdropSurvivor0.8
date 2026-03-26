@@ -2311,6 +2311,8 @@
       margin-top: 15px;
       width: 100%;
       box-sizing: border-box;
+      overflow: visible;
+      padding-bottom: 36px;
     }
 
     #upgrade-choices {
@@ -2413,12 +2415,21 @@
       cursor: pointer;
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s;
       position: relative;
-      overflow: hidden;
+      overflow: visible; /* Allow drips and border-flow to extend outside */
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       box-sizing: border-box;
       transform-style: preserve-3d;
+    }
+
+    /* Ensure inner content elements layer above border-flow/drip effects (z-index layering, not clipping) */
+    .upgrade-card .upgrade-rarity-header,
+    .upgrade-card .upgrade-title,
+    .upgrade-card .upgrade-icon,
+    .upgrade-card .upgrade-desc {
+      position: relative;
+      z-index: 2;
     }
 
     .upgrade-card::before {
@@ -2495,7 +2506,7 @@
     }
 
     .upgrade-card.holding::after {
-      animation: light-fill-meter 0.45s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+      animation: light-fill-meter 1.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
     }
 
     @keyframes light-fill-meter {
@@ -2517,7 +2528,7 @@
     }
 
     .upgrade-card.holding .hold-ring {
-      animation: hold-ring-pulse 0.45s ease-out forwards;
+      animation: hold-ring-pulse 1.2s ease-out forwards;
     }
 
     .upgrade-card:hover {
@@ -2802,6 +2813,110 @@
     .rarity-badge-epic      { color: #bb66ff; background: rgba(155,68,240,0.15); border: 1px solid #9b44f0; }
     .rarity-badge-legendary { color: #FFD700; background: rgba(255,215,0,0.15);  border: 1px solid #FFD700; }
     .rarity-badge-mythic    { color: #ff2200; background: rgba(255,34,0,0.15);   border: 1px solid #FF2200; text-shadow: 0 0 6px rgba(255,34,0,0.8); }
+
+
+    /* ── Melting Drip Border Effects ─────────────────────────────────────── */
+    /* Card drip: liquid drops that fall from bottom edge */
+    .card-drip {
+      position: absolute;
+      bottom: -3px;
+      border-radius: 0 0 60% 60%;
+      background: var(--rarity-glow-color, rgba(200,230,255,0.85));
+      box-shadow: 0 3px 10px var(--rarity-glow-color, rgba(200,230,255,0.5));
+      pointer-events: none;
+      z-index: 20;
+      transform-origin: top center;
+      animation: drip-fall var(--drip-dur, 2.2s) ease-in var(--drip-delay, 0s) infinite;
+      opacity: 0;
+    }
+    @keyframes drip-fall {
+      0%   { height: 0;    opacity: 0;   transform: scaleX(1)    translateY(0); }
+      15%  { height: 6px;  opacity: 0.9; transform: scaleX(1)    translateY(0); }
+      40%  { height: 14px; opacity: 1;   transform: scaleX(0.85) translateY(0); }
+      65%  { height: 16px; opacity: 0.9; transform: scaleX(0.7)  translateY(10px); }
+      85%  { height: 10px; opacity: 0.5; transform: scaleX(0.5)  translateY(22px); }
+      100% { height: 0;    opacity: 0;   transform: scaleX(0.2)  translateY(30px); }
+    }
+
+    /* Side-edge melt streaks */
+    .card-streak {
+      position: absolute;
+      width: 2px;
+      border-radius: 1px;
+      background: linear-gradient(to bottom, transparent, var(--rarity-glow-color, rgba(200,230,255,0.6)) 40%, transparent);
+      pointer-events: none;
+      z-index: 19;
+      opacity: 0;
+      animation: streak-drip var(--streak-dur, 3s) ease-in var(--streak-delay, 0s) infinite;
+    }
+    @keyframes streak-drip {
+      0%   { height: 0;    opacity: 0;   transform: translateY(0); }
+      20%  { height: 30px; opacity: 0.7; transform: translateY(0); }
+      60%  { height: 50px; opacity: 0.5; transform: translateY(22px); }
+      100% { height: 10px; opacity: 0;   transform: translateY(60px); }
+    }
+
+    /* Spinning border glow: conic sweep around card edges — sits behind card */
+    .border-flow {
+      position: absolute;
+      inset: -3px;
+      border-radius: 19px;
+      pointer-events: none;
+      z-index: -1;
+      overflow: hidden;
+    }
+    .border-flow::before {
+      content: '';
+      position: absolute;
+      inset: -50%;
+      background: conic-gradient(
+        transparent 0deg,
+        var(--rarity-glow-color, rgba(200,230,255,0.7)) 60deg,
+        transparent 120deg
+      );
+      animation: border-spin var(--spin-dur, 3s) linear infinite;
+      opacity: 0.75;
+    }
+    .border-flow::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #1a1a2e 0%, #0d1020 100%);
+    }
+    @keyframes border-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .upgrade-card.rarity-common    { --spin-dur: 4s; }
+    .upgrade-card.rarity-rare      { --spin-dur: 3s; }
+    .upgrade-card.rarity-epic      { --spin-dur: 2s; }
+    .upgrade-card.rarity-legendary { --spin-dur: 1.4s; }
+    .upgrade-card.rarity-mythical  { --spin-dur: 0.9s; }
+
+    /* Hold-progress fill that sweeps the card border during the 1.2s hold */
+    .hold-progress {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      pointer-events: none;
+      z-index: 12;
+      border: 3px solid transparent;
+      opacity: 0;
+      transition: none;
+    }
+    .upgrade-card.holding .hold-progress {
+      border-color: var(--rarity-glow-color, rgba(200,230,255,0.9));
+      opacity: 1;
+      animation: hold-progress-sweep 1.2s linear forwards;
+    }
+    @keyframes hold-progress-sweep {
+      0%   { clip-path: inset(50% 50% 50% 50%); filter: brightness(1.2); }
+      25%  { clip-path: inset(0% 75% 0% 0%);   filter: brightness(1.4); }
+      50%  { clip-path: inset(0% 50% 0% 0%);   filter: brightness(1.6); }
+      75%  { clip-path: inset(0% 25% 0% 0%);   filter: brightness(1.8); }
+      100% { clip-path: inset(0% 0%  0% 0%);   filter: brightness(2.2); }
+    }
 
     /* ── Mythic Particles ─────────────────────────────────────────────────── */
     .mythic-particle {
