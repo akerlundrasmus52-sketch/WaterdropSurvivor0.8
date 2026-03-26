@@ -75,7 +75,9 @@
 
         // Geometry list for disposal
         this._geometries  = [];
-        this._materials   = [];
+
+        // Scratch vector reused each frame to avoid GC pressure
+        this._tmpVec3 = new THREE.Vector3();
 
         _ensureMaterials();
         this._buildBody();
@@ -90,8 +92,18 @@
         var p = this.parts;
         var g = this._geometries;
 
+        // Per-instance material clones — independent so fade-out on one enemy
+        // does not affect any other Skinwalker instance sharing the same templates.
+        this._mats = {
+            skin:  skinMat.clone(),
+            dark:  darkMat.clone(),
+            tooth: toothMat.clone(),
+            eye:   eyeMat.clone(),
+            claw:  clawMat.clone()
+        };
+        var iMat = this._mats;
+
         // Helper to create a mesh and register its geometry
-        var self = this;
         function mesh(geo, mat) {
             g.push(geo);
             return new THREE.Mesh(geo, mat);
@@ -101,17 +113,17 @@
         p.root = new THREE.Group();
 
         // ---- TORSO ----
-        p.torso = mesh(new THREE.BoxGeometry(0.32, 0.55, 0.18), skinMat);
+        p.torso = mesh(new THREE.BoxGeometry(0.32, 0.55, 0.18), iMat.skin);
         p.torso.position.set(0, 1.05, 0);
         p.root.add(p.torso);
 
         // ---- PELVIS (attach leg pivots here) ----
-        p.pelvis = mesh(new THREE.BoxGeometry(0.28, 0.16, 0.16), skinMat);
+        p.pelvis = mesh(new THREE.BoxGeometry(0.28, 0.16, 0.16), iMat.skin);
         p.pelvis.position.set(0, 0.72, 0);
         p.torso.add(p.pelvis);
 
         // ---- NECK ----
-        p.neck = mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.22, 6), skinMat);
+        p.neck = mesh(new THREE.CylinderGeometry(0.06, 0.09, 0.22, 6), iMat.skin);
         p.neck.position.set(0, 0.30, 0);
         p.torso.add(p.neck);
 
@@ -120,7 +132,7 @@
         p.neck.add(this.light);
 
         // ---- HEAD (skull-like, slightly oversized) ----
-        p.head = mesh(new THREE.SphereGeometry(0.28, 10, 8), skinMat);
+        p.head = mesh(new THREE.SphereGeometry(0.28, 10, 8), iMat.skin);
         p.head.position.set(0, 0.52, 0.02);
         p.head.scale.set(1.05, 1.0, 0.9);
         // Permanent head tilt
@@ -128,14 +140,14 @@
         p.neck.add(p.head);
 
         // ---- JAW ----
-        p.jaw = mesh(new THREE.BoxGeometry(0.22, 0.10, 0.18), skinMat);
+        p.jaw = mesh(new THREE.BoxGeometry(0.22, 0.10, 0.18), iMat.skin);
         p.jaw.position.set(0, -0.18, 0.06);
         p.jaw.rotation.x = 0.18;
         p.head.add(p.jaw);
 
         // ---- TEETH (12 total) ----
         for (var t = 0; t < 12; t++) {
-            var tooth = mesh(new THREE.BoxGeometry(0.018, 0.032, 0.012), toothMat);
+            var tooth = mesh(new THREE.BoxGeometry(0.018, 0.032, 0.012), iMat.tooth);
             var col   = t % 4;
             var row   = Math.floor(t / 4);
             tooth.position.set(
@@ -148,11 +160,11 @@
         }
 
         // ---- EYES ----
-        p.eye_L = mesh(new THREE.SphereGeometry(0.06, 6, 5), eyeMat);
+        p.eye_L = mesh(new THREE.SphereGeometry(0.06, 6, 5), iMat.eye);
         p.eye_L.position.set(-0.10, 0.04, 0.22);
         p.head.add(p.eye_L);
 
-        p.eye_R = mesh(new THREE.SphereGeometry(0.06, 6, 5), eyeMat);
+        p.eye_R = mesh(new THREE.SphereGeometry(0.06, 6, 5), iMat.eye);
         p.eye_R.position.set(0.10, 0.04, 0.22);
         p.head.add(p.eye_R);
 
@@ -160,13 +172,13 @@
         for (var r = 0; r < 5; r++) {
             var yRib = 0.15 - r * 0.055;
 
-            var ribL = mesh(new THREE.TorusGeometry(0.14, 0.012, 4, 8, Math.PI), darkMat);
+            var ribL = mesh(new THREE.TorusGeometry(0.14, 0.012, 4, 8, Math.PI), iMat.dark);
             ribL.position.set(-0.01, yRib, -0.01);
             ribL.rotation.z = -0.30;
             ribL.rotation.y = Math.PI * 0.5;
             p.torso.add(ribL);
 
-            var ribR = mesh(new THREE.TorusGeometry(0.14, 0.012, 4, 8, Math.PI), darkMat);
+            var ribR = mesh(new THREE.TorusGeometry(0.14, 0.012, 4, 8, Math.PI), iMat.dark);
             ribR.position.set(0.01, yRib, -0.01);
             ribR.rotation.z = 0.30;
             ribR.rotation.y = -Math.PI * 0.5;
@@ -175,76 +187,76 @@
 
         // ---- SPINE BUMPS (6) ----
         for (var s = 0; s < 6; s++) {
-            var spineBump = mesh(new THREE.SphereGeometry(0.025, 4, 4), darkMat);
+            var spineBump = mesh(new THREE.SphereGeometry(0.025, 4, 4), iMat.dark);
             spineBump.position.set(0, 0.20 - s * 0.06, -0.09);
             p.torso.add(spineBump);
         }
 
         // ---- SHOULDER PIVOTS + ARMS (Left) ----
-        p.shoulder_L = mesh(new THREE.SphereGeometry(0.07, 6, 5), darkMat);
+        p.shoulder_L = mesh(new THREE.SphereGeometry(0.07, 6, 5), iMat.dark);
         p.shoulder_L.position.set(-0.20, 0.22, 0);
         p.torso.add(p.shoulder_L);
 
-        p.upper_arm_L = mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.52, 5), skinMat);
+        p.upper_arm_L = mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.52, 5), iMat.skin);
         p.upper_arm_L.position.set(0, -0.26, 0);
         p.upper_arm_L.rotation.z = -0.15;
         p.shoulder_L.add(p.upper_arm_L);
 
-        p.forearm_L = mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.55, 5), skinMat);
+        p.forearm_L = mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.55, 5), iMat.skin);
         p.forearm_L.position.set(0, -0.52, 0);
         p.upper_arm_L.add(p.forearm_L);
 
-        p.hand_L = mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), skinMat);
+        p.hand_L = mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), iMat.skin);
         p.hand_L.position.set(0, -0.55, 0);
         p.forearm_L.add(p.hand_L);
 
-        this._buildFingers(p.hand_L, 'L');
+        this._buildFingers(p.hand_L);
 
         // ---- SHOULDER PIVOTS + ARMS (Right) ----
-        p.shoulder_R = mesh(new THREE.SphereGeometry(0.07, 6, 5), darkMat);
+        p.shoulder_R = mesh(new THREE.SphereGeometry(0.07, 6, 5), iMat.dark);
         p.shoulder_R.position.set(0.20, 0.22, 0);
         p.torso.add(p.shoulder_R);
 
-        p.upper_arm_R = mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.52, 5), skinMat);
+        p.upper_arm_R = mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.52, 5), iMat.skin);
         p.upper_arm_R.position.set(0, -0.26, 0);
         p.upper_arm_R.rotation.z = 0.15;
         p.shoulder_R.add(p.upper_arm_R);
 
-        p.forearm_R = mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.55, 5), skinMat);
+        p.forearm_R = mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.55, 5), iMat.skin);
         p.forearm_R.position.set(0, -0.52, 0);
         p.upper_arm_R.add(p.forearm_R);
 
-        p.hand_R = mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), skinMat);
+        p.hand_R = mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), iMat.skin);
         p.hand_R.position.set(0, -0.55, 0);
         p.forearm_R.add(p.hand_R);
 
-        this._buildFingers(p.hand_R, 'R');
+        this._buildFingers(p.hand_R);
 
         // ---- LEGS (Left) ----
-        p.upper_leg_L = mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.60, 6), skinMat);
+        p.upper_leg_L = mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.60, 6), iMat.skin);
         p.upper_leg_L.position.set(-0.10, -0.08, 0);
         p.upper_leg_L.rotation.z = 0.12;
         p.pelvis.add(p.upper_leg_L);
 
-        p.lower_leg_L = mesh(new THREE.CylinderGeometry(0.042, 0.035, 0.58, 6), skinMat);
+        p.lower_leg_L = mesh(new THREE.CylinderGeometry(0.042, 0.035, 0.58, 6), iMat.skin);
         p.lower_leg_L.position.set(0, -0.60, 0);
         p.upper_leg_L.add(p.lower_leg_L);
 
-        p.foot_L = mesh(new THREE.BoxGeometry(0.10, 0.06, 0.28), skinMat);
+        p.foot_L = mesh(new THREE.BoxGeometry(0.10, 0.06, 0.28), iMat.skin);
         p.foot_L.position.set(0, -0.58, 0.08);
         p.lower_leg_L.add(p.foot_L);
 
         // ---- LEGS (Right) ----
-        p.upper_leg_R = mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.60, 6), skinMat);
+        p.upper_leg_R = mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.60, 6), iMat.skin);
         p.upper_leg_R.position.set(0.10, -0.08, 0);
         p.upper_leg_R.rotation.z = -0.12;
         p.pelvis.add(p.upper_leg_R);
 
-        p.lower_leg_R = mesh(new THREE.CylinderGeometry(0.042, 0.035, 0.58, 6), skinMat);
+        p.lower_leg_R = mesh(new THREE.CylinderGeometry(0.042, 0.035, 0.58, 6), iMat.skin);
         p.lower_leg_R.position.set(0, -0.60, 0);
         p.upper_leg_R.add(p.lower_leg_R);
 
-        p.foot_R = mesh(new THREE.BoxGeometry(0.10, 0.06, 0.28), skinMat);
+        p.foot_R = mesh(new THREE.BoxGeometry(0.10, 0.06, 0.28), iMat.skin);
         p.foot_R.position.set(0, -0.58, 0.08);
         p.lower_leg_R.add(p.foot_R);
     };
@@ -252,20 +264,21 @@
     /**
      * Build 4 fingers + claws on a hand mesh.
      * @param {THREE.Mesh} handMesh
-     * @param {string} side 'L' or 'R'
      */
-    SkinwalkerEnemy.prototype._buildFingers = function (handMesh, side) {
-        var g = this._geometries;
+    SkinwalkerEnemy.prototype._buildFingers = function (handMesh) {
+        var g    = this._geometries;
+        var skin = this._mats.skin;
+        var claw = this._mats.claw;
         function mesh(geo, mat) { g.push(geo); return new THREE.Mesh(geo, mat); }
         var xPositions = [-0.035, -0.012, 0.012, 0.035];
         for (var f = 0; f < 4; f++) {
-            var finger = mesh(new THREE.CylinderGeometry(0.008, 0.005, 0.18, 4), skinMat);
+            var finger = mesh(new THREE.CylinderGeometry(0.008, 0.005, 0.18, 4), skin);
             finger.position.set(xPositions[f], -0.09, 0);
             handMesh.add(finger);
 
-            var claw = mesh(new THREE.ConeGeometry(0.008, 0.045, 4), clawMat);
-            claw.position.set(0, -0.115, 0);
-            finger.add(claw);
+            var clawTip = mesh(new THREE.ConeGeometry(0.008, 0.045, 4), claw);
+            clawTip.position.set(0, -0.115, 0);
+            finger.add(clawTip);
         }
     };
 
@@ -279,7 +292,7 @@
      * @param {THREE.Vector3} playerPos
      */
     SkinwalkerEnemy.prototype.update = function (dt, playerPos) {
-        if (this.dead) return;
+        if (this.dead && this.state !== 'death') return;
 
         // animTime is advanced inside each animation method at state-specific rates
         this.stateTimer += dt;
@@ -357,8 +370,47 @@
     };
 
     SkinwalkerEnemy.prototype._setState = function (s) {
+        this._resetPoseToRest();
         this.state      = s;
         this.stateTimer = 0;
+    };
+
+    /**
+     * Reset all animated transforms to their rest/neutral pose.
+     * Called on every state transition so no values leak between states.
+     */
+    SkinwalkerEnemy.prototype._resetPoseToRest = function () {
+        var p = this.parts;
+        // Preserve Y rotation (facing direction) and world Y position
+        p.root.rotation.x = 0;
+        p.root.rotation.z = 0;
+        p.root.position.y = 0;
+
+        p.torso.position.set(0, 1.05, 0);
+        p.torso.rotation.set(0, 0, 0);
+
+        p.neck.rotation.set(0, 0, 0);
+
+        p.head.rotation.set(0, 0, 0.26); // 0.26 rad = permanent creepy head tilt
+
+        p.jaw.rotation.x = 0.18;
+
+        p.shoulder_L.position.set(-0.20, 0.22, 0);
+        p.shoulder_R.position.set( 0.20, 0.22, 0);
+
+        p.upper_arm_L.rotation.set(0, 0, -0.15);
+        p.upper_arm_R.rotation.set(0, 0,  0.15);
+        p.forearm_L.rotation.set(0, 0, 0);
+        p.forearm_R.rotation.set(0, 0, 0);
+        p.hand_L.rotation.set(0, 0, 0);
+        p.hand_R.rotation.set(0, 0, 0);
+
+        p.upper_leg_L.rotation.set(0, 0, 0.12);
+        p.upper_leg_R.rotation.set(0, 0, -0.12);
+        p.lower_leg_L.rotation.set(0, 0, 0);
+        p.lower_leg_R.rotation.set(0, 0, 0);
+        p.foot_L.rotation.set(0, 0, 0);
+        p.foot_R.rotation.set(0, 0, 0);
     };
 
     SkinwalkerEnemy.prototype._moveToward = function (playerPos, dt) {
@@ -486,11 +538,10 @@
         p.neck.rotation.x = -0.5;
         p.head.rotation.z = 0.22 + Math.sin(t * 0.8) * 0.10;
 
-        // Head Y-rotation tracks player
-        var worldPos = new THREE.Vector3();
-        p.root.getWorldPosition(worldPos);
-        var toPlayerX = playerPos.x - worldPos.x;
-        var toPlayerZ = playerPos.z - worldPos.z;
+        // Head Y-rotation tracks player — reuse cached scratch vector (no GC)
+        p.root.getWorldPosition(this._tmpVec3);
+        var toPlayerX = playerPos.x - this._tmpVec3.x;
+        var toPlayerZ = playerPos.z - this._tmpVec3.z;
         var targetAngleY = Math.atan2(toPlayerX, toPlayerZ);
         var diff = targetAngleY * 0.6 - p.head.rotation.y;
         while (diff >  PI) diff -= PI * 2;
@@ -647,15 +698,15 @@
             p.upper_arm_R.rotation.x = _lerp(p.upper_arm_R.rotation.x, 0.8, dt * 4);
             p.head.rotation.x  = ease * 0.6;
         } else {
-            // Phase 2: fade out
+            // Phase 2: fade out — update only this instance's own material clones,
+            // never touching the module-level template singletons.
             var fadeP = Math.max(0, 1.0 - (this.stateTimer - 1.2) / 0.8);
-            var self  = this;
-            p.root.traverse(function (obj) {
-                if (obj.isMesh && obj.material) {
-                    obj.material.transparent = true;
-                    obj.material.opacity     = fadeP;
-                }
-            });
+            var m = this._mats;
+            m.skin.transparent  = true;  m.skin.opacity  = fadeP;
+            m.dark.transparent  = true;  m.dark.opacity  = fadeP;
+            m.tooth.transparent = true;  m.tooth.opacity = fadeP;
+            m.eye.transparent   = true;  m.eye.opacity   = fadeP;
+            m.claw.transparent  = true;  m.claw.opacity  = fadeP;
             if (fadeP <= 0) {
                 if (typeof this.onDeath === 'function') {
                     this.onDeath();
@@ -673,13 +724,19 @@
         if (this.parts.root.parent) {
             this.parts.root.parent.remove(this.parts.root);
         }
-        // Traverse and dispose all geometry
+        // Dispose all geometry
         this.parts.root.traverse(function (obj) {
-            if (obj.isMesh) {
-                if (obj.geometry) obj.geometry.dispose();
-                // Do NOT dispose shared materials — they are module-level singletons
-            }
+            if (obj.isMesh && obj.geometry) obj.geometry.dispose();
         });
+        // Dispose per-instance materials
+        var m = this._mats;
+        if (m) {
+            m.skin.dispose();
+            m.dark.dispose();
+            m.tooth.dispose();
+            m.eye.dispose();
+            m.claw.dispose();
+        }
         if (this.light) {
             this.light.dispose();
         }
@@ -726,13 +783,13 @@
         p.shoulder_L.position.set(-0.20, 0.22, 0);
         p.shoulder_R.position.set( 0.20, 0.22, 0);
 
-        // Reset opacity on all meshes
-        p.root.traverse(function (obj) {
-            if (obj.isMesh && obj.material) {
-                obj.material.transparent = false;
-                obj.material.opacity     = 1.0;
-            }
-        });
+        // Reset per-instance materials — no scene traversal needed
+        var m = this._mats;
+        m.skin.transparent  = false;  m.skin.opacity  = 1.0;
+        m.dark.transparent  = false;  m.dark.opacity  = 1.0;
+        m.tooth.transparent = false;  m.tooth.opacity = 1.0;
+        m.eye.transparent   = false;  m.eye.opacity   = 1.0;
+        m.claw.transparent  = false;  m.claw.opacity  = 1.0;
     };
 
     // =========================================================================
