@@ -498,8 +498,6 @@ core:     { hp:90,  maxHp:90,  yRange:[-1.0,-0.3], bleedRate:0.80, pumpBlood:fal
 var _scene       = null;
 var _ready       = false;
 var _frame       = 0;   // frame counter for debug
-var _prevDropCount = 0; // track drop count for color update optimization
-var _prevMistCount = 0; // track mist count for color update optimization
 
 // ── Scratch vectors (NEVER allocate in update loop) ──────────────
 var _s0 = new THREE.Vector3();
@@ -654,9 +652,9 @@ _dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
   new Float32Array(CFG.DROP_COUNT * 3), 3
 );
 _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
+_dropIM.frustumCulled = false;
 _dropIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active drops
 _scene.add(_dropIM);
-_dropIM.frustumCulled = false;
 _dropIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
 // Pre-create drop data objects
@@ -685,9 +683,9 @@ _mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
   new Float32Array(CFG.MIST_COUNT * 3), 3
 );
 _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
+_mistIM.frustumCulled = false;
 _mistIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active mist
 _scene.add(_mistIM);
-_mistIM.frustumCulled = false;
 _mistIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
 _mistData = [];
@@ -736,15 +734,15 @@ opacity:     0.80,
 depthWrite:  false,
 depthTest:   true,
 polygonOffset: true,
-polygonOffsetFactor: -4,
-polygonOffsetUnits: -4,
+polygonOffsetFactor: -1,
+polygonOffsetUnits: -1,
 });
 
 _decals = [];
 for (var i = 0; i < CFG.DECAL_COUNT; i++) {
 var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
-mesh.position.y = 0.04;
+mesh.position.y = CFG.GROUND_Y;
 mesh.visible    = false;
 mesh.renderOrder = 2;
 _scene.add(mesh);
@@ -917,53 +915,33 @@ _goreMap.delete(eId);
   _frame++;
 
 var dirty = false;
-var maxDropIdx = -1;
-var aliveDropCount = 0;
 
 // ── Update blood drops ───────────────────
 for (var i = 0; i < _dropData.length; i++) {
 var d = _dropData[i];
 if (!d.alive) continue;
-aliveDropCount++;
 _updateDrop(d, dt, _dropIM, false);
 dirty = true;
-if (d.idx > maxDropIdx) maxDropIdx = d.idx;
 }
 if (dirty) {
-  _dropIM.count = Math.max(0, maxDropIdx + 1);
+  _dropIM.count = CFG.DROP_COUNT;
   _dropIM.instanceMatrix.needsUpdate = true;
-  // Only update colors if drop count changed (new spawns or kills)
-  if (_dropIM.instanceColor && aliveDropCount !== _prevDropCount) {
-    _dropIM.instanceColor.needsUpdate = true;
-  }
-} else if (_dropIM.count !== 0) {
-  _dropIM.count = 0;
+  if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
 }
-_prevDropCount = aliveDropCount;
 
 // ── Update mist ──────────────────────────
 var mistDirty = false;
-var maxMistIdx = -1;
-var aliveMistCount = 0;
 for (var i = 0; i < _mistData.length; i++) {
 var d = _mistData[i];
 if (!d.alive) continue;
-aliveMistCount++;
 _updateDrop(d, dt, _mistIM, true);
 mistDirty = true;
-if (d.idx > maxMistIdx) maxMistIdx = d.idx;
 }
 if (mistDirty) {
-  _mistIM.count = Math.max(0, maxMistIdx + 1);
+  _mistIM.count = CFG.MIST_COUNT;
   _mistIM.instanceMatrix.needsUpdate = true;
-  // Only update colors if mist count changed (new spawns or kills)
-  if (_mistIM.instanceColor && aliveMistCount !== _prevMistCount) {
-    _mistIM.instanceColor.needsUpdate = true;
-  }
-} else if (_mistIM.count !== 0) {
-  _mistIM.count = 0;
+  if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
 }
-_prevMistCount = aliveMistCount;
 
 // ── Update chunks ────────────────────────
 for (var i = 0; i < _chunks.length; i++) {
@@ -1034,11 +1012,6 @@ if (d.life <= 0) { _killDrop(d, im); return; }
 
 if (d.onGround) {
 // Settled: slowly spread as puddle, fade near end
-// Mist particles should be killed when they settle
-if (isMist) {
-  _killDrop(d, im);
-  return;
-}
 d.r = Math.min(d.r + dt * 0.008, 0.025);
 if (d.life < 2.5) {
 var a = d.life / 2.5;
@@ -1079,35 +1052,10 @@ d.bounces++;
 if (d.bounces === 1 && Math.random() < CFG.BOUNCE_DECAL_PROB) {
 _spawnDecal(d.px, d.pz, d.r * 0.8, d.color);
 }
-if (d.bounces === 1) {
-var _msc = 2 + Math.floor(Math.random() * 4);
-for (var _mi = 0; _mi < _msc; _mi++) {
-  var _md = _getFreeDrop(_dropData);
-  if (!_md) break;
-  _md.alive = true;
-  _md.px = d.px + (Math.random()-0.5)*0.08;
-  _md.py = d.py + 0.01;
-  _md.pz = d.pz + (Math.random()-0.5)*0.08;
-  _md.vx = (Math.random()-0.5)*0.8;
-  _md.vy = 0.05 + Math.random()*0.25;
-  _md.vz = (Math.random()-0.5)*0.8;
-  _md.r = 0.002 + Math.random()*0.004;
-  _md.maxLife = 1.5 + Math.random();
-  _md.life = _md.maxLife;
-  _md.viscosity = 0.85;
-  _md.bounces = 0;
-  _md.maxBounces = 0;
-  _md.onGround = false;
-  _md.color = d.color;
-  _md.frozen = false;
-  _md.charred = false;
-}
-}
 } else {
 d.vy = 0; d.vx = 0; d.vz = 0;
 d.onGround = true;
 _spawnDecal(d.px, d.pz, d.r * 1.2, d.color);
-_spawnMicroSplatter(d.px, d.pz, d.color);
 }
 }
 
@@ -1249,32 +1197,29 @@ function _updateWound(w, dt, ex, ey, ez, evx, evz, col) {
 if (!w.alive || w.cauterized || w.frozen) return;
 var anat  = ANATOMY.default;
 var oData = anat[w.organ];
+if (!oData) return;
 
 w.dripTimer += dt;
-var baseRate = CFG.DRIP_RATE / Math.max(0.1, (oData ? oData.bleedRate : 0.3) * (0.4 + w.depth));
-var jitteredRate = baseRate * (0.7 + Math.random() * 0.6);
-if (w.dripTimer >= jitteredRate) {
+var rate = CFG.DRIP_RATE / (oData.bleedRate * (0.4 + w.depth));
+if (w.dripTimer >= rate) {
 w.dripTimer = 0;
-var dripCount = (w.depth > 0.6 && Math.random() < 0.35) ? 2 : 1;
-for (var _dc = 0; _dc < dripCount; _dc++) {
-  var d = _getFreeDrop(_dropData);
-  if (!d) break;
-  d.alive = true;
-  d.px = ex + w.lx + (_dc > 0 ? (Math.random()-0.5)*0.04 : 0);
-  d.py = ey + w.ly;
-  d.pz = ez + w.lz + (_dc > 0 ? (Math.random()-0.5)*0.04 : 0);
-  d.vx = (Math.random()-0.5)*0.25 + evx*0.12;
-  d.vy = -0.45 - Math.random()*0.9;
-  d.vz = (Math.random()-0.5)*0.25 + evz*0.12;
-  d.r         = 0.009 + w.depth * 0.012;
-  d.maxLife   = 2.2 + Math.random();
-  d.life      = d.maxLife;
-  d.viscosity = 0.70;
-  d.bounces   = 0; d.maxBounces = 2;
-  d.onGround  = false;
-  d.color     = w.color;
-  d.frozen    = false; d.charred = false;
-}
+var d = _getFreeDrop(_dropData);
+if (!d) return;
+d.alive = true;
+d.px = ex + w.lx;
+d.py = ey + w.ly;
+d.pz = ez + w.lz;
+d.vx = (Math.random()-0.5)*0.25 + evx*0.12;
+d.vy = -0.45 - Math.random()*0.9;
+d.vz = (Math.random()-0.5)*0.25 + evz*0.12;
+d.r         = 0.009 + w.depth * 0.012;
+d.maxLife   = 2.2 + Math.random();
+d.life      = d.maxLife;
+d.viscosity = 0.70;
+d.bounces   = 0; d.maxBounces = 2;
+d.onGround  = false;
+d.color     = w.color;
+d.frozen    = false; d.charred = false;
 }
 
 }
@@ -1288,32 +1233,9 @@ var nx = normal ? -normal.x : 0;
 var ny = normal ? -normal.y : 0;
 var nz = normal ? -normal.z : 1;
 
+var count = wp.dropCount;
 var sMin  = wp.dropSpeed[0], sMax = wp.dropSpeed[1];
 
-// TYPE A - MICRO SPRAY (pixel-sized droplets)
-var _msCount = 8 + Math.floor(Math.random() * 8);
-for (var i = 0; i < _msCount; i++) {
-var d = _getFreeDrop(_dropData);
-if (!d) break;
-var spd = sMin * 1.5 + Math.random() * (sMax - sMin) * 0.5;
-var sctr = wp.woundR * 3;
-d.alive = true;
-d.px = hx; d.py = hy; d.pz = hz;
-d.vx = nx * spd + (Math.random()-0.5) * sctr * 4;
-d.vy = ny * spd * 0.1 - Math.random() * 0.3;
-d.vz = nz * spd + (Math.random()-0.5) * sctr * 4;
-d.r         = 0.002 + Math.random()*0.004;
-d.maxLife   = 1.5 + Math.random()*0.8;
-d.life      = d.maxLife;
-d.viscosity = 0.50;
-d.bounces   = 0; d.maxBounces = 1;
-d.onGround  = false;
-d.color     = col.base;
-d.frozen    = false; d.charred = false;
-}
-
-// TYPE B - MEDIUM DROPS (main blood)
-var count = wp.dropCount;
 for (var i = 0; i < count; i++) {
 var d = _getFreeDrop(_dropData);
 if (!d) break;
@@ -1324,7 +1246,7 @@ d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx * spd + (Math.random()-0.5) * sctr * 6;
 d.vy = ny * spd * 0.2 - Math.random() * 0.6;
 d.vz = nz * spd + (Math.random()-0.5) * sctr * 6;
-d.r         = 0.005 + Math.random()*0.010;
+d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 2.5 + Math.random()*1.5;
 d.life      = d.maxLife;
 d.viscosity = 0.60;
@@ -1334,27 +1256,7 @@ d.color     = (Math.random() < 0.15) ? col.dark : col.base;
 d.frozen    = false; d.charred = false;
 }
 
-// TYPE C - GRAVITY DRIPS (fall straight down)
-var _gdCount = 4 + Math.floor(Math.random() * 5);
-for (var i = 0; i < _gdCount; i++) {
-var d = _getFreeDrop(_dropData);
-if (!d) break;
-d.alive = true;
-d.px = hx; d.py = hy; d.pz = hz;
-d.vx = (Math.random()-0.5)*0.2;
-d.vy = -0.3 - Math.random()*1.2;
-d.vz = (Math.random()-0.5)*0.2;
-d.r         = 0.008 + Math.random()*0.006;
-d.maxLife   = 2.0 + Math.random();
-d.life      = d.maxLife;
-d.viscosity = 0.72;
-d.bounces   = 0; d.maxBounces = 1;
-d.onGround  = false;
-d.color     = col.base;
-d.frozen    = false; d.charred = false;
-}
-
-// TYPE D - FINE MIST CLOUD (unchanged)
+// Mist
 for (var i = 0; i < wp.mistCount; i++) {
 var d = _getFreeDrop(_mistData);
 if (!d) break;
@@ -1374,48 +1276,7 @@ d.color     = col.mist;
 d.frozen    = false; d.charred = false;
 }
 
-// TYPE E - FLOOR SPLAT DROPS
-var _fsCount = 3 + Math.floor(Math.random() * 4);
-for (var i = 0; i < _fsCount; i++) {
-var d = _getFreeDrop(_dropData);
-if (!d) break;
-d.alive = true;
-d.px = hx; d.py = hy; d.pz = hz;
-d.vx = (Math.random()-0.5) * 6.0;
-d.vy = -2.0 - Math.random()*3.0;
-d.vz = (Math.random()-0.5) * 6.0;
-d.r         = 0.006 + Math.random()*0.009;
-d.maxLife   = 1.8 + Math.random();
-d.life      = d.maxLife;
-d.viscosity = 0.55;
-d.bounces   = 0; d.maxBounces = 2;
-d.onGround  = false;
-d.color     = col.base;
-d.frozen    = false; d.charred = false;
-}
-
-// TYPE F - BACK SPRAY (exit wound / overpressure simulation)
-var _bsCount = 4 + Math.floor(Math.random() * 5);
-for (var i = 0; i < _bsCount; i++) {
-var d = _getFreeDrop(_dropData);
-if (!d) break;
-var spd = (sMin + Math.random()*(sMax-sMin)) * 0.55;
-d.alive = true;
-d.px = hx; d.py = hy; d.pz = hz;
-d.vx = -nx*spd + (Math.random()-0.5)*2.5;
-d.vy = 0.1 + Math.random()*0.8;
-d.vz = -nz*spd + (Math.random()-0.5)*2.5;
-d.r         = 0.006 + Math.random()*0.010;
-d.maxLife   = 2.0 + Math.random()*1.5;
-d.life      = d.maxLife;
-d.viscosity = 0.58;
-d.bounces   = 0; d.maxBounces = 3;
-d.onGround  = false;
-d.color     = col.dark;
-d.frozen    = false; d.charred = false;
-}
-
-// Exit wound (existing behavior preserved)
+// Exit wound
 if (wp.exitWound) {
 var ec = Math.ceil(wp.dropCount * 0.55);
 for (var i = 0; i < ec; i++) {
@@ -1901,9 +1762,7 @@ for (var i = 0; i < count; i++) {
 var c = _getFreeChunk();
 if (!c) break;
 var a = Math.random() * Math.PI * 2;
-var e = Math.random() < 0.3
-  ? -0.1 + Math.random() * 0.25
-  : 0.2 + Math.random() * 0.8;
+var e = 0.3 + Math.random() * 0.6;
 var s = 3.0 + Math.random() * (wp.dropSpeed ? wp.dropSpeed[1] * 0.55 : 8.0);
 c.alive  = true;
 c.px = ox; c.py = oy; c.pz = oz;
@@ -1915,7 +1774,7 @@ c.rvy = (Math.random()-0.5)*18;
 c.rvz = (Math.random()-0.5)*18;
 c.rx = 0; c.ry = 0; c.rz = 0;
 c.life    = 4.0 + Math.random()*3.0;
-c.size = 0.035 + Math.random()*0.06;
+c.size    = 0.035 + Math.random()*0.06;
 c.bounces = 0;
 c.color   = col.base;
 if (c.mesh) {
@@ -1923,7 +1782,6 @@ c.mesh.visible = true;
 c.mesh.scale.setScalar(c.size);
 c.mesh.material.color.setHex(c.color);
 c.mesh.material.opacity = 1.0;
-c.mesh.material.transparent = true;
 }
 }
 }
@@ -1937,7 +1795,7 @@ _decalIdx++;
 dd.alive   = true;
 dd.life    = CFG.DECAL_FADE;
 dd.maxLife = CFG.DECAL_FADE;
-dd.mesh.position.set(x, 0.04, z);
+dd.mesh.position.set(x, CFG.GROUND_Y, z);
 // Irregular shape: vary x (world X) and y (world Z after rotation) scale separately
 dd.mesh.scale.set(
 radius * (1.5 + Math.random() * 1.5),
@@ -1952,25 +1810,6 @@ dd.mesh.visible = true;
 
 function _spawnSplat(x, z, size, color) {
 _spawnDecal(x, z, size * 1.2, color);
-}
-
-function _spawnMicroSplatter(x, z, color) {
-for (var i = 0; i < 2 + Math.floor(Math.random()*3); i++) {
-  var ox = x + (Math.random()-0.5)*0.25;
-  var oz = z + (Math.random()-0.5)*0.25;
-  var dd = _decals[_decalIdx % CFG.DECAL_COUNT];
-  _decalIdx++;
-  dd.alive = true;
-  dd.life = CFG.DECAL_FADE * 0.6;
-  dd.maxLife = dd.life;
-  dd.mesh.position.set(ox, CFG.GROUND_Y, oz);
-  var microR = 0.08 + Math.random() * 0.15;
-  dd.mesh.scale.set(microR, microR * (0.3 + Math.random()*0.4), 1);
-  dd.mesh.rotation.z = Math.random() * Math.PI * 2;
-  dd.mesh.material.color.setHex(color || 0x880000);
-  dd.mesh.material.opacity = 0.4 + Math.random() * 0.35;
-  dd.mesh.visible = true;
-}
 }
 
 // ══════════════════════════════════════════
