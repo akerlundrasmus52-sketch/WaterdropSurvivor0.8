@@ -1095,19 +1095,14 @@
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
     }
 
-    // ── GORE: Connect every weapon to both gore systems ──────────────────────
-    {
+    // ── GORE SIMULATOR: Connect every weapon to gore system ──────────────────
+    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       _tmpV3.set(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
         hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
       }
-      if (window.BloodV2 && typeof BloodV2.hit === 'function') {
-        BloodV2.hit(slot, 'pistol', _tmpV3, hitNormal);
-      }
-      if (window.GoreSim && typeof GoreSim.onHit === 'function') {
-        GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
-      }
+      GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
     }
 
     _applyBloodToNearbyEnemies(
@@ -1218,10 +1213,7 @@
     // Hard camera shake on kill (scales slightly with hit force)
     _triggerShake(SHAKE_KILL_BASE + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
 
-    // ── GORE: Weapon-specific death reaction ─────────────────────────────────
-    if (window.BloodV2 && typeof BloodV2.kill === 'function') {
-      BloodV2.kill(slot, 'pistol');
-    }
+    // ── GORE SIMULATOR: Weapon-specific death reaction ──────────────────────
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(slot, 'pistol', null);
     }
@@ -1365,19 +1357,14 @@
     _reusableBloodPos.x = cx;
     _reusableBloodPos.y = 0.5;
     _reusableBloodPos.z = cz;
-    // Gore — both systems
-    {
+    // Gore simulator
+    if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       _tmpV3.set(cx, 0.4, cz);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
         hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
       }
-      if (window.BloodV2 && typeof BloodV2.hit === 'function') {
-        BloodV2.hit(crawler, 'pistol', _tmpV3, hitNormal);
-      }
-      if (window.GoreSim && typeof GoreSim.onHit === 'function') {
-        GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
-      }
+      GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
     }
 
     // Bullet hole on crawler
@@ -1406,10 +1393,7 @@
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 1.5);
     _triggerShake(SHAKE_KILL_BASE * 1.3 + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
 
-    // Gore — both systems kill
-    if (window.BloodV2 && typeof BloodV2.kill === 'function') {
-      BloodV2.kill(crawler, 'pistol');
-    }
+    // Gore sim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(crawler, 'pistol', null);
     }
@@ -1574,10 +1558,7 @@
       BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
     }
 
-    // Gore — both systems hit reaction
-    if (window.BloodV2 && typeof BloodV2.hit === 'function') {
-      BloodV2.hit(enemy, weaponKey, _tmpV3, hitNormal);
-    }
+    // GoreSim hit reaction
     if (window.GoreSim && typeof GoreSim.onHit === 'function') {
       GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
     }
@@ -1590,13 +1571,14 @@
     _triggerShake(shakeAmt);
 
     if (enemy.hp <= 0) {
-      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
+      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0, weaponKey);
     }
   }
 
   /** Kill a leaping slime, spawn loot and effects. */
-  function _killLeapingSlime(enemy, hitForce, killVX, killVZ) {
+  function _killLeapingSlime(enemy, hitForce, killVX, killVZ, weaponKey) {
     if (!enemy || enemy.dead) return;
+    const wk = weaponKey || 'pistol';
     const x = enemy.mesh.position.x;
     const y = enemy.mesh.position.y + enemy.size;
     const z = enemy.mesh.position.z;
@@ -1617,12 +1599,9 @@
       }
     }
 
-    // Gore — both systems kill
-    if (window.BloodV2 && typeof BloodV2.kill === 'function') {
-      BloodV2.kill(enemy, weaponKey);
-    }
+    // GoreSim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(enemy, weaponKey, null);
+      GoreSim.onKill(enemy, wk, null);
     }
 
     // Spawn blue slime flesh chunks
@@ -1637,7 +1616,7 @@
 
     // Trigger death animation inside the instance — set _tmpV3 to kill position first
     _tmpV3.set(x, y, z);
-    enemy._die('pistol', _tmpV3);
+    enemy._die(wk, _tmpV3);
 
     // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
     const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
