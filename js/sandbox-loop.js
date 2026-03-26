@@ -378,6 +378,27 @@
   // Active weapon effect timers (for unlocked weapons in sandbox)
   let _swordEffectCooldown = 0;  // sword slash cooldown
   let _auraEffectTimer    = 0;   // aura damage tick
+  // Timers for all additional active weapons (values in ms, matching weapon cooldown units)
+  let _uziTimer           = 0;
+  let _minigunTimer       = 0;
+  let _bowTimer           = 0;
+  let _sniperTimer        = 0;
+  let _pumpShotgunTimer   = 0;
+  let _autoShotgunTimer   = 0;
+  let _doubleBarrelTimer  = 0;
+  let _iceSpearTimer      = 0;
+  let _fireRingTimer      = 0;
+  let _fireRingAngle      = 0;   // running rotation angle for fire-ring orbs (radians)
+  let _lightningTimer     = 0;
+  let _meteorTimer        = 0;
+  let _teslaSaberTimer    = 0;
+  let _whipTimer          = 0;
+  let _boomerangTimer     = 0;
+  let _shurikenTimer      = 0;
+  let _nanoSwarmTimer     = 0;
+  let _homingMissileTimer = 0;
+  let _poisonTimer        = 0;
+  let _fireballTimer      = 0;
   // ─── Gore: Corpse Linger System ──────────────────────────────────────────────
   // Corpses linger 5-8 seconds after death with heartbeat blood pumping.
   const _activeCorpses = [];       // { slot, timer, lingerDuration, bloodTimer, poolMesh, poolMat, poolSlot }
@@ -614,18 +635,21 @@
       scene.add(m);
       _projPool.push({
         mesh: m,
-        mat: mat, // store reference for color update
+        mat: mat,          // store reference for color update
         active: false,
         vx: 0,
         vz: 0,
         distSq: 0,
         ox: 0,
         oz: 0,
+        weaponKey: 'gun',  // which weapon fired this projectile
+        weaponDmg: 0,      // pre-computed base damage (0 = fall back to gun stats)
+        explosionRadius: 0, // >0 triggers an AoE on impact (fireball)
       });
     }
   }
 
-  function _fireProjectile(fromX, fromZ, toX, toZ) {
+  function _fireProjectile(fromX, fromZ, toX, toZ, weaponKey, weaponDmg, explosionRadius) {
     const p = _projPool.find(function (o) { return !o.active; });
     if (!p) return;
     const dx = toX - fromX, dz = toZ - fromZ;
@@ -636,6 +660,9 @@
     p.oz = fromZ;
     p.distSq = 0;
     p.active = true;
+    p.weaponKey      = weaponKey      || 'gun';
+    p.weaponDmg      = weaponDmg      || 0;
+    p.explosionRadius = explosionRadius || 0;
     p.mesh.position.set(fromX, 0.5, fromZ);
     p.mesh.visible = true;
     _activeProjList.push(p);
@@ -798,6 +825,9 @@
   function _releaseProjectile(p, idx) {
     p.active = false;
     p.mesh.visible = false;
+    p.weaponKey = 'gun';
+    p.weaponDmg = 0;
+    p.explosionRadius = 0;
     if (idx !== undefined) _activeProjList.splice(idx, 1);
   }
 
@@ -1121,7 +1151,10 @@
 
     // Determine hit force from weapon (gun = 1.0)
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
-    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
+    const damage = (projectile && projectile.weaponDmg > 0)
+      ? projectile.weaponDmg
+      : (weapons && weapons.gun ? weapons.gun.damage : 15);
 
     // Critical hit chance — playerStats.critChance is the total chance (0.0–1.0)
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
@@ -1169,9 +1202,10 @@
       _tmpV3.set(slot.mesh.position.x, slot.mesh.position.y + 0.3, slot.mesh.position.z);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
-        hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
+        _leapHitNormal.set(-projectile.vx, 0, -projectile.vz).normalize();
+        hitNormal = _leapHitNormal;
       }
-      GoreSim.onHit(slot, 'pistol', _tmpV3, hitNormal);
+      GoreSim.onHit(slot, (projectile && projectile.weaponKey) || 'pistol', _tmpV3, hitNormal);
     }
 
     // ── BULLET HOLE GENERATION: Create a NEW visible bullet hole on slime mesh per shot ──
@@ -1250,8 +1284,10 @@
     }
 
     if (slot.hp <= 0) {
+      _triggerProjectileExplosion(projectile, slot.mesh.position.x, slot.mesh.position.z);
       _killSlime(slot, hitForce, projectile.vx || 0, projectile.vz || 0);
     } else {
+      _triggerProjectileExplosion(projectile, slot.mesh.position.x, slot.mesh.position.z);
       _updateSlimeHPBar(slot);
     }
   }
@@ -1341,7 +1377,10 @@
     if (!crawler || !crawler.active || crawler.dead || crawler.dying) return;
 
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
-    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
+    const damage = (projectile && projectile.weaponDmg > 0)
+      ? projectile.weaponDmg
+      : (weapons && weapons.gun ? weapons.gun.damage : 15);
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit = Math.random() < critChance;
     const critMultiplier = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
@@ -1380,9 +1419,10 @@
       _tmpV3.set(cx, 0.4, cz);
       var hitNormal = null;
       if (projectile && projectile.vx !== undefined) {
-        hitNormal = new THREE.Vector3(-projectile.vx, 0, -projectile.vz).normalize();
+        _leapHitNormal.set(-projectile.vx, 0, -projectile.vz).normalize();
+        hitNormal = _leapHitNormal;
       }
-      GoreSim.onHit(crawler, 'pistol', _tmpV3, hitNormal);
+      GoreSim.onHit(crawler, (projectile && projectile.weaponKey) || 'pistol', _tmpV3, hitNormal);
     }
 
     // Bullet hole on crawler
@@ -1400,8 +1440,10 @@
     }
 
     if (crawler.hp <= 0) {
+      _triggerProjectileExplosion(projectile, cx, cz);
       _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0);
     } else {
+      _triggerProjectileExplosion(projectile, cx, cz);
       _placeBloodStain(cx, cz, 0.15 + Math.random() * 0.25);
     }
   }
@@ -1524,8 +1566,8 @@
 
     if (enemy.woundPool && enemy.woundCount >= enemy.woundPool.length) enemy.woundCount = 0;
 
-    const weaponKey   = (weapons && weapons.gun) ? 'gun' : 'pistol';
-    const weaponLevel = (weapons && weapons.gun) ? (weapons.gun.level || 1) : 1;
+    const weaponKey   = (projectile && projectile.weaponKey) || (weapons && weapons.gun ? 'gun' : 'pistol');
+    const weaponLevel = (weapons && weapons[weaponKey] && weapons[weaponKey].level) || (weapons && weapons.gun ? (weapons.gun.level || 1) : 1);
     const hitForce    = 1.0 + (weaponLevel - 1) * 0.15;
 
     // Build hit-point and direction vectors from projectile position
@@ -1597,8 +1639,10 @@
     _triggerShake(shakeAmt);
 
     if (enemy.hp <= 0) {
+      _triggerProjectileExplosion(projectile, enemy.mesh.position.x, enemy.mesh.position.z);
       _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
     } else {
+      _triggerProjectileExplosion(projectile, enemy.mesh.position.x, enemy.mesh.position.z);
       _placeBloodStain(enemy.mesh.position.x, enemy.mesh.position.z, 0.15 + Math.random() * 0.25);
     }
   }
@@ -2811,6 +2855,128 @@
   const _swordSlashColor  = 0xFF8800;
   const _auraColor        = 0x3399FF;
 
+  // ── Shared helpers used by _updateWeaponEffects and its weapon blocks ─────
+
+  /** Get X position of any enemy (skinwalkers use parts.root, others use mesh). */
+  function _weaponEnemyX(e) {
+    return (e.parts && e.parts.root) ? e.parts.root.position.x : e.mesh.position.x;
+  }
+  /** Get Z position of any enemy (skinwalkers use parts.root, others use mesh). */
+  function _weaponEnemyZ(e) {
+    return (e.parts && e.parts.root) ? e.parts.root.position.z : e.mesh.position.z;
+  }
+
+  /**
+   * Find the nearest active enemy across all pools within rangeSq world units.
+   * Pass Infinity (or omit) to search without a distance cap.
+   */
+  function _weaponFindNearest(ox, oz, rangeSq) {
+    let best = null;
+    let bestDSq = (rangeSq != null) ? rangeSq : Infinity;
+    const pools = [_activeSlimes, _activeCrawlers, _activeLeapingSlimes];
+    for (let pi = 0; pi < pools.length; pi++) {
+      const arr = pools[pi];
+      for (let i = 0; i < arr.length; i++) {
+        const e = arr[i];
+        if (!e || !e.active || e.dead) continue;
+        const dx = e.mesh.position.x - ox, dz = e.mesh.position.z - oz;
+        const dSq = dx * dx + dz * dz;
+        if (dSq < bestDSq) { bestDSq = dSq; best = e; }
+      }
+    }
+    for (let i = 0; i < _activeSkinwalkers.length; i++) {
+      const sw = _activeSkinwalkers[i];
+      if (!sw || sw.dead) continue;
+      const dx = sw.parts.root.position.x - ox, dz = sw.parts.root.position.z - oz;
+      const dSq = dx * dx + dz * dz;
+      if (dSq < bestDSq) { bestDSq = dSq; best = sw; }
+    }
+    return best;
+  }
+
+  /**
+   * If a projectile has explosionRadius > 0, trigger the AoE explosion at (ix, iz).
+   * This runs on impact so the explosion is "explode on hit" not "explode on cast".
+   */
+  function _triggerProjectileExplosion(projectile, ix, iz) {
+    if (!projectile || !(projectile.explosionRadius > 0)) return;
+    const eRadius = projectile.explosionRadius;
+    const dmg = projectile.weaponDmg || 0;
+    _weaponAoeDamage(ix, iz, eRadius * eRadius, dmg, '#FF4400');
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(ix, 0.5, iz, 15, { color: 0xFF6600, spdMin: 1, spdMax: 5 });
+    }
+    // Clear radius so it doesn't retrigger on the same projectile after release
+    projectile.explosionRadius = 0;
+  }
+
+  /**
+   * Apply `dmg` damage to a single enemy (any type) and show floating text.
+   * Caller is responsible for multiplying by strMult before passing `dmg`.
+   */
+  function _weaponHitEnemy(e, dmg, color) {
+    if (!e || e.dead) return;
+    const ex = _weaponEnemyX(e), ez = _weaponEnemyZ(e);
+    _tmpV3.set(ex, 1.5, ez);
+    createFloatingText(dmg, _tmpV3, color, dmg);
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(ex, 0.5, ez, 4, {});
+    }
+    if (e.parts && e.parts.root) {
+      // Skinwalker — its own takeDamage handles hp and sets e.dead when HP reaches zero.
+      // _updateSkinwalkers removes dead skinwalkers before calling sw.update(), so
+      // onDeath (and _killSkinwalker) might never fire from the animation loop.
+      // Call _killSkinwalker immediately if this hit killed it (it guards with _killProcessed).
+      e.takeDamage(dmg);
+      if (e.dead) _killSkinwalker(e);
+    } else {
+      e.hp -= dmg;
+      if (e.flashTimer !== undefined) e.flashTimer = 0.1;
+      if (e.hp <= 0) {
+        if (e.enemyType === 'crawler') {
+          _killCrawler(e, 1.0, 0, 0);
+        } else if (e.enemyType === 'leaping_slime') {
+          _killLeapingSlime(e, 1.0, 0, 0);
+        } else {
+          _killSlime(e, 1.0, 0, 0);
+        }
+      } else if (e.enemyType === 'slime') {
+        _updateSlimeHPBar(e);
+      }
+    }
+  }
+
+  /**
+   * Deal `dmg` (already pre-multiplied by playerStats.strength where needed)
+   * to every active enemy within `rangeSq` of (cx, cz).
+   */
+  function _weaponAoeDamage(cx, cz, rangeSq, dmg, color) {
+    for (let si = _activeSlimes.length - 1; si >= 0; si--) {
+      const s = _activeSlimes[si];
+      if (!s || !s.active || s.dead) continue;
+      const dx = s.mesh.position.x - cx, dz = s.mesh.position.z - cz;
+      if (dx * dx + dz * dz <= rangeSq) _weaponHitEnemy(s, dmg, color);
+    }
+    for (let ci = _activeCrawlers.length - 1; ci >= 0; ci--) {
+      const c = _activeCrawlers[ci];
+      if (!c || !c.active || c.dead) continue;
+      const dx = c.mesh.position.x - cx, dz = c.mesh.position.z - cz;
+      if (dx * dx + dz * dz <= rangeSq) _weaponHitEnemy(c, dmg, color);
+    }
+    for (let li = _activeLeapingSlimes.length - 1; li >= 0; li--) {
+      const l = _activeLeapingSlimes[li];
+      if (!l || !l.active || l.dead) continue;
+      const dx = l.mesh.position.x - cx, dz = l.mesh.position.z - cz;
+      if (dx * dx + dz * dz <= rangeSq) _weaponHitEnemy(l, dmg, color);
+    }
+    for (let wi = _activeSkinwalkers.length - 1; wi >= 0; wi--) {
+      const sw = _activeSkinwalkers[wi];
+      if (!sw || sw.dead) continue;
+      const dx = sw.parts.root.position.x - cx, dz = sw.parts.root.position.z - cz;
+      if (dx * dx + dz * dz <= rangeSq) _weaponHitEnemy(sw, dmg, color);
+    }
+  }
+
   function _updateWeaponEffects(dt) {
     if (!player || !player.mesh || !weapons) return;
     const px = player.mesh.position.x;
@@ -2855,6 +3021,36 @@
             }
           }
         }
+        // Also hit crawlers in sword range
+        for (let ci = _activeCrawlers.length - 1; ci >= 0; ci--) {
+          const c = _activeCrawlers[ci];
+          if (!c || !c.active || c.dead) continue;
+          const dx = c.mesh.position.x - px, dz = c.mesh.position.z - pz;
+          if (dx * dx + dz * dz <= sRangeSq) {
+            const dmg = Math.round((sw.damage || 30) * (playerStats ? playerStats.strength || 1 : 1));
+            _weaponHitEnemy(c, dmg, '#FF8800');
+          }
+        }
+        // Also hit leaping slimes in sword range
+        for (let li = _activeLeapingSlimes.length - 1; li >= 0; li--) {
+          const l = _activeLeapingSlimes[li];
+          if (!l || !l.active || l.dead) continue;
+          const dx = l.mesh.position.x - px, dz = l.mesh.position.z - pz;
+          if (dx * dx + dz * dz <= sRangeSq) {
+            const dmg = Math.round((sw.damage || 30) * (playerStats ? playerStats.strength || 1 : 1));
+            _weaponHitEnemy(l, dmg, '#FF8800');
+          }
+        }
+        // Also hit skinwalkers in sword range
+        for (let wi = _activeSkinwalkers.length - 1; wi >= 0; wi--) {
+          const skinw = _activeSkinwalkers[wi];
+          if (!skinw || skinw.dead) continue;
+          const dx = skinw.parts.root.position.x - px, dz = skinw.parts.root.position.z - pz;
+          if (dx * dx + dz * dz <= sRangeSq) {
+            const dmg = Math.round((sw.damage || 30) * (playerStats ? playerStats.strength || 1 : 1));
+            _weaponHitEnemy(skinw, dmg, '#FF8800');
+          }
+        }
         // Visual flash on player
         if (player.mesh && player.mesh.material) {
           const origC = player.mesh.material.color.getHex();
@@ -2897,9 +3093,457 @@
             }
           }
         }
+        // Also hit crawlers in aura range
+        for (let ci = _activeCrawlers.length - 1; ci >= 0; ci--) {
+          const c = _activeCrawlers[ci];
+          if (!c || !c.active || c.dead) continue;
+          const dx = c.mesh.position.x - px, dz = c.mesh.position.z - pz;
+          if (dx * dx + dz * dz <= aRangeSq) {
+            const dmg = Math.round((weapons.aura.damage || 8) * (playerStats ? playerStats.strength || 1 : 1));
+            _weaponHitEnemy(c, dmg, '#33AAFF');
+          }
+        }
+        // Also hit leaping slimes in aura range
+        for (let li = _activeLeapingSlimes.length - 1; li >= 0; li--) {
+          const l = _activeLeapingSlimes[li];
+          if (!l || !l.active || l.dead) continue;
+          const dx = l.mesh.position.x - px, dz = l.mesh.position.z - pz;
+          if (dx * dx + dz * dz <= aRangeSq) {
+            const dmg = Math.round((weapons.aura.damage || 8) * (playerStats ? playerStats.strength || 1 : 1));
+            _weaponHitEnemy(l, dmg, '#33AAFF');
+          }
+        }
+        // Also hit skinwalkers in aura range
+        for (let wi = _activeSkinwalkers.length - 1; wi >= 0; wi--) {
+          const skinw = _activeSkinwalkers[wi];
+          if (!skinw || skinw.dead) continue;
+          const dx = skinw.parts.root.position.x - px, dz = skinw.parts.root.position.z - pz;
+          if (dx * dx + dz * dz <= aRangeSq) {
+            const dmg = Math.round((weapons.aura.damage || 8) * (playerStats ? playerStats.strength || 1 : 1));
+            _weaponHitEnemy(skinw, dmg, '#33AAFF');
+          }
+        }
       }
     } else {
       _auraEffectTimer = 0;
+    }
+
+    // ── ICE SPEAR: fires icy projectile toward nearest enemy ──────────────────
+    if (weapons.iceSpear && weapons.iceSpear.active) {
+      _iceSpearTimer -= dt * 1000;
+      if (_iceSpearTimer <= 0) {
+        _iceSpearTimer = weapons.iceSpear.cooldown || 1500;
+        weapons.iceSpear.lastShot = Date.now();
+        const range = weapons.iceSpear.range || 15;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.iceSpear.damage || 20) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'iceSpear', dmg);
+        }
+      }
+    } else { _iceSpearTimer = 0; }
+
+    // ── FIRE RING: orbiting fire orbs that scorch enemies they pass over ──────
+    if (weapons.fireRing && weapons.fireRing.active) {
+      const orbs = weapons.fireRing.orbs || 3;
+      const fRange = weapons.fireRing.range || 4;
+      _fireRingAngle += (weapons.fireRing.rotationSpeed || 2) * dt;
+      _fireRingTimer -= dt * 1000;
+      if (_fireRingTimer <= 0) {
+        _fireRingTimer = weapons.fireRing.cooldown || 800;
+        weapons.fireRing.lastShot = Date.now();
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.fireRing.damage || 8) * strMult);
+        const orbHitRadSq = 0.9 * 0.9;
+        for (let oi = 0; oi < orbs; oi++) {
+          const angle = _fireRingAngle + (oi / orbs) * Math.PI * 2;
+          const orbX = px + Math.cos(angle) * fRange;
+          const orbZ = pz + Math.sin(angle) * fRange;
+          _weaponAoeDamage(orbX, orbZ, orbHitRadSq, dmg, '#FF4400');
+        }
+      }
+    } else { _fireRingTimer = 0; }
+
+    // ── LIGHTNING: instant chain-strike hitting up to 3 enemies in range ──────
+    if (weapons.lightning && weapons.lightning.active) {
+      _lightningTimer -= dt * 1000;
+      if (_lightningTimer <= 0) {
+        _lightningTimer = weapons.lightning.cooldown || 2000;
+        weapons.lightning.lastShot = Date.now();
+        const lRange = weapons.lightning.range || 18;
+        const lRangeSq = lRange * lRange;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.lightning.damage || 45) * strMult);
+        // Collect all enemies in range
+        const inRange = [];
+        const lPools = [_activeSlimes, _activeCrawlers, _activeLeapingSlimes];
+        for (let pi = 0; pi < lPools.length; pi++) {
+          const arr = lPools[pi];
+          for (let i = 0; i < arr.length; i++) {
+            const e = arr[i];
+            if (!e || !e.active || e.dead) continue;
+            const dx = e.mesh.position.x - px, dz = e.mesh.position.z - pz;
+            if (dx * dx + dz * dz <= lRangeSq) inRange.push(e);
+          }
+        }
+        for (let wi = 0; wi < _activeSkinwalkers.length; wi++) {
+          const sw = _activeSkinwalkers[wi];
+          if (!sw || sw.dead) continue;
+          const dx = sw.parts.root.position.x - px, dz = sw.parts.root.position.z - pz;
+          if (dx * dx + dz * dz <= lRangeSq) inRange.push(sw);
+        }
+        // Strike up to strikes+2 enemies using partial Fisher-Yates shuffle
+        const strikeCount = Math.min(inRange.length, (weapons.lightning.strikes || 1) + 2);
+        for (let si = 0; si < strikeCount; si++) {
+          const ri = si + Math.floor(Math.random() * (inRange.length - si));
+          const tmp = inRange[si]; inRange[si] = inRange[ri]; inRange[ri] = tmp;
+          _weaponHitEnemy(inRange[si], dmg, '#88FFFF');
+        }
+      }
+    } else { _lightningTimer = 0; }
+
+    // ── METEOR: big AoE impact at nearest enemy position ─────────────────────
+    if (weapons.meteor && weapons.meteor.active) {
+      _meteorTimer -= dt * 1000;
+      if (_meteorTimer <= 0) {
+        _meteorTimer = weapons.meteor.cooldown || 2500;
+        weapons.meteor.lastShot = Date.now();
+        const mArea = weapons.meteor.area || 5;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.meteor.damage || 60) * strMult);
+        const nearest = _weaponFindNearest(px, pz, Infinity);
+        const mx = nearest ? _weaponEnemyX(nearest) : px;
+        const mz = nearest ? _weaponEnemyZ(nearest) : pz;
+        _weaponAoeDamage(mx, mz, mArea * mArea, dmg, '#FF6622');
+        if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+          BloodV2.rawBurst(mx, 0.5, mz, 30, { color: 0xFF4400, spdMin: 2, spdMax: 8 });
+        }
+      }
+    } else { _meteorTimer = 0; }
+
+    // ── BOW: fires arrow toward nearest enemy ─────────────────────────────────
+    if (weapons.bow && weapons.bow.active) {
+      _bowTimer -= dt * 1000;
+      if (_bowTimer <= 0) {
+        _bowTimer = weapons.bow.cooldown || 1400;
+        weapons.bow.lastShot = Date.now();
+        const range = weapons.bow.range || 16;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.bow.damage || 22) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'bow', dmg);
+        }
+      }
+    } else { _bowTimer = 0; }
+
+    // ── MINIGUN: very rapid fire toward nearest enemy ─────────────────────────
+    if (weapons.minigun && weapons.minigun.active) {
+      _minigunTimer -= dt * 1000;
+      if (_minigunTimer <= 0) {
+        _minigunTimer = weapons.minigun.cooldown || 60;
+        weapons.minigun.lastShot = Date.now();
+        const range = weapons.minigun.range || 12;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.minigun.damage || 6) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'minigun', dmg);
+        }
+      }
+    } else { _minigunTimer = 0; }
+
+    // ── PUMP SHOTGUN: spread of pellets toward nearest enemy ──────────────────
+    if (weapons.pumpShotgun && weapons.pumpShotgun.active) {
+      _pumpShotgunTimer -= dt * 1000;
+      if (_pumpShotgunTimer <= 0) {
+        _pumpShotgunTimer = weapons.pumpShotgun.cooldown || 1800;
+        weapons.pumpShotgun.lastShot = Date.now();
+        const range = weapons.pumpShotgun.range || 8;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        const baseAngle = nearest
+          ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
+          : player.mesh.rotation.y;
+        const spread = weapons.pumpShotgun.spread || 0.7;
+        const pellets = weapons.pumpShotgun.pellets || 8;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.pumpShotgun.damage || 14) * strMult);
+        for (let pi = 0; pi < pellets; pi++) {
+          const a = baseAngle + (Math.random() - 0.5) * spread;
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'pumpShotgun', dmg);
+        }
+      }
+    } else { _pumpShotgunTimer = 0; }
+
+    // ── AUTO SHOTGUN: faster burst spread toward nearest enemy ────────────────
+    if (weapons.autoShotgun && weapons.autoShotgun.active) {
+      _autoShotgunTimer -= dt * 1000;
+      if (_autoShotgunTimer <= 0) {
+        _autoShotgunTimer = weapons.autoShotgun.cooldown || 600;
+        weapons.autoShotgun.lastShot = Date.now();
+        const range = weapons.autoShotgun.range || 7;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        const baseAngle = nearest
+          ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
+          : player.mesh.rotation.y;
+        const spread = weapons.autoShotgun.spread || 0.6;
+        const pellets = weapons.autoShotgun.pellets || 6;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.autoShotgun.damage || 10) * strMult);
+        for (let pi = 0; pi < pellets; pi++) {
+          const a = baseAngle + (Math.random() - 0.5) * spread;
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'autoShotgun', dmg);
+        }
+      }
+    } else { _autoShotgunTimer = 0; }
+
+    // ── UZI: rapid fire toward nearest enemy ──────────────────────────────────
+    if (weapons.uzi && weapons.uzi.active) {
+      _uziTimer -= dt * 1000;
+      if (_uziTimer <= 0) {
+        _uziTimer = weapons.uzi.cooldown || 120;
+        weapons.uzi.lastShot = Date.now();
+        const range = weapons.uzi.range || 10;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.uzi.damage || 8) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'uzi', dmg);
+        }
+      }
+    } else { _uziTimer = 0; }
+
+    // ── SNIPER RIFLE: slow single long-range shot toward nearest enemy ────────
+    if (weapons.sniperRifle && weapons.sniperRifle.active) {
+      _sniperTimer -= dt * 1000;
+      if (_sniperTimer <= 0) {
+        _sniperTimer = weapons.sniperRifle.cooldown || 3000;
+        weapons.sniperRifle.lastShot = Date.now();
+        const range = weapons.sniperRifle.range || 30;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.sniperRifle.damage || 95) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'sniperRifle', dmg);
+        }
+      }
+    } else { _sniperTimer = 0; }
+
+    // ── TESLA SABER: melee + chains to 2 extra enemies beyond reach ──────────
+    if (weapons.teslaSaber && weapons.teslaSaber.active) {
+      _teslaSaberTimer -= dt * 1000;
+      if (_teslaSaberTimer <= 0) {
+        _teslaSaberTimer = weapons.teslaSaber.cooldown || 800;
+        weapons.teslaSaber.lastShot = Date.now();
+        const tRange = weapons.teslaSaber.range || 3.5;
+        const tRangeSq = tRange * tRange;
+        const chainRangeSq = 6 * 6;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.teslaSaber.damage || 28) * strMult);
+        const chainDmg = Math.round(dmg * 0.6);
+        // Primary melee hit on all enemies in direct range
+        _weaponAoeDamage(px, pz, tRangeSq, dmg, '#AAFFFF');
+        // Collect chain targets (enemies just outside melee range)
+        const chainTargets = [];
+        const tPools = [_activeSlimes, _activeCrawlers, _activeLeapingSlimes];
+        for (let pi = 0; pi < tPools.length; pi++) {
+          const arr = tPools[pi];
+          for (let i = 0; i < arr.length; i++) {
+            const e = arr[i];
+            if (!e || !e.active || e.dead) continue;
+            const dx = e.mesh.position.x - px, dz = e.mesh.position.z - pz;
+            const dSq = dx * dx + dz * dz;
+            if (dSq > tRangeSq && dSq <= chainRangeSq) chainTargets.push(e);
+          }
+        }
+        for (let wi = 0; wi < _activeSkinwalkers.length; wi++) {
+          const sw = _activeSkinwalkers[wi];
+          if (!sw || sw.dead) continue;
+          const dx = sw.parts.root.position.x - px, dz = sw.parts.root.position.z - pz;
+          const dSq = dx * dx + dz * dz;
+          if (dSq > tRangeSq && dSq <= chainRangeSq) chainTargets.push(sw);
+        }
+        // Chain-zap up to 2 targets using partial shuffle
+        const zapCount = Math.min(chainTargets.length, 2);
+        for (let si = 0; si < zapCount; si++) {
+          const ri = si + Math.floor(Math.random() * (chainTargets.length - si));
+          const tmp = chainTargets[si]; chainTargets[si] = chainTargets[ri]; chainTargets[ri] = tmp;
+          _weaponHitEnemy(chainTargets[si], chainDmg, '#AAFFFF');
+        }
+      }
+    } else { _teslaSaberTimer = 0; }
+
+    // ── WHIP: hits all enemies in a wide forward arc ──────────────────────────
+    if (weapons.whip && weapons.whip.active) {
+      _whipTimer -= dt * 1000;
+      if (_whipTimer <= 0) {
+        _whipTimer = weapons.whip.cooldown || 900;
+        weapons.whip.lastShot = Date.now();
+        const wRange = weapons.whip.range || 6;
+        const wRangeSq = wRange * wRange;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.whip.damage || 18) * strMult);
+        const facingAngle = player.mesh.rotation.y;
+        const halfArc = Math.PI * 0.6; // 108° half-arc (216° total forward arc)
+        const whipPools = [_activeSlimes, _activeCrawlers, _activeLeapingSlimes];
+        for (let pi = 0; pi < whipPools.length; pi++) {
+          const arr = whipPools[pi];
+          for (let ei = arr.length - 1; ei >= 0; ei--) {
+            const e = arr[ei];
+            if (!e || !e.active || e.dead) continue;
+            const dx = e.mesh.position.x - px, dz = e.mesh.position.z - pz;
+            if (dx * dx + dz * dz > wRangeSq) continue;
+            const angle = Math.atan2(dx, dz);
+            let diff = Math.abs(angle - facingAngle);
+            if (diff > Math.PI) diff = Math.PI * 2 - diff;
+            if (diff <= halfArc) _weaponHitEnemy(e, dmg, '#FFAA00');
+          }
+        }
+        for (let wi = _activeSkinwalkers.length - 1; wi >= 0; wi--) {
+          const sw = _activeSkinwalkers[wi];
+          if (!sw || sw.dead) continue;
+          const dx = sw.parts.root.position.x - px, dz = sw.parts.root.position.z - pz;
+          if (dx * dx + dz * dz > wRangeSq) continue;
+          const angle = Math.atan2(dx, dz);
+          let diff = Math.abs(angle - facingAngle);
+          if (diff > Math.PI) diff = Math.PI * 2 - diff;
+          if (diff <= halfArc) _weaponHitEnemy(sw, dmg, '#FFAA00');
+        }
+      }
+    } else { _whipTimer = 0; }
+
+    // ── DOUBLE BARREL: wide spread burst toward nearest enemy ─────────────────
+    if (weapons.doubleBarrel && weapons.doubleBarrel.active) {
+      _doubleBarrelTimer -= dt * 1000;
+      if (_doubleBarrelTimer <= 0) {
+        _doubleBarrelTimer = weapons.doubleBarrel.cooldown || 1500;
+        weapons.doubleBarrel.lastShot = Date.now();
+        const range = weapons.doubleBarrel.range || 12;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        const baseAngle = nearest
+          ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
+          : player.mesh.rotation.y;
+        const spread = weapons.doubleBarrel.spread || 0.55;
+        const pellets = weapons.doubleBarrel.pellets || 12;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.doubleBarrel.damage || 12) * strMult);
+        for (let pi = 0; pi < pellets; pi++) {
+          const a = baseAngle + (Math.random() - 0.5) * spread;
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'doubleBarrel', dmg);
+        }
+      }
+    } else { _doubleBarrelTimer = 0; }
+
+    // ── BOOMERANG: fires projectile toward nearest enemy ──────────────────────
+    if (weapons.boomerang && weapons.boomerang.active) {
+      _boomerangTimer -= dt * 1000;
+      if (_boomerangTimer <= 0) {
+        _boomerangTimer = weapons.boomerang.cooldown || 1600;
+        weapons.boomerang.lastShot = Date.now();
+        const range = weapons.boomerang.range || 12;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        const bAngle = nearest
+          ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
+          : player.mesh.rotation.y;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.boomerang.damage || 25) * strMult);
+        _fireProjectile(px, pz, px + Math.sin(bAngle) * 10, pz + Math.cos(bAngle) * 10, 'boomerang', dmg);
+      }
+    } else { _boomerangTimer = 0; }
+
+    // ── SHURIKEN: fires N projectiles evenly spread around the player ─────────
+    if (weapons.shuriken && weapons.shuriken.active) {
+      _shurikenTimer -= dt * 1000;
+      if (_shurikenTimer <= 0) {
+        _shurikenTimer = weapons.shuriken.cooldown || 400;
+        weapons.shuriken.lastShot = Date.now();
+        const numProj = weapons.shuriken.projectiles || 3;
+        const range = weapons.shuriken.range || 10;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        const baseAngle = nearest
+          ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
+          : player.mesh.rotation.y;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.shuriken.damage || 12) * strMult);
+        for (let si = 0; si < numProj; si++) {
+          const a = baseAngle + (si / numProj) * Math.PI * 2;
+          _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10, 'shuriken', dmg);
+        }
+      }
+    } else { _shurikenTimer = 0; }
+
+    // ── NANO SWARM: wider aura of nano-bots dealing persistent area damage ────
+    if (weapons.nanoSwarm && weapons.nanoSwarm.active) {
+      _nanoSwarmTimer -= dt * 1000;
+      if (_nanoSwarmTimer <= 0) {
+        _nanoSwarmTimer = weapons.nanoSwarm.cooldown || 200;
+        weapons.nanoSwarm.lastShot = Date.now();
+        const nRange = weapons.nanoSwarm.range || 8;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round((weapons.nanoSwarm.damage || 4) * strMult);
+        _weaponAoeDamage(px, pz, nRange * nRange, dmg, '#00FFCC');
+      }
+    } else { _nanoSwarmTimer = 0; }
+
+    // ── HOMING MISSILE: fires toward nearest enemy ────────────────────────────
+    if (weapons.homingMissile && weapons.homingMissile.active) {
+      _homingMissileTimer -= dt * 1000;
+      if (_homingMissileTimer <= 0) {
+        _homingMissileTimer = weapons.homingMissile.cooldown || 2200;
+        weapons.homingMissile.lastShot = Date.now();
+        const range = weapons.homingMissile.range || 20;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.homingMissile.damage || 50) * strMult);
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest), 'homingMissile', dmg);
+        }
+      }
+    } else { _homingMissileTimer = 0; }
+
+    // ── POISON: periodic AoE dot damage cloud around player ──────────────────
+    if (weapons.poison && weapons.poison.active) {
+      _poisonTimer -= dt * 1000;
+      if (_poisonTimer <= 0) {
+        _poisonTimer = weapons.poison.cooldown || 1500;
+        weapons.poison.lastShot = Date.now();
+        const pRange = weapons.poison.range || 5;
+        const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+        const dmg = Math.round(((weapons.poison.dotDamage || 3) + (weapons.poison.damage || 6)) * strMult);
+        _weaponAoeDamage(px, pz, pRange * pRange, dmg, '#00CC44');
+      }
+    } else { _poisonTimer = 0; }
+
+    // ── FIREBALL: fires a tagged projectile; AoE triggers on impact ──────────
+    if (weapons.fireball && weapons.fireball.active) {
+      _fireballTimer -= dt * 1000;
+      if (_fireballTimer <= 0) {
+        _fireballTimer = weapons.fireball.cooldown || 1800;
+        weapons.fireball.lastShot = Date.now();
+        const range = weapons.fireball.range || 14;
+        const nearest = _weaponFindNearest(px, pz, range * range);
+        if (nearest) {
+          const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
+          const dmg = Math.round((weapons.fireball.damage || 35) * strMult);
+          const eRadius = weapons.fireball.explosionRadius || 3;
+          // Tag the projectile so _hit* handlers apply fireball damage + AoE on impact
+          _fireProjectile(px, pz, _weaponEnemyX(nearest), _weaponEnemyZ(nearest),
+            'fireball', dmg, eRadius);
+        }
+      }
+    } else { _fireballTimer = 0; }
+
+    // ── DRONE TURRET: drones orbit player and fire automatically ─────────────
+    // The DroneTurret class and its update loop live in enemy-class.js / game-loop.js.
+    // In the sandbox the game loop is not running, so we drive the update here.
+    if (weapons.droneTurret && weapons.droneTurret.active &&
+        typeof DroneTurret !== 'undefined' &&
+        Array.isArray(window.droneTurrets) && window.droneTurrets.length > 0) {
+      for (let di = 0; di < window.droneTurrets.length; di++) {
+        const drone = window.droneTurrets[di];
+        if (drone && typeof drone.update === 'function') drone.update(dt);
+      }
     }
   }
 
@@ -4132,7 +4776,10 @@
   function _hitSkinwalker(projectile, sw) {
     if (!sw || sw.dead) return;
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
-    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
+    const damage = (projectile && projectile.weaponDmg > 0)
+      ? projectile.weaponDmg
+      : (weapons && weapons.gun ? weapons.gun.damage : 15);
     const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
     const isCrit   = Math.random() < critChance;
     const critMult = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
@@ -4140,6 +4787,12 @@
     const actualDmg = Math.round(damage * hitForce * critMult * swStrMult);
 
     sw.takeDamage(actualDmg);
+    // Fireball explosion on impact
+    _triggerProjectileExplosion(projectile, sw.parts.root.position.x, sw.parts.root.position.z);
+    // If this hit killed the skinwalker, ensure kill processing runs immediately.
+    // _updateSkinwalkers removes dead skinwalkers before calling sw.update(), which
+    // means onDeath (and _killSkinwalker) might never fire from the animation loop.
+    if (sw.dead) _killSkinwalker(sw);
 
     // Floating damage text
     const hx = sw.parts.root.position.x;

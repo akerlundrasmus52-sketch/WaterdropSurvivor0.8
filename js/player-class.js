@@ -937,7 +937,7 @@
           // Enhanced water droplet trail when moving - MORE PARTICLES
           if (this.velocity.length() > 0.01) {
             this.trailTimer += dt;
-            if (this.trailTimer > 0.12) { // Faster trail (was 0.15)
+            if (this.trailTimer > 0.25) { // Trail frequency (was 0.15)
               this.trailTimer = 0;
               spawnWaterDroplet(this.mesh.position);
               // Add extra splash particles during movement
@@ -1496,11 +1496,12 @@
               this.mesh.rotation.x += this._idleTipX;
               this.mesh.rotation.z += this._idleTipZ;
             }
-            // Random droplet bead falling off the character
+            // Random droplet bead falling off the character — only when injured (below 50% HP)
             this._idleDropTimer -= dt;
             if (this._idleDropTimer <= 0) {
               this._idleDropTimer = 2 + Math.random() * 2;
-              if (typeof spawnWaterDroplet === 'function' && this.mesh) {
+              if (typeof spawnWaterDroplet === 'function' && this.mesh &&
+                  typeof playerStats !== 'undefined' && playerStats.hp < playerStats.maxHp * 0.5) {
                 const _dropPos = this.mesh.position.clone();
                 _dropPos.y -= 0.3;
                 spawnWaterDroplet(_dropPos);

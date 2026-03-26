@@ -529,9 +529,13 @@
         var p = this.parts;
         var PI = Math.PI;
 
+        // Body rocks side-to-side as weight shifts between limb pairs (half limb freq = 0.9)
+        var bodySway = Math.sin(t * 0.9) * 0.06; // half-freq of limb cycle = subtle roll
         p.root.rotation.x  = PI * 0.38;
-        p.torso.position.y = 0.60;
+        p.root.rotation.z  = bodySway;
+        p.torso.position.y = 0.60 + Math.abs(Math.sin(t * 2.8)) * 0.04; // slight vertical bounce
         p.torso.rotation.x = -0.35;
+        p.torso.rotation.z = -bodySway * 0.5; // counter-rotate torso for natural feel
 
         // Head cranes up to stare at player despite body pitched forward
         p.head.rotation.x = -0.7;
@@ -548,23 +552,29 @@
         while (diff < -PI) diff += PI * 2;
         p.head.rotation.y += diff * Math.min(dt * 3.0, 1.0);
 
-        // Arms — elbows out, alternating crawl
-        p.upper_arm_L.rotation.x = 1.0 + Math.sin(t * 1.8) * 0.35;
-        p.upper_arm_L.rotation.z = 0.55;
-        p.forearm_L.rotation.x   = -1.1;
-        p.upper_arm_R.rotation.x = 1.0 + Math.sin(t * 1.8 + PI) * 0.35;
-        p.upper_arm_R.rotation.z = -0.55;
-        p.forearm_R.rotation.x   = -1.1;
+        // Arms — diagonal opposite pairs move together (FR+RL, FL+RR)
+        // Left arm and right leg share phase; right arm and left leg share opposing phase
+        var armPhaseL  = Math.sin(t * 1.8);           // left arm / right leg phase
+        var armPhaseR  = Math.sin(t * 1.8 + PI);      // right arm / left leg phase (180° offset)
+        var forearmBob = Math.sin(t * 1.8 * 2) * 0.1; // forearm micro-oscillation
 
-        // Legs — bent under body
-        p.upper_leg_L.rotation.x = -0.5 + Math.sin(t * 1.8 + PI) * 0.40;
-        p.lower_leg_L.rotation.x = 1.6;
-        p.upper_leg_R.rotation.x = -0.5 + Math.sin(t * 1.8) * 0.40;
-        p.lower_leg_R.rotation.x = 1.6;
+        p.upper_arm_L.rotation.x = 1.0 + armPhaseL * 0.40;
+        p.upper_arm_L.rotation.z = 0.55 + armPhaseL * 0.08;
+        p.forearm_L.rotation.x   = -1.1 + forearmBob;
 
-        // Wrists bent back — claws dig in
-        p.hand_L.rotation.x = 0.6;
-        p.hand_R.rotation.x = 0.6;
+        p.upper_arm_R.rotation.x = 1.0 + armPhaseR * 0.40;
+        p.upper_arm_R.rotation.z = -0.55 - armPhaseR * 0.08;
+        p.forearm_R.rotation.x   = -1.1 - forearmBob;
+
+        // Legs — diagonal gait: left leg moves with right arm (armPhaseR) and vice versa
+        p.upper_leg_L.rotation.x = -0.5 + armPhaseR * 0.45;
+        p.lower_leg_L.rotation.x = 1.6 + Math.max(0, armPhaseR) * 0.15;
+        p.upper_leg_R.rotation.x = -0.5 + armPhaseL * 0.45;
+        p.lower_leg_R.rotation.x = 1.6 + Math.max(0, armPhaseL) * 0.15;
+
+        // Wrists bent back — claws dig in, slight claw-rake oscillation
+        p.hand_L.rotation.x = 0.6 + armPhaseL * 0.12;
+        p.hand_R.rotation.x = 0.6 + armPhaseR * 0.12;
     };
 
     // ---- CRAWL TRANSITION (walk→crawl over 0.4s) ----
