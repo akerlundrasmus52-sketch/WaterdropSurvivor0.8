@@ -154,7 +154,13 @@ function getDefaultPlayerStats(baseExpReq) {
     xpCollectionRadius: 1.0,    // multiplier for XP-gem pickup magnetism radius
     luck: 0,                    // 0–1: bonus chance for better drops / crit rolls
     criticalHitChance: 0.10,    // 0–1: direct crit chance (mirrors critChance)
-    criticalHitDamageMulti: 1.5 // multiplier for critical hit damage (mirrors critDmg)
+    criticalHitDamageMulti: 1.5, // multiplier for critical hit damage (mirrors critDmg)
+
+    // ── Stamina ──────────────────────────────────────────────────────────────
+    stamina: 100,          // current stamina (depletes on dash/sprint)
+    maxStamina: 100,       // maximum stamina (upgradeable in Camp)
+    staminaRegen: 8,       // stamina regenerated per second (upgradeable in Camp)
+    dashStaminaCost: 49,   // % of maxStamina consumed per dash (upgradeable in Camp)
   };
 }
 

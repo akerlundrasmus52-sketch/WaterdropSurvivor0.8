@@ -170,8 +170,8 @@
     var _statusTimer = 0;
     var _statusDuration = 0;
     window.setPlayerStatusEffect = function (type, duration) {
-      _statusContainer = document.getElementById('rage-bar-container');
-      _statusFill = document.getElementById('rage-unified-fill');
+      _statusContainer = document.getElementById('stamina-bar-container');
+      _statusFill = document.getElementById('stamina-fill');
       if (!_statusContainer) return;
       // Remove old effect class
       _statusContainer.classList.remove('status-fire','status-poison','status-ice','status-shock');
@@ -183,9 +183,9 @@
     window.clearPlayerStatusEffect = function () {
       _statusType = null;
       _statusTimer = 0;
-      var c = document.getElementById('rage-bar-container');
+      var c = document.getElementById('stamina-bar-container');
       if (c) c.classList.remove('status-fire','status-poison','status-ice','status-shock');
-      var f = document.getElementById('rage-unified-fill');
+      var f = document.getElementById('stamina-fill');
       if (f) f.style.width = '';
     };
     // Tick is called from the game loop (via addExp/updateHUD path) every frame
@@ -196,7 +196,7 @@
         window.clearPlayerStatusEffect();
       } else {
         var pct = (_statusTimer / _statusDuration) * 100;
-        var f = _statusFill || document.getElementById('rage-unified-fill');
+        var f = _statusFill || document.getElementById('stamina-fill');
         if (f) f.style.width = Math.max(0, pct) + '%';
       }
     };
@@ -2818,6 +2818,7 @@
         const sw = (weapons.samuraiSword && weapons.samuraiSword.active)
           ? weapons.samuraiSword : weapons.sword;
         _swordEffectCooldown = sw.cooldown || 1200;
+        sw.lastShot = Date.now(); // track for skill-icon cooldown overlay
         const sRange = sw.range || 3.5;
         const sRangeSq = sRange * sRange;
         // Iterate backward so that _killSlime's splice doesn't skip entries
@@ -2866,6 +2867,7 @@
       _auraEffectTimer -= dt * 1000;
       if (_auraEffectTimer <= 0) {
         _auraEffectTimer = weapons.aura.cooldown || 1000;
+        weapons.aura.lastShot = Date.now(); // track for skill-icon cooldown overlay
         const aRange = weapons.aura.range || 3.5;
         const aRangeSq = aRange * aRange;
         // Iterate backward so _killSlime's splice is safe
@@ -2962,8 +2964,7 @@
     const fireRateMult = Math.max(0.1, (playerStats && playerStats.fireRate) || 1.0);
     const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * REVOLVER_FIRE_RATE_MULT / fireRateMult) : Math.round(850 / fireRateMult);
     _gunCooldown = cooldown;
-
-    const px = player.mesh.position.x, pz = player.mesh.position.z;
+    if (weapons && weapons.gun) weapons.gun.lastShot = Date.now(); // track for skill-icon cooldown overlay
 
     // Manual aim: joystick takes priority, then mouse. No auto-aim fallback.
     let tx, tz;
@@ -3908,6 +3909,9 @@
       if (hpFill) hpFill.style.width = hpPct + '%';
       if (hpText) hpText.innerText = 'HP: ' + Math.ceil(playerStats.hp) + '/' + playerStats.maxHp;
       _refreshExpBar();
+      // Update stamina bar and skill icons panel (defined in game-hud.js)
+      if (typeof _updateStaminaBar === 'function') _updateStaminaBar();
+      if (typeof _updateSkillIcons === 'function') _updateSkillIcons();
     } catch (e) {}
   }
 
@@ -4504,6 +4508,16 @@
       // Rage combat system tick
       if (window.GameRageCombat && typeof GameRageCombat.update === 'function') {
         GameRageCombat.update(dt);
+      }
+
+      // Stamina regen: regenerates over time at staminaRegen units/second
+      if (window.playerStats && window.playerStats.maxStamina > 0 &&
+          (window.playerStats.stamina || 0) < window.playerStats.maxStamina) {
+        const _staRegen = window.playerStats.staminaRegen || 8;
+        window.playerStats.stamina = Math.min(
+          window.playerStats.maxStamina,
+          (window.playerStats.stamina || 0) + _staRegen * dt
+        );
       }
 
       // Grey Boss system tick

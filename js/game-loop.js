@@ -980,6 +980,15 @@
         spawnParticles(player.mesh.position, 0x00FF00, 2);
       }
 
+      // Stamina regen: regenerates over time at staminaRegen units/second
+      if (playerStats.maxStamina > 0 && (playerStats.stamina || 0) < playerStats.maxStamina) {
+        const staminaRegenRate = playerStats.staminaRegen || 8;
+        playerStats.stamina = Math.min(
+          playerStats.maxStamina,
+          (playerStats.stamina || 0) + staminaRegenRate * dt
+        );
+      }
+
       // Annunaki Protocol: drain ANNUNAKI_HP_DRAIN_RATE % max HP per second (every 60 frames)
       // Double-check saveData to prevent drain when the protocol is not explicitly unlocked
       // (guards against stale window flags from previous sessions).
