@@ -842,7 +842,16 @@ class Engine2Sandbox {
     // ══════════════════════════════════════════════════════════════
     // 4. ANNUNAKI TABLET — Southwest area (-35, 15)
     // ══════════════════════════════════════════════════════════════
-    if (typeof AnnunakiTablet !== 'undefined') { this._annunakiTablet = new AnnunakiTablet(this.scene); }
+    if (typeof AnnunakiTablet !== 'undefined') {
+      try {
+        this._annunakiTablet = new AnnunakiTablet(this.scene);
+        console.log('[Engine2] ✓ Annunaki Tablet initialized at (-35, 0, 15)');
+      } catch (e) {
+        console.error('[Engine2] Failed to initialize Annunaki Tablet:', e);
+      }
+    } else {
+      console.warn('[Engine2] AnnunakiTablet class not loaded - tablet will not appear');
+    }
     // World Trees landmark system
     if (typeof WorldTrees !== 'undefined') {
       this._worldTrees = new WorldTrees(this.scene);
