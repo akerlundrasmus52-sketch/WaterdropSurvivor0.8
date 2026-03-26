@@ -2818,6 +2818,7 @@
         const sw = (weapons.samuraiSword && weapons.samuraiSword.active)
           ? weapons.samuraiSword : weapons.sword;
         _swordEffectCooldown = sw.cooldown || 1200;
+        sw.lastShot = Date.now(); // track for skill-icon cooldown overlay
         const sRange = sw.range || 3.5;
         const sRangeSq = sRange * sRange;
         // Iterate backward so that _killSlime's splice doesn't skip entries
@@ -2866,6 +2867,7 @@
       _auraEffectTimer -= dt * 1000;
       if (_auraEffectTimer <= 0) {
         _auraEffectTimer = weapons.aura.cooldown || 1000;
+        weapons.aura.lastShot = Date.now(); // track for skill-icon cooldown overlay
         const aRange = weapons.aura.range || 3.5;
         const aRangeSq = aRange * aRange;
         // Iterate backward so _killSlime's splice is safe
@@ -2962,8 +2964,7 @@
     const fireRateMult = Math.max(0.1, (playerStats && playerStats.fireRate) || 1.0);
     const cooldown = weapons && weapons.gun ? Math.round(weapons.gun.cooldown * REVOLVER_FIRE_RATE_MULT / fireRateMult) : Math.round(850 / fireRateMult);
     _gunCooldown = cooldown;
-
-    const px = player.mesh.position.x, pz = player.mesh.position.z;
+    if (weapons && weapons.gun) weapons.gun.lastShot = Date.now(); // track for skill-icon cooldown overlay
 
     // Manual aim: joystick takes priority, then mouse. No auto-aim fallback.
     let tx, tz;
@@ -3908,6 +3909,9 @@
       if (hpFill) hpFill.style.width = hpPct + '%';
       if (hpText) hpText.innerText = 'HP: ' + Math.ceil(playerStats.hp) + '/' + playerStats.maxHp;
       _refreshExpBar();
+      // Update stamina bar and skill icons panel (defined in game-hud.js)
+      if (typeof _updateStaminaBar === 'function') _updateStaminaBar();
+      if (typeof _updateSkillIcons === 'function') _updateSkillIcons();
     } catch (e) {}
   }
 
