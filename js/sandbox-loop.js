@@ -3330,7 +3330,7 @@
         const strMult = (playerStats && playerStats.strength > 0) ? playerStats.strength : 1;
         const dmg = Math.round((weapons.whip.damage || 18) * strMult);
         const facingAngle = player.mesh.rotation.y;
-        const halfArc = Math.PI * 0.6; // ±108° total 216° arc
+        const halfArc = Math.PI * 0.6; // 108° half-arc (216° total forward arc)
         const whipPools = [_activeSlimes, _activeCrawlers, _activeLeapingSlimes];
         for (let pi = 0; pi < whipPools.length; pi++) {
           const arr = whipPools[pi];
