@@ -827,6 +827,11 @@ class Engine2Sandbox {
 
     console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
     console.log('[Engine2] ✓ All landmarks created successfully');
+
+    // Bonus landmarks (Ritual Fire Circle, Alien Crash Debris, Ancient Stone Well)
+    if (typeof BonusLandmarks !== 'undefined') {
+      this._bonusLandmarks = new BonusLandmarks(this.scene);
+    }
   }
 
   /**
