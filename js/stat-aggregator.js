@@ -155,7 +155,10 @@
         goldDropMultiplier: 1.0,   // gold drop rate multiplier
         goldDropBonus: 0,          // legacy additive bonus
         expGainBonus: 0, itemDropRate: 1.0,
-        criticalHitChance: 0.10, criticalHitDamageMulti: 1.5
+        criticalHitChance: 0.10, criticalHitDamageMulti: 1.5,
+
+        // ── Stamina ──────────────────────────────────────────────────────────
+        stamina: 100, maxStamina: 100, staminaRegen: 8, dashStaminaCost: 49,
       };
     }
 
