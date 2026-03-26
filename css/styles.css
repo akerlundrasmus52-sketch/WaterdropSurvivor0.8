@@ -352,7 +352,6 @@
       background: conic-gradient(rgba(0,0,0,0.65) var(--cd-pct,0%), transparent var(--cd-pct,0%));
       transform: rotate(-90deg);
       mix-blend-mode: multiply;
-      will-change: auto; /* Disable GPU acceleration to reduce lag */
     }
     /* Cooldown text (remaining seconds) */
     .skill-icon-cd-text {
@@ -371,7 +370,16 @@
       filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
     }
     .skill-icon-label {
-      display: none; /* Hide labels for cleaner look */
+      /* Visually hidden but available to screen readers */
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     /* Pulse flash when skill becomes ready */
     @keyframes skill-ready-flash {

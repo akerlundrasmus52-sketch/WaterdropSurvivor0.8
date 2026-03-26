@@ -508,13 +508,13 @@
       var tree = this._trees[i];
 
       // Calculate distance to player for LOD
-      var distSq = Infinity;
+      var distToPlayerSq = Infinity;
       if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
         var dx_player = tree.pos.x - playerPos.x;
         var dz_player = tree.pos.z - playerPos.z;
-        distSq = dx_player * dx_player + dz_player * dz_player;
+        distToPlayerSq = dx_player * dx_player + dz_player * dz_player;
       }
-      var isNear = distSq < 50 * 50; // Within 50 units
+      var isNear = distToPlayerSq < 50 * 50; // Within 50 units
 
       // ── Wind sway ──────────────────────────────────────────────────────────
       tree.windTime += dt;
@@ -541,10 +541,10 @@
       if (playerPos && typeof playerPos.x === 'number' && typeof playerPos.z === 'number') {
         var dx = playerPos.x - tree.pos.x;
         var dz = playerPos.z - tree.pos.z;
-        var distSq = (dx * dx + dz * dz) / (tree.scale * tree.scale);
+        var collideDistSq = (dx * dx + dz * dz) / (tree.scale * tree.scale);
         var collideSq = COLLIDE_RADIUS * COLLIDE_RADIUS;
 
-        if (distSq < collideSq && tree.shakeTime <= 0) {
+        if (collideDistSq < collideSq && tree.shakeTime <= 0) {
           tree.shakeTime = 0.8;
           tree.shakeIntensity = 0.12;
 

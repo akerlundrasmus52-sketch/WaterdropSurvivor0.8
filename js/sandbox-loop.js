@@ -2992,21 +2992,21 @@
       let nearestEnemy = null;
       let nearestDistSq = gunRangeSq;
 
-      // Check all active enemies (slimes, leaping slimes, crawlers, skinwalkers)
-      const allEnemies = _activeSlimes.concat(_activeLeapingSlimes, _activeCrawlers);
-      if (_skinwalker && _skinwalker.parts && _skinwalker.parts.root) {
-        allEnemies.push({ mesh: _skinwalker.parts.root });
-      }
-
-      for (let i = 0; i < allEnemies.length; i++) {
-        const e = allEnemies[i];
-        if (!e || !e.mesh) continue;
-        const dx = e.mesh.position.x - px;
-        const dz = e.mesh.position.z - pz;
-        const distSq = dx * dx + dz * dz;
-        if (distSq < nearestDistSq) {
-          nearestDistSq = distSq;
-          nearestEnemy = e;
+      // Iterate each active-enemy array directly to avoid GC allocation from .concat()
+      const enemySources = [_activeSlimes, _activeLeapingSlimes, _activeCrawlers, _activeSkinwalkers];
+      for (let s = 0; s < enemySources.length; s++) {
+        const arr = enemySources[s];
+        if (!Array.isArray(arr)) continue;
+        for (let i = 0; i < arr.length; i++) {
+          const e = arr[i];
+          if (!e || !e.mesh) continue;
+          const dx = e.mesh.position.x - px;
+          const dz = e.mesh.position.z - pz;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < nearestDistSq) {
+            nearestDistSq = distSq;
+            nearestEnemy = e;
+          }
         }
       }
 
@@ -4712,12 +4712,11 @@
         const errorMsg = (e && e.message ? e.message : String(e));
         console.error('[SandboxLoop] _animate error:', e);
 
-        // Only show on-screen error for fatal errors that prevent game from running
-        // Skip errors related to undefined/null property access as they're usually non-fatal
-        const isPropertyAccessError = errorMsg.includes('undefined') ||
-                                       errorMsg.includes('Cannot read propert') ||  // matches both "property" and "properties"
-                                       errorMsg.includes('null') ||
-                                       errorMsg.includes('is not defined');
+        // Only show on-screen error for fatal errors that prevent game from running.
+        // Suppress property-access errors (TypeError: Cannot read ... of undefined/null)
+        // but always surface ReferenceErrors so missing globals are visible.
+        const isPropertyAccessError =
+          /Cannot read (propert(?:y|ies)) of (undefined|null)/i.test(errorMsg);
 
         if (!isPropertyAccessError) {
           _showError('Animate error: ' + errorMsg);
