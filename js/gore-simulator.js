@@ -491,6 +491,7 @@ if (this.life <= 0) { this.deactivate(); return; }
 
 if (this.onGround) {
   // Settled on ground — spread into puddle slowly
+  this.size = Math.min(this.size + dt * 0.005, 0.08);
   this.size = Math.min(this.size + dt * 0.008, 0.12);
   if (this.mesh) this.mesh.scale.set(this.size, 0.1, this.size);
   // Fade after a while
@@ -1124,6 +1125,7 @@ for (let i = 0; i < count; i++) {
   const spread = profile.woundRadius * 4;
   const vel = new THREE.Vector3(
     hitDir.x * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random()-0.5) * spread * 6,
+    hitDir.y * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random() - 0.5) * 1.0,
     hitDir.y * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random() - 0.6) * 1.2,
     hitDir.z * (speed.min + Math.random() * (speed.max - speed.min)) + (Math.random()-0.5) * spread * 6
   );
@@ -1573,7 +1575,7 @@ if (profile.killStyle === 'shatter') {
 }
 
 // DEFAULT DEATH — based on which organ killed enemy
-const deathBloodCount  = 60 + Math.floor(profile.bloodVolume * 20);
+const deathBloodCount  = 120 + Math.floor(profile.bloodVolume * 40);
 const deathColor       = SLIME_ANATOMY[killedBy]?.color || 0xaa0000;
 
 switch (killedBy) {
@@ -1589,9 +1591,11 @@ switch (killedBy) {
     // 3 massive cardiac pulses then collapse
     for (let p = 0; p < 4; p++) {
       setTimeout(() => {
-        this._spawnBloodBurst(pos, null, 20, 0xff0000, 'pump');
+        this._spawnBloodBurst(pos, null, 50, 0xff0000, 'pump');
       }, p * 150);
     }
+    setTimeout(() => { this._spawnBloodBurst(pos, null, 50, 0xff0000, 'pump'); }, 360);
+    setTimeout(() => { this._spawnBloodBurst(pos, null, 50, 0xff0000, 'pump'); }, 540);
     break;
 
   case 'guts':
@@ -1615,14 +1619,18 @@ switch (killedBy) {
     }
     break;
 
-  default:
-    // Normal violent death burst
+  default: {
+    // Normal violent death burst — overdone Hollywood style
+    const _enemyTypeColors = { slime: 0x22aa33, crawler: 0x8B4513, leaping_slime: 0x00bfff };
+    const _chunkCol = enemy && enemy.enemyType ? (_enemyTypeColors[enemy.enemyType] || 0x22aa33) : 0x22aa33;
     this._spawnBloodBurst(pos, null, deathBloodCount, deathColor, 'normal');
     // Some chunks for drama
     if (Math.random() < 0.5) {
+      this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile, _chunkCol);
       this._spawnChunks(pos, null, 3 + Math.floor(Math.random() * 4), profile, chunkColor);
     }
     break;
+  }
 }
 
 },
@@ -1680,7 +1688,7 @@ if (chunk) chunk.reset(pos, vel, options);
 return chunk;
 },
 
-_spawnChunks(pos, normal, count, profile, enemyColor) {
+_spawnChunks(pos, normal, count, profile, color) {
 for (let i = 0; i < count; i++) {
 const angle = Math.random() * Math.PI * 2;
 const elev  = 0.3 + Math.random() * 0.5;
@@ -1691,7 +1699,7 @@ Math.sin(elev) * speed + 1,
 Math.sin(angle) * Math.cos(elev) * speed
 );
 this._spawnChunk(pos, vel, {
-color: enemyColor !== undefined ? enemyColor : 0x22aa33,
+color: color || 0x22aa33,
 size:  0.04 + Math.random() * 0.14,
 });
 }

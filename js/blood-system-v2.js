@@ -95,12 +95,12 @@ woundR:        0.045,      // wound radius on body
 penetration:   0.40,       // 0=surface 1=full through
 exitWound:     true,
 exitScale:     1.9,        // exit hole bigger than entry
-dropCount:     10,         // blood drops per hit
-dropSpeed:     [3.5, 8.0], // [min,max] m/s
-mistCount:     6,
+dropCount:     30,         // blood drops per hit
+dropSpeed:     [4.0, 12.0], // [min,max] m/s
+mistCount:     18,
 mistSpeed:     [1.0, 3.5],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.35,
 organDmg:      18,
 pumpOnHeart:   true,
@@ -114,12 +114,12 @@ woundR:        0.060,
 penetration:   0.65,
 exitWound:     true,
 exitScale:     2.6,
-dropCount:     15,
+dropCount:     45,
 dropSpeed:     [5.5, 12.0],
-mistCount:     10,
+mistCount:     30,
 mistSpeed:     [2.0, 5.0],
-chunkChance:   0.08,
-chunkCount:    [1,2],
+chunkChance:   0.38,
+chunkCount:    [4,8],
 pushForce:     0.8,
 organDmg:      28,
 pumpOnHeart:   true,
@@ -136,12 +136,12 @@ woundR:        0.22,
 penetration:   0.25,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     45,         // MASSIVE blood volume
+dropCount:     180,        // MASSIVE blood volume
 dropSpeed:     [7.0, 20.0],
-mistCount:     30,
+mistCount:     90,
 mistSpeed:     [3.0, 9.0],
-chunkChance:   0.85,
-chunkCount:    [4,10],
+chunkChance:   1.0,
+chunkCount:    [12,28],
 pushForce:     3.5,
 organDmg:      55,
 pellets:       9,          // spread pattern
@@ -157,12 +157,12 @@ woundR:        0.032,
 penetration:   0.38,
 exitWound:     true,
 exitScale:     1.4,
-dropCount:     8,
+dropCount:     24,
 dropSpeed:     [3.0, 7.0],
-mistCount:     5,
+mistCount:     15,
 mistSpeed:     [1.0, 3.0],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.20,
 organDmg:      12,
 pumpOnHeart:   true,
@@ -176,17 +176,17 @@ woundR:        0.022,
 penetration:   1.0,        // full through
 exitWound:     true,
 exitScale:     0.85,       // supersonic — exit nearly same size
-dropCount:     18,
-dropSpeed:     [10.0, 28.0],
-mistCount:     20,
+dropCount:     54,
+dropSpeed:     [10.0, 55.0],
+mistCount:     60,
 mistSpeed:     [5.0, 14.0],
-chunkChance:   0.20,
-chunkCount:    [1,3],
+chunkChance:   0.50,
+chunkCount:    [4,9],
 pushForce:     2.0,
 organDmg:      80,
 // Temporary cavity: huge outward burst then blood collapses inward
 supersonicCavity: true,
-cavityR:       2.2,
+cavityR:       4.5,
 pumpOnHeart:   true,
 killStyle:     'supersonic',
 },
@@ -198,12 +198,12 @@ woundR:        0.028,
 penetration:   0.32,
 exitWound:     true,
 exitScale:     1.2,
-dropCount:     7,
+dropCount:     21,
 dropSpeed:     [3.0, 6.5],
-mistCount:     4,
+mistCount:     12,
 mistSpeed:     [1.0, 3.0],
-chunkChance:   0.02,
-chunkCount:    [0,1],
+chunkChance:   0.32,
+chunkCount:    [3,7],
 pushForce:     0.18,
 organDmg:      10,
 pumpOnHeart:   true,
@@ -217,13 +217,13 @@ woundR:        0.55,
 penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     80,
+dropCount:     240,
 dropSpeed:     [14.0, 35.0],
-mistCount:     50,
+mistCount:     150,
 mistSpeed:     [6.0, 18.0],
 chunkChance:   1.0,
-chunkCount:    [8,18],
-pushForce:     20.0,
+chunkCount:    [11,24],
+pushForce:     40.0,
 organDmg:      200,
 isExplosive:   true,
 blastR:        3.5,
@@ -237,12 +237,12 @@ woundR:        0.90,
 penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     150,
+dropCount:     400,
 dropSpeed:     [22.0, 55.0],
-mistCount:     100,
+mistCount:     250,
 mistSpeed:     [10.0, 25.0],
 chunkChance:   1.0,
-chunkCount:    [15,30],
+chunkCount:    [18,36],
 pushForce:     50.0,
 organDmg:      9999,
 isExplosive:   true,
@@ -257,12 +257,12 @@ woundR:        0.018,
 penetration:   1.0,
 exitWound:     true,
 exitScale:     0.7,
-dropCount:     3,          // cauterizes — barely bleeds
+dropCount:     9,          // cauterizes — barely bleeds
 dropSpeed:     [0.3, 1.5],
 mistCount:     0,
 mistSpeed:     [0,0],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.05,
 organDmg:      45,
 cauterizes:    true,
@@ -278,12 +278,12 @@ woundR:        0.14,
 penetration:   0.70,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     22,
+dropCount:     66,
 dropSpeed:     [5.0, 14.0],
-mistCount:     15,
+mistCount:     45,
 mistSpeed:     [2.0, 7.0],
-chunkChance:   0.35,
-chunkCount:    [2,5],
+chunkChance:   0.65,
+chunkCount:    [5,11],
 pushForce:     2.5,
 organDmg:      60,
 charEffect:    true,
@@ -298,12 +298,12 @@ woundR:        0.022,
 penetration:   0.92,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     12,
+dropCount:     36,
 dropSpeed:     [0.5, 2.5],
 mistCount:     0,
 mistSpeed:     [0,0],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.08,
 organDmg:      35,
 isSlash:       true,
@@ -319,12 +319,12 @@ woundR:        0.042,
 penetration:   0.85,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     25,
+dropCount:     75,
 dropSpeed:     [1.0, 6.0],
-mistCount:     3,
+mistCount:     9,
 mistSpeed:     [0.5, 2.0],
-chunkChance:   0.15,
-chunkCount:    [1,2],
+chunkChance:   0.45,
+chunkCount:    [4,8],
 pushForce:     1.0,
 organDmg:      50,
 isSlash:       true,
@@ -340,12 +340,12 @@ woundR:        0.09,
 penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     35,
+dropCount:     105,
 dropSpeed:     [1.5, 7.5],
-mistCount:     4,
+mistCount:     12,
 mistSpeed:     [0.5, 2.5],
-chunkChance:   0.50,
-chunkCount:    [2,4],
+chunkChance:   0.80,
+chunkCount:    [5,10],
 pushForce:     2.5,
 organDmg:      70,
 isSlash:       true,
@@ -361,12 +361,12 @@ woundR:        0.18,
 penetration:   0.15,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     2,
+dropCount:     6,
 dropSpeed:     [0.1, 0.5],
 mistCount:     0,
 mistSpeed:     [0,0],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.4,
 organDmg:      20,
 cauterizes:    true,
@@ -383,12 +383,12 @@ woundR:        0.065,
 penetration:   0.55,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     10,
+dropCount:     30,
 dropSpeed:     [1.0, 4.0],
-mistCount:     6,
+mistCount:     18,
 mistSpeed:     [0.3, 1.5],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.4,
 organDmg:      30,
 freezesBlood:  true,
@@ -403,12 +403,12 @@ woundR:        0.035,
 penetration:   1.0,
 exitWound:     true,
 exitScale:     1.0,
-dropCount:     7,
+dropCount:     21,
 dropSpeed:     [2.0, 7.0],
-mistCount:     10,
+mistCount:     30,
 mistSpeed:     [1.0, 4.0],
-chunkChance:   0.06,
-chunkCount:    [0,1],
+chunkChance:   0.36,
+chunkCount:    [3,7],
 pushForce:     4.0,
 organDmg:      40,
 electricEffect: true,
@@ -423,12 +423,12 @@ woundR:        0.026,
 penetration:   0.98,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     20,
+dropCount:     60,
 dropSpeed:     [0.3, 1.5],
 mistCount:     0,
 mistSpeed:     [0,0],
-chunkChance:   0.0,
-chunkCount:    [0,0],
+chunkChance:   0.3,
+chunkCount:    [3,6],
 pushForce:     0.02,
 organDmg:      120,
 isSlash:       true,
@@ -445,12 +445,12 @@ woundR:        1.20,
 penetration:   1.0,
 exitWound:     false,
 exitScale:     1.0,
-dropCount:     200,
+dropCount:     600,
 dropSpeed:     [25.0, 65.0],
-mistCount:     125,
+mistCount:     375,
 mistSpeed:     [12.0, 30.0],
 chunkChance:   1.0,
-chunkCount:    [20,40],
+chunkCount:    [23,46],
 pushForce:     80.0,
 organDmg:      9999,
 isExplosive:   true,
@@ -1299,6 +1299,27 @@ d.frozen    = false; d.charred = false;
 }
 }
 
+// ARTERIAL JET — high-pressure squirt from the wound
+for (var i = 0; i < 8; i++) {
+var d = _getFreeDrop(_dropData);
+if (!d) break;
+var spd = 8.0 + Math.random() * 10.0;
+var sctr = 0.08;
+d.alive = true;
+d.px = hx; d.py = hy; d.pz = hz;
+d.vx = nx * spd + (Math.random()-0.5) * sctr;
+d.vy = ny * spd + (Math.random()-0.5) * sctr;
+d.vz = nz * spd + (Math.random()-0.5) * sctr;
+d.r         = 0.018 + Math.random()*0.012;
+d.maxLife   = 3.5 + Math.random()*1.5;
+d.life      = d.maxLife;
+d.viscosity = 0.45;
+d.bounces   = 0; d.maxBounces = 3;
+d.onGround  = false;
+d.color     = col.base;
+d.frozen    = false; d.charred = false;
+}
+
 }
 
 function _fxSupersonic(hx, hy, hz, wp, col) {
@@ -1353,8 +1374,8 @@ d.frozen    = false; d.charred = false;
 }
 
 function _fxSlash(hx, hy, hz, normal, wp, col) {
-// Blood arcs off blade in a wide fan
-var count = wp.dropCount;
+// Blood arcs off blade in a wide fan — tripled for Hollywood overdone style
+var count = wp.dropCount * 3;
 for (var i = 0; i < count; i++) {
 var t = i / count;
 var arc = (t - 0.5) * Math.PI * wp.slashArc * 2;
@@ -1390,6 +1411,26 @@ d.viscosity = 0.85;
 d.bounces   = 0; d.maxBounces = 1;
 d.onGround  = false;
 d.color     = col.dark;
+d.frozen    = false; d.charred = false;
+}
+// UPWARD ARC — 12 drops that rise and fall like a visible arc
+for (var i = 0; i < 12; i++) {
+var d = _getFreeDrop(_dropData);
+if (!d) break;
+var spd = 3.0 + Math.random() * 4.0;
+var a   = Math.random() * Math.PI * 2;
+d.alive = true;
+d.px = hx; d.py = hy; d.pz = hz;
+d.vx = Math.cos(a) * spd * 0.4;
+d.vy = spd;
+d.vz = Math.sin(a) * spd * 0.4;
+d.r         = 0.010 + Math.random()*0.014;
+d.maxLife   = 3.5 + Math.random()*1.0;
+d.life      = d.maxLife;
+d.viscosity = 0.55;
+d.bounces   = 0; d.maxBounces = 3;
+d.onGround  = false;
+d.color     = col.base;
 d.frozen    = false; d.charred = false;
 }
 }
@@ -1556,12 +1597,12 @@ _burstRadial(hx, hy+0.15, hz, 30, col.organ, 2.5, 6.0, 0.006, 0.010, 1.0, 0.2);
 break;
 
 case 'heart':
-// 3 massive arterial pulses then silence
+// 3 massive arterial pulses then silence — hollywood geyser
 for (var p = 0; p < 3; p++) {
 (function(pulse) {
 setTimeout(function() {
 if (!_ready) return;
-_burstUpward(hx, hy+0.1, hz, 22, 0xff0000, 3.5+pulse, 7.0+pulse, 0.025, 0.04, 3.0, 0.55);
+_burstUpward(hx, hy+0.1, hz, 55, 0xff0000, 3.5+pulse, 16.0+pulse, 0.025, 0.04, 3.0, 0.55);
 }, pulse * 170);
 })(p);
 }
@@ -1674,10 +1715,12 @@ for (var p = 0; p < 4; p++) {
 (function(pulse) {
 setTimeout(function() {
 if (!_ready) return;
-_burstUpward(ex, ey+0.05, ez, 18, 0xff0000, 3.5, 8.0, 0.024, 0.040, 3.0, 0.55);
+_burstUpward(ex, ey+0.05, ez, 50, 0xff0000, 3.5, 8.0, 0.024, 0.040, 3.0, 0.55);
 }, pulse*160);
 })(p);
 }
+setTimeout(function() { if (!_ready) return; _burstUpward(ex, ey+0.05, ez, 50, 0xff0000, 3.5, 8.0, 0.024, 0.040, 3.0, 0.55); }, 360);
+setTimeout(function() { if (!_ready) return; _burstUpward(ex, ey+0.05, ez, 50, 0xff0000, 3.5, 8.0, 0.024, 0.040, 3.0, 0.55); }, 540);
 break;
 case 'guts':
 // Slow deflation
@@ -1698,8 +1741,15 @@ d.color = 0x44cc22; d.frozen = false; d.charred = false;
 }
 break;
 default:
-_burstRadial(ex, ey, ez, 65, col.base, 2.0, 8.0, 0.012, 0.030, 3.0, 0.58);
+_burstRadial(ex, ey, ez, 180, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58);
+_burstUpward(ex, ey, ez, 40, col.base, 5.0, 14.0, 0.012, 0.030, 3.0, 0.58);
 if (Math.random() < 0.5) _spawnChunks(ex, ey, ez, null, 3+Math.floor(Math.random()*4), wp, col);
+[0, 120, 240].forEach(function(delay) {
+  setTimeout(function() {
+    if (!_ready) return;
+    _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58);
+  }, delay);
+});
 break;
 }
 
@@ -2075,6 +2125,8 @@ console.log([
 '╚══════════════════════════════════════════════════════╝',
 '',
 ].join('\n'));
+
+console.log('[GORE PATCH v2 OVERDONE] Applied');
 
 })(window);
 

@@ -1180,9 +1180,12 @@
       GoreSim.onKill(slot, 'pistol', null);
     }
 
-    // DISABLED: Flying flesh chunks removed for realistic gore (user request)
-    // User wants realistic slime death without chunks - just blood and corpse
-    // _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 5), true);
+    // Hollywood-style overdone slime death burst
+    window.BloodV2 && BloodV2.rawBurst(x, y, z, 80, {
+      spdMin: 3, spdMax: 14, rMin: 0.010, rMax: 0.030, life: 3.5, visc: 0.55,
+      enemyType: 'slime'
+    });
+    _spawnFleshChunks(slot, 12 + Math.floor(Math.random() * 8), true);
 
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
@@ -1326,6 +1329,9 @@
       GoreSim.onKill(crawler, 'pistol', null);
     }
 
+    // Hollywood-style overdone crawler death burst
+    window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'crawler' });
+
     // Spawn brown crawler/worm flesh chunks
     const crawlerColors = [0x8B4513, 0x6B3410, 0x5C3010, 0xDEB887];
     _spawnFleshChunks(crawler, 6 + Math.floor(Math.random() * 5), true, crawlerColors);
@@ -1424,6 +1430,8 @@
   /** Apply a projectile hit to a leaping slime. */
   function _hitLeapingSlime(projectile, enemy) {
     if (!enemy || !enemy.active || enemy.dead || enemy.dying) return;
+
+    if (enemy.woundPool && enemy.woundCount >= enemy.woundPool.length) enemy.woundCount = 0;
 
     const weaponKey   = (weapons && weapons.gun) ? 'gun' : 'pistol';
     const weaponLevel = (weapons && weapons.gun) ? (weapons.gun.level || 1) : 1;
@@ -1532,6 +1540,9 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(enemy, 'pistol', null);
     }
+
+    // Hollywood-style overdone leaping slime death burst
+    window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'leaping_slime' });
 
     // Spawn blue slime flesh chunks
     const blueSlimeColors = [0x00bfff, 0x0090cc, 0x005f99, 0x00ffff];
@@ -1700,6 +1711,7 @@
       }
     }
 
+    _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 4), false, slot.mesh.material.color.getHex());
     var stageColor2 = slot.mesh.material.color.getHex();
     _spawnFleshChunks(slot, 2 + Math.floor(Math.random() * 2), false, [stageColor2]);
 
@@ -1736,6 +1748,7 @@
       }
     }
 
+    _spawnFleshChunks(slot, 6 + Math.floor(Math.random() * 6), false, slot.mesh.material.color.getHex());
     var stageColor3 = slot.mesh.material.color.getHex();
     _spawnFleshChunks(slot, 3 + Math.floor(Math.random() * 3), false, [stageColor3]);
 
@@ -1786,6 +1799,7 @@
       }
     }
 
+    _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 6), true, slot.mesh.material.color.getHex());
     var stageColor4 = slot.mesh.material.color.getHex();
     _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 3), true, [stageColor4]);
 
