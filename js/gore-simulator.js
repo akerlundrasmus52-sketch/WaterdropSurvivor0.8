@@ -722,10 +722,15 @@ this.direction.y + Math.random() * 0.4 * this.pressure,
 this.direction.z + (Math.random() - 0.5) * 0.3
 ).multiplyScalar(speed * (0.7 + Math.random() * 0.6));
 
-  // Update origin to enemy position
-  const worldOrigin = this.origin.clone();
+  // Update origin to enemy position using world transform
+  const worldOrigin = new THREE.Vector3();
   if (this.enemy.mesh) {
-    worldOrigin.add(this.enemy.mesh.position);
+    // Get world position of the local wound origin
+    const tempVec = this.origin.clone();
+    this.enemy.mesh.localToWorld(tempVec);
+    worldOrigin.copy(tempVec);
+  } else {
+    worldOrigin.copy(this.origin);
   }
 
   GoreSim._spawnDrop(worldOrigin, vel, {
@@ -802,11 +807,11 @@ if (this.drip_timer >= dripInterval) {
 _drip(enemyPos, enemyVelocity) {
 const worldPos = enemyPos.clone().add(this.localPos);
 
-// Drip direction: down + enemy velocity influence + small random
+// Drip direction: straight down with minimal spread
 const vel = new THREE.Vector3(
-  (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.x * 0.15 : 0),
-  -0.5 - Math.random() * 0.8,
-  (Math.random() - 0.5) * 0.3 + (enemyVelocity ? enemyVelocity.z * 0.15 : 0)
+  (Math.random() - 0.5) * 0.1,
+  -1.0,
+  (Math.random() - 0.5) * 0.1
 );
 
 GoreSim._spawnDrop(worldPos, vel, {
