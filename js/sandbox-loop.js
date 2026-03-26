@@ -3217,7 +3217,7 @@
         const nearest = _weaponFindNearest(px, pz, range * range);
         const baseAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
-          : _fireRingAngle;
+          : player.mesh.rotation.y;
         const spread = weapons.pumpShotgun.spread || 0.7;
         const pellets = weapons.pumpShotgun.pellets || 8;
         for (let pi = 0; pi < pellets; pi++) {
@@ -3237,7 +3237,7 @@
         const nearest = _weaponFindNearest(px, pz, range * range);
         const baseAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
-          : _fireRingAngle;
+          : player.mesh.rotation.y;
         const spread = weapons.autoShotgun.spread || 0.6;
         const pellets = weapons.autoShotgun.pellets || 6;
         for (let pi = 0; pi < pellets; pi++) {
@@ -3368,7 +3368,7 @@
         const nearest = _weaponFindNearest(px, pz, range * range);
         const baseAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
-          : _fireRingAngle;
+          : player.mesh.rotation.y;
         const spread = weapons.doubleBarrel.spread || 0.55;
         const pellets = weapons.doubleBarrel.pellets || 12;
         for (let pi = 0; pi < pellets; pi++) {
@@ -3388,7 +3388,7 @@
         const nearest = _weaponFindNearest(px, pz, range * range);
         const bAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
-          : Math.random() * Math.PI * 2;
+          : player.mesh.rotation.y;
         _fireProjectile(px, pz, px + Math.sin(bAngle) * 10, pz + Math.cos(bAngle) * 10);
       }
     } else { _boomerangTimer = 0; }
@@ -3404,7 +3404,7 @@
         const nearest = _weaponFindNearest(px, pz, range * range);
         const baseAngle = nearest
           ? Math.atan2(_weaponEnemyX(nearest) - px, _weaponEnemyZ(nearest) - pz)
-          : _fireRingAngle;
+          : player.mesh.rotation.y;
         for (let si = 0; si < numProj; si++) {
           const a = baseAngle + (si / numProj) * Math.PI * 2;
           _fireProjectile(px, pz, px + Math.sin(a) * 10, pz + Math.cos(a) * 10);
