@@ -826,6 +826,12 @@ class Engine2Sandbox {
     };
 
     console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
+
+    // Ground details: tall grass, fallen logs, rock clusters, scatter debris
+    if (typeof GroundDetails !== 'undefined') {
+      this._groundDetails = new GroundDetails(this.scene);
+    }
+
     console.log('[Engine2] ✓ All landmarks created successfully');
   }
 

@@ -4184,6 +4184,11 @@
         }
       }
 
+      // Ground details: grass wind, player disturbance
+      if (window._engine2Instance && window._engine2Instance._groundDetails) {
+        window._engine2Instance._groundDetails.update(dt, player ? player.mesh.position : null);
+      }
+
       // Camera shake & pooled flash updates
       _updateCameraShake(dt);
       _updateFlashPool(dt);
