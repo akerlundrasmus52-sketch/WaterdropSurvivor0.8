@@ -4617,6 +4617,11 @@
       }
 
       // Camera shake & pooled flash updates
+      // BonusLandmarks animated update (fire, debris, well)
+      if (window._engine2Instance && window._engine2Instance._bonusLandmarks) {
+        window._engine2Instance._bonusLandmarks.update(dt);
+      }
+
       _updateCameraShake(dt);
       _updateFlashPool(dt);
 
