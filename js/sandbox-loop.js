@@ -1085,6 +1085,7 @@
 
     // ── BULLET HOLE GENERATION: Create a NEW visible bullet hole on slime mesh per shot ──
     // This ensures EVERY single gun shot dynamically generates a visible bullet hole
+    if (slot.woundPool && slot.woundCount >= slot.woundPool.length) slot.woundCount = 0;
     if (slot.woundPool && slot.woundCount < slot.woundPool.length) {
       const wound = slot.woundPool[slot.woundCount++];
       // Make wound appear as true black hole
@@ -1177,9 +1178,12 @@
       GoreSim.onKill(slot, 'pistol', null);
     }
 
-    // DISABLED: Flying flesh chunks removed for realistic gore (user request)
-    // User wants realistic slime death without chunks - just blood and corpse
-    // _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 5), true);
+    // Hollywood-style overdone slime death burst
+    window.BloodV2 && BloodV2.rawBurst(x, y, z, 80, {
+      spdMin: 3, spdMax: 14, rMin: 0.010, rMax: 0.030, life: 3.5, visc: 0.55,
+      enemyType: 'slime'
+    });
+    _spawnFleshChunks(slot, 12 + Math.floor(Math.random() * 8), true);
 
     // Place a blood stain decal on the ground at the kill position
     _placeBloodStain(x, z);
@@ -1290,6 +1294,7 @@
     }
 
     // Bullet hole on crawler
+    if (crawler.woundPool && crawler.woundCount >= crawler.woundPool.length) crawler.woundCount = 0;
     if (crawler.woundPool && crawler.woundCount < crawler.woundPool.length) {
       const wound = crawler.woundPool[crawler.woundCount++];
       wound.material.color.setHex(0x441100);
@@ -1319,6 +1324,9 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(crawler, 'pistol', null);
     }
+
+    // Hollywood-style overdone crawler death burst
+    window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'crawler' });
 
     // Spawn brown crawler/worm flesh chunks
     const crawlerColors = [0x8B4513, 0x6B3410, 0x5C3010, 0xDEB887];
@@ -1418,6 +1426,8 @@
   /** Apply a projectile hit to a leaping slime. */
   function _hitLeapingSlime(projectile, enemy) {
     if (!enemy || !enemy.active || enemy.dead || enemy.dying) return;
+
+    if (enemy.woundPool && enemy.woundCount >= enemy.woundPool.length) enemy.woundCount = 0;
 
     const weaponKey   = (weapons && weapons.gun) ? 'gun' : 'pistol';
     const weaponLevel = (weapons && weapons.gun) ? (weapons.gun.level || 1) : 1;
@@ -1524,6 +1534,9 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(enemy, 'pistol', null);
     }
+
+    // Hollywood-style overdone leaping slime death burst
+    window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'leaping_slime' });
 
     // Spawn blue slime flesh chunks
     const blueSlimeColors = [0x00bfff, 0x0090cc, 0x005f99, 0x00ffff];
@@ -1692,7 +1705,7 @@
       }
     }
 
-    _spawnFleshChunks(slot, 2 + Math.floor(Math.random() * 2));
+    _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 4), false, slot.mesh.material.color.getHex());
 
     const _bPos2 = _reusableBloodPos;
     _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
@@ -1727,7 +1740,7 @@
       }
     }
 
-    _spawnFleshChunks(slot, 3 + Math.floor(Math.random() * 3));
+    _spawnFleshChunks(slot, 6 + Math.floor(Math.random() * 6), false, slot.mesh.material.color.getHex());
 
     const _bPos3 = _reusableBloodPos;
     _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
@@ -1776,7 +1789,7 @@
       }
     }
 
-    _spawnFleshChunks(slot, 4 + Math.floor(Math.random() * 3), true);
+    _spawnFleshChunks(slot, 8 + Math.floor(Math.random() * 6), true, slot.mesh.material.color.getHex());
 
     const _bPos4 = _reusableBloodPos;
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
