@@ -498,6 +498,8 @@ core:     { hp:90,  maxHp:90,  yRange:[-1.0,-0.3], bleedRate:0.80, pumpBlood:fal
 var _scene       = null;
 var _ready       = false;
 var _frame       = 0;   // frame counter for debug
+var _prevDropCount = 0; // track drop count for color update optimization
+var _prevMistCount = 0; // track mist count for color update optimization
 
 // ── Scratch vectors (NEVER allocate in update loop) ──────────────
 var _s0 = new THREE.Vector3();
@@ -734,8 +736,8 @@ opacity:     0.80,
 depthWrite:  false,
 depthTest:   true,
 polygonOffset: true,
-polygonOffsetFactor: -1,
-polygonOffsetUnits: -1,
+polygonOffsetFactor: -4,
+polygonOffsetUnits: -4,
 });
 
 _decals = [];
@@ -916,11 +918,13 @@ _goreMap.delete(eId);
 
 var dirty = false;
 var maxDropIdx = -1;
+var aliveDropCount = 0;
 
 // ── Update blood drops ───────────────────
 for (var i = 0; i < _dropData.length; i++) {
 var d = _dropData[i];
 if (!d.alive) continue;
+aliveDropCount++;
 _updateDrop(d, dt, _dropIM, false);
 dirty = true;
 if (d.idx > maxDropIdx) maxDropIdx = d.idx;
@@ -928,17 +932,23 @@ if (d.idx > maxDropIdx) maxDropIdx = d.idx;
 if (dirty) {
   _dropIM.count = Math.max(0, maxDropIdx + 1);
   _dropIM.instanceMatrix.needsUpdate = true;
-  if (_dropIM.instanceColor) _dropIM.instanceColor.needsUpdate = true;
+  // Only update colors if drop count changed (new spawns or kills)
+  if (_dropIM.instanceColor && aliveDropCount !== _prevDropCount) {
+    _dropIM.instanceColor.needsUpdate = true;
+  }
 } else if (_dropIM.count !== 0) {
   _dropIM.count = 0;
 }
+_prevDropCount = aliveDropCount;
 
 // ── Update mist ──────────────────────────
 var mistDirty = false;
 var maxMistIdx = -1;
+var aliveMistCount = 0;
 for (var i = 0; i < _mistData.length; i++) {
 var d = _mistData[i];
 if (!d.alive) continue;
+aliveMistCount++;
 _updateDrop(d, dt, _mistIM, true);
 mistDirty = true;
 if (d.idx > maxMistIdx) maxMistIdx = d.idx;
@@ -946,10 +956,14 @@ if (d.idx > maxMistIdx) maxMistIdx = d.idx;
 if (mistDirty) {
   _mistIM.count = Math.max(0, maxMistIdx + 1);
   _mistIM.instanceMatrix.needsUpdate = true;
-  if (_mistIM.instanceColor) _mistIM.instanceColor.needsUpdate = true;
+  // Only update colors if mist count changed (new spawns or kills)
+  if (_mistIM.instanceColor && aliveMistCount !== _prevMistCount) {
+    _mistIM.instanceColor.needsUpdate = true;
+  }
 } else if (_mistIM.count !== 0) {
   _mistIM.count = 0;
 }
+_prevMistCount = aliveMistCount;
 
 // ── Update chunks ────────────────────────
 for (var i = 0; i < _chunks.length; i++) {
@@ -1020,6 +1034,11 @@ if (d.life <= 0) { _killDrop(d, im); return; }
 
 if (d.onGround) {
 // Settled: slowly spread as puddle, fade near end
+// Mist particles should be killed when they settle
+if (isMist) {
+  _killDrop(d, im);
+  return;
+}
 d.r = Math.min(d.r + dt * 0.008, 0.025);
 if (d.life < 2.5) {
 var a = d.life / 2.5;
@@ -1904,6 +1923,7 @@ c.mesh.visible = true;
 c.mesh.scale.setScalar(c.size);
 c.mesh.material.color.setHex(c.color);
 c.mesh.material.opacity = 1.0;
+c.mesh.material.transparent = true;
 }
 }
 }
