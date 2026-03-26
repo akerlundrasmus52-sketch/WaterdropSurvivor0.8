@@ -1251,8 +1251,22 @@ window.spawnBossChest = function(x, z) {
         choices.push(...perkUnlockFillers);
       }
       else {
-        // ── Focus Path Prompt (regular levels only, not bonus rounds, starts at level 5) ──────────
-        if (!isBonusRound && focusPath === null && playerStats.lvl > 4) {
+        // ── Level 4: WEAPONS ONLY (first new weapon unlock) ────────────────────────
+        if (playerStats.lvl === 4 && focusPath === null) {
+          showUpgradeModal(isBonusRound, 'weapons');
+          return;
+        }
+
+        // ── Level 6+: Auto-alternate weapon / passive each level ────────────────────
+        // Even levels → weapon focus; odd levels → passive focus (no prompt needed)
+        if (!isBonusRound && focusPath === null && playerStats.lvl >= 6) {
+          const autoPath = (playerStats.lvl % 2 === 0) ? 'weapons' : 'passives';
+          showUpgradeModal(isBonusRound, autoPath);
+          return;
+        }
+
+        // ── Focus Path Prompt (levels 5 only after we gate 4 and 6+) ──────────────
+        if (!isBonusRound && focusPath === null && playerStats.lvl === 5) {
           showFocusPathPrompt(
             () => showUpgradeModal(isBonusRound, 'weapons'),
             () => showUpgradeModal(isBonusRound, 'passives')

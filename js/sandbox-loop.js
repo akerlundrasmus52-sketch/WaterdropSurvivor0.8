@@ -3537,10 +3537,14 @@
     // Sync revolver ammo to stat — reload after playerStats has been applied
     _revolverAmmo = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
 
-    // Set up weapons
+    // Always expose playerStats to window so level-up-system.js can find it
+    window.playerStats = playerStats;
+
+    // Set up weapons and expose to window so level-up-system.js can find them
     if (typeof getDefaultWeapons === 'function') {
       weapons = getDefaultWeapons();
     }
+    window.weapons = weapons;
     // Create player using the existing Player class
     if (typeof Player === 'function') {
       player = new Player();
@@ -4830,6 +4834,9 @@
       _rafId = requestAnimationFrame(_animate);
 
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');
+      // Signal loading.js that the game module is ready so the loading screen
+      // fades out and routes to the camp / main-menu screen.
+      window.gameModuleReady = true;
       console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
       console.log('[🎮 SandboxLoop] 🎉 ENGINE 2.0 SANDBOX READY!');
       console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
