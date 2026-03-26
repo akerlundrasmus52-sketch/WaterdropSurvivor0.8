@@ -1472,16 +1472,18 @@ window.spawnBossChest = function(x, z) {
           }
         }
         
-        // Add dramatic entrance animation - from corners
+        // Add dramatic entrance animation - sequential reveal with rotation (one by one)
         card.style.opacity = '0';
-        const corners = ['TopLeft', 'TopRight', 'BottomLeft', 'BottomRight'];
-        const corner = corners[index % 4];
-        card.style.animation = `swooshFrom${corner} 0.5s ease-out ${index * 0.1}s forwards`;
+        card.style.transform = 'scale(0.2) rotateY(90deg)';
+        // Stagger delay: 0.3s for wall to appear, then 0.15s between each card
+        const cardDelay = 0.3 + (index * 0.15);
+        card.style.animation = `cardRevealRotate 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${cardDelay}s forwards`;
         // Clear the inline animation after the entrance completes so CSS rarity-glow animations take over
         card.addEventListener('animationend', (e) => {
-          if (e.animationName && e.animationName.startsWith('swooshFrom')) {
+          if (e.animationName && e.animationName === 'cardRevealRotate') {
             card.style.animation = '';
             card.style.opacity = '1';
+            card.style.transform = '';
           }
         }, { once: true });
         
@@ -1683,6 +1685,12 @@ window.spawnBossChest = function(x, z) {
       }
 
       modal.style.display = 'flex';
+      modal.style.opacity = '0';
+      const existingAnimation = modal.style.animation || (window.getComputedStyle ? window.getComputedStyle(modal).animation : '') || '';
+      const wallFadeInAnim = 'wallFadeIn 0.3s ease-out forwards';
+      modal.style.animation = existingAnimation
+        ? existingAnimation + ', ' + wallFadeInAnim
+        : wallFadeInAnim;
 
       // --- Dopamine level-up FX: time dilation, camera zoom, chromatic aberration ---
       if (window.DopamineSystem && window.DopamineSystem.LevelUpFX) {
