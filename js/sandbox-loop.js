@@ -3998,14 +3998,20 @@
   // ─── Skinwalker support ──────────────────────────────────────────────────────
 
   /** Spawn one skinwalker far from the player. */
-  function _spawnSkinwalker() {
+  function _spawnSkinwalker(spawnX, spawnZ) {
     if (!window.SkinwalkerEnemy || !player || !player.mesh) return;
-    const angle = Math.random() * Math.PI * 2;
-    const dist  = 20 + Math.random() * 10;
-    const px    = player.mesh.position.x;
-    const pz    = player.mesh.position.z;
-    const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
-    const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    let rx, rz;
+    if (spawnX !== undefined && spawnZ !== undefined) {
+      rx = spawnX;
+      rz = spawnZ;
+    } else {
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = 20 + Math.random() * 10;
+      const px    = player.mesh.position.x;
+      const pz    = player.mesh.position.z;
+      rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+      rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    }
     const pos   = new THREE.Vector3(rx, 0, rz);
     const sw    = SkinwalkerEnemy.acquire(scene, pos);
     if (!sw) return;
@@ -4095,8 +4101,8 @@
 
     if (window.XPStarSystem) {
       const killDamage = 120 * 1.5;
-      XPStarSystem.spawn(x, y, z, 'leaping_slime', killDamage, 0, 0);
-      if (Math.random() < 0.35) XPStarSystem.spawn(x, y, z, 'leaping_slime', killDamage * 0.7, 0, 0);
+      XPStarSystem.spawn(x, y, z, 'skinwalker', killDamage, 0, 0);
+      if (Math.random() < 0.35) XPStarSystem.spawn(x, y, z, 'skinwalker', killDamage * 0.7, 0, 0);
     }
 
     playerStats.kills++;
@@ -4110,7 +4116,12 @@
     // Notify sequential wave manager
     SeqWaveManager.onEnemyKilled('skinwalker');
 
-    setTimeout(function() { SkinwalkerEnemy.release(sw); }, 8000);
+    setTimeout(function() {
+      // Guard against double-release: if reset() already removed sw from
+      // _activeSkinwalkers and called release(), don't release again.
+      if (_activeSkinwalkers.indexOf(sw) !== -1) return;
+      if (window.SkinwalkerEnemy) SkinwalkerEnemy.release(sw);
+    }, 8000);
   }
 
   // ─── Sequential Kill-Based Wave Manager ──────────────────────────────────────
@@ -4132,6 +4143,20 @@
     _x2Active:     false, // first-new-weapon x2 multiplier
     _prevWeaponCount: 1,  // number of weapons player had last check
     _initialized:  false,
+    _pendingTimeouts: [], // all pending setTimeout IDs so reset() can cancel them
+
+    _setTimeout: function(fn, delay) {
+      const id = setTimeout(fn, delay);
+      this._pendingTimeouts.push(id);
+      return id;
+    },
+
+    _clearAllTimeouts: function() {
+      for (let i = 0; i < this._pendingTimeouts.length; i++) {
+        clearTimeout(this._pendingTimeouts[i]);
+      }
+      this._pendingTimeouts = [];
+    },
 
     /** Initialize and spawn the first wave. Call from _boot. */
     start: function() {
@@ -4142,7 +4167,7 @@
       this._prevWeaponCount = 1;
       this._initialized  = true;
       // Brief delay before first enemy appears
-      setTimeout(function() { SeqWaveManager._spawnPhase(0); }, 1500);
+      SeqWaveManager._setTimeout(function() { SeqWaveManager._spawnPhase(0); }, 1500);
     },
 
     /** Returns total count of alive enemies across all pools. */
@@ -4187,7 +4212,7 @@
       this._phaseKills = 0;
       // Small delay so player sees the kill before next enemies appear
       const self = this;
-      setTimeout(function() { self._spawnPhase(nextPhase); }, 800);
+      SeqWaveManager._setTimeout(function() { self._spawnPhase(nextPhase); }, 800);
     },
 
     _mult: function(n) {
@@ -4195,7 +4220,6 @@
     },
 
     _spawnPhase: function(phase) {
-      const m = this._x2Active ? 2 : 1;
       switch (phase) {
         case 0:
           _showWaveNotification('WAVE START — 3 Slimes incoming!', '#ffdd44', 2500);
@@ -4262,7 +4286,7 @@
           const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
           const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
           (function(type, x, z, spawnDelay) {
-            setTimeout(function() {
+            SeqWaveManager._setTimeout(function() {
               if (!player || !player.mesh) return;
               switch (type) {
                 case 'slime':
@@ -4276,7 +4300,7 @@
                   break;
                 case 'leaping':
                   if (window.LeapingSlimePool) {
-                    const e = LeapingSlimePool.spawn(x, 0, z, 1);
+                    const e = LeapingSlimePool.spawn(x, z, 1);
                     if (e && _activeLeapingSlimes.indexOf(e) === -1) _activeLeapingSlimes.push(e);
                   }
                   break;
@@ -4287,7 +4311,7 @@
                   }
                   break;
                 case 'skinwalker':
-                  _spawnSkinwalker();
+                  _spawnSkinwalker(x, z);
                   break;
               }
             }, spawnDelay);
@@ -4322,6 +4346,8 @@
     },
 
     reset: function() {
+      // Cancel all pending wave timeouts first so stale callbacks can't fire
+      this._clearAllTimeouts();
       this._phase        = -1;
       this._phaseKills   = 0;
       this._totalKills   = 0;

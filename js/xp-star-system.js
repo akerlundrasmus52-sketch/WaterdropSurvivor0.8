@@ -71,6 +71,7 @@ const ENEMY_RARITIES = {
   'slime':         0,  // Common   — 1× XP multiplier
   'leaping_slime': 2,  // Rare     — 3× XP multiplier (tougher, visual override: sky-blue)
   'crawler':       3,  // Epic     — 5× XP multiplier (worm, visual override: brown/amber)
+  'skinwalker':    3,  // Epic     — 5× XP multiplier (elite shapeshifter, visual override: dark crimson)
   'boss':          5,  // Mythical — 40× XP multiplier
 };
 
@@ -80,6 +81,7 @@ const ENEMY_STAR_COLORS = {
   'slime':         { color: 0xEEEEFF, emissive: 0xBBCCFF }, // Bright white-grey (slime body)
   'leaping_slime': { color: 0x00CFFF, emissive: 0x0099DD }, // Bright sky-blue (blue slime body)
   'crawler':       { color: 0xC8A060, emissive: 0x8B5A2B }, // Warm brown/amber (worm body)
+  'skinwalker':    { color: 0xCC2244, emissive: 0x880022 }, // Dark crimson (shapeshifter)
   'boss':          { color: 0xFF5555, emissive: 0xCC0000 }, // Bright red (boss body)
 };
 
@@ -88,6 +90,7 @@ const ENEMY_SIZES = {
   'slime':         0.5,
   'leaping_slime': 0.6,
   'crawler':       1.1,
+  'skinwalker':    1.2,
   'boss':          2.0,
 };
 
