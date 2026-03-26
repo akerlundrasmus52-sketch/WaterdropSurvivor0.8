@@ -243,9 +243,10 @@
         var sAngle = (si / stripCount) * Math.PI * 2 + rnd() * 0.3;
         var stripGeo = new THREE.BoxGeometry(0.04, length * 0.9, 0.04);
         var strip = new THREE.Mesh(stripGeo, matBark);
+        // Log lies along X (rotation.z = π/2), so circumference is in YZ plane
         strip.position.set(
-          Math.cos(sAngle) * radius * 1.01,
           0,
+          Math.cos(sAngle) * radius * 1.01,
           Math.sin(sAngle) * radius * 1.01
         );
         strip.rotation.z = Math.PI / 2;
@@ -258,8 +259,9 @@
         for (var mi = 0; mi < mossCount; mi++) {
           var mossGeo = new THREE.CircleGeometry(rndRange(0.18, 0.35), 7);
           var mossMesh = new THREE.Mesh(mossGeo, matMoss);
+          // Place moss along the log's length (X axis), slightly above the surface
           var mossT = rndRange(-length * 0.4, length * 0.4);
-          mossMesh.position.set(0, radius + 0.01, mossT);
+          mossMesh.position.set(mossT, radius + 0.01, 0);
           mossMesh.rotation.z = Math.PI / 2;
           mossMesh.rotation.y = rnd() * Math.PI * 2;
           group.add(mossMesh);
@@ -284,10 +286,16 @@
   GroundDetails.prototype._createRocks = function () {
     if (!this.scene) return;
 
-    var colorA = new THREE.Color(0x6b6055);
-    var colorB = new THREE.Color(0x4a4440);
-    var colorC = new THREE.Color(0x8a7a6a);
+    // Shared unit-radius geometry — each rock is scaled to the desired size
+    var sharedRockGeo   = new THREE.DodecahedronGeometry(1, 0);
+    var sharedPebbleGeo = new THREE.DodecahedronGeometry(1, 0);
+
+    // Shared materials — one per color variant
+    var matA    = new THREE.MeshLambertMaterial({ color: 0x6b6055 });
+    var matB    = new THREE.MeshLambertMaterial({ color: 0x4a4440 });
+    var matC    = new THREE.MeshLambertMaterial({ color: 0x8a7a6a });
     var matMoss = new THREE.MeshLambertMaterial({ color: 0x253a12, emissive: 0x081502 });
+    var matPebb = matA; // pebbles reuse the neutral rock material
 
     for (var ci = 0; ci < ROCK_CLUSTERS.length; ci++) {
       var clust = ROCK_CLUSTERS[ci];
@@ -297,22 +305,20 @@
       for (var ri = 0; ri < count; ri++) {
         var baseRadius = rndRange(sizeRange[0], sizeRange[1]);
 
-        // Rock mesh
-        var rockGeo = new THREE.DodecahedronGeometry(baseRadius, 0);
+        // Pick shared material by color variant
         var cr = rnd();
-        var rockColor;
-        if (cr < 0.30)      { rockColor = colorB; }
-        else if (cr < 0.50) { rockColor = colorC; }
-        else                { rockColor = colorA; }
+        var rockMat;
+        if (cr < 0.30)      { rockMat = matB; }
+        else if (cr < 0.50) { rockMat = matC; }
+        else                { rockMat = matA; }
 
-        var rockMat = new THREE.MeshLambertMaterial({ color: rockColor });
-        var rock = new THREE.Mesh(rockGeo, rockMat);
+        var rock = new THREE.Mesh(sharedRockGeo, rockMat);
 
-        // Random scale (flatten and stretch)
+        // Scale to desired size (non-uniform for visual variety)
         rock.scale.set(
-          rndRange(0.7, 1.3),
-          rndRange(0.5, 0.9),
-          rndRange(0.8, 1.2)
+          baseRadius * rndRange(0.7, 1.3),
+          baseRadius * rndRange(0.5, 0.9),
+          baseRadius * rndRange(0.8, 1.2)
         );
         // Random rotation all axes
         rock.rotation.set(rnd() * Math.PI * 2, rnd() * Math.PI * 2, rnd() * Math.PI * 2);
@@ -343,9 +349,8 @@
       var pebbleCount = Math.floor(rndRange(6, 11));
       for (var pi = 0; pi < pebbleCount; pi++) {
         var pr = rndRange(0.05, 0.12);
-        var pGeo = new THREE.DodecahedronGeometry(pr, 0);
-        var pMat = new THREE.MeshLambertMaterial({ color: colorA });
-        var pebble = new THREE.Mesh(pGeo, pMat);
+        var pebble = new THREE.Mesh(sharedPebbleGeo, matPebb);
+        pebble.scale.setScalar(pr);
         var pa = rnd() * Math.PI * 2;
         var pd = rnd() * 1.5;
         pebble.position.set(
@@ -404,18 +409,19 @@
       artifact.rotation.y = rnd() * Math.PI * 2;
       this.scene.add(artifact);
 
-      // Gold edge strips (4 edges)
+      // Gold edge strips (4 edges) — parented to artifact so they follow its rotation
       for (var gs = 0; gs < 4; gs++) {
         var gAngle = (gs / 4) * Math.PI * 2 + Math.PI / 4;
         var gGeo = new THREE.BoxGeometry(0.03, 0.15, 0.03);
         var gStrip = new THREE.Mesh(gGeo, matGold);
+        // Position and rotation in artifact-local space so strips follow artifact rotation
         gStrip.position.set(
-          ax + Math.cos(gAngle) * 0.085,
-          -0.02,
-          az + Math.sin(gAngle) * 0.085
+          Math.cos(gAngle) * 0.085,
+          0.02,  // relative to artifact center (-0.04 world y)
+          Math.sin(gAngle) * 0.085
         );
-        gStrip.rotation.y = artifact.rotation.y + gAngle;
-        this.scene.add(gStrip);
+        gStrip.rotation.y = gAngle;
+        artifact.add(gStrip);
       }
     }
   };
