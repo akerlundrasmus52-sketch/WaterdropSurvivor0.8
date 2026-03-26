@@ -2973,7 +2973,7 @@
     _gunCooldown = cooldown;
     if (weapons && weapons.gun) weapons.gun.lastShot = Date.now(); // track for skill-icon cooldown overlay
 
-    // Manual aim: joystick takes priority, then mouse. No auto-aim fallback.
+    // Manual aim: joystick takes priority, then mouse, then auto-aim to nearest enemy.
     let tx, tz;
     if (_aimJoy.active && (_aimJoy.dx !== 0 || _aimJoy.dz !== 0)) {
       tx = px + _aimJoy.dx * 10;
@@ -2982,7 +2982,34 @@
       tx = _mouse.worldX;
       tz = _mouse.worldZ;
     } else {
-      return; // no aim input — don't fire
+      // Auto-aim fallback: find nearest enemy within gun range
+      const gunRange = (weapons && weapons.gun && weapons.gun.range) || 12;
+      const gunRangeSq = gunRange * gunRange;
+      let nearestEnemy = null;
+      let nearestDistSq = gunRangeSq;
+
+      // Check all active enemies (slimes, leaping slimes, crawlers, skinwalkers)
+      const allEnemies = _activeSlimes.concat(_activeLeapingSlimes, _activeCrawlers);
+      if (_skinwalker && _skinwalker.parts && _skinwalker.parts.root) {
+        allEnemies.push({ mesh: _skinwalker.parts.root });
+      }
+
+      for (let i = 0; i < allEnemies.length; i++) {
+        const e = allEnemies[i];
+        if (!e || !e.mesh) continue;
+        const dx = e.mesh.position.x - px;
+        const dz = e.mesh.position.z - pz;
+        const distSq = dx * dx + dz * dz;
+        if (distSq < nearestDistSq) {
+          nearestDistSq = distSq;
+          nearestEnemy = e;
+        }
+      }
+
+      if (!nearestEnemy) return; // no enemies in range — don't fire
+
+      tx = nearestEnemy.mesh.position.x;
+      tz = nearestEnemy.mesh.position.z;
     }
 
     _revolverAmmo--;

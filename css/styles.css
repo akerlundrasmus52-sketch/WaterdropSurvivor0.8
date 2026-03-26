@@ -262,115 +262,104 @@
     /* ── Skill Icons Panel (top-right) ── */
     #skill-icons-panel {
       position: fixed;
-      top: 64px;
-      right: 12px;
+      top: 58px;
+      right: 8px;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 8px;
+      gap: 4px;
       z-index: 115;
       pointer-events: none;
-      max-width: 260px;
+      max-width: 140px;
     }
     @media (max-width: 540px) {
       #skill-icons-panel {
-        top: 56px;
-        max-width: 220px;
+        top: 54px;
+        max-width: 140px;
       }
     }
     .skill-icons-wrapper {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
     }
     .skill-icons-section {
       width: 100%;
-      background: rgba(7, 10, 20, 0.7);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 14px;
-      padding: 6px 8px 8px;
-      box-shadow:
-        0 12px 28px rgba(0, 0, 0, 0.45),
-        0 0 0 1px rgba(255, 255, 255, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(6px);
+      background: transparent; /* Remove background */
+      border: none; /* Remove border */
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none; /* Remove shadow */
+      backdrop-filter: none;
     }
     .skill-section-title {
-      font-family: 'Nunito', 'M PLUS Rounded 1c', sans-serif;
-      font-size: 10px;
-      letter-spacing: 1px;
-      color: rgba(219, 232, 255, 0.75);
-      text-align: right;
-      margin: 0 2px 4px 0;
-      text-transform: uppercase;
+      display: none; /* Hide section titles */
     }
     .skill-icons-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-      gap: 6px;
+      grid-template-columns: repeat(2, 32px); /* 2 columns of smaller icons */
+      gap: 4px;
       justify-items: end;
     }
     .skill-icons-grid.weapon-grid {
-      grid-template-columns: repeat(4, 48px);
+      grid-template-columns: repeat(2, 32px); /* 2 columns */
     }
     @media (max-width: 540px) {
       .skill-icons-grid.weapon-grid {
-        grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+        grid-template-columns: repeat(2, 32px);
       }
     }
     .skill-icon-slot {
       position: relative;
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(145deg, #0c1625, #182a46);
-      border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 14px;
+      width: 32px; /* Smaller icons */
+      height: 32px;
+      background: transparent; /* Remove background */
+      border: 1px solid rgba(255,255,255,0.15); /* Only show border outline */
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      overflow: hidden;
-      box-shadow:
-        0 4px 10px rgba(0,0,0,0.6),
-        inset 0 1px 0 rgba(255,255,255,0.06);
+      font-size: 16px; /* Smaller icon size */
+      overflow: visible;
+      box-shadow: none; /* Remove shadow */
       transition: transform 0.15s, box-shadow 0.2s, border-color 0.2s;
     }
     .skill-icon-slot.weapon-slot {
-      background: linear-gradient(150deg, #13233c, #1f3b63);
-      border-color: rgba(255,215,0,0.25);
+      background: transparent;
+      border-color: rgba(255,215,0,0.3);
     }
     .skill-icon-slot.passive-slot {
-      background: linear-gradient(150deg, #1a1d2b, #212b3d);
+      background: transparent;
+      border-color: rgba(100,150,255,0.3);
     }
     .skill-icon-slot.ready {
-      border-color: rgba(255,215,0,0.6);
-      box-shadow:
-        0 6px 14px rgba(0,0,0,0.55),
-        inset 0 1px 0 rgba(255,255,255,0.1);
+      border-color: rgba(255,215,0,0.8);
+      box-shadow: 0 0 8px rgba(255,215,0,0.4);
     }
     .skill-icon-slot.ready .skill-icon-emoji {
-      filter: drop-shadow(0 0 6px rgba(255,215,0,0.45));
+      filter: drop-shadow(0 0 4px rgba(255,215,0,0.6));
     }
     .skill-icon-slot.on-cooldown {
-      opacity: 0.85;
+      opacity: 0.6;
     }
     /* Clock-wipe cooldown overlay with ring mask */
     .skill-icon-cd {
       position: absolute;
       inset: -1px;
-      border-radius: 14px;
+      border-radius: 8px;
       pointer-events: none;
-      background: conic-gradient(rgba(0,0,0,0.55) var(--cd-pct,0%), rgba(255,255,255,0.08) var(--cd-pct,0%));
+      background: conic-gradient(rgba(0,0,0,0.65) var(--cd-pct,0%), transparent var(--cd-pct,0%));
       transform: rotate(-90deg);
       mix-blend-mode: multiply;
+      will-change: auto; /* Disable GPU acceleration to reduce lag */
     }
     /* Cooldown text (remaining seconds) */
     .skill-icon-cd-text {
       position: absolute;
-      bottom: 2px;
-      right: 4px;
-      font-size: 9px;
+      bottom: 1px;
+      right: 2px;
+      font-size: 8px;
       color: #FFE17A;
       font-weight: bold;
       text-shadow: -1px -1px 0 #000, 1px 1px 0 #000;
@@ -379,19 +368,10 @@
     }
     .skill-icon-emoji {
       z-index: 1;
-      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55));
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7));
     }
     .skill-icon-label {
-      position: absolute;
-      bottom: 4px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 9px;
-      color: rgba(219,232,255,0.9);
-      text-shadow: -1px -1px 0 #000, 1px 1px 0 #000;
-      pointer-events: none;
-      white-space: nowrap;
-      line-height: 1.1;
+      display: none; /* Hide labels for cleaner look */
     }
     /* Pulse flash when skill becomes ready */
     @keyframes skill-ready-flash {

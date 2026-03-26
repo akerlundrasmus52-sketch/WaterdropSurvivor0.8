@@ -157,10 +157,12 @@
       const ws = (typeof weapons    !== 'undefined') ? weapons    : null;
       const now = Date.now();
 
-      // Build weapon slots
+      // Build weapon slots (skip default gun, only show upgrades)
       const weaponSlots = [];
       if (ws) {
         for (const key of Object.keys(_WEAPON_ICONS)) {
+          // Skip default gun - it's standard equipment, not an upgrade
+          if (key === 'gun') continue;
           const w = ws[key];
           if (!w || !w.active) continue;
           const def = _WEAPON_ICONS[key];
