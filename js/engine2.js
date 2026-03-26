@@ -827,6 +827,10 @@ class Engine2Sandbox {
 
     console.log('[Engine2] ✓ Lake created at (30, -30) - waterfall removed');
 
+    // ══════════════════════════════════════════════════════════════
+    // 4. ANNUNAKI TABLET — Southwest area (-35, 15)
+    // ══════════════════════════════════════════════════════════════
+    if (typeof AnnunakiTablet !== 'undefined') { this._annunakiTablet = new AnnunakiTablet(this.scene); }
     // World Trees landmark system
     if (typeof WorldTrees !== 'undefined') {
       this._worldTrees = new WorldTrees(this.scene);
