@@ -790,7 +790,12 @@
           // Movement with LEFT stick
           if (joystickLeft.active) {
             const rageSpeedMult = this._rageSpeedMult || 1;
-            const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60 * rageSpeedMult;
+            // Stamina speed penalty: at 0 stamina player moves at 50%, scales linearly up to 100%
+            const staminaPct = (typeof playerStats !== 'undefined' && playerStats.maxStamina > 0)
+              ? Math.max(0, (playerStats.stamina || 0) / playerStats.maxStamina)
+              : 1;
+            const staminaSpeedMult = 0.5 + staminaPct * 0.5; // 50% at 0 stamina, 100% at full
+            const speed = GAME_CONFIG.playerSpeedBase * (playerStats.walkSpeed / 25) * 60 * rageSpeedMult * staminaSpeedMult;
             targetVel.x = joystickLeft.x * speed * dt;
             targetVel.z = joystickLeft.y * speed * dt;
           }
@@ -1768,8 +1773,19 @@
         // Check for explicit false only: undefined (old saves without the aggregator) still allow dash
         // for backward compatibility; new saves start with dashUnlocked=false and unlock via skill tree.
         if (typeof playerStats !== 'undefined' && playerStats !== null && playerStats.dashUnlocked === false) return;
+
+        // Stamina check: need enough stamina to dash (dashStaminaCost% of maxStamina)
+        if (typeof playerStats !== 'undefined' && playerStats !== null) {
+          const maxSta  = playerStats.maxStamina  || 100;
+          const costPct = playerStats.dashStaminaCost || 49;
+          const cost    = maxSta * costPct / 100;
+          if ((playerStats.stamina || 0) < cost) return; // not enough stamina
+          playerStats.stamina = Math.max(0, (playerStats.stamina || 0) - cost);
+        }
+
         this.isDashing = true;
         this.dashTime = this.dashDuration;
+
         
         // Splash effect on dash start - more dramatic
         spawnParticles(this.mesh.position, COLORS.player, 10); // Reduced for performance

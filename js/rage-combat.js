@@ -873,10 +873,8 @@
   // ── HUD visibility (hide outside active gameplay) ────────────
   function setCombatHUDVisible(active) {
     const saPanel = document.getElementById('special-attacks-panel');
-    const rageBar = document.getElementById('rage-bar-container');
     const dispVal  = active ? '' : 'none';
     if (saPanel) saPanel.style.display = dispVal;
-    if (rageBar)  rageBar.style.display  = dispVal;
     // Close loadout panel when hiding
     if (!active) {
       const panel = document.getElementById('sa-loadout-panel');

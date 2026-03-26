@@ -61,41 +61,230 @@
       waterdropFill.setAttribute('y', fillY);
       waterdropFill.setAttribute('height', fillHeight);
 
-      // Update unified rage bar in the top-left bar stack
-      _updateUnifiedRageBar();
+      // Update stamina bar in the top-left bar stack
+      _updateStaminaBar();
+
+      // Update skill icons panel (weapons + passives at top-right)
+      _updateSkillIcons();
       
       // REGION DISPLAY: Update current region based on player position
       updateRegionDisplay();
     }
 
-    // Keep the unified rage bar in sync with the rage combat system
-    function _updateUnifiedRageBar() {
-      const rageFill = document.getElementById('rage-unified-fill');
-      const rageText = document.getElementById('rage-unified-text');
-      const rageContainer = document.getElementById('rage-bar-container');
-      if (!rageFill || !rageText || !rageContainer) return;
+    // ── Stamina bar: green fill showing current stamina ──────────────────────
+    function _updateStaminaBar() {
+      const fill      = document.getElementById('stamina-fill');
+      const text      = document.getElementById('stamina-text');
+      const container = document.getElementById('stamina-bar-container');
+      if (!fill || !text || !container) return;
 
-      // Read rage values from the rage combat system (exposed on window)
-      const rc = window.GameRageCombat;
-      if (!rc) return;
-      const meter = rc.rageMeter || 0;
-      const isActive = rc.isRageActive || false;
-      const pct = Math.round(meter);
-      rageFill.style.width = pct + '%';
+      const cur = (typeof playerStats !== 'undefined') ? (playerStats.stamina    || 0)   : 100;
+      const max = (typeof playerStats !== 'undefined') ? (playerStats.maxStamina || 100) : 100;
+      const pct = max > 0 ? Math.max(0, Math.min(100, (cur / max) * 100)) : 0;
 
-      // Style based on state
-      rageContainer.classList.toggle('rage-bar-active', isActive);
-      rageContainer.classList.toggle('rage-bar-ready', !isActive && meter >= 80);
+      fill.style.width = pct.toFixed(1) + '%';
 
-      if (isActive) {
-        rageText.innerText = '🔥 RAGING!';
-        rageText.style.color = '#FFF';
-      } else if (meter >= 80) {
-        rageText.innerText = '⚡ RAGE: ' + pct + '%';
-        rageText.style.color = '#FFD700';
+      container.classList.toggle('stamina-low',      pct < 40 && pct >= 20);
+      container.classList.toggle('stamina-critical', pct < 20);
+
+      if (pct <= 0) {
+        text.innerText = '⚡ STA: EMPTY';
+        text.style.color = '#FF4400';
+      } else if (pct < 20) {
+        text.innerText = '⚡ STA: ' + Math.round(pct) + '%';
+        text.style.color = '#FF8800';
       } else {
-        rageText.innerText = '⚡ RAGE: ' + pct + '%';
-        rageText.style.color = '#FF8800';
+        text.innerText = '⚡ STA: ' + Math.round(pct) + '%';
+        text.style.color = '#FFFFFF';
+      }
+    }
+
+    // ── Skill icons panel definitions ────────────────────────────────────────
+    // Weapon icon definitions (emoji icons for each weapon)
+    const _WEAPON_ICONS = {
+      gun:          { icon: '🔫', label: 'Gun' },
+      sword:        { icon: '⚔️',  label: 'Sword' },
+      samuraiSword: { icon: '🗡️', label: 'Katana' },
+      whip:         { icon: '🪢', label: 'Whip' },
+      uzi:          { icon: '🔫', label: 'Uzi' },
+      sniperRifle:  { icon: '🎯', label: 'Sniper' },
+      pumpShotgun:  { icon: '💥', label: 'Pump' },
+      autoShotgun:  { icon: '💥', label: 'Auto-SG' },
+      minigun:      { icon: '🔥', label: 'Minigun' },
+      bow:          { icon: '🏹', label: 'Bow' },
+      teslaSaber:   { icon: '⚡', label: 'Tesla' },
+      doubleBarrel: { icon: '🔫', label: 'DB' },
+      droneTurret:  { icon: '🤖', label: 'Drone' },
+      aura:         { icon: '🌀', label: 'Aura' },
+      boomerang:    { icon: '🪃', label: 'Boomerang' },
+      shuriken:     { icon: '💫', label: 'Shuriken' },
+      nanoSwarm:    { icon: '🤖', label: 'Swarm' },
+      homingMissile:{ icon: '🚀', label: 'Missile' },
+      iceSpear:     { icon: '❄️', label: 'Ice Spear' },
+      meteor:       { icon: '☄️', label: 'Meteor' },
+      fireRing:     { icon: '🔥', label: 'Fire Ring' },
+      lightning:    { icon: '⚡', label: 'Lightning' },
+      poison:       { icon: '☠️', label: 'Poison' },
+      fireball:     { icon: '🔥', label: 'Fireball' },
+    };
+
+    // Passive upgrade icon definitions
+    // Only shown when the stat is non-zero / unlocked
+    const _PASSIVE_ICONS = [
+      { id: 'hp_regen',    icon: '❤️↑', label: 'HP Regen',    check: (s) => s.hpRegen > 0 || s.hpRegenPerSecond > 0 },
+      { id: 'max_hp',      icon: '❤️+', label: 'Max HP',      check: (s) => s.maxHp > 100 },
+      { id: 'armor',       icon: '🛡️',  label: 'Armor',       check: (s) => s.armor > 0 },
+      { id: 'crit',        icon: '🎯',  label: 'Crit',        check: (s) => s.critChance > 0.10 },
+      { id: 'crit_dmg',    icon: '💥',  label: 'Crit Dmg',   check: (s) => s.critDmg > 1.5 },
+      { id: 'speed',       icon: '🏃',  label: 'Speed',       check: (s) => s.walkSpeed > 25 },
+      { id: 'lifesteal',   icon: '🩸',  label: 'Life Steal',  check: (s) => (s.lifeStealPercent || s.lifesteal || 0) > 0 },
+      { id: 'magnet',      icon: '🧲',  label: 'Magnet',      check: (s) => s.pickupRange > 1.0 },
+      { id: 'cooldown',    icon: '⏱️⬇', label: 'CD Red',     check: (s) => s.skillCooldown < 1.0 },
+      { id: 'damage',      icon: '⚔️↑',  label: 'Damage',     check: (s) => s.strength > 1 || s.weaponDamage > 0 },
+      { id: 'dash_master', icon: '💨',  label: 'Dash',        check: (s) => s.dashDistanceBonus > 0 },
+      { id: 'second_wind', icon: '🛡️💨', label: '2nd Wind',  check: (s) => s.hasSecondWind },
+      { id: 'stamina_up',  icon: '⚡+', label: 'Stamina+',    check: (s) => s.maxStamina > 100 },
+    ];
+
+    // Track previous ready state for flash animation
+    const _iconPrevReady = {};
+
+    function _updateSkillIcons() {
+      const panel = document.getElementById('skill-icons-panel');
+      if (!panel) return;
+
+      const ps = (typeof playerStats !== 'undefined') ? playerStats : null;
+      const ws = (typeof weapons    !== 'undefined') ? weapons    : null;
+      const now = Date.now();
+
+      // Build weapon slots
+      const weaponSlots = [];
+      if (ws) {
+        for (const key of Object.keys(_WEAPON_ICONS)) {
+          const w = ws[key];
+          if (!w || !w.active) continue;
+          const def = _WEAPON_ICONS[key];
+          const cd = w.cooldown || 0;
+          const last = w.lastShot || 0;
+          const elapsed = now - last;
+          const cdPct = cd > 0 ? Math.max(0, Math.min(100, ((cd - elapsed) / cd) * 100)) : 0;
+          const isReady = cdPct <= 0;
+          weaponSlots.push({ id: 'w_' + key, icon: def.icon, label: def.label, cdPct, isReady });
+        }
+      }
+
+      // Build passive slots
+      const passiveSlots = [];
+      if (ps) {
+        for (const def of _PASSIVE_ICONS) {
+          if (def.check(ps)) {
+            passiveSlots.push({ id: 'p_' + def.id, icon: def.icon, label: def.label, cdPct: 0, isReady: true });
+          }
+        }
+      }
+
+      // Rebuild panel if slot count changed (avoids thrashing DOM every frame)
+      const allSlots = [...weaponSlots, ...passiveSlots];
+      const panelKey = allSlots.map(s => s.id).join(',');
+      if (panel._panelKey !== panelKey) {
+        panel._panelKey = panelKey;
+        panel.innerHTML = '';
+        if (weaponSlots.length > 0) {
+          const label = document.createElement('div');
+          label.className = 'skill-row-label';
+          label.textContent = 'WEAPONS';
+          panel.appendChild(label);
+          const row = document.createElement('div');
+          row.className = 'skill-icons-row';
+          row.id = 'skill-row-weapons';
+          panel.appendChild(row);
+        }
+        if (passiveSlots.length > 0) {
+          const label = document.createElement('div');
+          label.className = 'skill-row-label';
+          label.textContent = 'PASSIVES';
+          panel.appendChild(label);
+          const row = document.createElement('div');
+          row.className = 'skill-icons-row';
+          row.id = 'skill-row-passives';
+          panel.appendChild(row);
+        }
+      }
+
+      // Update weapon row slots
+      const weapRow = document.getElementById('skill-row-weapons');
+      if (weapRow) {
+        // Sync slot count
+        while (weapRow.children.length < weaponSlots.length) {
+          const slot = _makeSkillSlot();
+          weapRow.appendChild(slot);
+        }
+        while (weapRow.children.length > weaponSlots.length) {
+          weapRow.removeChild(weapRow.lastChild);
+        }
+        weaponSlots.forEach((s, i) => _updateSlotEl(weapRow.children[i], s, now));
+      }
+
+      // Update passive row slots
+      const passRow = document.getElementById('skill-row-passives');
+      if (passRow) {
+        while (passRow.children.length < passiveSlots.length) {
+          const slot = _makeSkillSlot();
+          passRow.appendChild(slot);
+        }
+        while (passRow.children.length > passiveSlots.length) {
+          passRow.removeChild(passRow.lastChild);
+        }
+        passiveSlots.forEach((s, i) => _updateSlotEl(passRow.children[i], s, now));
+      }
+    }
+
+    function _makeSkillSlot() {
+      const slot = document.createElement('div');
+      slot.className = 'skill-icon-slot';
+      const iconEl = document.createElement('span');
+      iconEl.className = 'skill-icon-emoji';
+      slot.appendChild(iconEl);
+      const cd = document.createElement('div');
+      cd.className = 'skill-icon-cd';
+      slot.appendChild(cd);
+      const cdText = document.createElement('div');
+      cdText.className = 'skill-icon-cd-text';
+      slot.appendChild(cdText);
+      return slot;
+    }
+
+    function _updateSlotEl(el, s, now) {
+      if (!el) return;
+      const iconEl  = el.querySelector('.skill-icon-emoji');
+      const cdEl    = el.querySelector('.skill-icon-cd');
+      const cdText  = el.querySelector('.skill-icon-cd-text');
+      if (iconEl) iconEl.textContent = s.icon;
+      el.title = s.label;
+
+      const wasReady = _iconPrevReady[s.id];
+      _iconPrevReady[s.id] = s.isReady;
+
+      el.classList.toggle('ready',       s.isReady);
+      el.classList.toggle('on-cooldown', !s.isReady);
+
+      // Flash when transitioning to ready
+      if (s.isReady && wasReady === false) {
+        el.classList.remove('just-ready');
+        // Accessing offsetWidth triggers a reflow, which allows the CSS animation
+        // to restart from the beginning when the class is re-added below.
+        void el.offsetWidth;
+        el.classList.add('just-ready');
+        setTimeout(() => el.classList.remove('just-ready'), 600);
+      }
+
+      if (cdEl) {
+        const pctStr = s.cdPct.toFixed(1) + '%';
+        cdEl.style.setProperty('--cd-pct', pctStr);
+        cdEl.style.display = s.cdPct > 0 ? 'block' : 'none';
+      }
+      if (cdText) {
+        cdText.textContent = '';
       }
     }
 

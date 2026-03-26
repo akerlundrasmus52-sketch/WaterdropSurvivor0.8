@@ -46,8 +46,8 @@
     #special-attack-btn, #dash-btn {
       display: none !important;
     }
-    /* Show rage bar, special attacks panel, and companion skills in sandbox */
-    #rage-bar-container {
+    /* Show stamina bar, special attacks panel, and companion skills in sandbox */
+    #stamina-bar-container {
       display: block !important;
     }
     #special-attacks-panel {
@@ -588,7 +588,7 @@
   <!-- ── HUD Layer ──────────────────────────────────────────────────────── -->
   <div id="ui-layer">
     <div class="hud-top">
-      <!-- HP / EXP / RAGE bars -->
+      <!-- HP / EXP / STAMINA bars -->
       <div class="unified-bars-wrap">
         <div class="bar-container" id="hp-bar-container">
           <div class="bar-fill" id="hp-fill"></div>
@@ -598,9 +598,9 @@
           <div class="bar-fill" id="exp-fill"></div>
           <div class="bar-text" id="exp-text" style="color:#FFFFFF;">EXP: 0%</div>
         </div>
-        <div class="bar-container" id="rage-bar-container">
-          <div class="bar-fill" id="rage-unified-fill"></div>
-          <div class="bar-text" id="rage-unified-text" style="color:#FF8800;">⚡ RAGE: 0%</div>
+        <div class="bar-container" id="stamina-bar-container">
+          <div class="bar-fill" id="stamina-fill"></div>
+          <div class="bar-text" id="stamina-text" style="color:#FFFFFF;">⚡ STA: 100%</div>
         </div>
       </div>
       <div class="stat-text" id="status-message" style="display:none;"></div>
@@ -613,6 +613,9 @@
       <div id="montana-quest-ui"   style="display:none;"></div>
       <div id="eiffel-quest-ui"    style="display:none;"></div>
     </div>
+
+    <!-- Skill Icons Panel — top-right: active weapons + passives with cooldown animation -->
+    <div id="skill-icons-panel"></div>
 
     <!-- Pause / menu button -->
     <button id="menu-btn" title="Menu" onclick="window.isPaused=!window.isPaused; this.textContent=window.isPaused?'▶':'☰';">☰</button>
@@ -627,7 +630,6 @@
       <div class="companion-skill-btn comp-empty" id="comp-skill-2">⬡</div>
     </div>
     <div id="special-attacks-panel" style="display:none;">
-      <button id="rage-activate-btn" class="companion-skill-btn rage-activate-btn" title="Activate Rage">⚡</button>
       <div class="companion-skill-btn sa-slot comp-empty" id="sa-slot-1" title="Empty slot">⬡</div>
       <div class="companion-skill-btn sa-slot comp-empty" id="sa-slot-2" title="Empty slot">⬡</div>
     </div>
