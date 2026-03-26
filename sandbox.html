@@ -256,6 +256,136 @@
       }
     }
 
+    /* ══════════════════════════════════════════════════════════════════════════
+       RARITY CARD — Flowing drip border animations
+       Each rarity gets colored "dripping" edges that animate down the card border.
+       The drip is on ::after so it never conflicts with the ::before hover halo.
+       ══════════════════════════════════════════════════════════════════════════ */
+
+    /* Base ::after slot for the drip — transparent unless a rarity class is present */
+    .upgrade-card::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: inherit;
+      z-index: -1;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    /* ── Common — soft white silver drip ── */
+    .upgrade-card.rarity-common::after {
+      background: linear-gradient(180deg,
+        rgba(220,220,220,0.9) 0%,
+        rgba(180,180,180,0.4) 45%,
+        rgba(200,200,200,0.9) 55%,
+        rgba(220,220,220,0.4) 100%
+      );
+      animation: drip-common 2.8s ease-in-out infinite;
+      filter: blur(1.5px);
+    }
+    @keyframes drip-common {
+      0%,100% { background-position: 0 0; opacity:0.6; }
+      50%      { background-position: 0 100%; opacity:1; }
+    }
+
+    /* ── Rare — blue flowing drip ── */
+    .upgrade-card.rarity-rare::after {
+      background: linear-gradient(180deg,
+        rgba(52,152,219,0.0) 0%,
+        rgba(52,152,219,1.0) 20%,
+        rgba(30,100,200,0.8) 50%,
+        rgba(52,152,219,0.5) 80%,
+        rgba(52,152,219,0.0) 100%
+      );
+      animation: drip-rare 2.2s linear infinite;
+      filter: blur(2px);
+    }
+    @keyframes drip-rare {
+      0%   { transform: translateY(-100%) scaleX(1.1); opacity:0.4; }
+      50%  { opacity:1; }
+      100% { transform: translateY(100%) scaleX(1.1);  opacity:0.4; }
+    }
+
+    /* ── Epic — purple electric drip ── */
+    .upgrade-card.rarity-epic::after {
+      background: linear-gradient(180deg,
+        rgba(155,68,240,0.0) 0%,
+        rgba(155,68,240,1.0) 18%,
+        rgba(100,20,200,0.9) 50%,
+        rgba(155,68,240,0.5) 80%,
+        rgba(155,68,240,0.0) 100%
+      );
+      animation: drip-epic 1.7s linear infinite;
+      filter: blur(2.5px);
+    }
+    @keyframes drip-epic {
+      0%   { transform: translateY(-110%) scaleX(1.15); opacity:0.3; }
+      40%  { opacity:1; }
+      100% { transform: translateY(110%) scaleX(1.15); opacity:0.3; }
+    }
+
+    /* ── Legendary — gold lava drip ── */
+    .upgrade-card.rarity-legendary::after {
+      background: linear-gradient(180deg,
+        rgba(255,215,0,0.0) 0%,
+        rgba(255,215,0,1.0) 15%,
+        rgba(255,160,0,0.9) 45%,
+        rgba(255,215,0,0.6) 75%,
+        rgba(255,215,0,0.0) 100%
+      );
+      animation: drip-legendary 1.4s linear infinite;
+      filter: blur(3px);
+    }
+    @keyframes drip-legendary {
+      0%   { transform: translateY(-115%) scaleX(1.2); opacity:0.3; }
+      35%  { opacity:1; }
+      100% { transform: translateY(115%) scaleX(1.2); opacity:0.3; }
+    }
+
+    /* ── Mythic — red blood drip ── */
+    .upgrade-card.rarity-mythical::after {
+      background: linear-gradient(180deg,
+        rgba(255,0,0,0.0) 0%,
+        rgba(220,20,0,1.0) 12%,
+        rgba(160,0,0,0.95) 40%,
+        rgba(220,20,0,0.6) 70%,
+        rgba(255,0,0,0.0) 100%
+      );
+      animation: drip-mythic 1.0s linear infinite;
+      filter: blur(3.5px);
+    }
+    @keyframes drip-mythic {
+      0%   { transform: translateY(-120%) scaleX(1.25); opacity:0.4; }
+      30%  { opacity:1; }
+      100% { transform: translateY(120%) scaleX(1.25); opacity:0.4; }
+    }
+
+    /* ── Card entrance animation — pop up from below with scale ── */
+    @keyframes card-enter {
+      0%   { transform: translateY(30px) scale(0.82); opacity: 0; filter: blur(4px); }
+      60%  { transform: translateY(-6px) scale(1.04); opacity: 1; filter: blur(0); }
+      80%  { transform: translateY(2px) scale(0.99); }
+      100% { transform: translateY(0) scale(1); opacity: 1; filter: blur(0); }
+    }
+    .upgrade-card {
+      animation: card-enter 0.55s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    .upgrade-card:nth-child(1) { animation-delay: 0.00s; }
+    .upgrade-card:nth-child(2) { animation-delay: 0.07s; }
+    .upgrade-card:nth-child(3) { animation-delay: 0.14s; }
+    .upgrade-card:nth-child(4) { animation-delay: 0.21s; }
+
+    /* ── Level-up modal backdrop entrance ── */
+    #levelup-modal.lvl-entering .modal-content {
+      animation: modal-drop-in 0.6s cubic-bezier(0.22,1,0.36,1) both;
+    }
+    @keyframes modal-drop-in {
+      0%   { transform: translateY(-40px) scale(0.9); opacity:0; }
+      60%  { transform: translateY(8px) scale(1.02); }
+      100% { transform: translateY(0) scale(1); opacity:1; }
+    }
+
     /* ── Revolver ammo bullets ──────────────────────────────────────────────── */
     .revolver-bullet {
       width: 10px;
@@ -952,6 +1082,9 @@
   <!-- 11e. Leaping slime enemy — light-blue jumping variant with squish physics -->
   <script src="js/leaping-slime-enemy.js"></script>
 
+  <!-- 11f. Skinwalker enemy — advanced humanoid crawler with pool (sequential waves) -->
+  <script src="js/enemies/skinwalker.js"></script>
+
   <!-- ── DOM UI HELPERS ──────────────────────────────────────────────── -->
 
   <!-- 12. DOM helpers: showStatChange, showStatusMessage, stat notification queue -->
@@ -1019,6 +1152,9 @@
 
   <!-- 24. Engine 2.0 Sandbox: PBR arena ground + center spawn hole -->
   <script src="js/engine2.js"></script>
+  <script src="js/landmarks/annunaki-tablet.js"></script>
+  <!-- 24.1. World Trees — 12 procedural landmark trees with wind sway & leaf particles -->
+  <script src="js/landmarks/world-trees.js"></script>
 
   <!-- 24.1. Ground Details: tall grass, fallen logs, rock clusters, scatter debris -->
   <script src="js/landmarks/ground-details.js"></script>

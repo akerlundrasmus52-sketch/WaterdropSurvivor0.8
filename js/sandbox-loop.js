@@ -240,6 +240,7 @@
       if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
       if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
       if (window.LeapingSlimePool && typeof window.LeapingSlimePool.reset === 'function') window.LeapingSlimePool.reset();
+      SeqWaveManager.reset();
       const b = document.getElementById('you-died-banner');
       if (b) {
         b.style.display = 'block';
@@ -358,6 +359,7 @@
   let _allFleshChunks = [];        // global flying flesh chunk list (from all pool slots)
   let _activeCrawlers = [];        // live list of active crawler enemies
   let _activeLeapingSlimes = [];   // live list of active leaping slime enemies
+  let _activeSkinwalkers = [];     // live list of active skinwalker enemies
   let _projPool = [];              // reusable projectile objects
   let _activeProjList = [];        // currently flying projectiles
   let _animateErrorShown = false;  // prevent spamming error display every frame
@@ -452,6 +454,57 @@
   // ─── Helpers ─────────────────────────────────────────────────────────────────
   function _lerp(a, b, t) { return a + (b - a) * t; }
   function _clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+  // ─── In-game wave/notification bar ───────────────────────────────────────────
+  // Pooled notification queue — shows wave announcements, kill counts, etc.
+  // Uses a single reusable DOM element for minimal overhead.
+  var _notifEl = null;
+  var _notifTimeout = null;
+  function _showWaveNotification(text, color, durationMs) {
+    if (!_notifEl) {
+      _notifEl = document.createElement('div');
+      _notifEl.id = 'wave-notif-bar';
+      _notifEl.style.cssText = [
+        'position:fixed',
+        'top:80px',
+        'left:50%',
+        'transform:translateX(-50%) translateY(-20px)',
+        'z-index:9500',
+        'pointer-events:none',
+        'font-family:Bangers,"Impact","Arial Black",sans-serif',
+        'font-size:clamp(20px,4vw,32px)',
+        'letter-spacing:4px',
+        'text-align:center',
+        'padding:10px 28px',
+        'border-radius:16px',
+        'background:rgba(0,0,0,0.82)',
+        'border:2px solid currentColor',
+        'backdrop-filter:blur(6px)',
+        'box-shadow:0 0 24px currentColor,0 4px 16px rgba(0,0,0,0.8)',
+        'opacity:0',
+        'transition:opacity 0.3s ease,transform 0.35s cubic-bezier(0.22,1,0.36,1)',
+        'white-space:nowrap',
+        'text-shadow:0 0 10px currentColor,2px 2px 0 #000',
+        'will-change:transform,opacity'
+      ].join(';');
+      document.body.appendChild(_notifEl);
+    }
+    clearTimeout(_notifTimeout);
+    _notifEl.textContent  = text;
+    _notifEl.style.color  = color || '#ffffff';
+    _notifEl.style.borderColor = color || '#ffffff';
+    _notifEl.style.opacity   = '0';
+    _notifEl.style.transform = 'translateX(-50%) translateY(-20px) scale(0.85)';
+    // Force reflow so the transition fires correctly
+    void _notifEl.offsetHeight;
+    _notifEl.style.opacity   = '1';
+    _notifEl.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+    _notifTimeout = setTimeout(function() {
+      if (!_notifEl) return;
+      _notifEl.style.opacity   = '0';
+      _notifEl.style.transform = 'translateX(-50%) translateY(-12px) scale(0.92)';
+    }, durationMs || 2000);
+  }
 
   // Display an error message on-screen so mobile users can see what went wrong.
   function _showError(msg) {
@@ -637,6 +690,21 @@
             break;
           }
         }
+        // Skinwalkers not in spatial hash — check separately
+        if (!hitThisFrame) {
+          for (let wi = 0; wi < _activeSkinwalkers.length; wi++) {
+            const sw = _activeSkinwalkers[wi];
+            if (sw.dead) continue;
+            const wx = p.mesh.position.x - sw.parts.root.position.x;
+            const wz = p.mesh.position.z - sw.parts.root.position.z;
+            if (wx * wx + wz * wz < COLLISION_THRESHOLD_SQ * 4) {
+              _hitSkinwalker(p, sw);
+              _releaseProjectile(p, i);
+              hitThisFrame = true;
+              break;
+            }
+          }
+        }
       } else {
         // Fallback: O(n²) brute-force (used when spatial-hash.js is not loaded)
         for (let si = 0; si < _activeSlimes.length; si++) {
@@ -675,6 +743,21 @@
             const lz = p.mesh.position.z - l.mesh.position.z;
             if (lx * lx + lz * lz < COLLISION_THRESHOLD_SQ) {
               _hitLeapingSlime(p, l);
+              _releaseProjectile(p, i);
+              hitThisFrame = true;
+              break;
+            }
+          }
+        }
+        if (!hitThisFrame) {
+          // Check skinwalkers in brute-force mode
+          for (let wi = 0; wi < _activeSkinwalkers.length; wi++) {
+            const sw = _activeSkinwalkers[wi];
+            if (sw.dead) continue;
+            const wx = p.mesh.position.x - sw.parts.root.position.x;
+            const wz = p.mesh.position.z - sw.parts.root.position.z;
+            if (wx * wx + wz * wz < COLLISION_THRESHOLD_SQ * 4) {
+              _hitSkinwalker(p, sw);
               _releaseProjectile(p, i);
               hitThisFrame = true;
               break;
@@ -1241,9 +1324,7 @@
     if (window.GameMilestones && typeof GameMilestones.recordKill === 'function') {
       GameMilestones.recordKill();
     }
-  }
-
-  function _updateSlimeHPBar(slot) {
+    SeqWaveManager.onEnemyKilled('slime');
     // HP bars removed - function kept for compatibility but does nothing
   }
 
@@ -1371,6 +1452,7 @@
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(12);
     }
+    SeqWaveManager.onEnemyKilled('crawler');
   }
 
   /** Spawn crawlers alongside slimes during waves */
@@ -1582,6 +1664,7 @@
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
     }
+    SeqWaveManager.onEnemyKilled('leaping_slime');
   }
 
   /** Spawn one leaping slime near the player. */
@@ -3479,10 +3562,14 @@
     // Sync revolver ammo to stat — reload after playerStats has been applied
     _revolverAmmo = (playerStats && playerStats.magazineCapacity) || REVOLVER_MAX_AMMO;
 
-    // Set up weapons
+    // Always expose playerStats to window so level-up-system.js can find it
+    window.playerStats = playerStats;
+
+    // Set up weapons and expose to window so level-up-system.js can find them
     if (typeof getDefaultWeapons === 'function') {
       weapons = getDefaultWeapons();
     }
+    window.weapons = weapons;
     // Create player using the existing Player class
     if (typeof Player === 'function') {
       player = new Player();
@@ -3933,48 +4020,373 @@
     // Debug/status overlay removed per requirements — screen must be clean
   }
 
-  // ─── WaveManager — encapsulates survivor-style wave spawning logic ───────────
-  // Keeps the core animate loop clean.  Adheres to the pre-allocated pool
-  // architecture — all spawns go through _spawnWave / _activateSlime.
-  const WaveManager = {
-    _crawlerSpawnTimer: 0,
-    _leapingSpawnTimer: 6,  // initial delay before first leaping slime spawn
-    /** Tick wave timers and escalation.  Call once per frame from _animate. */
+  // ─── Skinwalker support ──────────────────────────────────────────────────────
+
+  /** Spawn one skinwalker far from the player. */
+  function _spawnSkinwalker(spawnX, spawnZ) {
+    if (!window.SkinwalkerEnemy || !player || !player.mesh) return;
+    let rx, rz;
+    if (spawnX !== undefined && spawnZ !== undefined) {
+      rx = spawnX;
+      rz = spawnZ;
+    } else {
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = 20 + Math.random() * 10;
+      const px    = player.mesh.position.x;
+      const pz    = player.mesh.position.z;
+      rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+      rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+    }
+    const pos   = new THREE.Vector3(rx, 0, rz);
+    const sw    = SkinwalkerEnemy.acquire(scene, pos);
+    if (!sw) return;
+    sw.onAttack = function(dmg) {
+      if (!player) return;
+      const now = Date.now();
+      if (!sw._lastDmgTime || now - sw._lastDmgTime > 600) {
+        sw._lastDmgTime = now;
+        if (typeof player.takeDamage === 'function') {
+          player.takeDamage(dmg, 'skinwalker', sw.parts.root.position);
+        } else {
+          playerStats.hp -= dmg;
+          if (playerStats.hp <= 0) { playerStats.hp = 0; gameOver(); }
+        }
+      }
+    };
+    sw.onDeath = function() {
+      _killSkinwalker(sw);
+    };
+    _activeSkinwalkers.push(sw);
+    console.log('[SeqWave] Skinwalker spawned at', rx.toFixed(1), rz.toFixed(1));
+  }
+
+  /** Update all active skinwalkers each frame. */
+  function _updateSkinwalkers(dt) {
+    if (!player || !player.mesh) return;
+    const playerPos = player.mesh.position;
+    for (let i = _activeSkinwalkers.length - 1; i >= 0; i--) {
+      const sw = _activeSkinwalkers[i];
+      if (sw.dead) {
+        _activeSkinwalkers.splice(i, 1);
+        continue;
+      }
+      sw.update(dt, playerPos);
+    }
+  }
+
+  /** Apply projectile damage to a skinwalker. */
+  function _hitSkinwalker(projectile, sw) {
+    if (!sw || sw.dead) return;
+    const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
+    const damage   = weapons && weapons.gun ? weapons.gun.damage : 15;
+    const critChance = (playerStats && playerStats.critChance != null) ? playerStats.critChance : 0.10;
+    const isCrit   = Math.random() < critChance;
+    const critMult = isCrit ? (playerStats && playerStats.critDmg ? playerStats.critDmg : 1.5) : 1.0;
+    const actualDmg = Math.round(damage * hitForce * critMult);
+
+    sw.takeDamage(actualDmg);
+
+    // Floating damage text
+    const hx = sw.parts.root.position.x;
+    const hy = sw.parts.root.position.y + 1.8;
+    const hz = sw.parts.root.position.z;
+    _tmpV3b.set(hx, hy, hz);
+    if (isCrit) {
+      createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+    } else {
+      createFloatingText(actualDmg, _tmpV3b, '#c8c7c0', actualDmg);
+    }
+
+    // Blood on hit
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(hx, hy, hz, 5, { color: 0xc8c7c0 });
+    }
+
+    _triggerShake(SHAKE_LIGHT_INTENSITY * 0.8);
+  }
+
+  /** Kill a skinwalker — rewards, gore, and pool return. */
+  function _killSkinwalker(sw) {
+    if (!sw || sw._killProcessed) return;
+    sw._killProcessed = true;
+    const x = sw.parts.root.position.x;
+    const y = sw.parts.root.position.y + 1.2;
+    const z = sw.parts.root.position.z;
+
+    _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 0.9);
+    _triggerShake(SHAKE_KILL_BASE * 0.9);
+
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(x, y, z, 20, { color: 0xc8c7c0 });
+    }
+    if (window.GoreSim && typeof GoreSim.onKill === 'function') {
+      GoreSim.onKill(sw, 'pistol', null);
+    }
+    _placeBloodStain(x, z);
+
+    if (window.XPStarSystem) {
+      const killDamage = 120 * 1.5;
+      XPStarSystem.spawn(x, y, z, 'skinwalker', killDamage, 0, 0);
+      if (Math.random() < 0.35) XPStarSystem.spawn(x, y, z, 'skinwalker', killDamage * 0.7, 0, 0);
+    }
+
+    playerStats.kills++;
+    if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
+      GameRageCombat.addRage(15);
+    }
+
+    const idx = _activeSkinwalkers.indexOf(sw);
+    if (idx !== -1) _activeSkinwalkers.splice(idx, 1);
+
+    // Notify sequential wave manager
+    SeqWaveManager.onEnemyKilled('skinwalker');
+
+    setTimeout(function() {
+      // Guard against double-release: if reset() already removed sw from
+      // _activeSkinwalkers and called release(), don't release again.
+      if (_activeSkinwalkers.indexOf(sw) !== -1) return;
+      if (window.SkinwalkerEnemy) SkinwalkerEnemy.release(sw);
+    }, 8000);
+  }
+
+  // ─── Sequential Kill-Based Wave Manager ──────────────────────────────────────
+  // Roguelike Survivor RPG wave system: phases trigger based on kill counts,
+  // not timers. Enemies always spawn 20+ units away from the player.
+  //
+  // Phase sequence:
+  //  0 → spawn 3 red slimes
+  //  1 → on 2 kills: spawn 2 blue (leaping) + 2 green
+  //  2 → on 3 more kills: spawn 3 blue + 2 green + 1 worm (crawler)
+  //  3 → when 2 alive remain: spawn 3 green + 3 blue + 1 worm
+  //  4 → when 1 alive remains: spawn 1 of each + 1 skinwalker
+  //  5 → on 1 kill from phase 4: spawn 2 of each + 1 skinwalker
+  //  (looping after phase 5, doubling count if new weapon unlocked)
+  const SeqWaveManager = {
+    _phase:        -1,   // current phase (-1 = not started)
+    _phaseKills:   0,    // kills accumulated since this phase began
+    _totalKills:   0,    // all-time kill counter
+    _x2Active:     false, // first-new-weapon x2 multiplier
+    _prevWeaponCount: 1,  // number of weapons player had last check
+    _initialized:  false,
+    _pendingTimeouts: [], // all pending setTimeout IDs so reset() can cancel them
+
+    _setTimeout: function(fn, delay) {
+      const id = setTimeout(fn, delay);
+      this._pendingTimeouts.push(id);
+      return id;
+    },
+
+    _clearAllTimeouts: function() {
+      for (let i = 0; i < this._pendingTimeouts.length; i++) {
+        clearTimeout(this._pendingTimeouts[i]);
+      }
+      this._pendingTimeouts = [];
+    },
+
+    /** Initialize and spawn the first wave. Call from _boot. */
+    start: function() {
+      this._phase        = 0;
+      this._phaseKills   = 0;
+      this._totalKills   = 0;
+      this._x2Active     = false;
+      this._prevWeaponCount = 1;
+      this._initialized  = true;
+      // Brief delay before first enemy appears
+      SeqWaveManager._setTimeout(function() { SeqWaveManager._spawnPhase(0); }, 1500);
+    },
+
+    /** Returns total count of alive enemies across all pools. */
+    _totalAlive: function() {
+      const slimes   = _activeSlimes.length;
+      const crawlers = _activeCrawlers.length;
+      const leapers  = _activeLeapingSlimes.length;
+      const skins    = _activeSkinwalkers.length;
+      return slimes + crawlers + leapers + skins;
+    },
+
+    /** Called from every kill function (_killSlime, _killCrawler, _killLeapingSlime, _killSkinwalker). */
+    onEnemyKilled: function(type) {
+      if (!this._initialized) return;
+      this._phaseKills++;
+      this._totalKills++;
+
+      const alive = this._totalAlive();
+
+      // Show kill notification
+      _showWaveNotification('Enemy down! ' + alive + ' remain', '#aaffaa', 1200);
+
+      // Phase transitions
+      if (this._phase === 0 && this._phaseKills >= 2) {
+        this._advancePhase(1);
+      } else if (this._phase === 1 && this._phaseKills >= 3) {
+        this._advancePhase(2);
+      } else if (this._phase === 2 && alive <= 2) {
+        this._advancePhase(3);
+      } else if (this._phase === 3 && alive <= 1) {
+        this._advancePhase(4);
+      } else if (this._phase === 4 && this._phaseKills >= 1) {
+        this._advancePhase(5);
+      } else if (this._phase === 5 && alive <= 0) {
+        // Loop: go back to phase 5 with increasing difficulty
+        this._advancePhase(5);
+      }
+    },
+
+    _advancePhase: function(nextPhase) {
+      this._phase      = nextPhase;
+      this._phaseKills = 0;
+      // Small delay so player sees the kill before next enemies appear
+      const self = this;
+      SeqWaveManager._setTimeout(function() { self._spawnPhase(nextPhase); }, 800);
+    },
+
+    _mult: function(n) {
+      return this._x2Active ? n * 2 : n;
+    },
+
+    _spawnPhase: function(phase) {
+      switch (phase) {
+        case 0:
+          _showWaveNotification('WAVE START — 3 Slimes incoming!', '#ffdd44', 2500);
+          this._spawnBatch([
+            { type: 'slime',   count: 3 }
+          ]);
+          break;
+        case 1:
+          _showWaveNotification('WAVE 2 — Blue & Green rise!', '#44aaff', 2500);
+          this._spawnBatch([
+            { type: 'leaping', count: this._mult(2) },
+            { type: 'slime',   count: this._mult(2) }
+          ]);
+          break;
+        case 2:
+          _showWaveNotification('WAVE 3 — The Worm awakens!', '#44ff88', 2500);
+          this._spawnBatch([
+            { type: 'leaping', count: this._mult(3) },
+            { type: 'slime',   count: this._mult(2) },
+            { type: 'crawler', count: this._mult(1) }
+          ]);
+          break;
+        case 3:
+          _showWaveNotification('WAVE 4 — More worms!', '#ff8844', 2500);
+          this._spawnBatch([
+            { type: 'slime',   count: this._mult(3) },
+            { type: 'leaping', count: this._mult(3) },
+            { type: 'crawler', count: this._mult(1) }
+          ]);
+          break;
+        case 4:
+          _showWaveNotification('☠ WAVE 5 — SKINWALKER APPEARS!', '#ff4444', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(1) },
+            { type: 'leaping',    count: this._mult(1) },
+            { type: 'crawler',    count: this._mult(1) },
+            { type: 'skinwalker', count: this._mult(1) }
+          ]);
+          break;
+        case 5:
+        default:
+          _showWaveNotification('💀 HORDE — 2 of everything!', '#ff0055', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(2) },
+            { type: 'leaping',    count: this._mult(2) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+      }
+    },
+
+    /** Spawn a batch of enemies spread at 20–30 units from player. */
+    _spawnBatch: function(groups) {
+      if (!player || !player.mesh) return;
+      const px = player.mesh.position.x;
+      const pz = player.mesh.position.z;
+      let delay = 0;
+      for (let g = 0; g < groups.length; g++) {
+        const grp = groups[g];
+        for (let i = 0; i < grp.count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist  = 20 + Math.random() * 10; // Always 20–30 units away
+          const rx    = _clamp(px + Math.cos(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+          const rz    = _clamp(pz + Math.sin(angle) * dist, -ARENA_RADIUS, ARENA_RADIUS);
+          (function(type, x, z, spawnDelay) {
+            SeqWaveManager._setTimeout(function() {
+              if (!player || !player.mesh) return;
+              switch (type) {
+                case 'slime':
+                  // Activate a pooled slime
+                  for (let k = 0; k < _enemyPool.length; k++) {
+                    if (!_enemyPool[k].active) {
+                      _activateSlime(_enemyPool[k], x, z);
+                      break;
+                    }
+                  }
+                  break;
+                case 'leaping':
+                  if (window.LeapingSlimePool) {
+                    const e = LeapingSlimePool.spawn(x, z, 1);
+                    if (e && _activeLeapingSlimes.indexOf(e) === -1) _activeLeapingSlimes.push(e);
+                  }
+                  break;
+                case 'crawler':
+                  if (window.CrawlerPool) {
+                    const c = CrawlerPool.spawn(x, z, 1);
+                    if (c) _activeCrawlers.push(c);
+                  }
+                  break;
+                case 'skinwalker':
+                  _spawnSkinwalker(x, z);
+                  break;
+              }
+            }, spawnDelay);
+          })(grp.type, rx, rz, delay);
+          delay += 300; // Stagger spawns by 300ms each
+        }
+      }
+    },
+
+    /** Check if player has unlocked a new weapon and activate x2 if so. */
+    _checkWeaponUnlock: function() {
+      if (this._x2Active || !window.weapons) return;
+      let count = 0;
+      const wk = Object.keys(weapons);
+      for (let i = 0; i < wk.length; i++) {
+        if (weapons[wk[i]] && weapons[wk[i]].active) count++;
+      }
+      if (count > this._prevWeaponCount) {
+        this._prevWeaponCount = count;
+        if (!this._x2Active) {
+          this._x2Active = true;
+          _showWaveNotification('🔫 NEW WEAPON! Enemy counts DOUBLED!', '#ffaa00', 3500);
+          console.log('[SeqWave] x2 multiplier activated (new weapon unlocked)');
+        }
+      }
+    },
+
+    /** Per-frame tick — checks weapon unlocks. */
     update: function(dt) {
-      _spawnTimer -= dt;
-      if (_spawnTimer <= 0) {
-        _spawnTimer = _spawnInterval;
-        _spawnWave();
-      }
+      this._checkWeaponUnlock();
+      _updateSkinwalkers(dt);
+    },
 
-      // Crawler spawn: every 8-12 seconds once wave difficulty escalates past initial waves
-      this._crawlerSpawnTimer -= dt;
-      var CRAWLER_SPAWN_WAVE_THRESHOLD = 5;
-      if (this._crawlerSpawnTimer <= 0 && _waveSize >= CRAWLER_SPAWN_WAVE_THRESHOLD) {
-        this._crawlerSpawnTimer = 8 + Math.random() * 4;
-        _spawnCrawler();
+    reset: function() {
+      // Cancel all pending wave timeouts first so stale callbacks can't fire
+      this._clearAllTimeouts();
+      this._phase        = -1;
+      this._phaseKills   = 0;
+      this._totalKills   = 0;
+      this._x2Active     = false;
+      this._initialized  = false;
+      for (let i = _activeSkinwalkers.length - 1; i >= 0; i--) {
+        try { SkinwalkerEnemy.release(_activeSkinwalkers[i]); } catch(e) {}
       }
-
-      // Leaping slime spawn: every 6-10 seconds from wave 3 onward
-      this._leapingSpawnTimer -= dt;
-      var LEAPING_SPAWN_WAVE_THRESHOLD = 3;
-      if (this._leapingSpawnTimer <= 0 && _waveSize >= LEAPING_SPAWN_WAVE_THRESHOLD) {
-        this._leapingSpawnTimer = 6 + Math.random() * 4;
-        _spawnLeapingSlime();
-      }
-
-      _escalationTimer -= dt;
-      if (_escalationTimer <= 0) {
-        _escalationTimer = ESCALATION_INTERVAL;
-        _waveSize      = Math.min(_waveSize + 2, 20);
-        _maxActive     = Math.min(_maxActive + 5, MAX_SLIMES);
-        _spawnInterval = Math.max(1.5, _spawnInterval * 0.85);
-        console.log('[WaveManager] Escalation! waveSize=' + _waveSize +
-          ' maxActive=' + _maxActive +
-          ' interval=' + _spawnInterval.toFixed(2) + 's');
-      }
+      _activeSkinwalkers.length = 0;
     }
   };
+
+  // Alias old WaveManager so existing code still compiles
+  const WaveManager = SeqWaveManager;
 
   // ─── LootManager — encapsulates EXP gem update and collection logic ──────────
   // Delegates to _updateGems for the pooled gem simulation.
@@ -4070,6 +4482,10 @@
       }
       if (window.HitDetection && typeof window.HitDetection.update === 'function') {
         window.HitDetection.update(dt, player ? player.mesh.position : null);
+      }
+      // World Trees — wind sway, collision shake, leaf particles
+      if (window._engine2Instance && window._engine2Instance._worldTrees) {
+        window._engine2Instance._worldTrees.update(dt, player ? player.mesh.position : null);
       }
       // Trauma system tick (gore chunks, stuck arrows, wound decals)
       if (window.TraumaSystem && typeof TraumaSystem.update === 'function') {
@@ -4181,6 +4597,11 @@
               1 + Math.sin(sparkle.userData.phase * 2) * 0.5
             );
           });
+        }
+
+        // Annunaki Tablet glow + glyph shimmer + dust motes
+        if (window._engine2Instance && window._engine2Instance._annunakiTablet) {
+          window._engine2Instance._annunakiTablet.update(dt);
         }
       }
 
@@ -4453,8 +4874,8 @@
       if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.init(scene, camera, player); }
 
       console.log('[🎮 SandboxLoop] Spawning first wave...');
-      _spawnWave();          // Spawn first wave immediately
-      console.log('[🎮 SandboxLoop] ✓ First wave spawned');
+      SeqWaveManager.start();  // Start sequential kill-based wave system
+      console.log('[🎮 SandboxLoop] ✓ Sequential wave system started');
 
       console.log('[🎮 SandboxLoop] Initializing input handlers...');
       _initInput();
@@ -4478,6 +4899,9 @@
       _rafId = requestAnimationFrame(_animate);
 
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');
+      // Signal loading.js that the game module is ready so the loading screen
+      // fades out and routes to the camp / main-menu screen.
+      window.gameModuleReady = true;
       console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
       console.log('[🎮 SandboxLoop] 🎉 ENGINE 2.0 SANDBOX READY!');
       console.log('[🎮 SandboxLoop] ════════════════════════════════════════════');
