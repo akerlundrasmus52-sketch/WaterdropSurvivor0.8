@@ -3444,10 +3444,15 @@
 
     if (!settingsBtn || !settingsModal || !closeBtn) return;
 
-    // Force desktop-friendly controls in sandbox so guns auto-fire without right-stick input
+    // Provide desktop-friendly defaults in sandbox; actual firing is driven by _aimJoy/mouse,
+    // not controlType. Only set these if they haven't been initialized yet (e.g., from saves).
     if (window.gameSettings) {
-      window.gameSettings.autoAim = true;
-      window.gameSettings.controlType = 'keyboard';
+      if (typeof window.gameSettings.autoAim === 'undefined') {
+        window.gameSettings.autoAim = true;
+      }
+      if (typeof window.gameSettings.controlType === 'undefined') {
+        window.gameSettings.controlType = 'keyboard';
+      }
     }
 
     settingsBtn.style.display = 'block';
