@@ -830,6 +830,11 @@ class Engine2Sandbox {
     // ===== LANDMARK 4: ANCIENT PYRAMID =====
     if (typeof AncientPyramid !== 'undefined') {
       this._pyramid = new AncientPyramid(this.scene);
+      // Register in centralized landmark registry so sandbox-loop can animate it
+      if (window._engine2Landmarks) {
+        window._engine2Landmarks.pyramid = this._pyramid;
+      }
+    }
     // ══════════════════════════════════════════════════════════════
     // 4. ANNUNAKI TABLET — Southwest area (-35, 15)
     // ══════════════════════════════════════════════════════════════

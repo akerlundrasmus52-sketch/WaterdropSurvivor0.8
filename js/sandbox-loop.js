@@ -4605,9 +4605,11 @@
         }
       }
 
-      // Ancient Pyramid animation
-      var engine2Inst = window._engine2Instance;
-      if (engine2Inst && engine2Inst._pyramid) { engine2Inst._pyramid.update(dt); }
+      // Ancient Pyramid animation (registered in window._engine2Landmarks)
+      if (window._engine2Landmarks && window._engine2Landmarks.pyramid &&
+          typeof window._engine2Landmarks.pyramid.update === 'function') {
+        window._engine2Landmarks.pyramid.update(dt);
+      }
 
       // Camera shake & pooled flash updates
       _updateCameraShake(dt);

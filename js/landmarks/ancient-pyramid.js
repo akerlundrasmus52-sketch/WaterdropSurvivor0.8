@@ -124,7 +124,7 @@
     var frontZ = PZ + 9;
 
     var doorway = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.5, 0.6), darkMat);
-    doorway.position.set(PX, -0.3 + 3.5 / 2, frontZ - 0.05);
+    doorway.position.set(PX, -0.3 + 3.5 / 2, frontZ - 0.32);
     scene.add(doorway);
 
     var entranceLight = new THREE.PointLight(0xcc8800, 0.6, 8);
@@ -235,7 +235,8 @@
     this.beamMesh = beamMesh;
 
     // ── Hieroglyph Bands ───────────────────────────────────────────────────
-    // One row of 12 tiny marks on each of the 4 faces of every tier
+    // One row of 12 tiny marks on each of the 4 faces of every tier.
+    // All marks share one InstancedMesh to minimise draw calls.
     var glyphMat = new THREE.MeshLambertMaterial({ color: 0xc8a84b, emissive: 0x1a1000 });
     var glyphGeo = new THREE.BoxGeometry(0.12, 0.18, 0.04);
     var tierDefs = [
@@ -246,46 +247,66 @@
       { y:  7.5, hw: 2   },
     ];
 
+    var glyphsPerFace  = 12;
+    var facesPerTier   = 4;
+    var totalGlyphs    = tierDefs.length * facesPerTier * glyphsPerFace;
+    var glyphInstanced = new THREE.InstancedMesh(glyphGeo, glyphMat, totalGlyphs);
+    var glyphIndex     = 0;
+    var glyphMatrix    = new THREE.Matrix4();
+    var glyphPos       = new THREE.Vector3();
+    var glyphQuat      = new THREE.Quaternion();
+    var glyphEuler     = new THREE.Euler();
+    var glyphScaleVec  = new THREE.Vector3(1, 1, 1);
+
     tierDefs.forEach(function (tier) {
       var hw  = tier.hw;
       var ty  = tier.y;
       var rng = hw * 1.7;  // spread of marks across face (leaves ~15 % margin)
-      var g, gm;
+      var g, localX, localZ;
 
       // +X face — marks run in Z, face normal is +X
-      for (g = 0; g < 12; g++) {
-        gm = new THREE.Mesh(glyphGeo, glyphMat);
-        gm.position.set(PX + hw + 0.02, ty, PZ + (g / 11 - 0.5) * rng);
-        gm.rotation.y = PI / 2;
-        gm.rotation.z = (Math.random() - 0.5) * 0.6;
-        scene.add(gm);
+      for (g = 0; g < glyphsPerFace; g++) {
+        localZ = (g / (glyphsPerFace - 1) - 0.5) * rng;
+        glyphPos.set(PX + hw + 0.02, ty, PZ + localZ);
+        glyphEuler.set(0, PI / 2, (Math.random() - 0.5) * 0.6);
+        glyphQuat.setFromEuler(glyphEuler);
+        glyphMatrix.compose(glyphPos, glyphQuat, glyphScaleVec);
+        glyphInstanced.setMatrixAt(glyphIndex++, glyphMatrix);
       }
 
       // -X face — marks run in Z, face normal is -X
-      for (g = 0; g < 12; g++) {
-        gm = new THREE.Mesh(glyphGeo, glyphMat);
-        gm.position.set(PX - hw - 0.02, ty, PZ + (g / 11 - 0.5) * rng);
-        gm.rotation.y = -PI / 2;
-        gm.rotation.z = (Math.random() - 0.5) * 0.6;
-        scene.add(gm);
+      for (g = 0; g < glyphsPerFace; g++) {
+        localZ = (g / (glyphsPerFace - 1) - 0.5) * rng;
+        glyphPos.set(PX - hw - 0.02, ty, PZ + localZ);
+        glyphEuler.set(0, -PI / 2, (Math.random() - 0.5) * 0.6);
+        glyphQuat.setFromEuler(glyphEuler);
+        glyphMatrix.compose(glyphPos, glyphQuat, glyphScaleVec);
+        glyphInstanced.setMatrixAt(glyphIndex++, glyphMatrix);
       }
 
       // +Z face — marks run in X, face normal is +Z (entrance side)
-      for (g = 0; g < 12; g++) {
-        gm = new THREE.Mesh(glyphGeo, glyphMat);
-        gm.position.set(PX + (g / 11 - 0.5) * rng, ty, PZ + hw + 0.02);
-        gm.rotation.z = (Math.random() - 0.5) * 0.6;
-        scene.add(gm);
+      for (g = 0; g < glyphsPerFace; g++) {
+        localX = (g / (glyphsPerFace - 1) - 0.5) * rng;
+        glyphPos.set(PX + localX, ty, PZ + hw + 0.02);
+        glyphEuler.set(0, 0, (Math.random() - 0.5) * 0.6);
+        glyphQuat.setFromEuler(glyphEuler);
+        glyphMatrix.compose(glyphPos, glyphQuat, glyphScaleVec);
+        glyphInstanced.setMatrixAt(glyphIndex++, glyphMatrix);
       }
 
       // -Z face — marks run in X, face normal is -Z
-      for (g = 0; g < 12; g++) {
-        gm = new THREE.Mesh(glyphGeo, glyphMat);
-        gm.position.set(PX + (g / 11 - 0.5) * rng, ty, PZ - hw - 0.02);
-        gm.rotation.z = (Math.random() - 0.5) * 0.6;
-        scene.add(gm);
+      for (g = 0; g < glyphsPerFace; g++) {
+        localX = (g / (glyphsPerFace - 1) - 0.5) * rng;
+        glyphPos.set(PX + localX, ty, PZ - hw - 0.02);
+        glyphEuler.set(0, 0, (Math.random() - 0.5) * 0.6);
+        glyphQuat.setFromEuler(glyphEuler);
+        glyphMatrix.compose(glyphPos, glyphQuat, glyphScaleVec);
+        glyphInstanced.setMatrixAt(glyphIndex++, glyphMatrix);
       }
     });
+
+    glyphInstanced.instanceMatrix.needsUpdate = true;
+    scene.add(glyphInstanced);
 
     // ── Ground Aura ────────────────────────────────────────────────────────
     var auraMat = new THREE.MeshBasicMaterial({
@@ -332,8 +353,9 @@
       this.beamActiveTime += dt;
       var fadeIn  = Math.min(1, this.beamActiveTime / 0.3);
       var fadeOut = Math.min(1, (this.beamDuration - this.beamActiveTime) / 0.4);
-      this.beamMat.opacity = Math.min(fadeIn, fadeOut) * 0.35
+      var beamOpacity = Math.min(fadeIn, fadeOut) * 0.35
         + Math.sin(this.beamActiveTime * 18) * 0.06;
+      this.beamMat.opacity = Math.max(0, Math.min(1, beamOpacity));
       this.apexLight.intensity = 2.0 + Math.sin(this.beamActiveTime * 12) * 0.8;
       if (this.beamActiveTime >= this.beamDuration) {
         this.beamActive      = false;
