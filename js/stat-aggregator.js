@@ -596,12 +596,27 @@
       var nmPain      = (nm.painSuppression   || 0);
       var nmTargeting = (nm.targetingMatrix   || 0);
       var nmShield    = (nm.adaptiveShielding || 0);
-      if (nmReflex    > 0) stats.weaponCooldownMult = (stats.weaponCooldownMult || 1) * Math.pow(0.96, nmReflex);
+      if (nmReflex    > 0) {
+        // neuralReflex: reduces weapon-related cooldowns (weaponCooldownMult < 1 = shorter cooldowns)
+        var wcm = (stats.weaponCooldownMult || 1) * Math.pow(0.96, nmReflex);
+        stats.weaponCooldownMult = wcm;
+        if (wcm < 1) {
+          if (stats.meleeCooldown) stats.meleeCooldown *= wcm;
+          if (stats.skillCooldown) stats.skillCooldown *= wcm;
+          if (stats.dashCooldown)  stats.dashCooldown  *= wcm;
+          // fireRate (shots/sec) increases when cooldowns shorten
+          if (stats.fireRate)      stats.fireRate      /= wcm;
+        }
+      }
       if (nmSynaptic  > 0) stats.xpMultiplier       = (stats.xpMultiplier || 1) * (1 + nmSynaptic * 0.06);
       if (nmPain      > 0) stats.maxHp              = (stats.maxHp || 100) * (1 + nmPain * 0.08);
       if (nmTargeting > 0) {
-        stats.critChance     = (stats.critChance     || 0) + nmTargeting * 0.03;
-        stats.critMultiplier = (stats.critMultiplier || 1.5) * (1 + nmTargeting * 0.10);
+        stats.critChance = (stats.critChance || 0) + nmTargeting * 0.03;
+        // Write to both critMultiplier and critDmg — sandbox uses critDmg for crit damage calculations
+        var baseCritMulti = (stats.critMultiplier || stats.critDmg || 1.5);
+        var newCritMulti  = baseCritMulti * (1 + nmTargeting * 0.10);
+        stats.critMultiplier = newCritMulti;
+        stats.critDmg        = newCritMulti;
       }
       if (nmShield    > 0) stats.damageReduction = (stats.damageReduction || 0) + nmShield * 0.03;
     }

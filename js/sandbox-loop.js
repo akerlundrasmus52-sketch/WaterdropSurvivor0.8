@@ -1889,7 +1889,10 @@
       GameMilestones.recordKill();
     }
     // Achievement + stat tracking
-    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (saveData) {
+      if (saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+      saveData.totalKills = (saveData.totalKills || 0) + 1;
+    }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
@@ -2051,7 +2054,10 @@
       GameRageCombat.addRage(12);
     }
     // Achievement + stat tracking
-    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (saveData) {
+      if (saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+      saveData.totalKills = (saveData.totalKills || 0) + 1;
+    }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
@@ -2295,7 +2301,10 @@
       GameRageCombat.addRage(8);
     }
     // Achievement + stat tracking
-    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (saveData) {
+      if (saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+      saveData.totalKills = (saveData.totalKills || 0) + 1;
+    }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
@@ -3170,13 +3179,18 @@
 
     // Respect pickup-range / XP collection-radius upgrades, if available
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
-    const _magnetBase = window._sandboxXpMagnetBase || 1.5;
-    const _magnetRunBonus = (window._sandboxXpMagnetRunStacks || 0) * 0.3;
-    const _magnetSkillBonus = (window._sandboxSkillTree && window._sandboxSkillTree.magnetism && window._sandboxSkillTree.magnetism.level || 0) * 0.2;
-    const _baseRadius = _xpStats && (typeof _xpStats.xpCollectionRadius === 'number' || typeof _xpStats.pickupRange === 'number')
-      ? (_xpStats.xpCollectionRadius || _xpStats.pickupRange || _magnetBase)
+    // Build target absolute radius in world units, then convert to multiplier for XPStarSystem.
+    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (8 units) by the provided radiusMultiplier.
+    const _magnetBase    = window._sandboxXpMagnetBase || 1.5; // start very small — earn upgrades
+    const _magnetRunBonus = (window._sandboxXpMagnetRunStacks || 0) * 2.5;  // 2.5 units per run stack
+    // Use playerStats.pickupRange if the aggregator set it (incorporates skill tree magnetism bonus)
+    const _baseRadius = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
+      ? _xpStats.pickupRange
       : _magnetBase;
-    const radiusMultiplier = _baseRadius + _magnetRunBonus + _magnetSkillBonus;
+    const _targetRadius   = _baseRadius + _magnetRunBonus;
+    const _magnetCfgRange = (window.XP_CFG && typeof window.XP_CFG.MAGNET_RANGE === 'number')
+      ? window.XP_CFG.MAGNET_RANGE : 8;
+    const radiusMultiplier = _magnetCfgRange > 0 ? (_targetRadius / _magnetCfgRange) : 1;
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
@@ -5555,7 +5569,10 @@
       GameRageCombat.addRage(15);
     }
     // Achievement + stat tracking
-    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (saveData) {
+      if (saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+      saveData.totalKills = (saveData.totalKills || 0) + 1;
+    }
     if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
     // Codex discovery
     if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
@@ -6515,12 +6532,23 @@
           _swOverlay.appendChild(_swPanel);
           document.body.appendChild(_swOverlay);
           var _swList = _swPanel.querySelector('#_swChoiceList');
+          // Map stored weapon IDs to actual internal sandbox weapon keys
+          var _swIdMap = {
+            pistol: 'gun', shotgun: 'pumpShotgun', rifle: 'sniperRifle',
+            revolver: 'uzi', flamethrower: 'fireRing', rocketLauncher: 'homingMissile'
+          };
           _swChoices.forEach(function(wid) {
             var _btn = document.createElement('button');
             _btn.style.cssText = 'padding:10px 16px;background:#2a2a4e;border:2px solid #FFD700;color:#FFD700;font-family:"Bangers",cursive;font-size:1.2em;cursor:pointer;border-radius:8px;';
             _btn.textContent = wid;
             _btn.onclick = function() {
-              if (weapons[wid]) { weapons[wid].active = true; weapons[wid].level = Math.max(1, weapons[wid].level || 1); }
+              var internalId = _swIdMap[wid] || wid;
+              if (weapons[internalId]) {
+                weapons[internalId].active = true;
+                weapons[internalId].level = Math.max(1, weapons[internalId].level || 1);
+              } else {
+                console.warn('[SandboxLoop] Unknown starting weapon id:', wid, '→', internalId);
+              }
               _swOverlay.remove();
             };
             _swList.appendChild(_btn);
@@ -6543,26 +6571,15 @@
       window._sandboxXpMagnetRunStacks = 0;
       _sandboxRunStartTime = Date.now();
       if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = 0;
-      // Track total runs
-      if (saveData && saveData.stats) saveData.stats.totalRuns = (saveData.stats.totalRuns || 0) + 1;
+      // Track total runs — keep stats.* and top-level counter in sync
+      if (saveData) {
+        if (saveData.stats) saveData.stats.totalRuns = (saveData.stats.totalRuns || 0) + 1;
+        saveData.totalRuns = (saveData.totalRuns || 0) + 1;
+      }
       // Initialize GameAccount if available
       if (window.GameAccount && typeof window.GameAccount.init === 'function' && !window.GameAccount._initialized) {
         window.GameAccount.init(saveData);
         window.GameAccount._initialized = true;
-      }
-      // Apply camp stat bonuses to playerStats
-      if (typeof calculateTotalPlayerStats === 'function') {
-        var _boostedStats = calculateTotalPlayerStats(saveData);
-        if (_boostedStats && playerStats) {
-          playerStats.maxHp = Math.max(playerStats.maxHp, _boostedStats.maxHp || playerStats.maxHp);
-          playerStats.hp = playerStats.maxHp;
-          playerStats.damage = _boostedStats.damage || playerStats.damage;
-          playerStats.moveSpeed = _boostedStats.moveSpeed || playerStats.moveSpeed;
-          playerStats.weaponCooldownMult = _boostedStats.weaponCooldownMult || playerStats.weaponCooldownMult;
-          playerStats.xpMultiplier = _boostedStats.xpMultiplier || playerStats.xpMultiplier;
-          playerStats.critChance = _boostedStats.critChance || playerStats.critChance;
-          playerStats.critMultiplier = _boostedStats.critMultiplier || playerStats.critMultiplier;
-        }
       }
 
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');

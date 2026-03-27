@@ -17,6 +17,22 @@ const WEAPON_MOD_DEFS = {
   sight:    { name: 'Sight',      icon: '🔭', maxLevel: 3, costPerLevel: 200, stat: 'range',    perLevel: 0.15 },
 };
 
+// Canonical starting-weapon pool — keyed by internal sandbox weapon IDs.
+// Used both by the Starting Weapon Wheel prize list and the jackpot grant logic
+// so the two are always in sync.
+const STARTING_WEAPON_POOL = [
+  { weaponId: 'gun',           label: 'Pistol',         icon: '🔫', rarity: 'common' },
+  { weaponId: 'pumpShotgun',   label: 'Shotgun',        icon: '🔫', rarity: 'uncommon' },
+  { weaponId: 'sniperRifle',   label: 'Rifle',          icon: '🎯', rarity: 'uncommon' },
+  { weaponId: 'uzi',           label: 'Uzi',            icon: '🔫', rarity: 'rare' },
+  { weaponId: 'fireRing',      label: 'Fire Ring',      icon: '🔥', rarity: 'rare' },
+  { weaponId: 'iceSpear',      label: 'Ice Spear',      icon: '❄️', rarity: 'epic' },
+  { weaponId: 'lightning',     label: 'Lightning',      icon: '⚡', rarity: 'epic' },
+  { weaponId: 'meteor',        label: 'Meteor',         icon: '☄️', rarity: 'legendary' },
+  { weaponId: 'sword',         label: 'Sword',          icon: '⚔️', rarity: 'legendary' },
+  { weaponId: 'homingMissile', label: 'Homing Missile', icon: '🚀', rarity: 'legendary' },
+];
+
 const WEAPON_FIRE_MODES = {
   single: { name: 'Single', icon: '🔹', cost: 0 },
   burst:  { name: 'Burst',  icon: '🔸', cost: 300 },
@@ -993,21 +1009,15 @@ function showWeaponBuilding() {
       { id: 'megaJackpot', label: 'MEGA JACKPOT!', icon: '💎', type: 'gold', value: 1000, rarity: 'mythic', weight: 3 },
     ],
 
-    // Starting Weapon Wheel — win a weapon to start next run with
-    startingWeapon: [
-      { id: 'sw_pistol',        label: 'Pistol',         icon: '🔫', type: 'startWeapon', weaponId: 'pistol',        rarity: 'common',    weight: 5 },
-      { id: 'sw_shotgun',       label: 'Shotgun',        icon: '🔫', type: 'startWeapon', weaponId: 'shotgun',       rarity: 'uncommon',  weight: 5 },
-      { id: 'sw_rifle',         label: 'Rifle',          icon: '🎯', type: 'startWeapon', weaponId: 'rifle',         rarity: 'uncommon',  weight: 5 },
-      { id: 'sw_revolver',      label: 'Revolver',       icon: '🔫', type: 'startWeapon', weaponId: 'revolver',      rarity: 'rare',      weight: 5 },
-      { id: 'sw_flamethrower',  label: 'Flamethrower',   icon: '🔥', type: 'startWeapon', weaponId: 'flamethrower',  rarity: 'rare',      weight: 5 },
-      { id: 'sw_iceSpear',      label: 'Ice Spear',      icon: '❄️', type: 'startWeapon', weaponId: 'iceSpear',      rarity: 'epic',      weight: 5 },
-      { id: 'sw_lightning',     label: 'Lightning',      icon: '⚡', type: 'startWeapon', weaponId: 'lightning',     rarity: 'epic',      weight: 5 },
-      { id: 'sw_meteor',        label: 'Meteor',         icon: '☄️', type: 'startWeapon', weaponId: 'meteor',        rarity: 'legendary', weight: 5 },
-      { id: 'sw_sword',         label: 'Sword',          icon: '⚔️', type: 'startWeapon', weaponId: 'sword',         rarity: 'legendary', weight: 5 },
-      { id: 'sw_rocketLauncher',label: 'Rocket Launcher',icon: '🚀', type: 'startWeapon', weaponId: 'rocketLauncher',rarity: 'legendary', weight: 5 },
-      { id: 'sw_jackpot',       label: 'ALL WEAPONS!',   icon: '🏆', type: 'startWeaponJackpot',                     rarity: 'mythic',    weight: 1 },
-      { id: 'sw_consolation',   label: '500 Gold',       icon: '💰', type: 'gold', value: 500,                       rarity: 'common',    weight: 15 },
-    ],
+    // Starting Weapon Wheel — prize list derived from the canonical STARTING_WEAPON_POOL
+    // so weaponIds are always the actual sandbox weapon keys.
+    startingWeapon: STARTING_WEAPON_POOL.map(function(w) {
+      return { id: 'sw_' + w.weaponId, label: w.label, icon: w.icon,
+               type: 'startWeapon', weaponId: w.weaponId, rarity: w.rarity, weight: 5 };
+    }).concat([
+      { id: 'sw_jackpot',     label: 'ALL WEAPONS!', icon: '🏆', type: 'startWeaponJackpot', rarity: 'mythic',  weight: 1 },
+      { id: 'sw_consolation', label: '500 Gold',     icon: '💰', type: 'gold', value: 500,    rarity: 'common',  weight: 15 },
+    ]),
   };
 
   var WHEEL_TIERS = {
@@ -1477,7 +1487,8 @@ function showWeaponBuilding() {
         break;
 
       case 'startWeaponJackpot':
-        var _allStartWeapons = ['pistol','shotgun','rifle','revolver','flamethrower','iceSpear','lightning','meteor','sword','rocketLauncher'];
+        // Derive jackpot list from the canonical pool to stay in sync
+        var _allStartWeapons = STARTING_WEAPON_POOL.map(function(w) { return w.weaponId; });
         saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
         _allStartWeapons.forEach(function(wid) {
           if (saveData.unlockedStartWeapons.indexOf(wid) === -1) saveData.unlockedStartWeapons.push(wid);

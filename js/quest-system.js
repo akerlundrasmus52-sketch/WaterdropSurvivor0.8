@@ -3416,7 +3416,6 @@
         const peeked = canClaim ? window.GameDailies.peekDailyReward(saveData) : null;
         const nextDay = peeked ? peeked.day : 0; // 1-based day number
         const rewards = window.GameDailies.DAILY_LOGIN_REWARDS;
-        const currentDayIdx = ((streak) % rewards.length); // 0-based index of today's day in cycle
         let html = '<div style="color:#FFD700;font-size:1.6em;margin-bottom:12px;text-shadow:2px 2px 0 #000;letter-spacing:2px;">🎁 DAILY REWARD</div>';
         html += '<div style="font-family:Arial,sans-serif;font-size:13px;color:#ccc;margin-bottom:16px;">Login Streak: <b style="color:#FFD700;">' + streak + ' days</b></div>';
         html += '<div class="daily-login-strip" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:100%;overflow-y:auto;max-height:280px;">';

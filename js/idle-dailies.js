@@ -156,10 +156,24 @@ function checkDailyLogin(saveData) {
     window.GameAccount.addXP(reward.accountXP, 'Daily Reward', saveData);
   }
   if (reward.randomWeapon) {
-    var _allWeapons = ['pistol','shotgun','rifle','revolver','flamethrower','iceSpear','lightning','meteor','sword','rocketLauncher'];
+    // Use canonical sandbox internal weapon keys so saveData.unlockedStartWeapons entries
+    // can be activated directly via weapons[id] in sandbox-loop.js
+    var _allWeapons = ['gun','pumpShotgun','sniperRifle','uzi','fireRing','iceSpear','lightning','meteor','sword','homingMissile'];
     var _wonWeapon = _allWeapons[Math.floor(Math.random() * _allWeapons.length)];
     saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
     if (saveData.unlockedStartWeapons.indexOf(_wonWeapon) === -1) saveData.unlockedStartWeapons.push(_wonWeapon);
+  }
+  // Special items — persist to saveData.specialItems so the game can act on them
+  if (reward.specialItem) {
+    saveData.specialItems = saveData.specialItems || {};
+    saveData.specialItems[reward.specialItem] = (saveData.specialItems[reward.specialItem] || 0) + 1;
+  }
+  // Weapon skin unlocks — persist to saveData.unlockedSkins array
+  if (reward.skinColor) {
+    saveData.unlockedSkins = saveData.unlockedSkins || [];
+    if (saveData.unlockedSkins.indexOf(reward.skinColor) === -1) {
+      saveData.unlockedSkins.push(reward.skinColor);
+    }
   }
   if (reward.essence) {
     if (saveData.clicker && typeof saveData.clicker.essence === 'number') {
