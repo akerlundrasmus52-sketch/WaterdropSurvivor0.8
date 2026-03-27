@@ -696,6 +696,13 @@
     const FRICTION = 0.92;
     const BOUNCE = 0.3;
 
+    // FIX N: Dirty flags to track which instance buffers were modified this frame
+    let fleshDirty = false;
+    let gutDirty = false;
+    let brainDirty = false;
+    let boneDirty = false;
+    let arrowDirty = false;
+
     // Update flesh chunks
     for (let i = 0; i < MAX_FLESH_CHUNKS; i++) {
       if (_fleshLife[i] <= 0) continue;
@@ -738,8 +745,10 @@
       _tmpScale.set(1, 1, 1);
       _tmpMatrix.compose(_tmpPos, _tmpQuat, _tmpScale);
       _fleshChunkIM.setMatrixAt(i, _tmpMatrix);
+      fleshDirty = true;  // FIX N: Mark as dirty when chunk is updated
     }
-    _fleshChunkIM.instanceMatrix.needsUpdate = true;
+    // FIX N: Only set needsUpdate if at least one chunk was active this frame
+    if (fleshDirty) _fleshChunkIM.instanceMatrix.needsUpdate = true;
 
     // Update guts (same physics)
     for (let i = 0; i < MAX_GUT_INSTANCES; i++) {
@@ -771,8 +780,10 @@
       _tmpScale.set(1, 1, 1);
       _tmpMatrix.compose(_tmpPos, _tmpQuat, _tmpScale);
       _gutIM.setMatrixAt(i, _tmpMatrix);
+      gutDirty = true;  // FIX N: Mark as dirty
     }
-    _gutIM.instanceMatrix.needsUpdate = true;
+    // FIX N: Only set needsUpdate if guts were updated
+    if (gutDirty) _gutIM.instanceMatrix.needsUpdate = true;
 
     // Update brains (with extra bounce)
     const BRAIN_BOUNCE = 0.5;
@@ -805,8 +816,10 @@
       _tmpScale.set(1, 1, 1);
       _tmpMatrix.compose(_tmpPos, _tmpQuat, _tmpScale);
       _brainIM.setMatrixAt(i, _tmpMatrix);
+      brainDirty = true;  // FIX N: Mark as dirty
     }
-    _brainIM.instanceMatrix.needsUpdate = true;
+    // FIX N: Only set needsUpdate if brains were updated
+    if (brainDirty) _brainIM.instanceMatrix.needsUpdate = true;
 
     // Update bones
     for (let i = 0; i < MAX_BONE_INSTANCES; i++) {
@@ -838,8 +851,10 @@
       _tmpScale.set(1, 1, 1);
       _tmpMatrix.compose(_tmpPos, _tmpQuat, _tmpScale);
       _boneIM.setMatrixAt(i, _tmpMatrix);
+      boneDirty = true;  // FIX N: Mark as dirty
     }
-    _boneIM.instanceMatrix.needsUpdate = true;
+    // FIX N: Only set needsUpdate if bones were updated
+    if (boneDirty) _boneIM.instanceMatrix.needsUpdate = true;
 
     // Update stuck arrows (follow enemy movement)
     for (let i = _stuckArrows.length - 1; i >= 0; i--) {
@@ -868,9 +883,11 @@
         _tmpScale.set(1, 1, 1);
         _tmpMatrix.compose(_tmpPos, _tmpQuat, _tmpScale);
         _stuckArrowIM.setMatrixAt(idx, _tmpMatrix);
+        arrowDirty = true;  // FIX N: Mark as dirty
       }
     }
-    _stuckArrowIM.instanceMatrix.needsUpdate = true;
+    // FIX N: Only set needsUpdate if arrows were updated
+    if (arrowDirty) _stuckArrowIM.instanceMatrix.needsUpdate = true;
 
     // Update wound decals (decay over time)
     for (let i = _woundDecals.length - 1; i >= 0; i--) {
