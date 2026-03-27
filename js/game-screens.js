@@ -1421,7 +1421,10 @@ function spawnWave() {
     window.pushSuperStatEvent(`🌊 Wave ${waveCount}!`, wRarity, '🌊', 'neutral');
   }
   
-  const currentEnemyCount = enemies.filter(e => !e.isDead).length;
+  let currentEnemyCount = 0;
+  for (let _ei = 0; _ei < enemies.length; _ei++) {
+    if (!enemies[_ei].isDead) currentEnemyCount++;
+  }
   if (currentEnemyCount >= GAME_CONFIG.maxEnemiesOnScreen) {
     console.warn(`[EnemyCap] Enemy count (${currentEnemyCount}) at max (${GAME_CONFIG.maxEnemiesOnScreen}), skipping wave spawn`);
     return;
@@ -1756,29 +1759,33 @@ let   _bdIMIndex         = 0;
 const BLOOD_DECAL_FADE_MS = 12000;
 
 function _ensureBloodDecalIM() {
-  if (_bloodDecalIM || !scene || typeof THREE === 'undefined') return;
-  const geo = new THREE.CircleGeometry(1, 16);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x6B0000, transparent: true, opacity: 0.7, depthWrite: false,
-    roughness: 0.15, metalness: 0.6, emissive: 0x3A0000, emissiveIntensity: 0.15,
-    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
-  });
-  _bloodDecalIM = new THREE.InstancedMesh(geo, mat, MAX_BLOOD_DECALS);
-  _bloodDecalIM.renderOrder = 12;
-  _bloodDecalIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  _bdIMQuat.setFromEuler(_bdIMRot);
-  for (let i = 0; i < MAX_BLOOD_DECALS; i++) {
-    _bdIMPos.set(0, -100, 0);
-    _bdIMScale.set(0.01, 0.01, 0.01);
-    _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
-    _bloodDecalIM.setMatrixAt(i, _bdIMMatrix);
-    _bdIMSpawnTime[i] = 0;
-    _bdIMInitialSize[i] = 0;
+  if (_bloodDecalIM || window._bloodDecalsDisabled || !scene || typeof THREE === 'undefined') return;
+  try {
+    const geo = new THREE.CircleGeometry(1, 16);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x6B0000, transparent: true, opacity: 0.7, depthWrite: false,
+      roughness: 0.15, metalness: 0.6, emissive: 0x3A0000, emissiveIntensity: 0.15,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+    });
+    _bloodDecalIM = new THREE.InstancedMesh(geo, mat, MAX_BLOOD_DECALS);
+    _bloodDecalIM.renderOrder = 12;
+    _bloodDecalIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    _bdIMQuat.setFromEuler(_bdIMRot);
+    for (let i = 0; i < MAX_BLOOD_DECALS; i++) {
+      _bdIMPos.set(0, -100, 0);
+      _bdIMScale.set(0.01, 0.01, 0.01);
+      _bdIMMatrix.compose(_bdIMPos, _bdIMQuat, _bdIMScale);
+      _bloodDecalIM.setMatrixAt(i, _bdIMMatrix);
+      _bdIMSpawnTime[i] = 0;
+      _bdIMInitialSize[i] = 0;
+    }
+    _bloodDecalIM.instanceMatrix.needsUpdate = true;
+    scene.add(_bloodDecalIM);
+    window._bloodDecalIM   = _bloodDecalIM;
+    window._bdIMSpawnTime  = _bdIMSpawnTime;
+  } catch (e) {
+    window._bloodDecalsDisabled = true;
   }
-  _bloodDecalIM.instanceMatrix.needsUpdate = true;
-  scene.add(_bloodDecalIM);
-  window._bloodDecalIM   = _bloodDecalIM;
-  window._bdIMSpawnTime  = _bdIMSpawnTime;
 }
 
 function spawnBloodDecal(pos) {
@@ -1851,6 +1858,7 @@ function updateBloodDecals() {
     return;
   }
   const now = Date.now();
+  if (window._bloodDecalsDisabled) return;
   for (let i = bloodDecals.length - 1; i >= 0; i--) {
     const decal = bloodDecals[i];
     if (!decal.userData.spawnTime) { if (!decal.parent) bloodDecals.splice(i, 1); continue; }

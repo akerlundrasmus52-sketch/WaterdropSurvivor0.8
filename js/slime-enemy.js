@@ -205,6 +205,8 @@ this.flashTimer  = 0;
 
 // ── Reset for reuse from pool ──────────────────
 SlimeEnemy.prototype.spawn = function(x, y, z, waveLevel) {
+// Cancel any in-flight fade interval from a previous life cycle
+if (this._fadeInterval) { clearInterval(this._fadeInterval); this._fadeInterval = null; }
 this.alive      = true;
 this.active     = true;
 this.dying      = false;
@@ -1552,16 +1554,19 @@ var fadeStart = Date.now();
 var fade = setInterval(function() {
 if (!self.mesh) { clearInterval(fade); return; }
 var t = (Date.now() - fadeStart) / 2500;
-if (t >= 1.0) { clearInterval(fade); self._cleanup(); return; }
+if (t >= 1.0) { clearInterval(fade); self._fadeInterval = null; self._cleanup(); return; }
 self.mesh.material.opacity = 1.0 - t;
 self.mesh.material.transparent = true;
 }, 50);
+this._fadeInterval = fade;
 } else {
 this._cleanup();
 }
 };
 
 SlimeEnemy.prototype._cleanup = function() {
+// Cancel any in-flight fade interval
+if (this._fadeInterval) { clearInterval(this._fadeInterval); this._fadeInterval = null; }
 this.alive  = false;
 this.dying  = false;
 this.active = false;

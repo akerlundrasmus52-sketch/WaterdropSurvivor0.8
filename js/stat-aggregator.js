@@ -407,9 +407,6 @@
       }
     }
 
-    // Sync hp after all hp changes up to this point
-    stats.hp = stats.maxHp;
-
     // ── 5. Skill Tree bonuses ────────────────────────────────────────────────
     var TREE = (typeof window !== 'undefined' && window.SKILL_TREE) || null;
     if (sd.skillTree && TREE) {
@@ -452,7 +449,7 @@
         if (bonus.meleeAttackSpeed)   stats.meleeAttackSpeed  = (stats.meleeAttackSpeed || 1.0) * (1 + bonus.meleeAttackSpeed);
         if (bonus.cleaveAngle)        stats.cleaveAngle       = (stats.cleaveAngle || 60) + bonus.cleaveAngle;
         if (bonus.knockbackPower)     stats.meleeKnockbackPower= (stats.meleeKnockbackPower || 1.0) * (1 + bonus.knockbackPower);
-        if (bonus.evadeChance)        stats.evadeChance       = Math.min(0.75, (stats.evadeChance || 0) + bonus.evadeChance);
+        if (bonus.evadeChance)        stats.evadeChance       = (stats.evadeChance || 0) + bonus.evadeChance;
         if (bonus.staggerResistance)  stats.staggerResistance = Math.min(0.90, (stats.staggerResistance || 0) + bonus.staggerResistance);
         if (bonus.magazineCapacity)   stats.magazineCapacity  = Math.max(1, (stats.magazineCapacity || 5) + bonus.magazineCapacity);
 
@@ -489,7 +486,6 @@
       // Apply accumulated skill bonuses
       stats.maxHp += hpFlat;
       if (hpPct > 0) stats.maxHp = Math.floor(stats.maxHp * (1 + hpPct));
-      stats.hp = stats.maxHp;
 
       stats.hpRegen           = (stats.hpRegen          || 0) + regenFlat;
       stats.hpRegenPerSecond  = (stats.hpRegenPerSecond  || 0) + regenFlat;
@@ -611,7 +607,6 @@
       // Survivability
       if ((pa.maxHp || 0) > 0) {
         stats.maxHp += pa.maxHp * 20;
-        stats.hp     = stats.maxHp;
       }
       if ((pa.hpRegen || 0) > 0) {
         stats.hpRegen          = (stats.hpRegen          || 0) + pa.hpRegen * 0.5;
@@ -622,7 +617,7 @@
         stats.armor     = (stats.armor     || 0) + pa.flatArmor * 4;
       }
       if ((pa.evadeChance || 0) > 0)
-        stats.evadeChance = Math.min(0.60, (stats.evadeChance || 0) + pa.evadeChance * 0.02);
+        stats.evadeChance = (stats.evadeChance || 0) + pa.evadeChance * 0.02;
       if ((pa.staggerResistance || 0) > 0)
         stats.staggerResistance = Math.min(0.75, (stats.staggerResistance || 0) + pa.staggerResistance * 0.03);
 
@@ -783,7 +778,6 @@
       }
       if ((lvlBonuses.maxHp || 0) > 0) {
         stats.maxHp += lvlBonuses.maxHp * (stats.maxHp || 100);
-        stats.hp     = stats.maxHp;
       }
       if ((lvlBonuses.armor || 0) > 0) {
         stats.armor     = (stats.armor     || 0) + lvlBonuses.armor * 100;
@@ -892,6 +886,10 @@
     stats.criticalHitChance       = stats.critChance;
     stats.criticalHitDamageMulti  = stats.critDmg;
     stats.mobilityScore           = stats.turnResponse || 1.0;
+
+    // Sync hp to maxHp for fresh stats objects (initial player creation, stat preview).
+    // recalculateAllStats() will clamp/preserve current HP for mid-run recalculations.
+    stats.hp = stats.maxHp;
 
     return stats;
   }

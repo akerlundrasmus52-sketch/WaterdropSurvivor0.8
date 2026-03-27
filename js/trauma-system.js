@@ -9,15 +9,17 @@
 
   // ─── Configuration ──────────────────────────────────────────────────────────
   const MAX_WOUND_DECALS = 500;          // Maximum wound decals on all enemies combined
-  const MAX_FLESH_CHUNKS = 1000;         // Maximum flying flesh chunks
-  const MAX_GUT_INSTANCES = 500;         // Intestines instances
-  const MAX_BRAIN_INSTANCES = 300;       // Brain matter instances
-  const MAX_BONE_INSTANCES = 400;        // Bone shard instances
+  // Pool sizes are set at init time based on graphics quality (see _resolvePoolSizes)
+  let MAX_FLESH_CHUNKS   = 1000;         // Maximum flying flesh chunks
+  let MAX_GUT_INSTANCES  = 500;          // Intestines instances
+  let MAX_BRAIN_INSTANCES= 300;          // Brain matter instances
+  let MAX_BONE_INSTANCES = 400;          // Bone shard instances
   const MAX_STUCK_ARROWS = 100;          // Arrows/spears stuck in enemies
   const WOUND_AGGRAVATION_DIST = 0.3;    // Distance to consider hits on same wound
   const WOUND_CHUNK_THRESHOLD = 3;       // Hits before chunk tears off
   const CORPSE_LIFETIME = 6000;          // Corpse stays for 6 seconds (ms)
   const HEARTBEAT_INTERVAL = 400;        // Blood pump interval (ms)
+  const CORPSE_FADE_DURATION_S = 1.0;    // Seconds for blood-pool fade-out after pumping ends
   const GRAVITY = -0.025;                // Physics gravity for chunks
 
   // ─── Internal State ─────────────────────────────────────────────────────────
@@ -81,6 +83,33 @@
   let _tmpScale = null;
 
   // ─── Init ────────────────────────────────────────────────────────────────────
+  function _resolvePoolSizes() {
+    var quality = '';
+    try { quality = (localStorage.getItem('sandboxGraphicsQuality') || '').toLowerCase(); } catch(e) {}
+    if (quality === 'ultralow') {
+      MAX_FLESH_CHUNKS    = 100;
+      MAX_GUT_INSTANCES   = 50;
+      MAX_BRAIN_INSTANCES = 30;
+      MAX_BONE_INSTANCES  = 40;
+    } else if (quality === 'low') {
+      MAX_FLESH_CHUNKS    = 250;
+      MAX_GUT_INSTANCES   = 125;
+      MAX_BRAIN_INSTANCES = 75;
+      MAX_BONE_INSTANCES  = 100;
+    } else if (quality === 'medium') {
+      MAX_FLESH_CHUNKS    = 500;
+      MAX_GUT_INSTANCES   = 250;
+      MAX_BRAIN_INSTANCES = 150;
+      MAX_BONE_INSTANCES  = 200;
+    } else {
+      // high / ultra / default
+      MAX_FLESH_CHUNKS    = 1000;
+      MAX_GUT_INSTANCES   = 500;
+      MAX_BRAIN_INSTANCES = 300;
+      MAX_BONE_INSTANCES  = 400;
+    }
+  }
+
   function init(threeScene) {
     if (typeof THREE === 'undefined') {
       console.warn('[TraumaSystem] THREE.js not yet available – init deferred');
@@ -89,6 +118,9 @@
     if (_initialized) return;
     _scene = threeScene;
     _initialized = true;
+
+    // Resolve pool sizes based on graphics quality setting
+    _resolvePoolSizes();
 
     // Initialize reusable THREE objects
     _tmpMatrix = new THREE.Matrix4();
@@ -455,122 +487,63 @@
       weapon: weapon,
       holes: bulletHoles.map(h => ({ pos: h.pos.clone(), dir: h.dir })),
       pumpCount: 0,
-      bloodPool: bloodPool,         // Dynamic blood pool mesh
-      poolSize: 0.3,                // Current pool radius
-      poolMaxSize: 1.8,             // Max pool radius (grows with each pump)
-      poolTargetColor: 0x2A0000     // Dark crimson/black target color
+      pumpTimer: 0,          // dt accumulator — triggers pump when >= HEARTBEAT_INTERVAL/1000
+      fadeTimer: -1,         // -1 = not fading; >=0 counts down (in seconds) for blood-pool fade
+      bloodPool: bloodPool,  // Dynamic blood pool mesh
+      poolSize: 0.3,         // Current pool radius
+      poolMaxSize: 1.8,      // Max pool radius (grows with each pump)
+      poolTargetColor: 0x2A0000  // Dark crimson/black target color
     };
 
     _activeCorpses.push(corpse);
-
-    // Schedule heartbeat pumps
-    _scheduleHeartbeatPumps(corpse);
   }
 
-  function _scheduleHeartbeatPumps(corpse) {
-    const maxPumps = 10; // Pump 10 times over 6 seconds
-    let pumpIndex = 0;
+  function _pumpCorpse(corpse) {
+    const maxPumps = 10;
+    const pumpIndex = corpse.pumpCount;
+    const pressure = 1.0 - (pumpIndex / maxPumps);
+    const particleCount = Math.floor(50 * pressure) + 10;
 
-    const pump = () => {
-      if (!corpse || pumpIndex >= maxPumps) {
-        // Remove corpse from tracking
-        const idx = _activeCorpses.indexOf(corpse);
-        if (idx >= 0) _activeCorpses.splice(idx, 1);
+    if (window.BloodSystem && window.BloodSystem.emitPulse) {
+      const phase = Math.sin(pumpIndex * Math.PI / 4) * 0.5 + 0.5;
+      const intensity = pressure * phase;
 
-        // Fade out and remove blood pool
-        if (corpse.bloodPool) {
-          let fadeLife = 60; // 1 second fade at 60fps
-          const fadeInterval = setInterval(() => {
-            fadeLife--;
-            if (corpse.bloodPool && corpse.bloodPool.material) {
-              corpse.bloodPool.material.opacity = (fadeLife / 60) * 0.6;
-            }
-            if (fadeLife <= 0) {
-              clearInterval(fadeInterval);
-              if (corpse.bloodPool) {
-                _scene.remove(corpse.bloodPool);
-                corpse.bloodPool.geometry.dispose();
-                corpse.bloodPool.material.dispose();
-                corpse.bloodPool = null;
-              }
-            }
-          }, 16); // ~60fps
-        }
-        return;
-      }
-
-      const elapsed = Date.now() - corpse.startTime;
-      if (elapsed > CORPSE_LIFETIME) {
-        const idx = _activeCorpses.indexOf(corpse);
-        if (idx >= 0) _activeCorpses.splice(idx, 1);
-
-        // Fade out blood pool
-        if (corpse.bloodPool) {
-          _scene.remove(corpse.bloodPool);
-          corpse.bloodPool.geometry.dispose();
-          corpse.bloodPool.material.dispose();
-          corpse.bloodPool = null;
-        }
-        return;
-      }
-
-      // Pump blood from wounds with decreasing pressure
-      const pressure = 1.0 - (pumpIndex / maxPumps); // Decreases over time
-      const particleCount = Math.floor(50 * pressure) + 10;
-
-      if (window.BloodSystem && window.BloodSystem.emitPulse) {
-        // Use Math.sin for pulsating effect
-        const phase = Math.sin(pumpIndex * Math.PI / 4) * 0.5 + 0.5;
-        const intensity = pressure * phase;
-
-        if (corpse.holes.length > 0) {
-          // Pump from specific bullet holes
-          corpse.holes.forEach(hole => {
-            window.BloodSystem.emitBurst(hole.pos, Math.floor(particleCount / corpse.holes.length), {
-              spreadXZ: 0.4 * intensity,
-              spreadY: 0.6 * intensity,
-              minSize: 0.02,
-              maxSize: 0.06
-            });
+      if (corpse.holes.length > 0) {
+        corpse.holes.forEach(hole => {
+          window.BloodSystem.emitBurst(hole.pos, Math.floor(particleCount / corpse.holes.length), {
+            spreadXZ: 0.4 * intensity,
+            spreadY: 0.6 * intensity,
+            minSize: 0.02,
+            maxSize: 0.06
           });
-        } else {
-          // Generic pump from corpse position
-          window.BloodSystem.emitPulse(corpse.position, {
-            pulses: 1,
-            perPulse: particleCount,
-            interval: 0,
-            spreadXZ: 0.5 * intensity,
-            spreadY: 0.4 * intensity
-          });
-        }
+        });
+      } else {
+        window.BloodSystem.emitPulse(corpse.position, {
+          pulses: 1,
+          perPulse: particleCount,
+          interval: 0,
+          spreadXZ: 0.5 * intensity,
+          spreadY: 0.4 * intensity
+        });
       }
+    }
 
-      // DYNAMIC BLOOD POOL: Grow pool with each pump and darken over time
-      if (corpse.bloodPool && corpse.bloodPool.material) {
-        // Grow pool smoothly (lerp toward target size)
-        const growthPerPump = 0.15; // Grows 0.15 units per pump
-        corpse.poolSize = Math.min(corpse.poolMaxSize, corpse.poolSize + growthPerPump);
+    // DYNAMIC BLOOD POOL: Grow pool with each pump and darken over time
+    if (corpse.bloodPool && corpse.bloodPool.material) {
+      const growthPerPump = 0.15;
+      corpse.poolSize = Math.min(corpse.poolMaxSize, corpse.poolSize + growthPerPump);
+      corpse.bloodPool.geometry.dispose();
+      corpse.bloodPool.geometry = new THREE.CircleGeometry(corpse.poolSize, 12);
 
-        // Update geometry to new size
-        corpse.bloodPool.geometry.dispose();
-        corpse.bloodPool.geometry = new THREE.CircleGeometry(corpse.poolSize, 12);
+      const darkProgress = pumpIndex / maxPumps;
+      const currentColor = new THREE.Color(0xAA0000);
+      const targetColor = new THREE.Color(corpse.poolTargetColor);
+      currentColor.lerp(targetColor, darkProgress);
+      corpse.bloodPool.material.color.copy(currentColor);
+      corpse.bloodPool.material.opacity = 0.6 + darkProgress * 0.25;
+    }
 
-        // Darken color over time: bright red → dark crimson/black
-        const darkProgress = pumpIndex / maxPumps; // 0.0 → 1.0
-        const currentColor = new THREE.Color(0xAA0000); // Bright red
-        const targetColor = new THREE.Color(corpse.poolTargetColor); // Dark crimson
-        currentColor.lerp(targetColor, darkProgress);
-        corpse.bloodPool.material.color.copy(currentColor);
-
-        // Increase opacity slightly as it darkens (more opaque = more blood)
-        corpse.bloodPool.material.opacity = 0.6 + darkProgress * 0.25; // 0.6 → 0.85
-      }
-
-      pumpIndex++;
-      setTimeout(pump, HEARTBEAT_INTERVAL);
-    };
-
-    setTimeout(pump, HEARTBEAT_INTERVAL); // Start first pump
+    corpse.pumpCount++;
   }
 
   // ─── Gore Chunk Spawning Functions ───────────────────────────────────────────
@@ -911,6 +884,45 @@
           wound.mesh.material.dispose();
         }
         _woundDecals.splice(i, 1);
+      }
+    }
+
+    // Update corpse heartbeat pumps using dt accumulator (no setTimeout)
+    const HEARTBEAT_INTERVAL_S = HEARTBEAT_INTERVAL / 1000;
+    const maxPumps = 10;
+    for (let i = _activeCorpses.length - 1; i >= 0; i--) {
+      const corpse = _activeCorpses[i];
+
+      // Handle blood pool fade-out phase
+      if (corpse.fadeTimer >= 0) {
+        corpse.fadeTimer -= dt;
+        if (corpse.bloodPool && corpse.bloodPool.material) {
+          corpse.bloodPool.material.opacity = Math.max(0, (corpse.fadeTimer / CORPSE_FADE_DURATION_S) * 0.6);
+        }
+        if (corpse.fadeTimer <= 0) {
+          if (corpse.bloodPool) {
+            _scene.remove(corpse.bloodPool);
+            corpse.bloodPool.geometry.dispose();
+            corpse.bloodPool.material.dispose();
+            corpse.bloodPool = null;
+          }
+          _activeCorpses.splice(i, 1);
+        }
+        continue;
+      }
+
+      // Check corpse lifetime
+      const elapsed = Date.now() - corpse.startTime;
+      if (elapsed > CORPSE_LIFETIME || corpse.pumpCount >= maxPumps) {
+        corpse.fadeTimer = CORPSE_FADE_DURATION_S; // Start fade-out
+        continue;
+      }
+
+      // Accumulate dt and fire a pump when interval is reached
+      corpse.pumpTimer += dt;
+      if (corpse.pumpTimer >= HEARTBEAT_INTERVAL_S) {
+        corpse.pumpTimer -= HEARTBEAT_INTERVAL_S;
+        _pumpCorpse(corpse);
       }
     }
   }

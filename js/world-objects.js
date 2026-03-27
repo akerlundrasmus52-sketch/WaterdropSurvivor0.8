@@ -947,18 +947,20 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function _updateSway(dt) {
-    // Trees
-    for (var i = 0; i < _trees.length; i++) {
-      var tr = _trees[i];
-      // Spring-damper physics
-      tr.swayVx += (-SWAY_SPRING * tr.swayX - SWAY_DAMP * tr.swayVx) * dt;
-      tr.swayVz += (-SWAY_SPRING * tr.swayZ - SWAY_DAMP * tr.swayVz) * dt;
-      tr.swayX += tr.swayVx * dt;
-      tr.swayZ += tr.swayVz * dt;
+    // Trees — skip if a WorldTrees instance is active (it handles sway with LOD)
+    if (!(window._engine2Instance && window._engine2Instance._worldTrees)) {
+      for (var i = 0; i < _trees.length; i++) {
+        var tr = _trees[i];
+        // Spring-damper physics
+        tr.swayVx += (-SWAY_SPRING * tr.swayX - SWAY_DAMP * tr.swayVx) * dt;
+        tr.swayVz += (-SWAY_SPRING * tr.swayZ - SWAY_DAMP * tr.swayVz) * dt;
+        tr.swayX += tr.swayVx * dt;
+        tr.swayZ += tr.swayVz * dt;
 
-      // Apply sway as rotation to the group
-      tr.group.rotation.x = tr.swayZ * 0.15;
-      tr.group.rotation.z = -tr.swayX * 0.15;
+        // Apply sway as rotation to the group
+        tr.group.rotation.x = tr.swayZ * 0.15;
+        tr.group.rotation.z = -tr.swayX * 0.15;
+      }
     }
 
     // Fence posts

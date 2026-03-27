@@ -759,6 +759,8 @@
         this.hp         = STATS.maxHP;
         this.dead       = false;
         this._pooled    = false;
+        this._deathStartTime = 0;    // reset so stale timestamps don't cause premature timeout
+        this._killProcessed  = false; // reset so _killSkinwalker can run again
         this.state      = 'idle';
         this.animTime   = 0;
         this.stateTimer = 0;

@@ -399,6 +399,8 @@
   let _homingMissileTimer = 0;
   let _poisonTimer        = 0;
   let _fireballTimer      = 0;
+  // Pre-allocated scratch array for combining enemy lists without GC allocation
+  const _allEnemiesScratch = [];
   // ─── Gore: Corpse Linger System ──────────────────────────────────────────────
   // Corpses linger 5-8 seconds after death with heartbeat blood pumping.
   const _activeCorpses = [];       // { slot, timer, lingerDuration, bloodTimer, poolMesh, poolMat, poolSlot }
@@ -418,6 +420,11 @@
 
   // Reusable world-space position object for blood emission (avoids new {} per hit)
   const _reusableBloodPos = { x: 0, y: 0, z: 0 };
+
+  // ─── Invisible enemy safety net timer ────────────────────────────────────────
+  let _visibilityCheckTimer = 0;
+  const MIN_VISIBLE_Y_THRESHOLD = -50; // Enemies below this Y are intentionally hidden (pooled/underground)
+  const DEATH_ANIMATION_TIMEOUT_MS = 5000; // Force-remove skinwalker if death animation stalls longer than this
 
   // ─── Spatial Hashing ─────────────────────────────────────────────────────────
   // SpatialHash instance for O(1) projectile→enemy collision queries.
@@ -575,6 +582,7 @@
    */
   function _rebuildSpatialHash() {
     if (!_enemySpatialHash) return;
+    if (_activeSlimes.length === 0 && _activeCrawlers.length === 0 && _activeLeapingSlimes.length === 0) return;
     _enemySpatialHash.clear();
     for (let i = 0; i < _activeSlimes.length; i++) {
       _enemySpatialHash.insert(_activeSlimes[i]);
@@ -1531,7 +1539,7 @@
     // Refresh active list and handle contact damage
     for (let i = _activeCrawlers.length - 1; i >= 0; i--) {
       const c = _activeCrawlers[i];
-      if (!c.active || c.dying) {
+      if (!c.active || !c.alive || c.dying) {
         _activeCrawlers.splice(i, 1);
         continue;
       }
@@ -4762,10 +4770,20 @@
   function _updateSkinwalkers(dt) {
     if (!player || !player.mesh) return;
     const playerPos = player.mesh.position;
+    const now = Date.now();
     for (let i = _activeSkinwalkers.length - 1; i >= 0; i--) {
       const sw = _activeSkinwalkers[i];
       if (sw.dead) {
-        _activeSkinwalkers.splice(i, 1);
+        // Track when death first became true
+        if (!sw._deathStartTime) sw._deathStartTime = now;
+        // Force-remove if death animation has stalled for more than 5 seconds
+        if (now - sw._deathStartTime > DEATH_ANIMATION_TIMEOUT_MS) {
+          _killSkinwalker(sw);
+          continue;
+        }
+        // While in death state but before timeout, keep updating so the
+        // death animation can complete and trigger sw.onDeath → _killSkinwalker.
+        sw.update(dt, playerPos);
         continue;
       }
       sw.update(dt, playerPos);
@@ -5164,20 +5182,16 @@
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
-        // Pass all active enemies so auto-aim can target leaping slimes too
-        const _allEnemies = _activeLeapingSlimes.length > 0
-          ? _activeSlimes.concat(_activeLeapingSlimes)
-          : _activeSlimes;
-        player.update(dt, _allEnemies, _activeProjList, expGems);
+        // Build combined enemy list without GC allocation from .concat()
+        _allEnemiesScratch.length = 0;
+        for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
+        for (let _li = 0; _li < _activeLeapingSlimes.length; _li++) _allEnemiesScratch.push(_activeLeapingSlimes[_li]);
+        player.update(dt, _allEnemiesScratch, _activeProjList, expGems);
       }
 
-      // Blood system tick
+      // Blood system tick (BloodSystem shim internally calls BloodV2.update — do NOT call BloodV2.update again)
       if (window.BloodSystem && typeof BloodSystem.update === 'function') {
         BloodSystem.update();
-      }
-      // New v2 system ticks — guarded so missing scripts are harmless
-      if (window.BloodV2 && typeof window.BloodV2.update === 'function') {
-        window.BloodV2.update(dt);
       }
       if (window.GoreSim && typeof window.GoreSim.update === 'function') {
         window.GoreSim.update(dt);
@@ -5185,7 +5199,7 @@
       if (window.SlimePool && typeof window.SlimePool.update === 'function') {
         window.SlimePool.update(dt, player ? player.mesh.position : null);
       }
-      if (window.WaveSpawner && typeof window.WaveSpawner.update === 'function') {
+      if (!window._sandboxWaveManagerActive && window.WaveSpawner && typeof window.WaveSpawner.update === 'function') {
         window.WaveSpawner.update(dt, player ? player.mesh.position : null);
       }
       if (window.HitDetection && typeof window.HitDetection.update === 'function') {
@@ -5239,6 +5253,30 @@
       // World objects: day/night cycle, sway physics, ambient animations
       if (window.WorldObjects && typeof WorldObjects.update === 'function') {
         WorldObjects.update(dt);
+      }
+
+      // ── Universal invisible enemy safety net (once per second) ───────────────
+      _visibilityCheckTimer += dt;
+      if (_visibilityCheckTimer >= 1.0) {
+        _visibilityCheckTimer = 0;
+        const _enemyArrays = [
+          { arr: _activeSlimes,       type: 'slime' },
+          { arr: _activeCrawlers,     type: 'crawler' },
+          { arr: _activeLeapingSlimes,type: 'leaping_slime' },
+          { arr: _activeSkinwalkers,  type: 'skinwalker' },
+        ];
+        for (let _ea = 0; _ea < _enemyArrays.length; _ea++) {
+          const _entry = _enemyArrays[_ea];
+          const _arr = _entry.arr;
+          for (let _ei = 0; _ei < _arr.length; _ei++) {
+            const _e = _arr[_ei];
+            const _mesh = _e && (_e.mesh || (_e.parts && _e.parts.root));
+            if (_e && _e.active && _e.alive && _mesh && !_mesh.visible && _mesh.position && _mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
+              _mesh.visible = true;
+              console.warn('[InvisibilityFix] Restored visibility for ' + _entry.type, _e);
+            }
+          }
+        }
       }
 
       // Atmospheric weather particles and dynamic sky cycle
@@ -5637,6 +5675,7 @@
 
       console.log('[🎮 SandboxLoop] Spawning first wave...');
       SeqWaveManager.start();  // Start sequential kill-based wave system
+      window._sandboxWaveManagerActive = true;
       console.log('[🎮 SandboxLoop] ✓ Sequential wave system started');
 
       console.log('[🎮 SandboxLoop] Initializing input handlers...');
