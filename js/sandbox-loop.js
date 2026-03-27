@@ -1461,9 +1461,11 @@
       // Show "Critical" text slightly above
       _tmpV3.set(slot.mesh.position.x, 2.4, slot.mesh.position.z);
       createFloatingText('Critical', _tmpV3, '#FF4400', 0);
+      _showDamageNumber(slot.mesh.position.x, 2.0, slot.mesh.position.z, actualDmg, slot.hp <= 0, true);
     } else {
       _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
+      _showDamageNumber(slot.mesh.position.x, 1.5, slot.mesh.position.z, actualDmg, slot.hp <= 0, false);
     }
 
     // ── GORE SIMULATOR: Connect every weapon to gore system ──────────────────
@@ -1681,9 +1683,11 @@
       createFloatingText(actualDmg, _tmpV3, '#FFD700', actualDmg);
       _tmpV3.set(cx, 2.4, cz);
       createFloatingText('Critical', _tmpV3, '#FF4400', 0);
+      _showDamageNumber(cx, 2.0, cz, actualDmg, crawler.hp <= 0, true);
     } else {
       _tmpV3.set(cx, 1.5, cz);
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
+      _showDamageNumber(cx, 1.5, cz, actualDmg, crawler.hp <= 0, false);
     }
 
     // Blood from crawler (brown/amber blood)
@@ -1899,10 +1903,12 @@
     _tmpV3b.set(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z);
     if (isCrit) {
       createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+      _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, true);
       _tmpV3b.y += 0.4;
       createFloatingText('Critical', _tmpV3b, '#FF4400', 0);
     } else {
       createFloatingText(actualDmg, _tmpV3b, '#00CFFF', actualDmg);
+      _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, false);
     }
 
     // Light-blue blood burst (DeepSkyBlue) — use BloodV2 rawBurst if available
@@ -2955,23 +2961,19 @@
         for (let i = 0; i < allEnemies.length; i++) {
           const e = allEnemies[i];
           if (!e || !e.active || e.dead || e.dying) continue;
-          const em = e.mesh || (e.group);
+          const em = e.mesh || e.group;
           if (!em) continue;
           const dx = em.position.x - px;
           const dz = em.position.z - pz;
           if (Math.sqrt(dx * dx + dz * dz) <= shockRadius) {
-            if (typeof _damageEnemy === 'function') {
-              _damageEnemy(e, 25, false);
-            } else if (typeof e.hp === 'number') {
-              e.hp -= 25;
-              if (e.hp <= 0) {
-                if (e.enemyType === 'crawler' || (e.segments && e.segments.length)) {
-                  _killCrawler(e, 1.0, 0, 0);
-                } else if (e.state && typeof e.state === 'string' && e.state.includes('LEAP') || e.state === 'IDLE' || e.state === 'JUMPING' || e.state === 'LANDING' || e.state === 'PREPARING_JUMP') {
-                  _killLeapingSlime(e, 1.0, 0, 0);
-                } else {
-                  _killSlime(e, 1.0, 0, 0);
-                }
+            e.hp = (e.hp || 0) - 25;
+            if (e.hp <= 0) {
+              if (e.enemyType === 'crawler') {
+                _killCrawler(e, 1.0, 0, 0);
+              } else if (e.enemyType === 'leaping_slime') {
+                _killLeapingSlime(e, 1.0, 0, 0);
+              } else {
+                _killSlime(e, 1.0, 0, 0);
               }
             }
           }
@@ -5168,8 +5170,10 @@
     _tmpV3b.set(hx, hy, hz);
     if (isCrit) {
       createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+      _showDamageNumber(hx, hy, hz, actualDmg, sw.dead, true);
     } else {
       createFloatingText(actualDmg, _tmpV3b, '#c8c7c0', actualDmg);
+      _showDamageNumber(hx, hy, hz, actualDmg, sw.dead, false);
     }
 
     // Blood on hit
