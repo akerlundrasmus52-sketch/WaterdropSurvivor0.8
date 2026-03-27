@@ -50,10 +50,11 @@
 // ══════════════════════════════════════════
 //  POOL SIZES — tuned for mobile performance
 //  Change these if you need more / less
+//  PERFORMANCE FIX 1D: Reduced from 500/250 to 120 max total
 // ══════════════════════════════════════════
 var CFG = {
-DROP_COUNT:       500,   // blood drop instances (InstancedMesh)
-MIST_COUNT:       250,   // fine mist instances  (InstancedMesh)
+DROP_COUNT:       80,    // blood drop instances (reduced from 500 to cap at 120 total)
+MIST_COUNT:       40,    // fine mist instances  (reduced from 250 to cap at 120 total)
 CHUNK_COUNT:      40,    // flesh/slime chunks   (pooled Mesh)
 DECAL_COUNT:      200,   // ground blood decals  (pooled Mesh)
 WOUND_PER_ENEMY:  8,     // max wounds on one enemy body

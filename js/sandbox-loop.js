@@ -5667,7 +5667,9 @@
     _phase:        -1,   // current phase (-1 = not started)
     _phaseKills:   0,    // kills accumulated since this phase began
     _totalKills:   0,    // all-time kill counter
+    _waveNumber:   0,    // actual wave number (for wave 30 boss trigger)
     _x2Active:     false, // first-new-weapon x2 multiplier
+    _greyBossTriggered: false, // SECTION 3A: tracks if Grey boss notification shown
     _prevWeaponCount: 1,  // number of weapons player had last check
     _initialized:  false,
     _pendingTimeouts: [], // all pending setTimeout IDs so reset() can cancel them
@@ -5687,12 +5689,14 @@
 
     /** Initialize and spawn the first wave. Call from _boot. */
     start: function() {
-      this._phase        = 0;
-      this._phaseKills   = 0;
-      this._totalKills   = 0;
-      this._x2Active     = false;
+      this._phase           = 0;
+      this._phaseKills      = 0;
+      this._totalKills      = 0;
+      this._waveNumber      = 1;
+      this._x2Active        = false;
       this._prevWeaponCount = 1;
-      this._initialized  = true;
+      this._greyBossTriggered = false;
+      this._initialized     = true;
       // Brief delay before first enemy appears
       SeqWaveManager._setTimeout(function() { SeqWaveManager._spawnPhase(0); }, 1500);
     },
@@ -5737,6 +5741,25 @@
     _advancePhase: function(nextPhase) {
       this._phase      = nextPhase;
       this._phaseKills = 0;
+      this._waveNumber++; // Increment wave counter
+
+      // SECTION 2E: Check for wave 30 Annunaki boss spawn
+      if (this._waveNumber === 30) {
+        _showWaveNotification('⚡ WAVE 30 — THE ANNUNAKI AWAKENS! ⚡', '#ffd700', 4000);
+        if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.spawn) {
+          setTimeout(function() {
+            AnnunakiBoss.spawn();
+          }, 1000);
+        }
+        // Complete quest
+        if (typeof QuestSystem !== 'undefined' && QuestSystem.completeObjective) {
+          QuestSystem.completeObjective('quest_makeItToFinalBoss');
+        }
+        return; // Don't spawn regular enemies
+      }
+
+      // PERFORMANCE FIX 1E: Clean up wave debris before spawning next wave
+      _cleanupWaveDebris();
       // Small delay so player sees the kill before next enemies appear
       const self = this;
       SeqWaveManager._setTimeout(function() { self._spawnPhase(nextPhase); }, 800);
@@ -5749,6 +5772,14 @@
     _spawnPhase: function(phase) {
       // Wave flash: dramatic full-screen white flash on each new wave
       _triggerWaveFlash();
+
+      // SECTION 3A: Custom wave definitions for waves 21-29
+      // Waves 21-29 have custom escalating difficulty before the final boss
+      if (this._waveNumber >= 21 && this._waveNumber <= 29) {
+        this._spawnCustomWave(this._waveNumber);
+        return;
+      }
+
       switch (phase) {
         case 0:
           _showWaveNotification('WAVE START — 3 Slimes incoming!', '#ffdd44', 2500);
@@ -5790,6 +5821,127 @@
           break;
         case 5:
         default:
+          _showWaveNotification('💀 HORDE — 2 of everything!', '#ff0055', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(2) },
+            { type: 'leaping',    count: this._mult(2) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+      }
+    },
+
+    /**
+     * _spawnCustomWave(waveNum) - Custom wave definitions for waves 21-29
+     * SECTION 3A: Escalating endgame content before Annunaki boss
+     */
+    _spawnCustomWave: function(waveNum) {
+      switch (waveNum) {
+        case 21:
+          _showWaveNotification('⚡ WAVE 21 — Escalation Begins!', '#ff8800', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(3) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+
+        case 22:
+          _showWaveNotification('⚡ WAVE 22 — The Swarm Intensifies!', '#ff7700', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(3) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(3) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+
+        case 23:
+          _showWaveNotification('⚡ WAVE 23 — No Mercy!', '#ff6600', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(4) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(3) },
+            { type: 'skinwalker', count: this._mult(3) }
+          ]);
+          break;
+
+        case 24:
+          _showWaveNotification('⚡ WAVE 24 — Maximum Pressure!', '#ff5500', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(4) },
+            { type: 'leaping',    count: this._mult(4) },
+            { type: 'crawler',    count: this._mult(3) },
+            { type: 'skinwalker', count: this._mult(3) }
+          ]);
+          break;
+
+        case 25:
+          // WAVE 25: Mini-boss Grey encounter with elite variants
+          _showWaveNotification('👽 WAVE 25 — THE GREY APPEARS! 👽', '#88ff88', 4000);
+
+          // Trigger Grey boss if available
+          if (typeof GreyBossSystem !== 'undefined' && !this._greyBossTriggered) {
+            this._greyBossTriggered = true;
+            // Grey boss is proximity-triggered, so just spawn support enemies
+          }
+
+          // Elite enemy support squad
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(3) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(4) } // Extra skinwalkers as elite variants
+          ]);
+          break;
+
+        case 26:
+          _showWaveNotification('🔥 WAVE 26 — Post-Grey Assault!', '#ff4400', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(4) },
+            { type: 'leaping',    count: this._mult(4) },
+            { type: 'crawler',    count: this._mult(4) },
+            { type: 'skinwalker', count: this._mult(3) }
+          ]);
+          break;
+
+        case 27:
+          _showWaveNotification('🔥 WAVE 27 — Overwhelming Force!', '#ff3300', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(5) },
+            { type: 'leaping',    count: this._mult(4) },
+            { type: 'crawler',    count: this._mult(4) },
+            { type: 'skinwalker', count: this._mult(4) }
+          ]);
+          break;
+
+        case 28:
+          _showWaveNotification('🔥 WAVE 28 — Final Warning!', '#ff2200', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(5) },
+            { type: 'leaping',    count: this._mult(5) },
+            { type: 'crawler',    count: this._mult(4) },
+            { type: 'skinwalker', count: this._mult(4) }
+          ]);
+          break;
+
+        case 29:
+          // WAVE 29: Herald of Annunaki - massive elite encounter
+          _showWaveNotification('💀 WAVE 29 — HERALD OF ANNUNAKI! 💀', '#ffd700', 4000);
+
+          // Spawn a horde of elite enemies as the "Herald"
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(6) },
+            { type: 'leaping',    count: this._mult(5) },
+            { type: 'crawler',    count: this._mult(5) },
+            { type: 'skinwalker', count: this._mult(5) } // 5 skinwalkers = Herald army
+          ]);
+          break;
+
+        default:
+          // Fallback to standard phase 5 horde
           _showWaveNotification('💀 HORDE — 2 of everything!', '#ff0055', 3000);
           this._spawnBatch([
             { type: 'slime',      count: this._mult(2) },
@@ -5901,8 +6053,56 @@
     }
   };
 
+  // ── PERFORMANCE FIX 1E: Wave Cleanup Function ────────────────────────────────
+  // Clears all projectile DOM elements, floating damage numbers, health bars, and
+  // particle elements between waves to prevent memory buildup.
+  function _cleanupWaveDebris() {
+    // Clear floating damage numbers (from createFloatingText pool)
+    const damageNums = document.querySelectorAll('div[style*="position:fixed"][style*="pointer-events:none"][style*="font-family:Impact"]');
+    damageNums.forEach(el => {
+      if (el.style.display !== 'none') {
+        el.style.display = 'none';
+      }
+    });
+
+    // Clear any projectile DOM elements (if any weapons create DOM projectiles)
+    const projectileDivs = document.querySelectorAll('.projectile, .bullet-trail, .projectile-glow');
+    projectileDivs.forEach(el => el.remove());
+
+    // Clear any particle effect elements
+    const particleDivs = document.querySelectorAll('.particle, .explosion-particle, .blood-particle');
+    particleDivs.forEach(el => el.remove());
+
+    // Clear all active projectiles without breaking the pooling system
+    if (Array.isArray(_activeProjList) && _activeProjList.length > 0) {
+      for (let i = 0; i < _activeProjList.length; i++) {
+        const proj = _activeProjList[i];
+        if (!proj) {
+          continue;
+        }
+        // Prefer using the central projectile release helper if available
+        if (typeof _releaseProjectile === 'function') {
+          _releaseProjectile(proj);
+        } else {
+          // Fallback: just mark projectile inactive; leave mesh attached for pooling
+          proj.active = false;
+        }
+      }
+      // Reset active list; do not mutate _projPool or detach meshes here
+      _activeProjList.length = 0;
+    }
+
+    // Clear trauma system debris if available
+    if (window.TraumaSystem && typeof TraumaSystem.clearAll === 'function') {
+      TraumaSystem.clearAll();
+    }
+  }
+
   // ─── Main animation loop ──────────────────────────────────────────────────────
   function _animate(nowMs) {
+    // PERFORMANCE FIX 1A: Cancel any previous rAF before scheduling the next one
+    // This prevents multiple overlapping rAF loops if _boot() is called more than once
+    if (_rafId !== null) cancelAnimationFrame(_rafId);
     _rafId = requestAnimationFrame(_animate);
 
     try {
@@ -5957,6 +6157,14 @@
       // Manager updates (wave spawning + loot pickup)
       WaveManager.update(dt);
       LootManager.update(dt);
+
+      // Boss updates
+      if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.update) {
+        AnnunakiBoss.update(dt);
+      }
+      if (typeof AidaBoss !== 'undefined' && AidaBoss.update) {
+        AidaBoss.update(dt);
+      }
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
@@ -6565,6 +6773,8 @@
       }
 
       // Start loop
+      // PERFORMANCE FIX 1A: Cancel any previous rAF before starting a new loop
+      if (_rafId !== null) cancelAnimationFrame(_rafId);
       _lastTime = performance.now();
       _rafId = requestAnimationFrame(_animate);
 
