@@ -61,13 +61,13 @@
       background: radial-gradient(circle at center, transparent 30%, rgba(139, 0, 0, 0.4) 100%);
       opacity: 0;
       transition: opacity 0.3s;
-      will-change: opacity;
     }
 
     /* Pulsating vignette when HP < 25% — communicates imminent death */
     #low-hp-vignette.low-hp-critical {
       transition: none; /* let the animation control opacity */
       animation: low-hp-vignette-pulse 0.8s ease-in-out infinite;
+      will-change: opacity;
     }
 
     @keyframes low-hp-vignette-pulse {
@@ -89,10 +89,10 @@
       z-index: 100;
       opacity: 0;
       overflow: hidden;
-      will-change: opacity, transform;
     }
     #blood-splatter-overlay.active {
       animation: blood-splatter-fade 3.2s ease-out forwards;
+      will-change: opacity, transform;
     }
     @keyframes blood-splatter-fade {
       0%   { opacity: 1; }
@@ -2434,7 +2434,6 @@
       box-sizing: border-box;
       transform-style: preserve-3d;
       will-change: box-shadow, transform;
-      transform: translateZ(0);
     }
 
     /* Ensure inner content elements layer above border-flow/drip effects (z-index layering, not clipping) */

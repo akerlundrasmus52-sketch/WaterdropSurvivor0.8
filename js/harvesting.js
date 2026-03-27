@@ -869,8 +869,9 @@
     if (!res) { hud.innerHTML = ''; hud.style.display = 'none'; return; }
 
     // Camp mode: always show building materials (wood/stone) even at 0
+    // hidden: true resources are always excluded — even if the player has leftover amounts from legacy saves
     const entries = Object.entries(RESOURCE_TYPES)
-      .filter(([k, v]) => k !== 'flesh' && (res[k] > 0 || (!v.hidden && isCamp && BUILD_MATERIAL_KEYS.includes(k))))
+      .filter(([k, v]) => k !== 'flesh' && !v.hidden && (res[k] > 0 || (isCamp && BUILD_MATERIAL_KEYS.includes(k))))
       .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">x${(res[k] || 0)}</span></span>`)
       .join('');
     hud.innerHTML = entries || '';
