@@ -592,9 +592,11 @@
       `;
       
       // Close button
+      const _isSandboxMode = window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'));
+      const _startRunLabel = _isSandboxMode ? '▶ Restart Run' : '▶ Start New Run';
       content += `
         <button class="btn start-run-btn" style="margin-top: 20px; font-size: 18px; padding: 12px 35px; background: #27ae60; color: #FFF; margin-right: 10px;">
-          ▶ Start New Run
+          ${_startRunLabel}
         </button>
         <button class="btn" style="margin-top: 20px; font-size: 16px; padding: 10px 30px; background: #888; color: #FFF;">
           Close
@@ -647,7 +649,12 @@
         } else {
           startRunBtn.onclick = () => {
             document.body.removeChild(overlay);
-            startGame();
+            // In sandbox 2.0 mode, reload the page to start a fresh run (CHANGE 5)
+            if (window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'))) {
+              window.location.reload();
+            } else {
+              startGame();
+            }
           };
         }
       }

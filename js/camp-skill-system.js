@@ -3576,6 +3576,7 @@
     
     // Expose globally for inline onclick handlers and external access
     window.claimTutorialQuest = claimTutorialQuest;
+    window.progressTutorialQuest = progressTutorialQuest;
     window.checkQuestConditions = checkQuestConditions;
     window.isQuestClaimed = isQuestClaimed;
     window.getCurrentQuest = getCurrentQuest;

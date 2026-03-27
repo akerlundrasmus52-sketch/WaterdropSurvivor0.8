@@ -117,7 +117,7 @@
     if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
   };
   // ── Quest & companion stubs (quest system loads but quests aren't used yet) ──
-  if (typeof progressTutorialQuest === 'undefined') {
+  if (typeof progressTutorialQuest === 'undefined' && typeof window.progressTutorialQuest === 'undefined') {
     window.progressTutorialQuest = function () {}; // no-op: quests not active yet
   }
   if (typeof droneTurrets === 'undefined') {
@@ -233,6 +233,8 @@
   // screen from the main game (which requires systems not loaded here).
   if (typeof gameOver === 'undefined') {
     window.gameOver = function () {
+      // Evaluate run quests before showing death screen (CHANGE 3)
+      if (typeof _checkSandboxRunQuestProgress === 'function') _checkSandboxRunQuestProgress();
       // Reset all new v2 systems before unloading
       if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
       if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
@@ -262,7 +264,7 @@
     equippedGear: { weapon: 'gun' },
     companions: {},
     selectedCompanion: null,
-    tutorialQuests: { currentQuest: null, readyToClaim: [], firstDeathShown: false, pendingBuildQuest: null, landmarksFound: null, mysteriousEggFound: false },
+    tutorialQuests: { currentQuest: null, readyToClaim: [], firstDeathShown: false, pendingBuildQuest: null, landmarksFound: null, mysteriousEggFound: false, killsThisRun: 0, firstBossDefeated: false },
     tutorial: { completed: true, currentStep: 'completed' },
     upgrades: { goldEarned: 0 },
     resources: { magicEssence: 0 },
@@ -451,6 +453,10 @@
   // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
   let _sessionTimerSecs    = 0; // total elapsed seconds since boot
   let _sessionTimerAccum   = 0; // accumulator for 1-second updates
+
+  // ─── Run Quest Tracking (CHANGE 1) ───────────────────────────────────────────
+  let _sandboxRunKills    = 0; // kills this run (for quest tracking)
+  let _sandboxRunStartTime = 0; // Date.now() at run start (for survival quests)
 
   // ─── Damage Number Pool (CHANGE 8) ───────────────────────────────────────────
   let _dmgNumPool = null; // lazy-init pool of span elements
@@ -1079,6 +1085,8 @@
       var secs = _sessionTimerSecs % 60;
       var timerEl = document.getElementById('hud-session-timer');
       if (timerEl) timerEl.textContent = '⌛ ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+      // Check survival-time quests once per second (CHANGE 4)
+      _checkSandboxRunQuestProgress();
     }
   }
 
@@ -1855,7 +1863,14 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (slot.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
+    if (slot.isBoss) {
+      if (_hitStopRemaining < 120) _hitStopRemaining = 120;
+      if (saveData.tutorialQuests) saveData.tutorialQuests.firstBossDefeated = true;
+    }
+    // Run quest kill tracking (CHANGE 1)
+    _sandboxRunKills++;
+    if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = _sandboxRunKills;
+    _checkSandboxRunQuestProgress();
 
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
@@ -2002,7 +2017,14 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (crawler.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
+    if (crawler.isBoss) {
+      if (_hitStopRemaining < 120) _hitStopRemaining = 120;
+      if (saveData.tutorialQuests) saveData.tutorialQuests.firstBossDefeated = true;
+    }
+    // Run quest kill tracking (CHANGE 1)
+    _sandboxRunKills++;
+    if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = _sandboxRunKills;
+    _checkSandboxRunQuestProgress();
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(12);
     }
@@ -2227,7 +2249,14 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (enemy.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
+    if (enemy.isBoss) {
+      if (_hitStopRemaining < 120) _hitStopRemaining = 120;
+      if (saveData.tutorialQuests) saveData.tutorialQuests.firstBossDefeated = true;
+    }
+    // Run quest kill tracking (CHANGE 1)
+    _sandboxRunKills++;
+    if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = _sandboxRunKills;
+    _checkSandboxRunQuestProgress();
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
     }
@@ -3196,6 +3225,31 @@
           }
         }
       } catch(e) { console.warn('[LvlUp shockwave] error:', e); }
+    }
+
+    // ── Egg Hunt quest: spawn mysterious egg at level 15 (CHANGE 7) ──
+    if (playerStats.lvl >= 15 &&
+        saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_eggHunt' &&
+        !window._mysteriousEggSpawned && player && player.mesh && scene) {
+      try {
+        window._mysteriousEggSpawned = true;
+        const eggGroup = new THREE.Group();
+        const eggGeo = new THREE.SphereGeometry(0.8, 16, 16);
+        const eggMat = new THREE.MeshStandardMaterial({
+          color: 0x8B5CF6, emissive: 0x7C3AED, emissiveIntensity: 0.6
+        });
+        const eggMesh = new THREE.Mesh(eggGeo, eggMat);
+        eggMesh.scale.set(1.0, 1.3, 1.0);
+        eggGroup.add(eggMesh);
+        eggGroup.position.set(
+          player.mesh.position.x + 8,
+          0.8,
+          player.mesh.position.z + 8
+        );
+        scene.add(eggGroup);
+        window._mysteriousEggObject = eggGroup;
+        _showWaveNotification('✨ A Mysterious Egg appeared nearby', '#8B5CF6', 3500);
+      } catch(e) { console.warn('[EggHunt] egg spawn failed:', e); }
     }
 
     // ── Fiery "LEVEL UP" text animation (Grind Survivors style) ──
@@ -5428,7 +5482,14 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (sw.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
+    if (sw.isBoss) {
+      if (_hitStopRemaining < 120) _hitStopRemaining = 120;
+      if (saveData.tutorialQuests) saveData.tutorialQuests.firstBossDefeated = true;
+    }
+    // Run quest kill tracking (CHANGE 1)
+    _sandboxRunKills++;
+    if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = _sandboxRunKills;
+    _checkSandboxRunQuestProgress();
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(15);
     }
@@ -5445,6 +5506,31 @@
       if (_activeSkinwalkers.indexOf(sw) !== -1) return;
       if (window.SkinwalkerEnemy) SkinwalkerEnemy.release(sw);
     }, 8000);
+  }
+
+  // ─── Run Quest Progress Checker (CHANGE 2) ───────────────────────────────────
+  // Called after every kill and when the death/end-run screen appears.
+  // Mirrors the logic in js/game-over-reset.js so quests complete in sandbox.
+  function _checkSandboxRunQuestProgress() {
+    if (!saveData || !saveData.tutorialQuests) return;
+    if (typeof window.progressTutorialQuest !== 'function') return;
+    const tq = saveData.tutorialQuests;
+    const cq = tq.currentQuest;
+    if (!cq) return;
+    const elapsedSec = _sandboxRunStartTime ? (Date.now() - _sandboxRunStartTime) / 1000 : 0;
+    if (cq === 'quest1_kill3'          && _sandboxRunKills >= 3)   window.progressTutorialQuest('quest1_kill3', true);
+    if (cq === 'quest4_kill10'         && _sandboxRunKills >= 10)  window.progressTutorialQuest('quest4_kill10', true);
+    if (cq === 'quest6_survive2min'    && elapsedSec >= 120)       window.progressTutorialQuest('quest6_survive2min', true);
+    if (cq === 'quest8_kill10'         && _sandboxRunKills >= 10)  window.progressTutorialQuest('quest8_kill10', true);
+    if (cq === 'quest10_kill15'        && _sandboxRunKills >= 15)  window.progressTutorialQuest('quest10_kill15', true);
+    if (cq === 'quest14_kill25'        && _sandboxRunKills >= 25)  window.progressTutorialQuest('quest14_kill25', true);
+    if (cq === 'quest15b_runKill12'    && _sandboxRunKills >= 12)  window.progressTutorialQuest('quest15b_runKill12', true);
+    if (cq === 'quest26_kill20'        && _sandboxRunKills >= 20)  window.progressTutorialQuest('quest26_kill20', true);
+    if (cq === 'quest28_survive3min'   && elapsedSec >= 180)       window.progressTutorialQuest('quest28_survive3min', true);
+    if (cq === 'firstRunDeath')                                    window.progressTutorialQuest('firstRunDeath', true);
+    if (cq === 'quest_annunaki1'       && _sandboxRunKills >= 100) window.progressTutorialQuest('quest_annunaki1', true);
+    if (cq === 'quest_pushingLimits'   && tq.firstBossDefeated)    window.progressTutorialQuest('quest_pushingLimits', true);
+    if (cq === 'quest_eggHunt'         && tq.mysteriousEggFound) window.progressTutorialQuest('quest_eggHunt', true);
   }
 
   // ─── Sequential Kill-Based Wave Manager ──────────────────────────────────────
@@ -6006,6 +6092,19 @@
       // Persistent HUD: session timer and kill count
       _updatePersistentHUD(dt);
 
+      // Mysterious egg proximity check for quest_eggHunt (CHANGE 7)
+      if (window._mysteriousEggObject && player && player.mesh) {
+        const _epx = player.mesh.position.x - window._mysteriousEggObject.position.x;
+        const _epz = player.mesh.position.z - window._mysteriousEggObject.position.z;
+        if (_epx * _epx + _epz * _epz <= 4) { // within 2 units (2^2 = 4)
+          if (saveData.tutorialQuests) saveData.tutorialQuests.mysteriousEggFound = true;
+          scene.remove(window._mysteriousEggObject);
+          window._mysteriousEggObject = null;
+          _showWaveNotification('🥚 You found the Mysterious Egg!', '#8B5CF6', 3000);
+          _checkSandboxRunQuestProgress();
+        }
+      }
+
       _refreshHUD(dt);
 
       // Tick player status effects (StatusBar depletion)
@@ -6304,6 +6403,11 @@
       // Start loop
       _lastTime = performance.now();
       _rafId = requestAnimationFrame(_animate);
+
+      // Initialize run quest tracking (CHANGE 1 + 9)
+      _sandboxRunKills = 0;
+      _sandboxRunStartTime = Date.now();
+      if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = 0;
 
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');
       // Signal loading.js that the game module is ready so the loading screen
