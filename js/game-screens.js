@@ -1759,7 +1759,7 @@ let   _bdIMIndex         = 0;
 const BLOOD_DECAL_FADE_MS = 12000;
 
 function _ensureBloodDecalIM() {
-  if (_bloodDecalIM || !scene || typeof THREE === 'undefined') return;
+  if (_bloodDecalIM || window._bloodDecalsDisabled || !scene || typeof THREE === 'undefined') return;
   try {
     const geo = new THREE.CircleGeometry(1, 16);
     const mat = new THREE.MeshStandardMaterial({

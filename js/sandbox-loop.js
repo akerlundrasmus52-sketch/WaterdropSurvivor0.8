@@ -4779,9 +4779,11 @@
         // Force-remove if death animation has stalled for more than 5 seconds
         if (now - sw._deathStartTime > DEATH_ANIMATION_TIMEOUT_MS) {
           _killSkinwalker(sw);
-        } else {
-          _activeSkinwalkers.splice(i, 1);
+          continue;
         }
+        // While in death state but before timeout, keep updating so the
+        // death animation can complete and trigger sw.onDeath → _killSkinwalker.
+        sw.update(dt, playerPos);
         continue;
       }
       sw.update(dt, playerPos);

@@ -887,6 +887,10 @@
     stats.criticalHitDamageMulti  = stats.critDmg;
     stats.mobilityScore           = stats.turnResponse || 1.0;
 
+    // Sync hp to maxHp for fresh stats objects (initial player creation, stat preview).
+    // recalculateAllStats() will clamp/preserve current HP for mid-run recalculations.
+    stats.hp = stats.maxHp;
+
     return stats;
   }
 

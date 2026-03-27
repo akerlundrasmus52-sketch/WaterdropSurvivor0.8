@@ -947,8 +947,8 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function _updateSway(dt) {
-    // Trees — skip if WorldTrees is active (it handles sway with LOD)
-    if (!window.WorldTrees) {
+    // Trees — skip if a WorldTrees instance is active (it handles sway with LOD)
+    if (!(window._engine2Instance && window._engine2Instance._worldTrees)) {
       for (var i = 0; i < _trees.length; i++) {
         var tr = _trees[i];
         // Spring-damper physics
