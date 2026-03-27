@@ -992,12 +992,29 @@ function showWeaponBuilding() {
       { id: 'weaponUnlock', label: 'Weapon Unlock', icon: '🎁', type: 'weaponUnlock', rarity: 'legendary', weight: 8 },
       { id: 'megaJackpot', label: 'MEGA JACKPOT!', icon: '💎', type: 'gold', value: 1000, rarity: 'mythic', weight: 3 },
     ],
+
+    // Starting Weapon Wheel — win a weapon to start next run with
+    startingWeapon: [
+      { id: 'sw_pistol',        label: 'Pistol',         icon: '🔫', type: 'startWeapon', weaponId: 'pistol',        rarity: 'common',    weight: 5 },
+      { id: 'sw_shotgun',       label: 'Shotgun',        icon: '🔫', type: 'startWeapon', weaponId: 'shotgun',       rarity: 'uncommon',  weight: 5 },
+      { id: 'sw_rifle',         label: 'Rifle',          icon: '🎯', type: 'startWeapon', weaponId: 'rifle',         rarity: 'uncommon',  weight: 5 },
+      { id: 'sw_revolver',      label: 'Revolver',       icon: '🔫', type: 'startWeapon', weaponId: 'revolver',      rarity: 'rare',      weight: 5 },
+      { id: 'sw_flamethrower',  label: 'Flamethrower',   icon: '🔥', type: 'startWeapon', weaponId: 'flamethrower',  rarity: 'rare',      weight: 5 },
+      { id: 'sw_iceSpear',      label: 'Ice Spear',      icon: '❄️', type: 'startWeapon', weaponId: 'iceSpear',      rarity: 'epic',      weight: 5 },
+      { id: 'sw_lightning',     label: 'Lightning',      icon: '⚡', type: 'startWeapon', weaponId: 'lightning',     rarity: 'epic',      weight: 5 },
+      { id: 'sw_meteor',        label: 'Meteor',         icon: '☄️', type: 'startWeapon', weaponId: 'meteor',        rarity: 'legendary', weight: 5 },
+      { id: 'sw_sword',         label: 'Sword',          icon: '⚔️', type: 'startWeapon', weaponId: 'sword',         rarity: 'legendary', weight: 5 },
+      { id: 'sw_rocketLauncher',label: 'Rocket Launcher',icon: '🚀', type: 'startWeapon', weaponId: 'rocketLauncher',rarity: 'legendary', weight: 5 },
+      { id: 'sw_jackpot',       label: 'ALL WEAPONS!',   icon: '🏆', type: 'startWeaponJackpot',                     rarity: 'mythic',    weight: 1 },
+      { id: 'sw_consolation',   label: '500 Gold',       icon: '💰', type: 'gold', value: 500,                       rarity: 'common',    weight: 15 },
+    ],
   };
 
   var WHEEL_TIERS = {
     basic: { name: 'Basic Wheel', cost: 50, costType: 'gold', color: '#4FC3F7', icon: '🎰' },
     premium: { name: 'Premium Wheel', cost: 200, costType: 'gold', color: '#AA44FF', icon: '🎡' },
     elite: { name: 'Elite Wheel', cost: 100, costType: 'essence', color: '#F39C12', icon: '⭐' },
+    startingWeapon: { name: 'Weapon Wheel', cost: 300, costType: 'gold', color: '#FF6B35', icon: '⚔️' },
   };
 
   function buildSpinWheel(panel) {
@@ -1446,6 +1463,27 @@ function showWeaponBuilding() {
           if (typeof showStatChange === 'function') {
             showStatChange('💰 +300 Gold (All weapons unlocked!)', 'stat');
           }
+        }
+        break;
+
+      case 'startWeapon':
+        saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
+        if (saveData.unlockedStartWeapons.indexOf(prize.weaponId) === -1) {
+          saveData.unlockedStartWeapons.push(prize.weaponId);
+        }
+        if (typeof showStatChange === 'function') {
+          showStatChange('⚔️ Starting Weapon Unlocked: ' + prize.label + '!', 'legendary');
+        }
+        break;
+
+      case 'startWeaponJackpot':
+        var _allStartWeapons = ['pistol','shotgun','rifle','revolver','flamethrower','iceSpear','lightning','meteor','sword','rocketLauncher'];
+        saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
+        _allStartWeapons.forEach(function(wid) {
+          if (saveData.unlockedStartWeapons.indexOf(wid) === -1) saveData.unlockedStartWeapons.push(wid);
+        });
+        if (typeof showStatChange === 'function') {
+          showStatChange('🏆 JACKPOT! All Starting Weapons Unlocked!', 'mythic');
         }
         break;
     }

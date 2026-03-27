@@ -237,6 +237,13 @@
     window.gameOver = function () {
       // Evaluate run quests before showing death screen (CHANGE 3) — pass endOfRun=true
       if (typeof _checkSandboxRunQuestProgress === 'function') _checkSandboxRunQuestProgress(true);
+      // Track survival time and run bonus XP
+      var _elapsedSec = _sandboxRunStartTime ? (Date.now() - _sandboxRunStartTime) / 1000 : 0;
+      if (saveData && saveData.stats) saveData.stats.longestSurvivalTime = Math.max(saveData.stats.longestSurvivalTime || 0, _elapsedSec);
+      var _runKills = playerStats ? (playerStats.kills || 0) : 0;
+      var _runBonus = Math.min(50, Math.floor(_runKills * (1 + _elapsedSec / 60)));
+      if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(_runBonus, 'Run End Bonus', saveData);
+      if (typeof _checkSandboxAchievements === 'function') _checkSandboxAchievements();
       // Reset all new v2 systems before unloading
       if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
       if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
@@ -459,6 +466,7 @@
   // ─── Run Quest Tracking (CHANGE 1) ───────────────────────────────────────────
   let _sandboxRunKills    = 0; // kills this run (for quest tracking)
   let _sandboxRunStartTime = 0; // Date.now() at run start (for survival quests)
+  let _xpMagnetRunStacks  = 0; // XP magnet upgrade stacks this run
 
   // ─── Damage Number Pool (CHANGE 8) ───────────────────────────────────────────
   let _dmgNumPool = null; // lazy-init pool of span elements
@@ -1880,6 +1888,18 @@
     if (window.GameMilestones && typeof GameMilestones.recordKill === 'function') {
       GameMilestones.recordKill();
     }
+    // Achievement + stat tracking
+    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    // Codex discovery
+    if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
+      var _codexData = saveData && saveData.codexData;
+      if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_balanced']) {
+        window.CodexSystem.discover('enemy_balanced');
+        if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+      }
+    }
+    _checkSandboxAchievements();
     SeqWaveManager.onEnemyKilled('slime');
     // HP bars removed - function kept for compatibility but does nothing
   }
@@ -2030,6 +2050,18 @@
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(12);
     }
+    // Achievement + stat tracking
+    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    // Codex discovery
+    if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
+      var _codexData = saveData && saveData.codexData;
+      if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_bug']) {
+        window.CodexSystem.discover('enemy_bug');
+        if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+      }
+    }
+    _checkSandboxAchievements();
     SeqWaveManager.onEnemyKilled('crawler');
   }
 
@@ -2262,6 +2294,18 @@
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
     }
+    // Achievement + stat tracking
+    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    // Codex discovery
+    if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
+      var _codexData = saveData && saveData.codexData;
+      if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_fast']) {
+        window.CodexSystem.discover('enemy_fast');
+        if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+      }
+    }
+    _checkSandboxAchievements();
     SeqWaveManager.onEnemyKilled('leaping_slime');
   }
 
@@ -3126,10 +3170,13 @@
 
     // Respect pickup-range / XP collection-radius upgrades, if available
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
-    const radiusMultiplier =
-      _xpStats && (typeof _xpStats.xpCollectionRadius === 'number' || typeof _xpStats.pickupRange === 'number')
-        ? (_xpStats.xpCollectionRadius || _xpStats.pickupRange || 1)
-        : 1;
+    const _magnetBase = window._sandboxXpMagnetBase || 1.5;
+    const _magnetRunBonus = (window._sandboxXpMagnetRunStacks || 0) * 0.3;
+    const _magnetSkillBonus = (window._sandboxSkillTree && window._sandboxSkillTree.magnetism && window._sandboxSkillTree.magnetism.level || 0) * 0.2;
+    const _baseRadius = _xpStats && (typeof _xpStats.xpCollectionRadius === 'number' || typeof _xpStats.pickupRange === 'number')
+      ? (_xpStats.xpCollectionRadius || _xpStats.pickupRange || _magnetBase)
+      : _magnetBase;
+    const radiusMultiplier = _baseRadius + _magnetRunBonus + _magnetSkillBonus;
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
@@ -3274,6 +3321,18 @@
         window.isPaused = false;
       }
     }, 1800); // 1.8s delay to let the fiery text play
+
+    // Stats + Account XP + Codex + Achievements on level up
+    if (saveData && saveData.stats) saveData.stats.highestLevel = Math.max(saveData.stats.highestLevel || 0, playerStats.lvl);
+    if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(10, 'Level Up', saveData);
+    if (playerStats.lvl >= 5 && window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
+      var _codexData2 = saveData && saveData.codexData;
+      if (!_codexData2 || !_codexData2.discovered || !_codexData2.discovered['char_waterdrop']) {
+        window.CodexSystem.discover('char_waterdrop');
+        if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+      }
+    }
+    _checkSandboxAchievements();
   }
 
   // ── Fiery LEVEL UP text: Grind Survivors style with Eye of Horus ──
@@ -5495,7 +5554,18 @@
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(15);
     }
-
+    // Achievement + stat tracking
+    if (saveData && saveData.stats) saveData.stats.totalKills = (saveData.stats.totalKills || 0) + 1;
+    if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(2, 'Kill', saveData);
+    // Codex discovery
+    if (window.CodexSystem && typeof window.CodexSystem.discover === 'function') {
+      var _codexData = saveData && saveData.codexData;
+      if (!_codexData || !_codexData.discovered || !_codexData.discovered['enemy_hardfast']) {
+        window.CodexSystem.discover('enemy_hardfast');
+        if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(5, 'Codex Discovery', saveData);
+      }
+    }
+    _checkSandboxAchievements();
     const idx = _activeSkinwalkers.indexOf(sw);
     if (idx !== -1) _activeSkinwalkers.splice(idx, 1);
 
@@ -5552,6 +5622,12 @@
     // End-of-run only: firstRunDeath requires the player to actually die/end the run
     if (endOfRun) {
       if (cq === 'firstRunDeath') window.progressTutorialQuest('firstRunDeath', true);
+    }
+  }
+
+  function _checkSandboxAchievements() {
+    if (window.checkAchievements && typeof window.checkAchievements === 'function') {
+      window.checkAchievements();
     }
   }
 
@@ -6427,14 +6503,67 @@
         });
       }
 
+      // Show starting weapon choice if player has unlocked starting weapons
+      if (saveData.unlockedStartWeapons && saveData.unlockedStartWeapons.length > 0 && weapons) {
+        try {
+          var _swChoices = saveData.unlockedStartWeapons;
+          var _swOverlay = document.createElement('div');
+          _swOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;';
+          var _swPanel = document.createElement('div');
+          _swPanel.style.cssText = 'background:#1a1a2e;border:3px solid #FFD700;border-radius:12px;padding:24px;color:#fff;font-family:"Bangers",cursive;text-align:center;max-width:500px;';
+          _swPanel.innerHTML = '<div style="font-size:1.8em;color:#FFD700;margin-bottom:16px;">⚔️ CHOOSE STARTING WEAPON</div><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;" id="_swChoiceList"></div>';
+          _swOverlay.appendChild(_swPanel);
+          document.body.appendChild(_swOverlay);
+          var _swList = _swPanel.querySelector('#_swChoiceList');
+          _swChoices.forEach(function(wid) {
+            var _btn = document.createElement('button');
+            _btn.style.cssText = 'padding:10px 16px;background:#2a2a4e;border:2px solid #FFD700;color:#FFD700;font-family:"Bangers",cursive;font-size:1.2em;cursor:pointer;border-radius:8px;';
+            _btn.textContent = wid;
+            _btn.onclick = function() {
+              if (weapons[wid]) { weapons[wid].active = true; weapons[wid].level = Math.max(1, weapons[wid].level || 1); }
+              _swOverlay.remove();
+            };
+            _swList.appendChild(_btn);
+          });
+          var _skipBtn = document.createElement('button');
+          _skipBtn.style.cssText = 'margin-top:12px;padding:8px 16px;background:#333;border:1px solid #888;color:#aaa;cursor:pointer;border-radius:8px;';
+          _skipBtn.textContent = 'Skip (use default)';
+          _skipBtn.onclick = function() { _swOverlay.remove(); };
+          _swPanel.appendChild(_skipBtn);
+        } catch(e) { console.warn('[SandboxLoop] Starting weapon modal error:', e); }
+      }
+
       // Start loop
       _lastTime = performance.now();
       _rafId = requestAnimationFrame(_animate);
 
       // Initialize run quest tracking (CHANGE 1 + 9)
       _sandboxRunKills = 0;
+      _xpMagnetRunStacks = 0;
+      window._sandboxXpMagnetRunStacks = 0;
       _sandboxRunStartTime = Date.now();
       if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = 0;
+      // Track total runs
+      if (saveData && saveData.stats) saveData.stats.totalRuns = (saveData.stats.totalRuns || 0) + 1;
+      // Initialize GameAccount if available
+      if (window.GameAccount && typeof window.GameAccount.init === 'function' && !window.GameAccount._initialized) {
+        window.GameAccount.init(saveData);
+        window.GameAccount._initialized = true;
+      }
+      // Apply camp stat bonuses to playerStats
+      if (typeof calculateTotalPlayerStats === 'function') {
+        var _boostedStats = calculateTotalPlayerStats(saveData);
+        if (_boostedStats && playerStats) {
+          playerStats.maxHp = Math.max(playerStats.maxHp, _boostedStats.maxHp || playerStats.maxHp);
+          playerStats.hp = playerStats.maxHp;
+          playerStats.damage = _boostedStats.damage || playerStats.damage;
+          playerStats.moveSpeed = _boostedStats.moveSpeed || playerStats.moveSpeed;
+          playerStats.weaponCooldownMult = _boostedStats.weaponCooldownMult || playerStats.weaponCooldownMult;
+          playerStats.xpMultiplier = _boostedStats.xpMultiplier || playerStats.xpMultiplier;
+          playerStats.critChance = _boostedStats.critChance || playerStats.critChance;
+          playerStats.critMultiplier = _boostedStats.critMultiplier || playerStats.critMultiplier;
+        }
+      }
 
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');
       // Signal loading.js that the game module is ready so the loading screen

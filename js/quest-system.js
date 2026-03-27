@@ -3416,9 +3416,10 @@
         const peeked = canClaim ? window.GameDailies.peekDailyReward(saveData) : null;
         const nextDay = peeked ? peeked.day : 0; // 1-based day number
         const rewards = window.GameDailies.DAILY_LOGIN_REWARDS;
+        const currentDayIdx = ((streak) % rewards.length); // 0-based index of today's day in cycle
         let html = '<div style="color:#FFD700;font-size:1.6em;margin-bottom:12px;text-shadow:2px 2px 0 #000;letter-spacing:2px;">🎁 DAILY REWARD</div>';
         html += '<div style="font-family:Arial,sans-serif;font-size:13px;color:#ccc;margin-bottom:16px;">Login Streak: <b style="color:#FFD700;">' + streak + ' days</b></div>';
-        html += '<div class="daily-login-strip">';
+        html += '<div class="daily-login-strip" style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-width:100%;overflow-y:auto;max-height:280px;">';
         rewards.forEach(function(r, i) {
           const dayNum = i + 1;
           const claimed = streak >= dayNum && !canClaim;
@@ -3428,10 +3429,10 @@
           const rarityBorder = isToday ? '2px solid ' + rarityColor : (claimed ? '2px solid rgba(46,204,113,0.4)' : '2px solid rgba(255,215,0,0.2)');
           const rarityGlow  = isToday ? '0 0 10px ' + rarityColor + '88' : 'none';
           const cls = 'daily-login-day' + (claimed ? ' claimed' : '') + (isToday ? ' today' : '');
-          html += '<div class="' + cls + '" style="border:' + rarityBorder + ';box-shadow:' + rarityGlow + ';">';
-          html += '<div class="day-num">Day ' + dayNum + '</div>';
-          html += '<div class="day-reward" style="color:' + (claimed ? '#2ecc71' : isToday ? rarityColor : '#aaa') + '">' + (claimed ? '✅' : r.item ? '🎁' : '💰') + '</div>';
-          html += '<div class="day-gold" style="color:' + rarityColor + '">' + r.gold + 'g</div>';
+          html += '<div class="' + cls + '" style="border:' + rarityBorder + ';box-shadow:' + rarityGlow + ';min-width:0;">';
+          html += '<div class="day-num" style="font-size:10px;">Day ' + dayNum + '</div>';
+          html += '<div class="day-reward" style="font-size:16px;color:' + (claimed ? '#2ecc71' : isToday ? rarityColor : '#aaa') + '">' + (claimed ? '✅' : (r.icon || '💰')) + '</div>';
+          html += '<div class="day-gold" style="color:' + rarityColor + ';font-size:9px;">' + (r.gold ? r.gold + 'g' : '') + '</div>';
           html += '</div>';
         });
         html += '</div>';
@@ -3455,9 +3456,13 @@
             _claimDone = true;
             const result = window.GameDailies.checkDailyLogin(saveData);
             if (!result.alreadyClaimed) {
-              saveData.gold = (saveData.gold || 0) + result.gold;
+              saveData.gold = (saveData.gold || 0) + (result.gold || 0);
+              var _rewardParts = [];
+              if (result.gold) _rewardParts.push('+' + result.gold + ' Gold');
+              if (result.skillPoints) _rewardParts.push('+' + result.skillPoints + ' Skill Points');
+              if (result.attributePoints) _rewardParts.push('+' + result.attributePoints + ' Attr Points');
               saveSaveData();
-              showStatChange('🎁 Day ' + result.day + ' Reward: +' + result.gold + ' Gold!');
+              showStatChange('🎁 Day ' + result.day + ' Reward: ' + (_rewardParts.join(', ') || 'Claimed!'));
             }
 
             // Determine rarity of claimed reward
