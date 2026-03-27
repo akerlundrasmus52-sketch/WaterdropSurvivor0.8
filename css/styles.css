@@ -10430,3 +10430,116 @@
   from { transform: scale(0); opacity: 1; }
   to { transform: scale(1); opacity: 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   AIDA BOSS ANIMATIONS (SECTION 5B)
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes aida-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes aida-aura-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes aida-phase-transition {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+  }
+  25% {
+    transform: translateX(-50%) scale(1.2, 0.8);
+  }
+  50% {
+    transform: translateX(-50%) scale(0.9, 1.2);
+  }
+  75% {
+    transform: translateX(-50%) scale(1.1, 0.9);
+  }
+}
+
+@keyframes aida-death {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateX(-50%) scale(1.2) rotate(5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.3) rotate(-15deg) translateY(100px);
+  }
+}
+
+@keyframes aida-drain-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.5);
+  }
+}
+
+.aida-projectile {
+  animation: aida-projectile-spin 1s linear infinite;
+}
+
+@keyframes aida-projectile-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   COMPLETION SCREEN ANIMATIONS (SECTION 6)
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes completion-title-pulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow: 0 0 30px #ffd700, 0 0 60px #ff8c00;
+  }
+  50% {
+    transform: scale(1.05);
+    text-shadow: 0 0 40px #ffd700, 0 0 80px #ff8c00, 0 0 100px #ffd700;
+  }
+}
+
+@keyframes completion-subtitle-fade {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes completion-reward-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

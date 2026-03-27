@@ -6021,6 +6021,9 @@
       if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.update) {
         AnnunakiBoss.update(dt);
       }
+      if (typeof AidaBoss !== 'undefined' && AidaBoss.update) {
+        AidaBoss.update(dt);
+      }
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {

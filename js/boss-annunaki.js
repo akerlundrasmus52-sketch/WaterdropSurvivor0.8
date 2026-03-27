@@ -606,8 +606,14 @@ function _triggerAidaReveal() {
 }
 
 function _spawnAida() {
-  // TODO: Implement Aida boss (Section 5B)
-  console.log('[AnnunakiBoss] Aida reveal complete - spawn Aida boss');
+  console.log('[AnnunakiBoss] Aida reveal complete - spawning Aida boss');
+
+  // Spawn Aida boss if available
+  if (typeof AidaBoss !== 'undefined' && AidaBoss.spawn) {
+    AidaBoss.spawn();
+  } else {
+    console.warn('[AnnunakiBoss] AidaBoss not found - ensure boss-aida.js is loaded');
+  }
 }
 
 // ════════════════════════════════════════════════════════════
