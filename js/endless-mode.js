@@ -147,22 +147,34 @@ function _calculateWaveStats(wave) {
 //  WAVE SPAWNING
 // ════════════════════════════════════════════════════════════
 function _spawnEndlessWave(stats) {
-  // Use existing SeqWaveManager spawn batch system if available
-  if (typeof SeqWaveManager !== 'undefined' && SeqWaveManager._spawnBatch) {
-    var enemyTypes = ['slime', 'leaping', 'crawler', 'skinwalker'];
-    var groups = [];
+  // Build groups for this wave
+  var enemyTypes = ['slime', 'leaping', 'crawler', 'skinwalker'];
+  var groups = [];
 
-    var perType = Math.max(1, Math.floor(stats.enemyCount / enemyTypes.length));
+  var perType = Math.max(1, Math.floor(stats.enemyCount / enemyTypes.length));
 
-    enemyTypes.forEach(function(type) {
-      groups.push({ type: type, count: perType });
-    });
+  enemyTypes.forEach(function(type) {
+    groups.push({ type: type, count: perType });
+  });
 
-    SeqWaveManager._spawnBatch(groups);
-
-    console.log('[EndlessMode] Spawned', groups.length, 'enemy groups');
+  // Prefer a global event-based spawning API so other systems can handle spawning.
+  if (typeof global !== 'undefined' &&
+      typeof global.dispatchEvent === 'function' &&
+      typeof global.CustomEvent === 'function') {
+    try {
+      var event = new global.CustomEvent('endlessmode:spawnwave', {
+        detail: {
+          groups: groups,
+          stats: stats
+        }
+      });
+      global.dispatchEvent(event);
+      console.log('[EndlessMode] Requested spawn of', groups.length, 'enemy groups via event');
+    } catch (e) {
+      console.warn('[EndlessMode] Failed to dispatch spawn event:', e);
+    }
   } else {
-    console.warn('[EndlessMode] SeqWaveManager not available for spawning');
+    console.warn('[EndlessMode] No spawning API available (CustomEvent/dispatchEvent missing)');
   }
 }
 
