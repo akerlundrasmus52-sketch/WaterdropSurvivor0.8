@@ -61,7 +61,7 @@ const XP_CFG = {
   COLLECT_RANGE: 0.8,          // Collection distance
 
   // Pool size
-  POOL_SIZE: 50,               // Pre-allocated stars
+  POOL_SIZE: 60,               // Pre-allocated stars (BUG C: increased from 50 to 60)
 };
 
 // Enemy-specific rarity mapping
@@ -173,6 +173,9 @@ class XPStar {
   }
 
   spawn(x, y, z, enemyType, killDamage, killVX, killVZ) {
+    // BUG B: Increment token at spawn to cancel any pending RAF callbacks from previous deactivation
+    this._deactivateToken++;
+
     this.active = true;
     this.onGround = false;
     this.bounceCount = 0;
@@ -278,6 +281,8 @@ class XPStar {
     this.mesh = new THREE.Mesh(_sharedGeometry, material);
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = false;
+    // BUG E: Disable frustum culling — stars must be visible at all distances and angles
+    this.mesh.frustumCulled = false;
   }
 
   update(dt, playerX, playerY, playerZ, radiusMultiplier) {
