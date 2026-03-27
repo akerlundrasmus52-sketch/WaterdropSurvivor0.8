@@ -269,6 +269,8 @@ this.mesh.scale.setScalar(this.scale);
 this.mesh.visible = true;
 this.mesh.material.color.setHex(SLIME_COLORS.healthy);
 this.mesh.material.opacity = 1.0;
+// BUG K: Explicitly reset material.transparent to false to ensure full opacity
+this.mesh.material.transparent = false;
 if (this.shadowMesh) {
 this.shadowMesh.position.set(x, 0.01, z);
 this.shadowMesh.visible = true;

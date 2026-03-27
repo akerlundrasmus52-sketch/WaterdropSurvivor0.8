@@ -1017,11 +1017,14 @@ function endCountdown() {
   gameStartTime = Date.now();
   console.log('[Countdown] Game started - isPaused:', isPaused, 'isGameActive:', isGameActive);
 
-  // Engine 2.0 Sandbox mode is only active when sandbox.html explicitly sets
-  // window._engine2SandboxMode = true before init().  The main game (index.html)
-  // should NOT enter sandbox mode here — doing so disables normal wave spawning
-  // and creates a second ground mesh on top of the world-gen ground.
-  if (window._engine2SandboxMode === true && window.Engine2Sandbox && !window._engine2Instance) {
+  // FIX 1B: Engine 2.0 Sandbox mode double-init protection
+  // In sandbox mode, Engine2Sandbox is already created by sandbox-loop.js at boot.
+  // Skip this block entirely when in sandbox to prevent double ground mesh.
+  // The main game (index.html) never enters sandbox mode, so wave spawning works normally.
+  if (window._engine2SandboxMode === true && window._engine2Instance) {
+    // Already initialized by sandbox-loop.js — skip
+    console.log('[Engine2] Sandbox mode already active, skipping duplicate init');
+  } else if (window._engine2SandboxMode === true && window.Engine2Sandbox && !window._engine2Instance) {
     window._engine2Instance = new window.Engine2Sandbox(scene, camera);
     window._engine2Instance.init();
     console.log('[Engine2] Engine 2.0 Sandbox mode activated');
@@ -1408,6 +1411,9 @@ function checkTimedAlienSpawns() {
 }
 
 function spawnWave() {
+  // FIX 1B: Guard spawnWave() — sandbox handles its own wave spawning via sandbox-loop.js
+  if (window._engine2SandboxMode) return;
+
   // ── BUG FIX: Respect Annunaki wave-stop flag ──
   if (window._annunakiWavesStopped) return;
 

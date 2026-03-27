@@ -483,7 +483,7 @@
       }
     }
     
-    // Real-time canvas-based minimap — redrawn every frame
+    // Real-time canvas-based minimap — throttled to max 20fps (50ms) to reduce canvas overhead
     let _minimapCanvas = null;
     // Minimap world-space radius (units visible each side of player)
     const _MM_RANGE = 60;
@@ -512,8 +512,16 @@
       return _minimapCanvas;
     }
 
+    // FIX M: Module-level variable for minimap throttling
+    let _lastMinimapUpdateMs = 0;
+
     function updateMinimap() {
       if (!player || !player.mesh) return;
+
+      // FIX M: Throttle minimap redraws to max 20/sec (50ms) to reduce canvas overhead
+      const now = Date.now();
+      if (now - _lastMinimapUpdateMs < 50) return;
+      _lastMinimapUpdateMs = now;
 
       const canvas = _getOrCreateMinimapCanvas();
       if (!canvas) return;
@@ -529,7 +537,6 @@
 
       const px = player.mesh.position.x;
       const pz = player.mesh.position.z;
-      const now = Date.now();
 
       ctx.clearRect(0, 0, W, H);
 

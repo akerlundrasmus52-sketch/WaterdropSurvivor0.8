@@ -947,6 +947,9 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   function _updateSway(dt) {
+    // FIX 1A & FIX L: Skip all sway updates in sandbox mode — sandbox handles its own world via WorldTrees
+    if (window._engine2SandboxMode) return;
+
     // Trees — skip if a WorldTrees instance is active (it handles sway with LOD)
     if (!(window._engine2Instance && window._engine2Instance._worldTrees)) {
       for (var i = 0; i < _trees.length; i++) {
