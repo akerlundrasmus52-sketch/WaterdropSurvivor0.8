@@ -164,7 +164,7 @@ function _createAidaDOM() {
     'width:30vw;height:65vh;background:linear-gradient(180deg,#8b1a8b 0%,#dc143c 100%);' +
     'border-radius:50% 50% 0 0;border:4px solid #ff00ff;' +
     'box-shadow:0 0 60px rgba(255,0,255,0.8),inset 0 0 40px rgba(255,0,255,0.3);' +
-    'z-index:499;pointer-events:auto;opacity:0;transition:opacity 0.5s;';
+    'z-index:499;pointer-events:none;opacity:0;transition:opacity 0.5s;';
 
   // Eyes
   var leftEye = document.createElement('div');
