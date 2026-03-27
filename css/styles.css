@@ -10257,3 +10257,176 @@
 #horus-crown {
   animation: horus-crown-glow 4s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ANNUNAKI BOSS STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes annunaki-idle {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.015); }
+}
+
+@keyframes annunaki-aura-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(212,175,55,0.3); }
+  50% { box-shadow: 0 0 60px rgba(212,175,55,0.7); }
+}
+
+@keyframes annunaki-stomp {
+  0% { transform: translateY(0); }
+  30% { transform: translateY(-30px); }
+  60% { transform: translateY(8px) scaleX(1.05); }
+  100% { transform: translateY(0); }
+}
+
+.annunaki-stomping {
+  animation: annunaki-stomp 0.4s ease-out !important;
+}
+
+@keyframes annunaki-swipe {
+  0% { transform: rotate(0deg); }
+  40% { transform: rotate(-25deg) translateX(-20px); }
+  100% { transform: rotate(0deg); }
+}
+
+.annunaki-swiping {
+  animation: annunaki-swipe 0.5s ease-in-out !important;
+}
+
+@keyframes annunaki-roar {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.annunaki-roaring {
+  animation: annunaki-roar 0.3s ease-in-out !important;
+}
+
+@keyframes annunaki-death {
+  0% { opacity: 1; transform: scale(1) rotate(0deg); }
+  40% { transform: scale(1.1) rotate(-5deg); }
+  70% { transform: scale(0.95) rotate(3deg) translateY(20px); }
+  100% { opacity: 0; transform: scale(0.8) rotate(-8deg) translateY(60px); }
+}
+
+.annunaki-dying {
+  animation: annunaki-death 1.8s ease-in forwards !important;
+}
+
+@keyframes annunaki-projectile {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(200px) scale(0.3); opacity: 0; }
+}
+
+.annunaki-projectile {
+  animation: annunaki-projectile 0.8s ease-in forwards;
+}
+
+@keyframes annunaki-phase-flash {
+  0%, 100% { background: rgba(0,0,0,0); }
+  50% { background: rgba(212,175,55,0.15); }
+}
+
+@keyframes annunaki-enter {
+  from { transform: translateX(-50%) translateY(-110%); }
+  to { transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes annunaki-shockwave-expand {
+  from { width: 0; height: 0; opacity: 1; }
+  to { width: 120px; height: 120px; opacity: 0; }
+}
+
+.annunaki-enraged .annunaki-aura {
+  border-color: rgba(255,50,0,0.5) !important;
+  box-shadow: 0 0 40px rgba(255,50,0,0.6) !important;
+}
+
+.annunaki-enraged {
+  filter: hue-rotate(30deg) brightness(1.3) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ENDLESS MODE STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+#endless-wave-display {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(11px,2.5vw,14px);
+  color: rgba(255,215,0,0.9);
+  background: rgba(0,0,0,0.5);
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,215,0,0.3);
+  z-index: 100;
+  font-family: 'Bangers', cursive;
+  letter-spacing: 2px;
+  display: none;
+}
+
+#endless-mode-btn {
+  background: linear-gradient(135deg, #1a0a0a 0%, #3a0a0a 50%, #1a0a0a 100%);
+  border: 2px solid rgba(255,50,0,0.6);
+  color: rgba(255,215,0,0.9);
+  font-family: 'Bangers', cursive;
+  font-size: clamp(14px,3vw,18px);
+  letter-spacing: 3px;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 0 16px rgba(255,50,0,0.3);
+  text-transform: uppercase;
+  border-radius: 10px;
+}
+
+#endless-mode-btn:hover {
+  background: linear-gradient(135deg, #3a0a0a 0%, #5a0a0a 50%, #3a0a0a 100%);
+  box-shadow: 0 0 28px rgba(255,80,0,0.6);
+  transform: scale(1.05);
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+}
+
+#wave-complete-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(32px,8vw,64px);
+  color: #ffd700;
+  font-family: 'Bangers', cursive;
+  letter-spacing: 6px;
+  text-shadow: 0 0 20px #ffd700, 0 0 40px #ff8c00, 2px 2px 0 #000;
+  z-index: 9999;
+  display: none;
+  animation: waveCompleteFade 1s ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes waveCompleteFade {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+}
+
+.completion-particle {
+  position: fixed;
+  width: 6px;
+  height: 6px;
+  background: #ffd700;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+@keyframes completion-burst {
+  from { transform: scale(0); opacity: 1; }
+  to { transform: scale(1); opacity: 0; }
+}
