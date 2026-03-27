@@ -61,6 +61,7 @@
       background: radial-gradient(circle at center, transparent 30%, rgba(139, 0, 0, 0.4) 100%);
       opacity: 0;
       transition: opacity 0.3s;
+      will-change: opacity;
     }
 
     /* Pulsating vignette when HP < 25% — communicates imminent death */
@@ -88,6 +89,7 @@
       z-index: 100;
       opacity: 0;
       overflow: hidden;
+      will-change: opacity, transform;
     }
     #blood-splatter-overlay.active {
       animation: blood-splatter-fade 3.2s ease-out forwards;
@@ -125,6 +127,7 @@
       z-index: 10;
       touch-action: none;
       pointer-events: auto;
+      max-width: min(200px, 55vw);
     }
     .hud-top:active {
       cursor: grabbing;
@@ -262,7 +265,7 @@
     /* ── Skill Icons Panel (top-right) ── */
     #skill-icons-panel {
       position: fixed;
-      top: 58px;
+      top: 60px;
       right: 8px;
       display: flex;
       flex-direction: column;
@@ -443,6 +446,8 @@
       z-index: 100;
       opacity: 0;
       transition: opacity 0.3s;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
     }
     
     #combo-text {
@@ -686,6 +691,12 @@
     
     #waterdrop-level-text {
       text-shadow: 0 0 10px rgba(255,215,0,0.8);
+      animation: waterdrop-level-pulse 3s ease-in-out infinite;
+      will-change: filter;
+    }
+    @keyframes waterdrop-level-pulse {
+      0%, 100% { filter: drop-shadow(0 0 4px rgba(255,215,0,0.3)); }
+      50%       { filter: drop-shadow(0 0 10px rgba(255,215,0,0.6)); }
     }
     
     /* EXP Bar at bottom - REMOVED per PR #117 adjustments */
@@ -1388,10 +1399,10 @@
     /* Stat Notification Queue - Red/Black Dominant */
     #stat-notifications {
       position: fixed;
-      top: 70px;
+      top: 125px;
       left: 50%;
       transform: translateX(-50%);
-      width: 320px;
+      width: min(260px, calc(50vw - 14px));
       z-index: 150;
       pointer-events: none;
       text-align: center;
@@ -1603,6 +1614,7 @@
       border: 3px solid #5DADE2;
       border-radius: 16px;
       padding: 12px 16px;
+      width: min(260px, calc(50vw - 14px));
       max-width: 280px;
       z-index: 999;
       pointer-events: none;
@@ -2421,6 +2433,8 @@
       justify-content: space-between;
       box-sizing: border-box;
       transform-style: preserve-3d;
+      will-change: box-shadow, transform;
+      transform: translateZ(0);
     }
 
     /* Ensure inner content elements layer above border-flow/drip effects (z-index layering, not clipping) */
@@ -2592,6 +2606,7 @@
     /* Class upgrades - Purple edges */
     .upgrade-card.class {
       border-color: #9b59b6;
+      background: linear-gradient(135deg, #100818 0%, #0a0510 100%);
       animation: rarity-glow-class 3s ease-in-out infinite;
     }
     @keyframes rarity-glow-class {
@@ -2614,7 +2629,7 @@
       border-color: #cccccc;
       background: linear-gradient(135deg, #141414 0%, #0e0e0e 100%);
       animation: rarity-glow-common 3s ease-in-out infinite;
-      --rarity-glow-color: rgba(200,200,200,0.7);
+      --rarity-glow-color: rgba(220,220,220,0.55);
     }
     @keyframes rarity-glow-common {
       0%, 100% {
@@ -2622,24 +2637,36 @@
           0 0 0 4px rgba(4,8,18,0.97),
           0 8px 20px rgba(0,0,0,0.7),
           0 4px 12px rgba(0,0,0,0.5),
-          0 0 5px rgba(200,200,200,0.1),
-          inset 0 2px 0 rgba(255,255,255,0.08);
+          0 0 8px rgba(200,200,200,0.28),
+          0 0 16px rgba(180,180,180,0.14),
+          inset 0 2px 0 rgba(255,255,255,0.10);
       }
       50% {
         box-shadow:
           0 0 0 5px rgba(3,7,16,0.98),
           0 10px 25px rgba(0,0,0,0.75),
           0 4px 12px rgba(0,0,0,0.5),
-          0 0 10px rgba(200,200,200,0.18),
-          inset 0 2px 0 rgba(255,255,255,0.1);
+          0 0 14px rgba(220,220,220,0.32),
+          0 0 24px rgba(200,200,200,0.18),
+          inset 0 2px 0 rgba(255,255,255,0.12);
       }
+    }
+    .upgrade-card.rarity-common:hover {
+      box-shadow:
+        0 0 0 4px rgba(4,8,18,0.97),
+        0 14px 36px rgba(0,0,0,0.8),
+        0 0 18px rgba(220,220,220,0.38),
+        0 0 30px rgba(200,200,200,0.18),
+        inset 0 2px 0 rgba(255,255,255,0.12);
+      border-color: #e0e0e0;
+      transform: translateY(-12px) scale(1.06) rotateX(5deg);
     }
     
     .upgrade-card.rarity-rare {
       border-color: #3498DB;
       background: linear-gradient(135deg, #0d1520 0%, #081018 100%);
       animation: rarity-glow-rare 2.5s ease-in-out infinite;
-      --rarity-glow-color: rgba(52,152,219,0.9);
+      --rarity-glow-color: rgba(52,152,219,0.65);
     }
     .upgrade-card.rarity-rare:hover {
       box-shadow:
@@ -2677,7 +2704,7 @@
       border-color: #9b44f0;
       background: linear-gradient(135deg, #120820 0%, #0b0515 100%);
       animation: rarity-glow-epic 2s ease-in-out infinite;
-      --rarity-glow-color: rgba(155,68,240,0.9);
+      --rarity-glow-color: rgba(155,68,240,0.65);
     }
     .upgrade-card.rarity-epic:hover {
       box-shadow:
@@ -2704,8 +2731,8 @@
           0 0 0 5px rgba(3,7,16,0.98),
           0 14px 35px rgba(0,0,0,0.85),
           0 4px 12px rgba(0,0,0,0.5),
-          0 0 15px rgba(155,68,240,0.33),
-          0 0 30px rgba(155,68,240,0.18),
+          0 0 18px rgba(155,68,240,0.22),
+          0 0 30px rgba(155,68,240,0.12),
           inset 0 2px 0 rgba(255,255,255,0.14);
       }
     }
@@ -2715,7 +2742,7 @@
       border-color: #FFD700;
       background: linear-gradient(135deg, #1a1400 0%, #120e00 100%);
       animation: legendary-glow 2s ease-in-out infinite alternate;
-      --rarity-glow-color: rgba(255,215,0,0.95);
+      --rarity-glow-color: rgba(255,215,0,0.70);
     }
     .upgrade-card.rarity-legendary:hover {
       box-shadow:
@@ -2734,7 +2761,7 @@
       border-color: #FF2200;
       background: linear-gradient(135deg, #200000 0%, #0a0000 100%);
       animation: mythical-glow 1.2s ease-in-out infinite alternate;
-      --rarity-glow-color: rgba(255,34,0,1);
+      --rarity-glow-color: rgba(255,34,0,0.75);
       overflow: visible;
     }
     .upgrade-card.rarity-mythical:hover {
@@ -2864,6 +2891,7 @@
       pointer-events: none;
       z-index: -1;
       overflow: hidden;
+      will-change: transform;
     }
     .border-flow::before {
       content: '';
@@ -2908,7 +2936,7 @@
     .upgrade-card.holding .hold-progress {
       border-color: var(--rarity-glow-color, rgba(200,230,255,0.9));
       opacity: 1;
-      animation: hold-progress-sweep 1.2s linear forwards;
+      animation: hold-progress-sweep 0.6s linear forwards;
     }
     @keyframes hold-progress-sweep {
       0%   { clip-path: inset(50% 50% 50% 50%); filter: brightness(1.2); }
@@ -3218,6 +3246,7 @@
       animation: floatUp 1s forwards;
       z-index: 50;
       letter-spacing: 0.5px;
+      will-change: transform, opacity;
     }
     
     .damage-number.critical {
@@ -7458,6 +7487,7 @@
   z-index: 1000;
   transform-origin: top center;
   animation: lvlup-ray var(--ray-dur, 900ms) ease-out forwards;
+  will-change: transform, opacity;
 }
 
 /* Screen edge flash */

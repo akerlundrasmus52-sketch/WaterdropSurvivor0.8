@@ -532,7 +532,7 @@
     shrine.id = 'horus-shrine';
     shrine.style.cssText = [
       'position:fixed',
-      'top:0px',
+      'top:4px',
       'left:50%',
       'transform:translateX(-50%)',
       'z-index:9500',
@@ -540,32 +540,31 @@
       'display:flex',
       'flex-direction:column',
       'align-items:center',
-      'width:220px',
+      'width:180px',
     ].join(';');
 
     // Crown (always visible)
     var crown = document.createElement('div');
     crown.id = 'horus-crown';
     crown.style.cssText = [
-      'width:72px',
-      'height:72px',
+      'width:52px',
+      'height:52px',
       'background:linear-gradient(135deg,rgba(12,8,2,0.97),rgba(28,20,4,0.97))',
-      'border:2px solid rgba(212,175,55,0.7)',
-      'border-top:none',
-      'border-radius:0 0 12px 12px',
+      'border:2px solid rgba(212,175,55,0.65)',
+      'border-radius:14px',
+      'box-shadow:0 4px 16px rgba(0,0,0,0.85),0 0 10px rgba(212,175,55,0.12)',
       'display:flex',
       'align-items:center',
       'justify-content:center',
-      'box-shadow:0 4px 18px rgba(0,0,0,0.8),0 0 12px rgba(212,175,55,0.15)',
-      'z-index:2',
       'position:relative',
+      'z-index:1',
     ].join(';');
 
     // Eye of Horus SVG
     var svgNS = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('width', '52');
-    svg.setAttribute('height', '52');
+    svg.setAttribute('width', '38');
+    svg.setAttribute('height', '38');
     svg.setAttribute('viewBox', '0 0 52 52');
 
     var defs = document.createElementNS(svgNS, 'defs');
@@ -691,18 +690,20 @@
     var curtain = document.createElement('div');
     curtain.id = 'horus-curtain';
     curtain.style.cssText = [
-      'width:200px',
+      'width:164px',
       'max-height:0px',
       'overflow:hidden',
-      'transition:max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.2s ease 0.2s',
-      'background:linear-gradient(180deg,rgba(8,5,1,0.97),rgba(14,9,2,0.97))',
-      'border:1.5px solid rgba(212,175,55,0.45)',
-      'border-top:none',
-      'border-radius:0 0 10px 10px',
+      'transition:max-height 0.38s cubic-bezier(0.22,1,0.36,1),opacity 0.18s ease 0.15s',
+      'background:linear-gradient(180deg,rgba(10,6,1,0.98),rgba(18,12,2,0.98))',
+      'border:1.5px solid rgba(212,175,55,0.55)',
+      'border-radius:10px',
       'box-shadow:0 8px 28px rgba(0,0,0,0.9),0 0 16px rgba(212,175,55,0.08)',
       'position:relative',
       'z-index:1',
       'opacity:0',
+      'margin-top:3px',
+      'backdrop-filter:blur(8px)',
+      '-webkit-backdrop-filter:blur(8px)',
     ].join(';');
 
     // Top accent line
@@ -719,9 +720,10 @@
     var textEl = document.createElement('div');
     textEl.id = 'horus-text';
     textEl.style.cssText = [
-      'padding:8px 16px 12px',
+      'padding:10px 14px 14px',
       'font-family:Cinzel,Georgia,serif',
-      'font-size:11px',
+      'font-size:12px',
+      'font-weight:500',
       'letter-spacing:2.5px',
       'text-align:center',
       'color:rgba(212,175,55,0.92)',
@@ -767,13 +769,13 @@
     clearTimeout(_notifCloseTimeout);
 
     // Open curtain: make visible then expand
-    curtain.style.transition = 'max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.15s ease';
+    curtain.style.transition = 'max-height 0.38s cubic-bezier(0.22,1,0.36,1),opacity 0.15s ease';
     curtain.style.opacity = '1';
     curtain.style.maxHeight = '80px';
 
     _notifTimeout = setTimeout(function() {
       // Close: fade text first, then roll up curtain
-      curtain.style.transition = 'max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.2s ease';
+      curtain.style.transition = 'max-height 0.38s cubic-bezier(0.22,1,0.36,1),opacity 0.2s ease';
       curtain.style.opacity = '0';
       _notifCloseTimeout = setTimeout(function() {
         curtain.style.maxHeight = '0px';

@@ -1554,16 +1554,15 @@
     }
   }
 
-  // Grant minimal starter materials to build the first building (Quest Hall = 1W/1S/1C)
+  // Grant minimal starter materials to build the first building (Quest Hall = 1W/1S)
   function _aidaGrantStarterMaterials() {
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (!sd || sd.aidaStarterGranted) return;
     sd.aidaStarterGranted = true;
     if (!sd.resources) sd.resources = {};
-    // Quest Hall costs 1 Wood, 1 Stone, 1 Coal (first building)
+    // Quest Hall costs 1 Wood, 1 Stone (first building)
     sd.resources.wood  = (sd.resources.wood  || 0) + 1;
     sd.resources.stone = (sd.resources.stone || 0) + 1;
-    sd.resources.coal  = (sd.resources.coal  || 0) + 1;
     // No gold or skill points - earn through quests
     if (typeof saveSaveData === 'function') saveSaveData();
     if (typeof showStatChange === 'function') {
@@ -5418,7 +5417,7 @@
       _nearBuilding = null;
       _updatePromptUI();
 
-      // Show resource HUD in camp mode (always shows wood/stone/coal even at 0)
+      // Show resource HUD in camp mode (always shows wood/stone even at 0)
       if (window.GameHarvesting) {
         window.GameHarvesting.showCampHUD(_saveData);
       }
