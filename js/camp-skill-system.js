@@ -2845,7 +2845,7 @@
     }
     
     // ── Build Overlay: click-to-build with resource requirements and 0-100% animation ──
-    // Building N requires N of each: wood, stone, coal.
+    // Building N requires N of each: wood, stone.
     // Resources are checked and deducted on build. Progress shown as 0→100% with phases.
     function _showBuildOverlay(buildingId, buildingName) {
       window._buildOverlayActive = true;
@@ -2864,8 +2864,7 @@
       var res = (saveData.resources) || {};
       var hasWood  = (res.wood  || 0) >= cost;
       var hasStone = (res.stone || 0) >= cost;
-      var hasCoal  = (res.coal  || 0) >= cost;
-      var canBuild = hasWood && hasStone && hasCoal;
+      var canBuild = hasWood && hasStone;
 
       var overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Bangers,cursive;';
@@ -2891,8 +2890,7 @@
         mats.style.cssText = 'display:flex;justify-content:center;gap:14px;margin:0 0 16px;';
         var matDefs = [
           { icon: '🪵', label: 'Wood',  have: res.wood  || 0, ok: hasWood },
-          { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone },
-          { icon: '🖤', label: 'Coal',  have: res.coal  || 0, ok: hasCoal }
+          { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone }
         ];
         matDefs.forEach(function (m) {
           var box = document.createElement('div');
@@ -2981,7 +2979,6 @@
         var r = saveData.resources || {};
         r.wood  = Math.max(0, (r.wood  || 0) - cost);
         r.stone = Math.max(0, (r.stone || 0) - cost);
-        r.coal  = Math.max(0, (r.coal  || 0) - cost);
         if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
 
         var startMs = Date.now();
@@ -3106,7 +3103,7 @@
           setTimeout(function () {
             if (window.CampWorld && window.CampWorld.isActive) {
               window.CampWorld.showBennySpeech(
-                '> Next node requires: Wood x' + nextCost + ', Stone x' + nextCost + ', Coal x' + nextCost + '. Gather immediately.'
+                '> Next node requires: Wood x' + nextCost + ', Stone x' + nextCost + '. Gather immediately.'
               );
               setTimeout(function () { window.CampWorld.hideBennySpeech(); }, 5000);
             }
@@ -3765,11 +3762,11 @@
       const nextCost = saveData.buildingProgress && saveData.buildingProgress.nextBuildingCost;
       if (nextCost && readyToClaim.length > 0) {
         const res = saveData.resources || {};
-        const w = res.wood || 0, s = res.stone || 0, c = res.coal || 0;
-        if (w < nextCost || s < nextCost || c < nextCost) {
+        const w = res.wood || 0, s = res.stone || 0;
+        if (w < nextCost || s < nextCost) {
           const remEl = document.createElement('div');
           remEl.style.cssText = 'font-size: 10px; color: #aaa; margin-top: 3px;';
-          remEl.textContent = `🏗️ Next build needs: 🪵${Math.min(w,nextCost)}/${nextCost} 🪨${Math.min(s,nextCost)}/${nextCost} 🖤${Math.min(c,nextCost)}/${nextCost}`;
+          remEl.textContent = `🏗️ Next build needs: 🪵${Math.min(w,nextCost)}/${nextCost} 🪨${Math.min(s,nextCost)}/${nextCost}`;
           questTracker.appendChild(remEl);
         }
       }
