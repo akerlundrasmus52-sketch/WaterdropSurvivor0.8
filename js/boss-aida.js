@@ -448,8 +448,8 @@ function _attackLifeDrain() {
     }
 
     // Damage player and heal Aida
-    if (typeof player !== 'undefined' && typeof takeDamage === 'function') {
-      takeDamage(5, 'aida_drain');
+    if (typeof player !== 'undefined' && typeof player.takeDamage === 'function') {
+      player.takeDamage(5);
       _currentHP = Math.min(_maxHP, _currentHP + 10);
       _updateHPBar();
     }
