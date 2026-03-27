@@ -182,6 +182,7 @@ LeapingSlimeEnemy.prototype.spawn = function(x, z, waveLevel) {
   // Place mesh
   this.mesh.position.set(x, 0, z);
   this.mesh.rotation.y = Math.random() * Math.PI * 2;
+  this.mesh.scale.set(1, 1, 1); // ensure scale is reset (may be near-zero from death animation)
   this.mesh.visible   = true;
 
   // Reset body scale to neutral
@@ -638,7 +639,7 @@ var LeapingSlimePool = {
     if (!e) {
       // Recycle the first slot if the pool is exhausted
       e = this._pool[0];
-      if (e.alive || e.dying) e._cleanup();
+      e._cleanup(); // always cleanup before force-recycling
     }
     e.spawn(x, z, waveLevel);
     return e;
