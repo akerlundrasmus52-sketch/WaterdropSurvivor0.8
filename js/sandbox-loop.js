@@ -5689,13 +5689,14 @@
 
     /** Initialize and spawn the first wave. Call from _boot. */
     start: function() {
-      this._phase        = 0;
-      this._phaseKills   = 0;
-      this._totalKills   = 0;
-      this._waveNumber   = 1;
-      this._x2Active     = false;
+      this._phase           = 0;
+      this._phaseKills      = 0;
+      this._totalKills      = 0;
+      this._waveNumber      = 1;
+      this._x2Active        = false;
       this._prevWeaponCount = 1;
-      this._initialized  = true;
+      this._greyBossTriggered = false;
+      this._initialized     = true;
       // Brief delay before first enemy appears
       SeqWaveManager._setTimeout(function() { SeqWaveManager._spawnPhase(0); }, 1500);
     },
