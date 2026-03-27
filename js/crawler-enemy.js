@@ -332,8 +332,10 @@ CrawlerEnemy.prototype.update = function(dt, playerPos) {
     if (this.deathTimer < 0.3 && (this._deathSlideVX || this._deathSlideVZ)) {
       this.group.position.x += this._deathSlideVX * dt;
       this.group.position.z += this._deathSlideVZ * dt;
-      this._deathSlideVX *= 0.85;
-      this._deathSlideVZ *= 0.85;
+      // dt-scaled exponential decay: 0.85 per frame at 60 FPS
+      var decay = Math.pow(0.85, dt * 60);
+      this._deathSlideVX *= decay;
+      this._deathSlideVZ *= decay;
     }
     // Fade out segments over 2 seconds
     var fade = 1.0 - this.deathTimer / 2.0;

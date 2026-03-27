@@ -469,8 +469,10 @@ LeapingSlimeEnemy.prototype._updateDeath = function(dt) {
   if (elapsed < 0.3 && (this._deathSlideVX || this._deathSlideVZ)) {
     this.mesh.position.x += this._deathSlideVX * dt;
     this.mesh.position.z += this._deathSlideVZ * dt;
-    this._deathSlideVX *= 0.85;
-    this._deathSlideVZ *= 0.85;
+    // dt-scaled exponential decay: 0.85 per frame at 60 FPS
+    var decay = Math.pow(0.85, dt * 60);
+    this._deathSlideVX *= decay;
+    this._deathSlideVZ *= decay;
   }
 
   this.deathTimer -= dt;

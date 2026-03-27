@@ -624,9 +624,11 @@
   /**
    * Trigger a camera shake.  `intensity` is in world units — small hits pass ~0.12,
    * kills pass ~0.35.  Duration auto-scales so bigger hits shake longer.
+   * @param {number} intensity - Shake radius in world units.
+   * @param {number} [minDuration=0] - Optional minimum duration in seconds.
    */
-  function _triggerShake(intensity) {
-    const duration = Math.min(0.5, intensity * SHAKE_DURATION_SCALE);
+  function _triggerShake(intensity, minDuration) {
+    const duration = Math.max(minDuration || 0, Math.min(0.5, intensity * SHAKE_DURATION_SCALE));
     if (intensity > _shakePeakIntensity) _shakePeakIntensity = intensity;
     if (duration > _shakeTimer) _shakeTimer = duration;
   }
@@ -787,11 +789,12 @@
       }
     }
     if (!sp) return;
-    // Project world position to screen
-    var v3 = new THREE.Vector3(worldX, worldY + 1.0, worldZ);
-    v3.project(camera);
-    var sx = (v3.x * 0.5 + 0.5) * window.innerWidth;
-    var sy = (-v3.y * 0.5 + 0.5) * window.innerHeight;
+    if (!_tmpV3b) return; // scene not yet initialized
+    // Project world position to screen — reuse _tmpV3b to avoid new THREE.Vector3 allocation
+    _tmpV3b.set(worldX, worldY + 1.0, worldZ);
+    _tmpV3b.project(camera);
+    var sx = (_tmpV3b.x * 0.5 + 0.5) * window.innerWidth;
+    var sy = (-_tmpV3b.y * 0.5 + 0.5) * window.innerHeight;
     // Color based on type
     var color = isKill ? '#ff4444' : (isCrit ? '#ffdd00' : '#ffffff');
     sp.textContent = String(amount);
@@ -1283,8 +1286,10 @@
       if (c.timer < 0.3 && c.slot && c.slot.mesh && (c.slot._deathSlideVX || c.slot._deathSlideVZ)) {
         c.slot.mesh.position.x += (c.slot._deathSlideVX || 0) * dt;
         c.slot.mesh.position.z += (c.slot._deathSlideVZ || 0) * dt;
-        c.slot._deathSlideVX = (c.slot._deathSlideVX || 0) * 0.85;
-        c.slot._deathSlideVZ = (c.slot._deathSlideVZ || 0) * 0.85;
+        // dt-scaled exponential decay: 0.85 per frame at 60 FPS
+        const deathSlideDecay = Math.pow(0.85, dt * 60);
+        c.slot._deathSlideVX = (c.slot._deathSlideVX || 0) * deathSlideDecay;
+        c.slot._deathSlideVZ = (c.slot._deathSlideVZ || 0) * deathSlideDecay;
         // Keep blood pool position synced
         c.x = c.slot.mesh.position.x;
         c.z = c.slot.mesh.position.z;
@@ -1835,11 +1840,9 @@
           } else {
             playerStats.hp -= crawlerDmg;
           }
-          // Screen shake on player damage
+          // Screen shake on player damage (0.25s minimum duration)
           const _cDmgRatio = _clamp(crawlerDmg / (playerStats.maxHp || 100), 0.003, 0.015);
-          _triggerShake(_cDmgRatio);
-          if (_cDmgRatio > _shakePeakIntensity) _shakePeakIntensity = _cDmgRatio;
-          if (0.25 > _shakeTimer) _shakeTimer = 0.25;
+          _triggerShake(_cDmgRatio, 0.25);
           if (playerStats && playerStats.hp <= 0) {
             playerStats.hp = 0;
             gameOver();
@@ -2070,11 +2073,9 @@
           } else {
             playerStats.hp -= LEAPING_DAMAGE;
           }
-          // Screen shake on player damage
+          // Screen shake on player damage (0.25s minimum duration)
           const _lDmgRatio = _clamp(LEAPING_DAMAGE / (playerStats.maxHp || 100), 0.003, 0.015);
-          _triggerShake(_lDmgRatio);
-          if (_lDmgRatio > _shakePeakIntensity) _shakePeakIntensity = _lDmgRatio;
-          if (0.25 > _shakeTimer) _shakeTimer = 0.25;
+          _triggerShake(_lDmgRatio, 0.25);
           if (playerStats && playerStats.hp <= 0) {
             playerStats.hp = 0;
             gameOver();
@@ -2836,11 +2837,9 @@
           } else {
             playerStats.hp -= SLIME_DAMAGE;
           }
-          // Screen shake on player damage
+          // Screen shake on player damage (0.25s minimum duration)
           const _sDmgRatio = _clamp(SLIME_DAMAGE / (playerStats.maxHp || 100), 0.003, 0.015);
-          _triggerShake(_sDmgRatio);
-          if (_sDmgRatio > _shakePeakIntensity) _shakePeakIntensity = _sDmgRatio;
-          if (0.25 > _shakeTimer) _shakeTimer = 0.25;
+          _triggerShake(_sDmgRatio, 0.25);
           // Sandbox HP guard: always check game-over via playerStats (works even if
           // player.takeDamage doesn't call gameOver() itself in sandbox context)
           if (playerStats && playerStats.hp <= 0) {
@@ -2957,15 +2956,20 @@
         const px = player.mesh.position.x;
         const pz = player.mesh.position.z;
         const shockRadius = 6;
-        const allEnemies = _activeSlimes.concat(_activeCrawlers, _activeLeapingSlimes);
-        for (let i = 0; i < allEnemies.length; i++) {
-          const e = allEnemies[i];
+        const shockRadiusSq = shockRadius * shockRadius;
+        // Reuse scratch array to avoid per-level-up GC allocation
+        _allEnemiesScratch.length = 0;
+        for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
+        for (let _ci = 0; _ci < _activeCrawlers.length; _ci++) _allEnemiesScratch.push(_activeCrawlers[_ci]);
+        for (let _li = 0; _li < _activeLeapingSlimes.length; _li++) _allEnemiesScratch.push(_activeLeapingSlimes[_li]);
+        for (let i = 0; i < _allEnemiesScratch.length; i++) {
+          const e = _allEnemiesScratch[i];
           if (!e || !e.active || e.dead || e.dying) continue;
           const em = e.mesh || e.group;
           if (!em) continue;
           const dx = em.position.x - px;
           const dz = em.position.z - pz;
-          if (Math.sqrt(dx * dx + dz * dz) <= shockRadius) {
+          if (dx * dx + dz * dz <= shockRadiusSq) {
             e.hp = (e.hp || 0) - 25;
             if (e.hp <= 0) {
               if (e.enemyType === 'crawler') {
@@ -5103,11 +5107,9 @@
           playerStats.hp -= dmg;
           if (playerStats.hp <= 0) { playerStats.hp = 0; gameOver(); }
         }
-        // Screen shake on player damage
+        // Screen shake on player damage (0.25s minimum duration)
         const _swDmgRatio = _clamp(dmg / (playerStats.maxHp || 100), 0.003, 0.015);
-        _triggerShake(_swDmgRatio);
-        if (_swDmgRatio > _shakePeakIntensity) _shakePeakIntensity = _swDmgRatio;
-        if (0.25 > _shakeTimer) _shakeTimer = 0.25;
+        _triggerShake(_swDmgRatio, 0.25);
       }
     };
     sw.onDeath = function() {
@@ -5779,7 +5781,7 @@
         var _ring = _lvlUpRings[_ri];
         _ring.scale.x += 0.35 * dt * 60;
         _ring.scale.z += 0.35 * dt * 60;
-        _ring.material.opacity -= 0.025;
+        _ring.material.opacity -= 0.025 * dt * 60;
         if (_ring.material.opacity <= 0) {
           scene.remove(_ring);
           _ring.geometry.dispose();

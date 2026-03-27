@@ -152,6 +152,7 @@ class XPStar {
     this.mesh = null;
     this.rarity = 0;
     this.xpValue = 1;
+    this._deactivateToken = 0; // incremented on each deactivate to cancel stale RAF callbacks
 
     // Physics
     this.vx = 0;
@@ -364,8 +365,9 @@ class XPStar {
       // Lift off ground when magnetized
       this.onGround = false;
 
-      // Quadratic ramp-up: starts slow at 8 units, accelerates as star gets closer
-      const t = Math.max(0, (8 - dist) / 8); // 0 at 8 units, 1 at 0 units
+      // Quadratic ramp-up: starts slow at the edge of range, accelerates as star gets closer
+      const effectiveRange = XP_CFG.MAGNET_RANGE * rm;
+      const t = Math.max(0, (effectiveRange - dist) / effectiveRange); // 0 at edge, 1 at 0 units
       const pullStrength = XP_CFG.MAGNET_SPEED * (1 + t * t * 4);
       this.mesh.position.x += (dx / dist) * pullStrength * dt * 60;
       this.mesh.position.y += (dy / dist) * pullStrength * dt * 60;
@@ -391,12 +393,16 @@ class XPStar {
   deactivate() {
     this.active = false;
     if (this.mesh) {
+      // Use a token so stale RAF callbacks (from a quickly-reused star) don't interfere
+      const token = ++this._deactivateToken;
       // Scale pop: 1.4 this frame, then 0.001 next frame, then hide
       this.mesh.scale.set(1.4, 1.4, 1.4);
       requestAnimationFrame(() => {
+        if (this._deactivateToken !== token) return; // star was reused — abort
         if (this.mesh) {
           this.mesh.scale.set(0.001, 0.001, 0.001);
           requestAnimationFrame(() => {
+            if (this._deactivateToken !== token) return; // star was reused — abort
             if (this.mesh) {
               this.mesh.visible = false;
               this.mesh.position.set(0, -1000, 0); // Park off-screen

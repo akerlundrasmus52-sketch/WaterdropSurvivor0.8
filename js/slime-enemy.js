@@ -1340,8 +1340,10 @@ var MAX_TIME = 4.0;
 if (this.deathTimer < 0.3 && (this._deathSlideVX || this._deathSlideVZ)) {
   pos.x += this._deathSlideVX * dt;
   pos.z += this._deathSlideVZ * dt;
-  this._deathSlideVX *= 0.85;
-  this._deathSlideVZ *= 0.85;
+  // dt-scaled exponential decay: 0.85 per frame at 60 FPS
+  var deathSlideFriction = Math.exp(Math.log(0.85) * dt * 60);
+  this._deathSlideVX *= deathSlideFriction;
+  this._deathSlideVZ *= deathSlideFriction;
 }
 
 // Emit blood trail during death movement
