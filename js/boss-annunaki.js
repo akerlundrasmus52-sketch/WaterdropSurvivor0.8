@@ -426,7 +426,19 @@ function _doSwipeAttack() {
   // Check player distance and deal damage
   if (typeof window.player !== 'undefined' && window.player && window.player.mesh) {
     var bossX = window.innerWidth / 2;
-    var playerScreenX = window.innerWidth / 2; // Simplified - would need proper calculation
+    // Compute a real screen-space X position for the player if possible
+    var playerScreenX = window.innerWidth / 2;
+    try {
+      if (window.THREE && window.camera && typeof window.player.mesh.getWorldPosition === 'function') {
+        var _annunakiTempVec = new window.THREE.Vector3();
+        window.player.mesh.getWorldPosition(_annunakiTempVec);
+        _annunakiTempVec.project(window.camera);
+        // Convert normalized device coordinates (-1..1) to screen pixels
+        playerScreenX = (_annunakiTempVec.x + 1) * 0.5 * window.innerWidth;
+      }
+    } catch (e) {
+      // Fallback: keep playerScreenX at center if projection fails
+    }
     var distance = Math.abs(playerScreenX - bossX);
     if (distance < window.innerWidth * 0.4) {
       // Player is within 40% of screen width - deal damage
