@@ -781,7 +781,7 @@
     // Find a free span
     var sp = null;
     for (var i = 0; i < _dmgNumPool.length; i++) {
-      if (_dmgNumPool[i].style.opacity === '0' || _dmgNumPool[i].style.display === 'none') {
+      if (parseFloat(_dmgNumPool[i].style.opacity) <= 0 || _dmgNumPool[i].style.display === 'none') {
         sp = _dmgNumPool[i];
         break;
       }
@@ -1638,7 +1638,7 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (slot.isBoss) { if (120 > _hitStopRemaining) _hitStopRemaining = 120; }
+    if (slot.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
 
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
@@ -1785,7 +1785,7 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (crawler.isBoss) { if (120 > _hitStopRemaining) _hitStopRemaining = 120; }
+    if (crawler.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(12);
     }
@@ -2012,7 +2012,7 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (enemy.isBoss) { if (120 > _hitStopRemaining) _hitStopRemaining = 120; }
+    if (enemy.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
     }
@@ -5213,7 +5213,7 @@
     _incrementKillCombo();
     _updateKillCountHUD();
     // Boss hit-stop
-    if (sw.isBoss) { if (120 > _hitStopRemaining) _hitStopRemaining = 120; }
+    if (sw.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(15);
     }
