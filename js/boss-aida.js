@@ -405,10 +405,10 @@ function _attackShadowDash() {
     _aidaDOM.style.transition = 'transform 0.15s';
 
     // Check if player is in danger zone (front 40% of screen)
-    if (typeof player !== 'undefined' && player.mesh && typeof takeDamage === 'function') {
+    if (typeof player !== 'undefined' && player.mesh && typeof player.takeDamage === 'function') {
       var pScreen = _worldToScreen(player.mesh.position);
       if (pScreen && pScreen.y > window.innerHeight * 0.6) {
-        takeDamage(30, 'aida_dash');
+        player.takeDamage(30, 'aida_dash');
       }
     }
 
