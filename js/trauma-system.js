@@ -19,6 +19,7 @@
   const WOUND_CHUNK_THRESHOLD = 3;       // Hits before chunk tears off
   const CORPSE_LIFETIME = 6000;          // Corpse stays for 6 seconds (ms)
   const HEARTBEAT_INTERVAL = 400;        // Blood pump interval (ms)
+  const CORPSE_FADE_DURATION_S = 1.0;    // Seconds for blood-pool fade-out after pumping ends
   const GRAVITY = -0.025;                // Physics gravity for chunks
 
   // ─── Internal State ─────────────────────────────────────────────────────────
@@ -896,7 +897,7 @@
       if (corpse.fadeTimer >= 0) {
         corpse.fadeTimer -= dt;
         if (corpse.bloodPool && corpse.bloodPool.material) {
-          corpse.bloodPool.material.opacity = Math.max(0, (corpse.fadeTimer / 1.0) * 0.6);
+          corpse.bloodPool.material.opacity = Math.max(0, (corpse.fadeTimer / CORPSE_FADE_DURATION_S) * 0.6);
         }
         if (corpse.fadeTimer <= 0) {
           if (corpse.bloodPool) {
@@ -913,7 +914,7 @@
       // Check corpse lifetime
       const elapsed = Date.now() - corpse.startTime;
       if (elapsed > CORPSE_LIFETIME || corpse.pumpCount >= maxPumps) {
-        corpse.fadeTimer = 1.0; // Start 1-second fade
+        corpse.fadeTimer = CORPSE_FADE_DURATION_S; // Start fade-out
         continue;
       }
 

@@ -423,6 +423,8 @@
 
   // ─── Invisible enemy safety net timer ────────────────────────────────────────
   let _visibilityCheckTimer = 0;
+  const MIN_VISIBLE_Y_THRESHOLD = -50; // Enemies below this Y are intentionally hidden (pooled/underground)
+  const DEATH_ANIMATION_TIMEOUT_MS = 5000; // Force-remove skinwalker if death animation stalls longer than this
 
   // ─── Spatial Hashing ─────────────────────────────────────────────────────────
   // SpatialHash instance for O(1) projectile→enemy collision queries.
@@ -4775,7 +4777,7 @@
         // Track when death first became true
         if (!sw._deathStartTime) sw._deathStartTime = now;
         // Force-remove if death animation has stalled for more than 5 seconds
-        if (now - sw._deathStartTime > 5000) {
+        if (now - sw._deathStartTime > DEATH_ANIMATION_TIMEOUT_MS) {
           _killSkinwalker(sw);
         } else {
           _activeSkinwalkers.splice(i, 1);
@@ -5267,7 +5269,7 @@
           for (let _ei = 0; _ei < _arr.length; _ei++) {
             const _e = _arr[_ei];
             const _mesh = _e && (_e.mesh || (_e.parts && _e.parts.root));
-            if (_e && _e.active && _e.alive && _mesh && !_mesh.visible && _mesh.position && _mesh.position.y > -50) {
+            if (_e && _e.active && _e.alive && _mesh && !_mesh.visible && _mesh.position && _mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
               _mesh.visible = true;
               console.warn('[InvisibilityFix] Restored visibility for ' + _entry.type, _e);
             }
