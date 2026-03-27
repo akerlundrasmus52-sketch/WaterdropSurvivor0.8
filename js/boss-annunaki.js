@@ -143,9 +143,23 @@ var AnnunakiBoss = {
    * Reset boss state
    */
   reset: function() {
+    // Remove the main boss element from the DOM
     if (_boss && _boss.parentNode) {
       _boss.parentNode.removeChild(_boss);
     }
+
+    // Also remove any boss-related UI elements created in _createBossElement()
+    var hpBar = document.getElementById('annunaki-hp-bar');
+    if (hpBar && hpBar.parentNode) {
+      hpBar.parentNode.removeChild(hpBar);
+    }
+
+    var phaseLabel = document.getElementById('annunaki-phase-label');
+    if (phaseLabel && phaseLabel.parentNode) {
+      phaseLabel.parentNode.removeChild(phaseLabel);
+    }
+
+    // Reset internal state
     _boss = null;
     _active = false;
     _currentHP = 0;
