@@ -6072,13 +6072,23 @@
     const particleDivs = document.querySelectorAll('.particle, .explosion-particle, .blood-particle');
     particleDivs.forEach(el => el.remove());
 
-    // Clear all active projectiles from the pool
-    while (_activeProjList.length > 0) {
-      const proj = _activeProjList.pop();
-      if (proj && proj.mesh && proj.mesh.parent) {
-        proj.mesh.parent.remove(proj.mesh);
+    // Clear all active projectiles without breaking the pooling system
+    if (Array.isArray(_activeProjList) && _activeProjList.length > 0) {
+      for (let i = 0; i < _activeProjList.length; i++) {
+        const proj = _activeProjList[i];
+        if (!proj) {
+          continue;
+        }
+        // Prefer using the central projectile release helper if available
+        if (typeof _releaseProjectile === 'function') {
+          _releaseProjectile(proj);
+        } else {
+          // Fallback: just mark projectile inactive; leave mesh attached for pooling
+          proj.active = false;
+        }
       }
-      _projPool.push(proj);
+      // Reset active list; do not mutate _projPool or detach meshes here
+      _activeProjList.length = 0;
     }
 
     // Clear trauma system debris if available
