@@ -484,7 +484,7 @@ function _resurrectAnnunakiClone() {
     'background:linear-gradient(180deg,#2a2a2a 0%,#4a4a4a 40%,#1a1a1a 100%);' +
     'border-radius:50% 50% 0 0;border:3px solid rgba(255,215,0,0.5);' +
     'box-shadow:0 0 40px rgba(255,215,0,0.4);z-index:498;opacity:0;' +
-    'transition:opacity 0.5s;pointer-events:auto;';
+    'transition:opacity 0.5s;pointer-events:none;';
 
   // Eyes
   var leftEye = document.createElement('div');
