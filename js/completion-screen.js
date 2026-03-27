@@ -270,12 +270,20 @@ function _startEndlessMode() {
       EndlessMode.start();
     } else {
       console.warn('[CompletionScreen] EndlessMode not available');
-      // Fall back to restarting sandbox in endless mode
-      if (typeof _resetSandboxGame === 'function') {
-        _resetSandboxGame();
-        if (typeof saveData !== 'undefined') {
-          saveData.sandboxMode = 'endless';
+      // Fall back to navigating using existing APIs, marking sandbox as endless
+      if (typeof saveData !== 'undefined') {
+        saveData.sandboxMode = 'endless';
+        if (typeof saveSaveData === 'function') {
+          saveSaveData();
         }
+      }
+      if (typeof returnToLobby === 'function') {
+        returnToLobby();
+      } else if (typeof showCampScreen === 'function') {
+        showCampScreen();
+      } else {
+        // As a last resort, reload to main menu
+        window.location.reload();
       }
     }
   }, 500);
