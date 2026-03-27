@@ -483,7 +483,7 @@
       }
     }
     
-    // Real-time canvas-based minimap — redrawn every frame
+    // Real-time canvas-based minimap — throttled to max 20fps (50ms) to reduce canvas overhead
     let _minimapCanvas = null;
     // Minimap world-space radius (units visible each side of player)
     const _MM_RANGE = 60;

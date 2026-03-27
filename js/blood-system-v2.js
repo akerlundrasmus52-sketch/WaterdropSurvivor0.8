@@ -644,7 +644,7 @@ CFG.DECAL_COUNT + ' decals'
 
 function _buildDropPool() {
 var geo = new THREE.SphereGeometry(1.0, 8, 6); // unit sphere, scaled per instance
-var mat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true });
 
 _dropIM = new THREE.InstancedMesh(geo, mat, CFG.DROP_COUNT);
 _dropIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -680,7 +680,7 @@ _dropIM.instanceColor.needsUpdate  = true;
 
 function _buildMistPool() {
 var geo = new THREE.SphereGeometry(1.0, 6, 4);
-var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 });
+var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, vertexColors: true });
 
 _mistIM = new THREE.InstancedMesh(geo, mat, CFG.MIST_COUNT);
 _mistIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

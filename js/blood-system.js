@@ -101,7 +101,6 @@
 
     _geo.setAttribute('position', new THREE.BufferAttribute(_positions, 3));
     _geo.setAttribute('color',    new THREE.BufferAttribute(_colors, 3));
-    _geo.setAttribute('size',     new THREE.BufferAttribute(_sizes, 1));
 
     _mat = new THREE.PointsMaterial({
       size: 4.0,  // BUG H: Increased from 0.09 to 4.0 for better visibility at all distances
@@ -1049,7 +1048,6 @@
     if (needsUpdate) {
       _geo.attributes.position.needsUpdate = true;
       _geo.attributes.color.needsUpdate    = true;
-      _geo.attributes.size.needsUpdate     = true;
     }
 
     // Limit GPU draw range to only the particles that have been allocated
