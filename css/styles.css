@@ -10216,7 +10216,8 @@
 
 .horus-pupil {
   animation: horus-eye-pulse 3s ease-in-out infinite;
-  transform-origin: 26px 26px;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 @keyframes horus-crown-glow {

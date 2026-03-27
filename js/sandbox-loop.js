@@ -507,7 +507,8 @@
   // ─── Eye of Horus Notification Shrine ────────────────────────────────────────
   // Permanent widget fixed at top-center. Crown is always visible; curtain
   // rolls down from behind the crown when a notification fires.
-  var _notifTimeout = null;
+  var _notifTimeout      = null;
+  var _notifCloseTimeout = null;
 
   function _buildHorusShrine() {
     // Container
@@ -560,10 +561,12 @@
     radGrad.setAttribute('r', '50%');
     var stop1 = document.createElementNS(svgNS, 'stop');
     stop1.setAttribute('offset', '0%');
-    stop1.setAttribute('stop-color', 'rgba(255,215,0,0.4)');
+    stop1.setAttribute('stop-color', 'rgb(255,215,0)');
+    stop1.setAttribute('stop-opacity', '0.4');
     var stop2 = document.createElementNS(svgNS, 'stop');
     stop2.setAttribute('offset', '100%');
-    stop2.setAttribute('stop-color', 'rgba(212,130,0,0)');
+    stop2.setAttribute('stop-color', 'rgb(212,130,0)');
+    stop2.setAttribute('stop-opacity', '0');
     radGrad.appendChild(stop1);
     radGrad.appendChild(stop2);
     // Filter for blur
@@ -575,6 +578,15 @@
     defs.appendChild(radGrad);
     defs.appendChild(filter);
     svg.appendChild(defs);
+
+    // 10. Subtle glow circle — appended right after defs so it paints behind all eye shapes
+    var glowCircle = document.createElementNS(svgNS, 'circle');
+    glowCircle.setAttribute('cx', '26');
+    glowCircle.setAttribute('cy', '26');
+    glowCircle.setAttribute('r', '18');
+    glowCircle.setAttribute('fill', 'url(#horus-glow)');
+    glowCircle.setAttribute('opacity', '0.4');
+    svg.appendChild(glowCircle);
 
     // 1. Gold outer almond eye shape (glow outline)
     var outerAlmond = document.createElementNS(svgNS, 'path');
@@ -656,15 +668,6 @@
     dot.setAttribute('fill', 'rgba(212,175,55,0.6)');
     svg.appendChild(dot);
 
-    // 10. Subtle glow circle
-    var glowCircle = document.createElementNS(svgNS, 'circle');
-    glowCircle.setAttribute('cx', '26');
-    glowCircle.setAttribute('cy', '26');
-    glowCircle.setAttribute('r', '18');
-    glowCircle.setAttribute('fill', 'url(#horus-glow)');
-    glowCircle.setAttribute('opacity', '0.4');
-    svg.appendChild(glowCircle);
-
     crown.appendChild(svg);
     shrine.appendChild(crown);
 
@@ -745,6 +748,7 @@
     }
 
     clearTimeout(_notifTimeout);
+    clearTimeout(_notifCloseTimeout);
 
     // Open curtain: make visible then expand
     curtain.style.transition = 'max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.15s ease';
@@ -752,16 +756,13 @@
     curtain.style.maxHeight = '80px';
 
     _notifTimeout = setTimeout(function() {
-      // Close: fade text first, then roll up
+      // Close: fade text first, then roll up curtain
       curtain.style.transition = 'max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.2s ease';
       curtain.style.opacity = '0';
-      setTimeout(function() {
+      _notifCloseTimeout = setTimeout(function() {
         curtain.style.maxHeight = '0px';
       }, 200);
     }, durationMs || 2800);
-
-    // Also trigger wave flash
-    _triggerWaveFlash();
   }
 
   // Display an error message on-screen so mobile users can see what went wrong.
