@@ -504,55 +504,265 @@
   function _lerp(a, b, t) { return a + (b - a) * t; }
   function _clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
-  // ─── In-game wave/notification bar ───────────────────────────────────────────
-  // Pooled notification queue — shows wave announcements, kill counts, etc.
-  // Uses a single reusable DOM element for minimal overhead.
-  var _notifEl = null;
-  var _notifTimeout = null;
+  // ─── Eye of Horus Notification Shrine ────────────────────────────────────────
+  // Permanent widget fixed at top-center. Crown is always visible; curtain
+  // rolls down from behind the crown when a notification fires.
+  var _notifTimeout      = null;
+  var _notifCloseTimeout = null;
+
+  function _buildHorusShrine() {
+    // Container
+    var shrine = document.createElement('div');
+    shrine.id = 'horus-shrine';
+    shrine.style.cssText = [
+      'position:fixed',
+      'top:0px',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'z-index:9500',
+      'pointer-events:none',
+      'display:flex',
+      'flex-direction:column',
+      'align-items:center',
+      'width:220px',
+    ].join(';');
+
+    // Crown (always visible)
+    var crown = document.createElement('div');
+    crown.id = 'horus-crown';
+    crown.style.cssText = [
+      'width:72px',
+      'height:72px',
+      'background:linear-gradient(135deg,rgba(12,8,2,0.97),rgba(28,20,4,0.97))',
+      'border:2px solid rgba(212,175,55,0.7)',
+      'border-top:none',
+      'border-radius:0 0 12px 12px',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'box-shadow:0 4px 18px rgba(0,0,0,0.8),0 0 12px rgba(212,175,55,0.15)',
+      'z-index:2',
+      'position:relative',
+    ].join(';');
+
+    // Eye of Horus SVG
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('width', '52');
+    svg.setAttribute('height', '52');
+    svg.setAttribute('viewBox', '0 0 52 52');
+
+    var defs = document.createElementNS(svgNS, 'defs');
+    // Radial gradient for glow
+    var radGrad = document.createElementNS(svgNS, 'radialGradient');
+    radGrad.setAttribute('id', 'horus-glow');
+    radGrad.setAttribute('cx', '50%');
+    radGrad.setAttribute('cy', '50%');
+    radGrad.setAttribute('r', '50%');
+    var stop1 = document.createElementNS(svgNS, 'stop');
+    stop1.setAttribute('offset', '0%');
+    stop1.setAttribute('stop-color', 'rgb(255,215,0)');
+    stop1.setAttribute('stop-opacity', '0.4');
+    var stop2 = document.createElementNS(svgNS, 'stop');
+    stop2.setAttribute('offset', '100%');
+    stop2.setAttribute('stop-color', 'rgb(212,130,0)');
+    stop2.setAttribute('stop-opacity', '0');
+    radGrad.appendChild(stop1);
+    radGrad.appendChild(stop2);
+    // Filter for blur
+    var filter = document.createElementNS(svgNS, 'filter');
+    filter.setAttribute('id', 'eye-filter');
+    var blur = document.createElementNS(svgNS, 'feGaussianBlur');
+    blur.setAttribute('stdDeviation', '1.2');
+    filter.appendChild(blur);
+    defs.appendChild(radGrad);
+    defs.appendChild(filter);
+    svg.appendChild(defs);
+
+    // 10. Subtle glow circle — appended right after defs so it paints behind all eye shapes
+    var glowCircle = document.createElementNS(svgNS, 'circle');
+    glowCircle.setAttribute('cx', '26');
+    glowCircle.setAttribute('cy', '26');
+    glowCircle.setAttribute('r', '18');
+    glowCircle.setAttribute('fill', 'url(#horus-glow)');
+    glowCircle.setAttribute('opacity', '0.4');
+    svg.appendChild(glowCircle);
+
+    // 1. Gold outer almond eye shape (glow outline)
+    var outerAlmond = document.createElementNS(svgNS, 'path');
+    outerAlmond.setAttribute('d', 'M8,26 C14,14 38,14 44,26 C38,38 14,38 8,26 Z');
+    outerAlmond.setAttribute('fill', 'none');
+    outerAlmond.setAttribute('stroke', 'url(#horus-glow)');
+    outerAlmond.setAttribute('stroke-width', '1.5');
+    outerAlmond.setAttribute('opacity', '0.35');
+    svg.appendChild(outerAlmond);
+
+    // 2. Main eye white (filled almond)
+    var eyeWhite = document.createElementNS(svgNS, 'path');
+    eyeWhite.setAttribute('d', 'M8,26 C14,14 38,14 44,26 C38,38 14,38 8,26 Z');
+    eyeWhite.setAttribute('fill', 'rgba(255,245,220,0.08)');
+    eyeWhite.setAttribute('stroke', 'rgba(212,175,55,0.9)');
+    eyeWhite.setAttribute('stroke-width', '1.8');
+    svg.appendChild(eyeWhite);
+
+    // 3. Iris
+    var iris = document.createElementNS(svgNS, 'circle');
+    iris.setAttribute('cx', '26');
+    iris.setAttribute('cy', '26');
+    iris.setAttribute('r', '7.5');
+    iris.setAttribute('fill', 'rgba(20,12,2,0.95)');
+    iris.setAttribute('stroke', 'rgba(212,175,55,0.7)');
+    iris.setAttribute('stroke-width', '1.5');
+    svg.appendChild(iris);
+
+    // 4. Pupil (animated via CSS class)
+    var pupil = document.createElementNS(svgNS, 'circle');
+    pupil.setAttribute('cx', '26');
+    pupil.setAttribute('cy', '26');
+    pupil.setAttribute('r', '3.5');
+    pupil.setAttribute('fill', 'rgba(212,175,55,0.95)');
+    pupil.setAttribute('filter', 'url(#eye-filter)');
+    pupil.setAttribute('class', 'horus-pupil');
+    svg.appendChild(pupil);
+
+    // 5. Inner gold sparkle
+    var sparkle = document.createElementNS(svgNS, 'circle');
+    sparkle.setAttribute('cx', '26');
+    sparkle.setAttribute('cy', '26');
+    sparkle.setAttribute('r', '1.2');
+    sparkle.setAttribute('fill', 'white');
+    sparkle.setAttribute('opacity', '0.9');
+    svg.appendChild(sparkle);
+
+    // 6. Upper lash line
+    var lashLine = document.createElementNS(svgNS, 'path');
+    lashLine.setAttribute('d', 'M8,26 Q26,10 44,26');
+    lashLine.setAttribute('fill', 'none');
+    lashLine.setAttribute('stroke', 'rgba(212,175,55,0.6)');
+    lashLine.setAttribute('stroke-width', '1');
+    svg.appendChild(lashLine);
+
+    // 7. Lower classic Horus cheek mark
+    var cheekMark = document.createElementNS(svgNS, 'path');
+    cheekMark.setAttribute('d', 'M26,33 L18,44 C17,45 16,46 16,46');
+    cheekMark.setAttribute('fill', 'none');
+    cheekMark.setAttribute('stroke', 'rgba(212,175,55,0.8)');
+    cheekMark.setAttribute('stroke-width', '1.8');
+    cheekMark.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(cheekMark);
+
+    // 8. Second cheek flourish
+    var cheekFlourish = document.createElementNS(svgNS, 'path');
+    cheekFlourish.setAttribute('d', 'M26,33 L22,42 L20,45');
+    cheekFlourish.setAttribute('fill', 'none');
+    cheekFlourish.setAttribute('stroke', 'rgba(180,140,30,0.5)');
+    cheekFlourish.setAttribute('stroke-width', '1');
+    cheekFlourish.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(cheekFlourish);
+
+    // 9. Decorative dot
+    var dot = document.createElementNS(svgNS, 'circle');
+    dot.setAttribute('cx', '14');
+    dot.setAttribute('cy', '45');
+    dot.setAttribute('r', '1.2');
+    dot.setAttribute('fill', 'rgba(212,175,55,0.6)');
+    svg.appendChild(dot);
+
+    crown.appendChild(svg);
+    shrine.appendChild(crown);
+
+    // Curtain (rolls down on notification)
+    var curtain = document.createElement('div');
+    curtain.id = 'horus-curtain';
+    curtain.style.cssText = [
+      'width:200px',
+      'max-height:0px',
+      'overflow:hidden',
+      'transition:max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.2s ease 0.2s',
+      'background:linear-gradient(180deg,rgba(8,5,1,0.97),rgba(14,9,2,0.97))',
+      'border:1.5px solid rgba(212,175,55,0.45)',
+      'border-top:none',
+      'border-radius:0 0 10px 10px',
+      'box-shadow:0 8px 28px rgba(0,0,0,0.9),0 0 16px rgba(212,175,55,0.08)',
+      'position:relative',
+      'z-index:1',
+      'opacity:0',
+    ].join(';');
+
+    // Top accent line
+    var accentLine = document.createElement('div');
+    accentLine.style.cssText = [
+      'width:60%',
+      'height:1px',
+      'background:linear-gradient(90deg,transparent,rgba(212,175,55,0.6),transparent)',
+      'margin:0 auto 8px auto',
+    ].join(';');
+    curtain.appendChild(accentLine);
+
+    // Text area
+    var textEl = document.createElement('div');
+    textEl.id = 'horus-text';
+    textEl.style.cssText = [
+      'padding:8px 16px 12px',
+      'font-family:Cinzel,Georgia,serif',
+      'font-size:11px',
+      'letter-spacing:2.5px',
+      'text-align:center',
+      'color:rgba(212,175,55,0.92)',
+      'text-shadow:0 0 8px rgba(212,175,55,0.4)',
+      'line-height:1.5',
+      'text-transform:uppercase',
+      'min-height:32px',
+      'word-break:break-word',
+    ].join(';');
+    curtain.appendChild(textEl);
+
+    // Decorative corner marks
+    var cornerL = document.createElement('span');
+    cornerL.style.cssText = 'position:absolute;bottom:6px;left:8px;font-size:8px;color:rgba(212,175,55,0.3);';
+    cornerL.textContent = '[';
+    var cornerR = document.createElement('span');
+    cornerR.style.cssText = 'position:absolute;bottom:6px;right:8px;font-size:8px;color:rgba(212,175,55,0.3);';
+    cornerR.textContent = ']';
+    curtain.appendChild(cornerL);
+    curtain.appendChild(cornerR);
+
+    shrine.appendChild(curtain);
+    document.body.appendChild(shrine);
+  }
+
   function _showWaveNotification(text, color, durationMs) {
-    if (!_notifEl) {
-      _notifEl = document.createElement('div');
-      _notifEl.id = 'wave-notif-bar';
-      _notifEl.style.cssText = [
-        'position:fixed',
-        'top:80px',
-        'left:50%',
-        'transform:translateX(-50%) translateY(-20px)',
-        'z-index:9500',
-        'pointer-events:none',
-        'font-family:Bangers,"Impact","Arial Black",sans-serif',
-        'font-size:clamp(20px,4vw,32px)',
-        'letter-spacing:4px',
-        'text-align:center',
-        'padding:10px 28px',
-        'border-radius:16px',
-        'background:rgba(0,0,0,0.82)',
-        'border:2px solid currentColor',
-        'backdrop-filter:blur(6px)',
-        'box-shadow:0 0 24px currentColor,0 4px 16px rgba(0,0,0,0.8)',
-        'opacity:0',
-        'transition:opacity 0.3s ease,transform 0.35s cubic-bezier(0.22,1,0.36,1)',
-        'white-space:nowrap',
-        'text-shadow:0 0 10px currentColor,2px 2px 0 #000',
-        'will-change:transform,opacity'
-      ].join(';');
-      document.body.appendChild(_notifEl);
+    if (!document.getElementById('horus-shrine')) {
+      _buildHorusShrine();
     }
+    var curtain = document.getElementById('horus-curtain');
+    var textEl  = document.getElementById('horus-text');
+    if (!curtain || !textEl) return;
+
+    textEl.textContent = text;
+    // Apply color only if it's not white (white looks bad against the gold bg)
+    if (color && color !== '#ffffff' && color !== 'white' && color !== 'rgb(255,255,255)') {
+      textEl.style.color = color;
+    } else {
+      textEl.style.color = 'rgba(212,175,55,0.92)';
+    }
+
     clearTimeout(_notifTimeout);
-    _notifEl.textContent  = text;
-    _notifEl.style.color  = color || '#ffffff';
-    _notifEl.style.borderColor = color || '#ffffff';
-    _notifEl.style.opacity   = '0';
-    _notifEl.style.transform = 'translateX(-50%) translateY(-20px) scale(0.85)';
-    // Force reflow so the transition fires correctly
-    void _notifEl.offsetHeight;
-    _notifEl.style.opacity   = '1';
-    _notifEl.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+    clearTimeout(_notifCloseTimeout);
+
+    // Open curtain: make visible then expand
+    curtain.style.transition = 'max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.15s ease';
+    curtain.style.opacity = '1';
+    curtain.style.maxHeight = '80px';
+
     _notifTimeout = setTimeout(function() {
-      if (!_notifEl) return;
-      _notifEl.style.opacity   = '0';
-      _notifEl.style.transform = 'translateX(-50%) translateY(-12px) scale(0.92)';
-    }, durationMs || 2000);
+      // Close: fade text first, then roll up curtain
+      curtain.style.transition = 'max-height 0.42s cubic-bezier(0.4,0,0.2,1),opacity 0.2s ease';
+      curtain.style.opacity = '0';
+      _notifCloseTimeout = setTimeout(function() {
+        curtain.style.maxHeight = '0px';
+      }, 200);
+    }, durationMs || 2800);
   }
 
   // Display an error message on-screen so mobile users can see what went wrong.
@@ -666,14 +876,14 @@
         'bottom:120px',
         'left:50%',
         'transform:translateX(-50%)',
-        'font-size:28px',
-        'font-weight:bold',
-        'color:white',
-        'text-shadow:0 0 12px red',
+        'font-family:Bangers,cursive',
+        'font-size:24px',
+        'color:rgba(255,215,55,0.95)',
+        'text-shadow:0 0 10px rgba(220,30,0,0.8)',
         'pointer-events:none',
         'z-index:9999',
-        'transition:all 0.15s ease',
-        'opacity:1',
+        'transition:opacity 0.3s ease',
+        'opacity:0',
       ].join(';');
       document.body.appendChild(el);
     }
@@ -682,7 +892,7 @@
       return;
     }
     el.style.opacity = '1';
-    var fontSize = Math.min(56, 28 + (_killCombo - 2) * 2);
+    var fontSize = Math.min(48, 24 + (_killCombo - 1) * 1.5);
     el.style.fontSize = fontSize + 'px';
     el.textContent = _killCombo + 'x COMBO';
     if (_killCombo >= 5) {
@@ -712,12 +922,12 @@
           'height:100%',
           'pointer-events:none',
           'z-index:9998',
-          'background:radial-gradient(ellipse at center, transparent 50%, rgba(180,0,0,0.35) 100%)',
+          'background:radial-gradient(ellipse at center, transparent 50%, rgba(160,0,0,0.3) 100%)',
           'transition:opacity 0.3s ease',
         ].join(';');
         document.body.appendChild(v);
       }
-      v.style.opacity = String(Math.min(0.9, (_killCombo - 4) * 0.12));
+      v.style.opacity = String(Math.min(0.7, (_killCombo - 4) * 0.12));
     } else {
       var v = document.getElementById('combo-vignette');
       if (v) v.style.opacity = '0';
@@ -826,12 +1036,13 @@
       kc.id = 'hud-kill-count';
       kc.style.cssText = [
         'position:fixed',
-        'top:16px',
+        'top:14px',
         'right:16px',
-        'color:white',
-        'font-size:15px',
-        'font-weight:bold',
-        'text-shadow:0 0 8px black',
+        'color:rgba(255,215,55,0.9)',
+        'font-family:Bangers,cursive',
+        'font-size:14px',
+        'letter-spacing:1.5px',
+        'text-shadow:0 0 8px rgba(0,0,0,0.9)',
         'z-index:9000',
         'pointer-events:none',
       ].join(';');
@@ -843,16 +1054,17 @@
       st.id = 'hud-session-timer';
       st.style.cssText = [
         'position:fixed',
-        'top:40px',
+        'top:34px',
         'right:16px',
-        'color:white',
-        'font-size:15px',
-        'font-weight:bold',
-        'text-shadow:0 0 8px black',
+        'color:rgba(255,215,55,0.9)',
+        'font-family:Bangers,cursive',
+        'font-size:14px',
+        'letter-spacing:1.5px',
+        'text-shadow:0 0 8px rgba(0,0,0,0.9)',
         'z-index:9000',
         'pointer-events:none',
       ].join(';');
-      st.textContent = '🕐 0:00';
+      st.textContent = '⌛ 0:00';
       document.body.appendChild(st);
     }
   }
@@ -866,7 +1078,7 @@
       var mins = Math.floor(_sessionTimerSecs / 60);
       var secs = _sessionTimerSecs % 60;
       var timerEl = document.getElementById('hud-session-timer');
-      if (timerEl) timerEl.textContent = '🕐 ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+      if (timerEl) timerEl.textContent = '⌛ ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
     }
   }
 
@@ -2939,12 +3151,13 @@
     // ── Shockwave ring: expanding golden ring at player position ──
     if (player && player.mesh && scene) {
       try {
-        const ringGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+        const ringGeo = new THREE.RingGeometry(0.1, 0.35, 32);
         const ringMat = new THREE.MeshBasicMaterial({
           color: 0xFFDD00,
           transparent: true,
-          opacity: 0.9,
+          opacity: 0.85,
           side: THREE.DoubleSide,
+          depthWrite: false,
         });
         const ring = new THREE.Mesh(ringGeo, ringMat);
         ring.position.copy(player.mesh.position);
@@ -5779,9 +5992,9 @@
       // Level-up shockwave ring animation
       for (var _ri = _lvlUpRings.length - 1; _ri >= 0; _ri--) {
         var _ring = _lvlUpRings[_ri];
-        _ring.scale.x += 0.35 * dt * 60;
-        _ring.scale.z += 0.35 * dt * 60;
-        _ring.material.opacity -= 0.025 * dt * 60;
+        _ring.scale.x += 0.38 * dt * 60;
+        _ring.scale.z += 0.38 * dt * 60;
+        _ring.material.opacity -= 0.022 * dt * 60;
         if (_ring.material.opacity <= 0) {
           scene.remove(_ring);
           _ring.geometry.dispose();

@@ -10207,3 +10207,24 @@
 .eye-of-horus-static {
   filter: drop-shadow(0 0 8px rgba(204, 0, 0, 0.5)) drop-shadow(0 0 16px rgba(255, 191, 0, 0.3));
 }
+
+/* ─── Eye of Horus Notification Shrine ──────────────────────────────────────── */
+@keyframes horus-eye-pulse {
+  0%, 100% { opacity: 0.95; transform: scale(1); }
+  50%       { opacity: 1;    transform: scale(1.15); }
+}
+
+.horus-pupil {
+  animation: horus-eye-pulse 3s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes horus-crown-glow {
+  0%, 100% { box-shadow: 0 4px 18px rgba(0,0,0,0.8), 0 0 8px  rgba(212,175,55,0.1); }
+  50%       { box-shadow: 0 4px 18px rgba(0,0,0,0.8), 0 0 18px rgba(212,175,55,0.3); }
+}
+
+#horus-crown {
+  animation: horus-crown-glow 4s ease-in-out infinite;
+}
