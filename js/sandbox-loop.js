@@ -5667,6 +5667,7 @@
     _phase:        -1,   // current phase (-1 = not started)
     _phaseKills:   0,    // kills accumulated since this phase began
     _totalKills:   0,    // all-time kill counter
+    _waveNumber:   0,    // actual wave number (for wave 30 boss trigger)
     _x2Active:     false, // first-new-weapon x2 multiplier
     _prevWeaponCount: 1,  // number of weapons player had last check
     _initialized:  false,
@@ -5690,6 +5691,7 @@
       this._phase        = 0;
       this._phaseKills   = 0;
       this._totalKills   = 0;
+      this._waveNumber   = 1;
       this._x2Active     = false;
       this._prevWeaponCount = 1;
       this._initialized  = true;
@@ -5737,6 +5739,23 @@
     _advancePhase: function(nextPhase) {
       this._phase      = nextPhase;
       this._phaseKills = 0;
+      this._waveNumber++; // Increment wave counter
+
+      // SECTION 2E: Check for wave 30 Annunaki boss spawn
+      if (this._waveNumber === 30) {
+        _showWaveNotification('⚡ WAVE 30 — THE ANNUNAKI AWAKENS! ⚡', '#ffd700', 4000);
+        if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.spawn) {
+          setTimeout(function() {
+            AnnunakiBoss.spawn();
+          }, 1000);
+        }
+        // Complete quest
+        if (typeof QuestSystem !== 'undefined' && QuestSystem.completeObjective) {
+          QuestSystem.completeObjective('quest_makeItToFinalBoss');
+        }
+        return; // Don't spawn regular enemies
+      }
+
       // PERFORMANCE FIX 1E: Clean up wave debris before spawning next wave
       _cleanupWaveDebris();
       // Small delay so player sees the kill before next enemies appear
@@ -5997,6 +6016,11 @@
       // Manager updates (wave spawning + loot pickup)
       WaveManager.update(dt);
       LootManager.update(dt);
+
+      // Boss updates
+      if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.update) {
+        AnnunakiBoss.update(dt);
+      }
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
