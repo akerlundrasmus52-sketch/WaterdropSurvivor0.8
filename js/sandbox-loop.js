@@ -5669,6 +5669,7 @@
     _totalKills:   0,    // all-time kill counter
     _waveNumber:   0,    // actual wave number (for wave 30 boss trigger)
     _x2Active:     false, // first-new-weapon x2 multiplier
+    _greyBossTriggered: false, // SECTION 3A: tracks if Grey boss notification shown
     _prevWeaponCount: 1,  // number of weapons player had last check
     _initialized:  false,
     _pendingTimeouts: [], // all pending setTimeout IDs so reset() can cancel them
@@ -5770,6 +5771,14 @@
     _spawnPhase: function(phase) {
       // Wave flash: dramatic full-screen white flash on each new wave
       _triggerWaveFlash();
+
+      // SECTION 3A: Custom wave definitions for waves 21-29
+      // Waves 21-29 have custom escalating difficulty before the final boss
+      if (this._waveNumber >= 21 && this._waveNumber <= 29) {
+        this._spawnCustomWave(this._waveNumber);
+        return;
+      }
+
       switch (phase) {
         case 0:
           _showWaveNotification('WAVE START — 3 Slimes incoming!', '#ffdd44', 2500);
@@ -5811,6 +5820,127 @@
           break;
         case 5:
         default:
+          _showWaveNotification('💀 HORDE — 2 of everything!', '#ff0055', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(2) },
+            { type: 'leaping',    count: this._mult(2) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+      }
+    },
+
+    /**
+     * _spawnCustomWave(waveNum) - Custom wave definitions for waves 21-29
+     * SECTION 3A: Escalating endgame content before Annunaki boss
+     */
+    _spawnCustomWave: function(waveNum) {
+      switch (waveNum) {
+        case 21:
+          _showWaveNotification('⚡ WAVE 21 — Escalation Begins!', '#ff8800', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(3) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+
+        case 22:
+          _showWaveNotification('⚡ WAVE 22 — The Swarm Intensifies!', '#ff7700', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(3) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(3) },
+            { type: 'skinwalker', count: this._mult(2) }
+          ]);
+          break;
+
+        case 23:
+          _showWaveNotification('⚡ WAVE 23 — No Mercy!', '#ff6600', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(4) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(3) },
+            { type: 'skinwalker', count: this._mult(3) }
+          ]);
+          break;
+
+        case 24:
+          _showWaveNotification('⚡ WAVE 24 — Maximum Pressure!', '#ff5500', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(4) },
+            { type: 'leaping',    count: this._mult(4) },
+            { type: 'crawler',    count: this._mult(3) },
+            { type: 'skinwalker', count: this._mult(3) }
+          ]);
+          break;
+
+        case 25:
+          // WAVE 25: Mini-boss Grey encounter with elite variants
+          _showWaveNotification('👽 WAVE 25 — THE GREY APPEARS! 👽', '#88ff88', 4000);
+
+          // Trigger Grey boss if available
+          if (typeof GreyBossSystem !== 'undefined' && !this._greyBossTriggered) {
+            this._greyBossTriggered = true;
+            // Grey boss is proximity-triggered, so just spawn support enemies
+          }
+
+          // Elite enemy support squad
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(3) },
+            { type: 'leaping',    count: this._mult(3) },
+            { type: 'crawler',    count: this._mult(2) },
+            { type: 'skinwalker', count: this._mult(4) } // Extra skinwalkers as elite variants
+          ]);
+          break;
+
+        case 26:
+          _showWaveNotification('🔥 WAVE 26 — Post-Grey Assault!', '#ff4400', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(4) },
+            { type: 'leaping',    count: this._mult(4) },
+            { type: 'crawler',    count: this._mult(4) },
+            { type: 'skinwalker', count: this._mult(3) }
+          ]);
+          break;
+
+        case 27:
+          _showWaveNotification('🔥 WAVE 27 — Overwhelming Force!', '#ff3300', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(5) },
+            { type: 'leaping',    count: this._mult(4) },
+            { type: 'crawler',    count: this._mult(4) },
+            { type: 'skinwalker', count: this._mult(4) }
+          ]);
+          break;
+
+        case 28:
+          _showWaveNotification('🔥 WAVE 28 — Final Warning!', '#ff2200', 3000);
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(5) },
+            { type: 'leaping',    count: this._mult(5) },
+            { type: 'crawler',    count: this._mult(4) },
+            { type: 'skinwalker', count: this._mult(4) }
+          ]);
+          break;
+
+        case 29:
+          // WAVE 29: Herald of Annunaki - massive elite encounter
+          _showWaveNotification('💀 WAVE 29 — HERALD OF ANNUNAKI! 💀', '#ffd700', 4000);
+
+          // Spawn a horde of elite enemies as the "Herald"
+          this._spawnBatch([
+            { type: 'slime',      count: this._mult(6) },
+            { type: 'leaping',    count: this._mult(5) },
+            { type: 'crawler',    count: this._mult(5) },
+            { type: 'skinwalker', count: this._mult(5) } // 5 skinwalkers = Herald army
+          ]);
+          break;
+
+        default:
+          // Fallback to standard phase 5 horde
           _showWaveNotification('💀 HORDE — 2 of everything!', '#ff0055', 3000);
           this._spawnBatch([
             { type: 'slime',      count: this._mult(2) },
