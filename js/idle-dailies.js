@@ -9,7 +9,7 @@ var DAILY_LOGIN_REWARDS = [
   { day: 4,  icon: '💎', label: '1 Attribute Point', attributePoints: 1 },
   { day: 5,  icon: '💰⭐', label: '300 Gold + 1 Skill Point', gold: 300, skillPoints: 1 },
   { day: 6,  icon: '⭐⭐', label: '2 Skill Points', skillPoints: 2 },
-  { day: 7,  icon: '🏺', label: '500 Gold + Ancient Shard', gold: 500, specialItem: 'ancientShard' },
+  { day: 7,  icon: '🪵', label: '500 Gold + 15 Wood + 15 Stone', gold: 500, wood: 15, stone: 15 },
   { day: 8,  icon: '💎💰', label: '1 Attr Point + 150 Gold', attributePoints: 1, gold: 150 },
   { day: 9,  icon: '💎💎', label: '2 Attribute Points', attributePoints: 2 },
   { day: 10, icon: '💰', label: '750 Gold', gold: 750 },
@@ -24,7 +24,7 @@ var DAILY_LOGIN_REWARDS = [
   { day: 19, icon: '💰', label: '1200 Gold', gold: 1200 },
   { day: 20, icon: '💎⭐', label: '4 Attr Points + 2 Skill Points', attributePoints: 4, skillPoints: 2 },
   { day: 21, icon: '💰⭐', label: '1500 Gold + 5 Skill Points', gold: 1500, skillPoints: 5 },
-  { day: 22, icon: '🧠', label: 'Neural Fragment (500 Account XP)', specialItem: 'neuralFragment', accountXP: 500 },
+  { day: 22, icon: '🪨', label: '15 Wood + 15 Stone', wood: 15, stone: 15 },
   { day: 23, icon: '⭐⭐⭐⭐⭐⭐', label: '6 Skill Points', skillPoints: 6 },
   { day: 24, icon: '💰💎', label: '2000 Gold + 4 Attr Points', gold: 2000, attributePoints: 4 },
   { day: 25, icon: '⭐💎', label: '8 Skill Points + 3 Attr Points', skillPoints: 8, attributePoints: 3 },
@@ -184,6 +184,12 @@ function checkDailyLogin(saveData) {
   }
   if (reward.spinTokens) {
     saveData.spinTokens = (saveData.spinTokens || 0) + reward.spinTokens;
+  }
+  // Wood and stone resource grants
+  if (reward.wood || reward.stone) {
+    if (!saveData.resources) saveData.resources = {};
+    if (reward.wood)  saveData.resources.wood  = (saveData.resources.wood  || 0) + reward.wood;
+    if (reward.stone) saveData.resources.stone = (saveData.resources.stone || 0) + reward.stone;
   }
   // Always grant account XP for daily claim
   if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {

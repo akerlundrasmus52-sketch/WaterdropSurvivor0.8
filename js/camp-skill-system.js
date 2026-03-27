@@ -1965,7 +1965,7 @@
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 15, stone: 15, iron: 3, leather: 3 },
+        rewardResources: { wood: 15, stone: 15 },
         unlockBuilding: 'forge',
         message: "🔨 Forge Unlocked! You received starter materials.",
         nextQuest: 'questForge0b_craftTools',
@@ -3291,7 +3291,7 @@
         for (const [res, amt] of Object.entries(quest.rewardResources)) {
           saveData.resources[res] = (saveData.resources[res] || 0) + amt;
           showStatChange(`+${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}!`);
-          const iconMap = { wood: '🪵', stone: '🪨', iron: '⚙️', leather: '🥩', crystal: '💎' };
+          const iconMap = { wood: '🪵', stone: '🪨' };
           flyItems.push({ icon: iconMap[res] || '📦', label: `+${amt} ${res}` });
         }
         // Animate resource icons flying into HUD

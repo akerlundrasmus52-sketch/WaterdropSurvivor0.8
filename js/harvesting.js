@@ -9,24 +9,24 @@
   const RESOURCE_TYPES = {
     wood:         { label: 'Wood',         icon: '🪵', color: '#8B4513', category: 'material' },
     stone:        { label: 'Stone',        icon: '🪨', color: '#888888', category: 'material' },
-    coal:         { label: 'Coal',         icon: '🖤', color: '#222222', category: 'material' },
-    iron:         { label: 'Iron',         icon: '⚙️', color: '#AAAAAA', category: 'material' },
-    metal:        { label: 'Metal',        icon: '🔩', color: '#778899', category: 'material' },
-    crystal:      { label: 'Crystal',      icon: '💎', color: '#88CCFF', category: 'material' },
-    magicEssence: { label: 'Magic Essence',icon: '✨', color: '#AA44FF', category: 'material' },
+    coal:         { label: 'Coal',         icon: '🖤', color: '#222222', category: 'material', hidden: true },
+    iron:         { label: 'Iron',         icon: '⚙️', color: '#AAAAAA', category: 'material', hidden: true },
+    metal:        { label: 'Metal',        icon: '🔩', color: '#778899', category: 'material', hidden: true },
+    crystal:      { label: 'Crystal',      icon: '💎', color: '#88CCFF', category: 'material', hidden: true },
+    magicEssence: { label: 'Magic Essence',icon: '✨', color: '#AA44FF', category: 'material', hidden: true },
     gem:          { label: 'Gem',          icon: '💍', color: '#FFD700', category: 'material', hidden: true },
-    flesh:        { label: 'Flesh',        icon: '🥩', color: '#CC2200', category: 'food' },
-    meat:         { label: 'Meat',         icon: '🍖', color: '#CC4400', category: 'food' },
-    food:         { label: 'Food',         icon: '🍲', color: '#FF8C00', category: 'food' },
-    animalSkin:   { label: 'Animal Skin',  icon: '🐾', color: '#D2B48C', category: 'animal' },
+    flesh:        { label: 'Flesh',        icon: '🥩', color: '#CC2200', category: 'food', hidden: true },
+    meat:         { label: 'Meat',         icon: '🍖', color: '#CC4400', category: 'food', hidden: true },
+    food:         { label: 'Food',         icon: '🍲', color: '#FF8C00', category: 'food', hidden: true },
+    animalSkin:   { label: 'Animal Skin',  icon: '🐾', color: '#D2B48C', category: 'animal', hidden: true },
     fur:          { label: 'Fur',          icon: '🧶', color: '#8B6914', category: 'animal', hidden: true },
-    leather:      { label: 'Leather',      icon: '🟫', color: '#654321', category: 'animal' },
+    leather:      { label: 'Leather',      icon: '🟫', color: '#654321', category: 'animal', hidden: true },
     feather:      { label: 'Feather',      icon: '🪶', color: '#DDDDDD', category: 'animal', hidden: true },
     chitin:       { label: 'Chitin',       icon: '🛡️', color: '#556B2F', category: 'animal', hidden: true },
     venom:        { label: 'Venom',        icon: '☠️', color: '#7CFC00', category: 'animal', hidden: true },
-    berry:        { label: 'Berry',        icon: '🫐', color: '#4B0082', category: 'food' },
-    flower:       { label: 'Flower',       icon: '🌸', color: '#FF69B4', category: 'food' },
-    vegetable:    { label: 'Vegetable',    icon: '🥕', color: '#FF8C00', category: 'food' }
+    berry:        { label: 'Berry',        icon: '🫐', color: '#4B0082', category: 'food', hidden: true },
+    flower:       { label: 'Flower',       icon: '🌸', color: '#FF69B4', category: 'food', hidden: true },
+    vegetable:    { label: 'Vegetable',    icon: '🥕', color: '#FF8C00', category: 'food', hidden: true }
   };
 
   // ── Harvesting tool definitions ─────────────────────────────
@@ -38,7 +38,7 @@
       amountMin: 2, amountMax: 5,
       buyCost: 1,                   // gold cost in the Store — 1 Gold each so player is never softlocked
       epicBuyCost: 800,
-      epicForgeReq: { wood: 20, iron: 5 },
+      epicForgeReq: { wood: 20 },
       swingDurationMs: 600
     },
     sledgehammer: {
@@ -48,7 +48,7 @@
       amountMin: 2, amountMax: 4,
       buyCost: 1,
       epicBuyCost: 1000,
-      epicForgeReq: { stone: 20, iron: 10 },
+      epicForgeReq: { stone: 20 },
       swingDurationMs: 800
     },
     pickaxe: {
@@ -58,7 +58,7 @@
       amountMin: 1, amountMax: 3,
       buyCost: 1,
       epicBuyCost: 1200,
-      epicForgeReq: { coal: 15, iron: 15 },
+      epicForgeReq: { wood: 15, stone: 15 },
       swingDurationMs: 700
     },
     magicTool: {
@@ -68,7 +68,7 @@
       amountMin: 1, amountMax: 2,
       buyCost: 1,
       epicBuyCost: 2000,
-      epicForgeReq: { crystal: 10, magicEssence: 5 },
+      epicForgeReq: { wood: 10, stone: 5 },
       swingDurationMs: 500
     },
     knife: {
@@ -78,7 +78,7 @@
       amountMin: 1, amountMax: 3,
       buyCost: 1,
       epicBuyCost: 600,
-      epicForgeReq: { iron: 8, leather: 3 },
+      epicForgeReq: { wood: 8, stone: 3 },
       swingDurationMs: 400
     },
     berryScoop: {
@@ -88,7 +88,7 @@
       amountMin: 2, amountMax: 6,
       buyCost: 1,
       epicBuyCost: 400,
-      epicForgeReq: { wood: 10, leather: 2 },
+      epicForgeReq: { wood: 10 },
       swingDurationMs: 300
     }
   };
@@ -854,7 +854,7 @@
   }
 
   // Building material resource keys shown in camp HUD
-  const BUILD_MATERIAL_KEYS = ['wood', 'stone', 'coal'];
+  const BUILD_MATERIAL_KEYS = ['wood', 'stone'];
 
   function _updateHUD() {
     const hud = document.getElementById('harvest-hud');
@@ -868,9 +868,10 @@
     const res = _getResources();
     if (!res) { hud.innerHTML = ''; hud.style.display = 'none'; return; }
 
-    // Camp mode: always show building materials (wood/stone/coal) even at 0
+    // Camp mode: always show building materials (wood/stone) even at 0
+    // hidden: true resources are always excluded — even if the player has leftover amounts from legacy saves
     const entries = Object.entries(RESOURCE_TYPES)
-      .filter(([k, v]) => k !== 'flesh' && (res[k] > 0 || (!v.hidden && isCamp && BUILD_MATERIAL_KEYS.includes(k))))
+      .filter(([k, v]) => k !== 'flesh' && !v.hidden && (res[k] > 0 || (isCamp && BUILD_MATERIAL_KEYS.includes(k))))
       .map(([k, v]) => `<span class="harvest-res-item"><span class="harvest-res-icon">${v.icon}</span><span class="harvest-res-count">x${(res[k] || 0)}</span></span>`)
       .join('');
     hud.innerHTML = entries || '';

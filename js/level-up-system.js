@@ -1759,7 +1759,7 @@ window.spawnBossChest = function(x, z) {
           // Start melt-shadow animation on this card
           card.classList.add('holding');
 
-          // Confirm after 1200ms hold duration
+          // Confirm after 600ms hold duration
           holdTimer = setTimeout(() => {
             holdTimer = null;
             activeHold = null;
@@ -1767,7 +1767,7 @@ window.spawnBossChest = function(x, z) {
             if (card.dataset.selected === '1' && modal.style.display !== 'none') {
               applyUpgradeAndClose();
             }
-          }, 1200);
+          }, 600);
           activeHold = { timer: holdTimer, card };
         });
 
@@ -1799,7 +1799,7 @@ window.spawnBossChest = function(x, z) {
       modal.style.display = 'flex';
       modal.style.opacity = '0';
       const existingAnimation = modal.style.animation || (window.getComputedStyle ? window.getComputedStyle(modal).animation : '') || '';
-      const wallFadeInAnim = 'wallFadeIn 0.3s ease-out forwards';
+      const wallFadeInAnim = 'wallFadeIn 0.32s cubic-bezier(0.22,1,0.36,1) forwards';
       modal.style.animation = existingAnimation
         ? existingAnimation + ', ' + wallFadeInAnim
         : wallFadeInAnim;
