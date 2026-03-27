@@ -10273,10 +10273,10 @@
 }
 
 @keyframes annunaki-stomp {
-  0% { transform: translateY(0); }
-  30% { transform: translateY(-30px); }
-  60% { transform: translateY(8px) scaleX(1.05); }
-  100% { transform: translateY(0); }
+  0% { transform: translateX(-50%) translateY(0); }
+  30% { transform: translateX(-50%) translateY(-30px); }
+  60% { transform: translateX(-50%) translateY(8px) scaleX(1.05); }
+  100% { transform: translateX(-50%) translateY(0); }
 }
 
 .annunaki-stomping {
