@@ -2104,7 +2104,8 @@
       const dx = playerPos.x - c.mesh.position.x;
       const dz = playerPos.z - c.mesh.position.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      if (dist < 1.3 && !player.invulnerable) {
+      // BUG J: Add mesh.visible check to prevent invisible crawlers from dealing damage
+      if (dist < 1.3 && !player.invulnerable && c.mesh && c.mesh.visible) {
         const now = Date.now();
         if (now - c.lastDamageTime > 400) {
           c.lastDamageTime = now;

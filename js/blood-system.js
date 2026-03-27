@@ -104,13 +104,13 @@
     _geo.setAttribute('size',     new THREE.BufferAttribute(_sizes, 1));
 
     _mat = new THREE.PointsMaterial({
-      size: 0.09,
+      size: 4.0,  // BUG H: Increased from 0.09 to 4.0 for better visibility at all distances
       vertexColors: true,
       transparent: true,
       opacity: 0.95,
       depthWrite: false,
       depthTest: true,
-      sizeAttenuation: true,
+      sizeAttenuation: true,  // BUG H: Keep true for proper perspective scaling
       blending: THREE.NormalBlending,
       // Make points circular (not square) by using a radial gradient
       alphaTest: 0.01,

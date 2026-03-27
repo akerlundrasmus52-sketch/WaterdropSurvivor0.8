@@ -654,6 +654,11 @@ _dropIM.instanceColor  = new THREE.InstancedBufferAttribute(
 _dropIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _dropIM.frustumCulled = false;
 _dropIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active drops
+// BUG F: Set renderOrder for proper layering (drops render after background, before mist)
+_dropIM.renderOrder = 1;
+// BUG F: Ensure depthWrite is true so drops affect depth buffer correctly
+_dropIM.material.depthWrite = true;
+_dropIM.material.depthTest = true;
 _scene.add(_dropIM);
 _dropIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
@@ -685,6 +690,10 @@ _mistIM.instanceColor  = new THREE.InstancedBufferAttribute(
 _mistIM.instanceColor.setUsage(THREE.DynamicDrawUsage);
 _mistIM.frustumCulled = false;
 _mistIM.count = 0; // FIXED: Start at 0, will be set dynamically based on active mist
+// BUG G: Fix mist rendering settings for near-camera visibility
+_mistIM.renderOrder = 2; // Render after drops so mist appears on top
+_mistIM.material.depthTest = true; // Must respect depth to avoid clipping through geometry
+_mistIM.material.depthWrite = false; // Correct for transparent materials
 _scene.add(_mistIM);
 _mistIM.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
