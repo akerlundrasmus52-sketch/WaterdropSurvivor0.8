@@ -1470,6 +1470,7 @@
     
     // Expose to global scope for onclick handlers
     window.claimAchievement = claimAchievement;
+    window.checkAchievements = checkAchievements;
 
     // ── FEATURE 4: Hall of Fame Screen ───────────────────────────────────────
     function showHallOfFameScreen() {

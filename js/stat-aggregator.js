@@ -236,6 +236,30 @@
         stats.topSpeed          = (stats.topSpeed  || 6.5) * thMsm;
         stats.baseMovementSpeed = (stats.baseMovementSpeed || 1.0) * thMsm;
       }
+
+      // Forge: +5% weapon damage / level
+      if (bldgs.forge && bldgs.forge.level > 0) {
+        var fgLvl = bldgs.forge.level;
+        stats.strength      = (stats.strength || 1) * (1 + 0.05 * fgLvl);
+        stats.weaponDamage  = (stats.weaponDamage || 0) + 0.05 * fgLvl;
+      }
+
+      // Warehouse: +5% gold multiplier / level
+      if (bldgs.warehouse && bldgs.warehouse.level > 0) {
+        var whLvl = bldgs.warehouse.level;
+        stats.goldMultiplier = (stats.goldMultiplier || 1.0) + 0.05 * whLvl;
+      }
+
+      // Companion House: +10% companion damage / level
+      if (bldgs.companionHouse && bldgs.companionHouse.level > 0) {
+        var chLvl = bldgs.companionHouse.level;
+        stats.companionDamageMult = (stats.companionDamageMult || 1.0) * (1 + 0.10 * chLvl);
+      }
+
+      // Skill Tree building: +1 skill point available per level (tracked separately)
+      if (bldgs.skillTree && bldgs.skillTree.level > 0) {
+        stats.bonusSkillPoints = (stats.bonusSkillPoints || 0) + bldgs.skillTree.level;
+      }
     }
 
     // ── 3. Permanent Upgrade Shop bonuses (saveData.upgrades) ────────────────
@@ -562,6 +586,39 @@
         stats.strength         = (stats.strength || 1) * 2;
         stats._annunakiActive  = true;
       }
+    }
+
+    // ── 7b. Neural Matrix skill-level bonuses (neuralReflex, synapticProcessing, etc.) ──
+    if (sd.neuralMatrix) {
+      var nm = sd.neuralMatrix;
+      var nmReflex    = (nm.neuralReflex      || 0);
+      var nmSynaptic  = (nm.synapticProcessing|| 0);
+      var nmPain      = (nm.painSuppression   || 0);
+      var nmTargeting = (nm.targetingMatrix   || 0);
+      var nmShield    = (nm.adaptiveShielding || 0);
+      if (nmReflex    > 0) {
+        // neuralReflex: reduces weapon-related cooldowns (weaponCooldownMult < 1 = shorter cooldowns)
+        var wcm = (stats.weaponCooldownMult || 1) * Math.pow(0.96, nmReflex);
+        stats.weaponCooldownMult = wcm;
+        if (wcm < 1) {
+          if (stats.meleeCooldown) stats.meleeCooldown *= wcm;
+          if (stats.skillCooldown) stats.skillCooldown *= wcm;
+          if (stats.dashCooldown)  stats.dashCooldown  *= wcm;
+          // fireRate (shots/sec) increases when cooldowns shorten
+          if (stats.fireRate)      stats.fireRate      /= wcm;
+        }
+      }
+      if (nmSynaptic  > 0) stats.xpMultiplier       = (stats.xpMultiplier || 1) * (1 + nmSynaptic * 0.06);
+      if (nmPain      > 0) stats.maxHp              = (stats.maxHp || 100) * (1 + nmPain * 0.08);
+      if (nmTargeting > 0) {
+        stats.critChance = (stats.critChance || 0) + nmTargeting * 0.03;
+        // Write to both critMultiplier and critDmg — sandbox uses critDmg for crit damage calculations
+        var baseCritMulti = (stats.critMultiplier || stats.critDmg || 1.5);
+        var newCritMulti  = baseCritMulti * (1 + nmTargeting * 0.10);
+        stats.critMultiplier = newCritMulti;
+        stats.critDmg        = newCritMulti;
+      }
+      if (nmShield    > 0) stats.damageReduction = (stats.damageReduction || 0) + nmShield * 0.03;
     }
 
     // ── 8. Profile Account deep stat upgrades ────────────────────────────────

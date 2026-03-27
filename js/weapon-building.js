@@ -17,6 +17,22 @@ const WEAPON_MOD_DEFS = {
   sight:    { name: 'Sight',      icon: '🔭', maxLevel: 3, costPerLevel: 200, stat: 'range',    perLevel: 0.15 },
 };
 
+// Canonical starting-weapon pool — keyed by internal sandbox weapon IDs.
+// Used both by the Starting Weapon Wheel prize list and the jackpot grant logic
+// so the two are always in sync.
+const STARTING_WEAPON_POOL = [
+  { weaponId: 'gun',           label: 'Pistol',         icon: '🔫', rarity: 'common' },
+  { weaponId: 'pumpShotgun',   label: 'Shotgun',        icon: '🔫', rarity: 'uncommon' },
+  { weaponId: 'sniperRifle',   label: 'Rifle',          icon: '🎯', rarity: 'uncommon' },
+  { weaponId: 'uzi',           label: 'Uzi',            icon: '🔫', rarity: 'rare' },
+  { weaponId: 'fireRing',      label: 'Fire Ring',      icon: '🔥', rarity: 'rare' },
+  { weaponId: 'iceSpear',      label: 'Ice Spear',      icon: '❄️', rarity: 'epic' },
+  { weaponId: 'lightning',     label: 'Lightning',      icon: '⚡', rarity: 'epic' },
+  { weaponId: 'meteor',        label: 'Meteor',         icon: '☄️', rarity: 'legendary' },
+  { weaponId: 'sword',         label: 'Sword',          icon: '⚔️', rarity: 'legendary' },
+  { weaponId: 'homingMissile', label: 'Homing Missile', icon: '🚀', rarity: 'legendary' },
+];
+
 const WEAPON_FIRE_MODES = {
   single: { name: 'Single', icon: '🔹', cost: 0 },
   burst:  { name: 'Burst',  icon: '🔸', cost: 300 },
@@ -992,12 +1008,23 @@ function showWeaponBuilding() {
       { id: 'weaponUnlock', label: 'Weapon Unlock', icon: '🎁', type: 'weaponUnlock', rarity: 'legendary', weight: 8 },
       { id: 'megaJackpot', label: 'MEGA JACKPOT!', icon: '💎', type: 'gold', value: 1000, rarity: 'mythic', weight: 3 },
     ],
+
+    // Starting Weapon Wheel — prize list derived from the canonical STARTING_WEAPON_POOL
+    // so weaponIds are always the actual sandbox weapon keys.
+    startingWeapon: STARTING_WEAPON_POOL.map(function(w) {
+      return { id: 'sw_' + w.weaponId, label: w.label, icon: w.icon,
+               type: 'startWeapon', weaponId: w.weaponId, rarity: w.rarity, weight: 5 };
+    }).concat([
+      { id: 'sw_jackpot',     label: 'ALL WEAPONS!', icon: '🏆', type: 'startWeaponJackpot', rarity: 'mythic',  weight: 1 },
+      { id: 'sw_consolation', label: '500 Gold',     icon: '💰', type: 'gold', value: 500,    rarity: 'common',  weight: 15 },
+    ]),
   };
 
   var WHEEL_TIERS = {
     basic: { name: 'Basic Wheel', cost: 50, costType: 'gold', color: '#4FC3F7', icon: '🎰' },
     premium: { name: 'Premium Wheel', cost: 200, costType: 'gold', color: '#AA44FF', icon: '🎡' },
     elite: { name: 'Elite Wheel', cost: 100, costType: 'essence', color: '#F39C12', icon: '⭐' },
+    startingWeapon: { name: 'Weapon Wheel', cost: 300, costType: 'gold', color: '#FF6B35', icon: '⚔️' },
   };
 
   function buildSpinWheel(panel) {
@@ -1446,6 +1473,28 @@ function showWeaponBuilding() {
           if (typeof showStatChange === 'function') {
             showStatChange('💰 +300 Gold (All weapons unlocked!)', 'stat');
           }
+        }
+        break;
+
+      case 'startWeapon':
+        saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
+        if (saveData.unlockedStartWeapons.indexOf(prize.weaponId) === -1) {
+          saveData.unlockedStartWeapons.push(prize.weaponId);
+        }
+        if (typeof showStatChange === 'function') {
+          showStatChange('⚔️ Starting Weapon Unlocked: ' + prize.label + '!', 'legendary');
+        }
+        break;
+
+      case 'startWeaponJackpot':
+        // Derive jackpot list from the canonical pool to stay in sync
+        var _allStartWeapons = STARTING_WEAPON_POOL.map(function(w) { return w.weaponId; });
+        saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
+        _allStartWeapons.forEach(function(wid) {
+          if (saveData.unlockedStartWeapons.indexOf(wid) === -1) saveData.unlockedStartWeapons.push(wid);
+        });
+        if (typeof showStatChange === 'function') {
+          showStatChange('🏆 JACKPOT! All Starting Weapons Unlocked!', 'mythic');
         }
         break;
     }

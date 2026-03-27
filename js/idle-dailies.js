@@ -3,13 +3,36 @@
 
 (function () {
 var DAILY_LOGIN_REWARDS = [
-  { day: 1, gold: 50,  essence: 10, item: null,        spinTokens: 0, label: '💰 50 Gold + 10 Essence' },
-  { day: 2, gold: 100, essence: 0,  item: null,        spinTokens: 1, label: '💰 100 Gold + 🎡 Spin Token' },
-  { day: 3, gold: 150, essence: 25, item: null,        spinTokens: 0, label: '💰 150 Gold + 25 Essence' },
-  { day: 4, gold: 200, essence: 0,  item: null,        spinTokens: 1, label: '💰 200 Gold + 🎡 Spin Token' },
-  { day: 5, gold: 300, essence: 50, item: null,        spinTokens: 0, label: '💰 300 Gold + 50 Essence' },
-  { day: 6, gold: 400, essence: 0,  item: null,        spinTokens: 2, label: '💰 400 Gold + 🎡 2x Spin Tokens' },
-  { day: 7, gold: 500, essence: 100, item: 'rare_item', spinTokens: 1, label: '💰 500 Gold + 100 Essence + 🎁 Rare Item + 🎡 Spin Token' }
+  { day: 1,  icon: '💰', label: '100 Gold', gold: 100 },
+  { day: 2,  icon: '⭐', label: '1 Skill Point', skillPoints: 1 },
+  { day: 3,  icon: '💰', label: '200 Gold', gold: 200 },
+  { day: 4,  icon: '💎', label: '1 Attribute Point', attributePoints: 1 },
+  { day: 5,  icon: '💰⭐', label: '300 Gold + 1 Skill Point', gold: 300, skillPoints: 1 },
+  { day: 6,  icon: '⭐⭐', label: '2 Skill Points', skillPoints: 2 },
+  { day: 7,  icon: '🏺', label: '500 Gold + Ancient Shard', gold: 500, specialItem: 'ancientShard' },
+  { day: 8,  icon: '💎💰', label: '1 Attr Point + 150 Gold', attributePoints: 1, gold: 150 },
+  { day: 9,  icon: '💎💎', label: '2 Attribute Points', attributePoints: 2 },
+  { day: 10, icon: '💰', label: '750 Gold', gold: 750 },
+  { day: 11, icon: '⭐⭐⭐', label: '3 Skill Points', skillPoints: 3 },
+  { day: 12, icon: '💰💎', label: '500 Gold + 2 Attr Points', gold: 500, attributePoints: 2 },
+  { day: 13, icon: '⭐💎', label: '2 Skill Points + 1 Attr Point', skillPoints: 2, attributePoints: 1 },
+  { day: 14, icon: '💰⭐', label: '1000 Gold + 3 Skill Points', gold: 1000, skillPoints: 3 },
+  { day: 15, icon: '🔴', label: 'Crimson Weapon Skin', skinColor: 'crimson' },
+  { day: 16, icon: '⭐⭐⭐⭐', label: '4 Skill Points', skillPoints: 4 },
+  { day: 17, icon: '💰💎', label: '800 Gold + 3 Attr Points', gold: 800, attributePoints: 3 },
+  { day: 18, icon: '⭐⭐⭐⭐⭐', label: '5 Skill Points', skillPoints: 5 },
+  { day: 19, icon: '💰', label: '1200 Gold', gold: 1200 },
+  { day: 20, icon: '💎⭐', label: '4 Attr Points + 2 Skill Points', attributePoints: 4, skillPoints: 2 },
+  { day: 21, icon: '💰⭐', label: '1500 Gold + 5 Skill Points', gold: 1500, skillPoints: 5 },
+  { day: 22, icon: '🧠', label: 'Neural Fragment (500 Account XP)', specialItem: 'neuralFragment', accountXP: 500 },
+  { day: 23, icon: '⭐⭐⭐⭐⭐⭐', label: '6 Skill Points', skillPoints: 6 },
+  { day: 24, icon: '💰💎', label: '2000 Gold + 4 Attr Points', gold: 2000, attributePoints: 4 },
+  { day: 25, icon: '⭐💎', label: '8 Skill Points + 3 Attr Points', skillPoints: 8, attributePoints: 3 },
+  { day: 26, icon: '💰', label: '2500 Gold', gold: 2500 },
+  { day: 27, icon: '⭐', label: '10 Skill Points', skillPoints: 10 },
+  { day: 28, icon: '💎💰', label: '5 Attr Points + 3000 Gold', attributePoints: 5, gold: 3000 },
+  { day: 29, icon: '⭐💎', label: '15 Skill Points + 5 Attr Points', skillPoints: 15, attributePoints: 5 },
+  { day: 30, icon: '🏆', label: '5000 Gold + Random Starting Weapon', gold: 5000, randomWeapon: true }
 ];
 
 var QUEST_POOL = [
@@ -122,7 +145,36 @@ function checkDailyLogin(saveData) {
   dailies.lastLoginRewardDay = rewardDay + 1;
   saveData.dailies = dailies;
 
-  // Grant essence and spin tokens in addition to gold
+  // Grant reward items
+  if (reward.skillPoints) {
+    saveData.skillPoints = (saveData.skillPoints || 0) + reward.skillPoints;
+  }
+  if (reward.attributePoints) {
+    saveData.attributePoints = (saveData.attributePoints || 0) + reward.attributePoints;
+  }
+  if (reward.accountXP && window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+    window.GameAccount.addXP(reward.accountXP, 'Daily Reward', saveData);
+  }
+  if (reward.randomWeapon) {
+    // Use canonical sandbox internal weapon keys so saveData.unlockedStartWeapons entries
+    // can be activated directly via weapons[id] in sandbox-loop.js
+    var _allWeapons = ['gun','pumpShotgun','sniperRifle','uzi','fireRing','iceSpear','lightning','meteor','sword','homingMissile'];
+    var _wonWeapon = _allWeapons[Math.floor(Math.random() * _allWeapons.length)];
+    saveData.unlockedStartWeapons = saveData.unlockedStartWeapons || [];
+    if (saveData.unlockedStartWeapons.indexOf(_wonWeapon) === -1) saveData.unlockedStartWeapons.push(_wonWeapon);
+  }
+  // Special items — persist to saveData.specialItems so the game can act on them
+  if (reward.specialItem) {
+    saveData.specialItems = saveData.specialItems || {};
+    saveData.specialItems[reward.specialItem] = (saveData.specialItems[reward.specialItem] || 0) + 1;
+  }
+  // Weapon skin unlocks — persist to saveData.unlockedSkins array
+  if (reward.skinColor) {
+    saveData.unlockedSkins = saveData.unlockedSkins || [];
+    if (saveData.unlockedSkins.indexOf(reward.skinColor) === -1) {
+      saveData.unlockedSkins.push(reward.skinColor);
+    }
+  }
   if (reward.essence) {
     if (saveData.clicker && typeof saveData.clicker.essence === 'number') {
       saveData.clicker.essence += reward.essence;
@@ -133,15 +185,21 @@ function checkDailyLogin(saveData) {
   if (reward.spinTokens) {
     saveData.spinTokens = (saveData.spinTokens || 0) + reward.spinTokens;
   }
+  // Always grant account XP for daily claim
+  if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+    window.GameAccount.addXP(30, 'Daily Reward', saveData);
+  }
 
   return {
     alreadyClaimed: false,
     streak: dailies.loginStreak,
     day: rewardDay + 1,
-    gold: reward.gold,
-    item: reward.item,
+    gold: reward.gold || 0,
+    item: reward.item || null,
     essence: reward.essence || 0,
     spinTokens: reward.spinTokens || 0,
+    skillPoints: reward.skillPoints || 0,
+    attributePoints: reward.attributePoints || 0,
     label: reward.label || ''
   };
 }

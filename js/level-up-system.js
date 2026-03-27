@@ -704,6 +704,67 @@ window.spawnBossChest = function(x, z) {
             playerStats.capillaryAction = (playerStats.capillaryAction || 0) + 1;
             showStatChange(`Capillary Action Lv.${playerStats.capillaryAction}! EXP/Gold range ×1.5`);
           }
+        },
+        {
+          id: 'secondShotChance',
+          icon: '🔫',
+          title: 'SECOND SHOT',
+          desc: 'Second Shot Chance +10%',
+          apply: () => {
+            playerStats.secondShotChance = (playerStats.secondShotChance || 0) + 0.10;
+            showStatChange(`+10% Second Shot Chance (Now: ${Math.round(playerStats.secondShotChance * 100)}%)`);
+          }
+        },
+        {
+          id: 'explosiveRounds',
+          icon: '💥',
+          title: 'EXPLOSIVE ROUNDS',
+          desc: 'Explosive Rounds +8% chance',
+          apply: () => {
+            playerStats.explosiveRounds = (playerStats.explosiveRounds || 0) + 0.08;
+            showStatChange(`+8% Explosive Rounds (Now: ${Math.round(playerStats.explosiveRounds * 100)}%)`);
+          }
+        },
+        {
+          id: 'freezeOnHit',
+          icon: '❄️',
+          title: 'FREEZE ON HIT',
+          desc: 'Freeze on Hit +5% chance',
+          apply: () => {
+            playerStats.freezeOnHit = (playerStats.freezeOnHit || 0) + 0.05;
+            showStatChange(`+5% Freeze on Hit (Now: ${Math.round(playerStats.freezeOnHit * 100)}%)`);
+          }
+        },
+        {
+          id: 'areaOfEffect',
+          icon: '🌀',
+          title: 'AREA OF EFFECT',
+          desc: 'AoE +20% (explosive weapons)',
+          apply: () => {
+            playerStats.aoeBonus = (playerStats.aoeBonus || 1) * 1.20;
+            showStatChange(`+20% AoE Radius`);
+          }
+        },
+        {
+          id: 'companionDamage',
+          icon: '🤖',
+          title: 'COMPANION BOOST',
+          desc: 'Companion Dmg +20%',
+          apply: () => {
+            playerStats.companionDamageMult = (playerStats.companionDamageMult || 1) * 1.20;
+            showStatChange(`+20% Companion Damage`);
+          }
+        },
+        {
+          id: 'xpMagnet',
+          icon: '🧲',
+          title: 'XP MAGNET',
+          desc: 'XP Pickup Range +2.5 radius',
+          apply: () => {
+            window._sandboxXpMagnetRunStacks = (window._sandboxXpMagnetRunStacks || 0) + 1;
+            playerStats.xpMagnetStacks = (playerStats.xpMagnetStacks || 0) + 1;
+            showStatChange(`XP Magnet Lv.${playerStats.xpMagnetStacks}! +2.5 pickup radius`);
+          }
         }
       ];
 
