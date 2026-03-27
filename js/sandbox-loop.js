@@ -441,6 +441,20 @@
   let _shakePeakIntensity = 0;    // peak shake radius (world units)
   const _shakeOffset = { x: 0, z: 0 }; // applied to camera each frame
 
+  // ─── Kill Combo System ───────────────────────────────────────────────────────
+  let _killCombo      = 0;    // current combo count
+  let _killComboTimer = 0;    // countdown before combo resets (seconds)
+
+  // ─── Level-Up Shockwave Rings ────────────────────────────────────────────────
+  let _lvlUpRings = [];       // active expanding ring meshes
+
+  // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
+  let _sessionTimerSecs    = 0; // total elapsed seconds since boot
+  let _sessionTimerAccum   = 0; // accumulator for 1-second updates
+
+  // ─── Damage Number Pool (CHANGE 8) ───────────────────────────────────────────
+  let _dmgNumPool = null; // lazy-init pool of span elements
+
   // ─── Pooled PointLight Flash System ──────────────────────────────────────────
   // Pre-allocated PointLights for muzzle flashes / hit lights.  Zero new THREE.PointLight
   // after _buildFlashPool() is called.  Exposed as window._acquireFlash for
@@ -610,9 +624,11 @@
   /**
    * Trigger a camera shake.  `intensity` is in world units — small hits pass ~0.12,
    * kills pass ~0.35.  Duration auto-scales so bigger hits shake longer.
+   * @param {number} intensity - Shake radius in world units.
+   * @param {number} [minDuration=0] - Optional minimum duration in seconds.
    */
-  function _triggerShake(intensity) {
-    const duration = Math.min(0.5, intensity * SHAKE_DURATION_SCALE);
+  function _triggerShake(intensity, minDuration) {
+    const duration = Math.max(minDuration || 0, Math.min(0.5, intensity * SHAKE_DURATION_SCALE));
     if (intensity > _shakePeakIntensity) _shakePeakIntensity = intensity;
     if (duration > _shakeTimer) _shakeTimer = duration;
   }
@@ -631,6 +647,232 @@
     const amp = _shakePeakIntensity * Math.min(1, _shakeTimer * SHAKE_FADE_RATE);
     _shakeOffset.x = (Math.random() * 2 - 1) * amp;
     _shakeOffset.z = (Math.random() * 2 - 1) * amp;
+  }
+
+  // ─── Kill Combo helpers ───────────────────────────────────────────────────────
+  function _incrementKillCombo() {
+    _killCombo++;
+    _killComboTimer = 2.5;
+    _updateKillComboDisplay();
+  }
+
+  function _updateKillComboDisplay() {
+    var el = document.getElementById('kill-combo-display');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'kill-combo-display';
+      el.style.cssText = [
+        'position:fixed',
+        'bottom:120px',
+        'left:50%',
+        'transform:translateX(-50%)',
+        'font-size:28px',
+        'font-weight:bold',
+        'color:white',
+        'text-shadow:0 0 12px red',
+        'pointer-events:none',
+        'z-index:9999',
+        'transition:all 0.15s ease',
+        'opacity:1',
+      ].join(';');
+      document.body.appendChild(el);
+    }
+    if (_killCombo < 2) {
+      el.style.opacity = '0';
+      return;
+    }
+    el.style.opacity = '1';
+    var fontSize = Math.min(56, 28 + (_killCombo - 2) * 2);
+    el.style.fontSize = fontSize + 'px';
+    el.textContent = _killCombo + 'x COMBO';
+    if (_killCombo >= 5) {
+      el.style.animation = 'combo-pulse 0.4s ease-in-out infinite alternate';
+      if (!document.getElementById('combo-pulse-style')) {
+        var style = document.createElement('style');
+        style.id = 'combo-pulse-style';
+        style.textContent = '@keyframes combo-pulse{from{text-shadow:0 0 12px red}to{text-shadow:0 0 28px red,0 0 8px #ff6666}}';
+        document.head.appendChild(style);
+      }
+    } else {
+      el.style.animation = '';
+    }
+  }
+
+  function _updateComboVignette() {
+    if (_killCombo >= 5) {
+      var v = document.getElementById('combo-vignette');
+      if (!v) {
+        v = document.createElement('div');
+        v.id = 'combo-vignette';
+        v.style.cssText = [
+          'position:fixed',
+          'top:0',
+          'left:0',
+          'width:100%',
+          'height:100%',
+          'pointer-events:none',
+          'z-index:9998',
+          'background:radial-gradient(ellipse at center, transparent 50%, rgba(180,0,0,0.35) 100%)',
+          'transition:opacity 0.3s ease',
+        ].join(';');
+        document.body.appendChild(v);
+      }
+      v.style.opacity = String(Math.min(0.9, (_killCombo - 4) * 0.12));
+    } else {
+      var v = document.getElementById('combo-vignette');
+      if (v) v.style.opacity = '0';
+    }
+  }
+
+  // ─── Wave Flash helper ────────────────────────────────────────────────────────
+  function _triggerWaveFlash() {
+    var fl = document.getElementById('wave-flash');
+    if (!fl) {
+      fl = document.createElement('div');
+      fl.id = 'wave-flash';
+      fl.style.cssText = [
+        'position:fixed',
+        'top:0',
+        'left:0',
+        'width:100%',
+        'height:100%',
+        'background:white',
+        'pointer-events:none',
+        'z-index:10000',
+        'opacity:0',
+      ].join(';');
+      document.body.appendChild(fl);
+    }
+    fl.style.transition = 'none';
+    fl.style.opacity = '0.35';
+    requestAnimationFrame(function() {
+      fl.style.transition = 'opacity 0.5s ease';
+      requestAnimationFrame(function() {
+        fl.style.opacity = '0';
+      });
+    });
+  }
+
+  // ─── Damage Number Pool helpers ───────────────────────────────────────────────
+  function _initDmgNumPool() {
+    if (_dmgNumPool) return;
+    _dmgNumPool = [];
+    for (var i = 0; i < 20; i++) {
+      var sp = document.createElement('span');
+      sp.className = 'damage-number';
+      sp.style.cssText = [
+        'position:fixed',
+        'pointer-events:none',
+        'font-weight:bold',
+        'font-size:18px',
+        'text-shadow:1px 1px 3px black',
+        'z-index:9997',
+        'opacity:0',
+        'display:none',
+        'transition:opacity 0.6s ease',
+        'user-select:none',
+      ].join(';');
+      document.body.appendChild(sp);
+      _dmgNumPool.push(sp);
+    }
+  }
+
+  function _showDamageNumber(worldX, worldY, worldZ, amount, isKill, isCrit) {
+    if (!camera || !renderer) return;
+    _initDmgNumPool();
+    // Find a free span
+    var sp = null;
+    for (var i = 0; i < _dmgNumPool.length; i++) {
+      if (parseFloat(_dmgNumPool[i].style.opacity) <= 0 || _dmgNumPool[i].style.display === 'none') {
+        sp = _dmgNumPool[i];
+        break;
+      }
+    }
+    if (!sp) return;
+    if (!_tmpV3b) return; // scene not yet initialized
+    // Project world position to screen — reuse _tmpV3b to avoid new THREE.Vector3 allocation
+    _tmpV3b.set(worldX, worldY + 1.0, worldZ);
+    _tmpV3b.project(camera);
+    var sx = (_tmpV3b.x * 0.5 + 0.5) * window.innerWidth;
+    var sy = (-_tmpV3b.y * 0.5 + 0.5) * window.innerHeight;
+    // Color based on type
+    var color = isKill ? '#ff4444' : (isCrit ? '#ffdd00' : '#ffffff');
+    sp.textContent = String(amount);
+    sp.style.color = color;
+    sp.style.left = sx + 'px';
+    sp.style.top = sy + 'px';
+    sp.style.display = 'block';
+    sp.style.transition = 'none';
+    sp.style.opacity = '1';
+    sp.style.transform = 'translateX(-50%)';
+    // Start animation: float up and fade
+    var startY = sy;
+    var _sp = sp;
+    requestAnimationFrame(function() {
+      _sp.style.transition = 'opacity 0.6s ease, top 0.6s ease';
+      _sp.style.opacity = '0';
+      _sp.style.top = (startY - 40) + 'px';
+    });
+    setTimeout(function() {
+      _sp.style.display = 'none';
+      _sp.style.transition = 'none';
+    }, 650);
+  }
+
+  // ─── Persistent HUD elements (kill count + session timer) ────────────────────
+  function _initPersistentHUD() {
+    if (!document.getElementById('hud-kill-count')) {
+      var kc = document.createElement('div');
+      kc.id = 'hud-kill-count';
+      kc.style.cssText = [
+        'position:fixed',
+        'top:16px',
+        'right:16px',
+        'color:white',
+        'font-size:15px',
+        'font-weight:bold',
+        'text-shadow:0 0 8px black',
+        'z-index:9000',
+        'pointer-events:none',
+      ].join(';');
+      kc.textContent = '💀 0';
+      document.body.appendChild(kc);
+    }
+    if (!document.getElementById('hud-session-timer')) {
+      var st = document.createElement('div');
+      st.id = 'hud-session-timer';
+      st.style.cssText = [
+        'position:fixed',
+        'top:40px',
+        'right:16px',
+        'color:white',
+        'font-size:15px',
+        'font-weight:bold',
+        'text-shadow:0 0 8px black',
+        'z-index:9000',
+        'pointer-events:none',
+      ].join(';');
+      st.textContent = '🕐 0:00';
+      document.body.appendChild(st);
+    }
+  }
+
+  function _updatePersistentHUD(dt) {
+    // Update session timer
+    _sessionTimerAccum += dt;
+    if (_sessionTimerAccum >= 1.0) {
+      _sessionTimerSecs += Math.floor(_sessionTimerAccum);
+      _sessionTimerAccum -= Math.floor(_sessionTimerAccum);
+      var mins = Math.floor(_sessionTimerSecs / 60);
+      var secs = _sessionTimerSecs % 60;
+      var timerEl = document.getElementById('hud-session-timer');
+      if (timerEl) timerEl.textContent = '🕐 ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+  }
+
+  function _updateKillCountHUD() {
+    var kc = document.getElementById('hud-kill-count');
+    if (kc && playerStats) kc.textContent = '💀 ' + (playerStats.kills || 0);
   }
 
   // ─── Projectile pool ─────────────────────────────────────────────────────────
@@ -1040,12 +1282,36 @@
       c.timer += dt;
       const lifeRatio = c.timer / c.lingerDuration; // 0 → 1 over linger duration
 
-      // Grow blood pool from small to large as corpse bleeds out
-      const poolRadius = 0.1 + lifeRatio * 0.6; // grows from 0.1 to 0.7 units (reduced from 1.8)
+      // Death slide: apply kill velocity to corpse mesh for the first 0.3 seconds
+      if (c.timer < 0.3 && c.slot && c.slot.mesh && (c.slot._deathSlideVX || c.slot._deathSlideVZ)) {
+        c.slot.mesh.position.x += (c.slot._deathSlideVX || 0) * dt;
+        c.slot.mesh.position.z += (c.slot._deathSlideVZ || 0) * dt;
+        // dt-scaled exponential decay: 0.85 per frame at 60 FPS
+        const deathSlideDecay = Math.pow(0.85, dt * 60);
+        c.slot._deathSlideVX = (c.slot._deathSlideVX || 0) * deathSlideDecay;
+        c.slot._deathSlideVZ = (c.slot._deathSlideVZ || 0) * deathSlideDecay;
+        // Keep blood pool position synced
+        c.x = c.slot.mesh.position.x;
+        c.z = c.slot.mesh.position.z;
+        if (c.poolMesh) {
+          c.poolMesh.position.x = c.x;
+          c.poolMesh.position.z = c.z;
+        }
+      }
+
+      // Grow blood pool from small to large as corpse bleeds out (more dramatic)
+      const poolRadius = 0.1 + lifeRatio * 1.1; // grows from 0.1 to 1.2 units
       if (c.poolMesh) {
-        c.poolMesh.scale.set(poolRadius * 2, poolRadius * 2, 1); // scale the fixed-size geo (reduced from 10)
+        c.poolMesh.scale.set(poolRadius * 2, poolRadius * 2, 1);
+        // Lerp pool color from 0x8B0000 (dark red) to 0x2A0000 (near black) over linger
+        if (c.poolMat && c.poolMat.color) {
+          const r = _lerp(0x8B / 255, 0x2A / 255, lifeRatio);
+          const g = 0;
+          const b = 0;
+          c.poolMat.color.setRGB(r, g, b);
+        }
         // Darken pool as time passes (more blood = darker)
-        c.poolMat.opacity = 0.75 * (1 - lifeRatio * 0.3);
+        c.poolMat.opacity = 0.85 * (1 - lifeRatio * 0.2);
       }
 
       // Heartbeat blood pumping: sin-wave drives burst rate
@@ -1200,9 +1466,11 @@
       // Show "Critical" text slightly above
       _tmpV3.set(slot.mesh.position.x, 2.4, slot.mesh.position.z);
       createFloatingText('Critical', _tmpV3, '#FF4400', 0);
+      _showDamageNumber(slot.mesh.position.x, 2.0, slot.mesh.position.z, actualDmg, slot.hp <= 0, true);
     } else {
       _tmpV3.set(slot.mesh.position.x, 1.5, slot.mesh.position.z);
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
+      _showDamageNumber(slot.mesh.position.x, 1.5, slot.mesh.position.z, actualDmg, slot.hp <= 0, false);
     }
 
     // ── GORE SIMULATOR: Connect every weapon to gore system ──────────────────
@@ -1332,6 +1600,9 @@
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
     slot.dead = true;
+    // Set death slide velocity for corpse movement
+    slot._deathSlideVX = (killVX || 0) * 0.5;
+    slot._deathSlideVZ = (killVZ || 0) * 0.5;
     // CRITICAL FIX: Ensure corpse mesh stays visible!
     slot.mesh.visible = true;
     // Flatten the corpse mesh and darken to a bloody grey
@@ -1369,6 +1640,10 @@
     _tmpV3.set(x, 1.8, z);
 
     playerStats.kills++;
+    _incrementKillCombo();
+    _updateKillCountHUD();
+    // Boss hit-stop
+    if (slot.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
 
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
@@ -1413,9 +1688,11 @@
       createFloatingText(actualDmg, _tmpV3, '#FFD700', actualDmg);
       _tmpV3.set(cx, 2.4, cz);
       createFloatingText('Critical', _tmpV3, '#FF4400', 0);
+      _showDamageNumber(cx, 2.0, cz, actualDmg, crawler.hp <= 0, true);
     } else {
       _tmpV3.set(cx, 1.5, cz);
       createFloatingText(actualDmg, _tmpV3, '#FF4444', actualDmg);
+      _showDamageNumber(cx, 1.5, cz, actualDmg, crawler.hp <= 0, false);
     }
 
     // Blood from crawler (brown/amber blood)
@@ -1481,6 +1758,8 @@
     // Mark as dying (crawler death animation handles fade)
     crawler.dying = true;
     crawler.deathTimer = 0;
+    crawler._deathSlideVX = (killVX || 0) * 0.5;
+    crawler._deathSlideVZ = (killVZ || 0) * 0.5;
     const cidx = _activeCrawlers.indexOf(crawler);
     if (cidx !== -1) _activeCrawlers.splice(cidx, 1);
 
@@ -1508,6 +1787,10 @@
     }
 
     playerStats.kills++;
+    _incrementKillCombo();
+    _updateKillCountHUD();
+    // Boss hit-stop
+    if (crawler.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(12);
     }
@@ -1557,6 +1840,9 @@
           } else {
             playerStats.hp -= crawlerDmg;
           }
+          // Screen shake on player damage (0.25s minimum duration)
+          const _cDmgRatio = _clamp(crawlerDmg / (playerStats.maxHp || 100), 0.003, 0.015);
+          _triggerShake(_cDmgRatio, 0.25);
           if (playerStats && playerStats.hp <= 0) {
             playerStats.hp = 0;
             gameOver();
@@ -1620,10 +1906,12 @@
     _tmpV3b.set(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z);
     if (isCrit) {
       createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+      _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, true);
       _tmpV3b.y += 0.4;
       createFloatingText('Critical', _tmpV3b, '#FF4400', 0);
     } else {
       createFloatingText(actualDmg, _tmpV3b, '#00CFFF', actualDmg);
+      _showDamageNumber(_tmpV3.x, _tmpV3.y + 0.5, _tmpV3.z, actualDmg, enemy.hp <= 0, false);
     }
 
     // Light-blue blood burst (DeepSkyBlue) — use BloodV2 rawBurst if available
@@ -1697,6 +1985,9 @@
     if (idx !== -1) _activeLeapingSlimes.splice(idx, 1);
 
     // Trigger death animation inside the instance — set _tmpV3 to kill position first
+    // Set death slide velocities before calling _die so _updateDeath can use them
+    enemy._deathSlideVX = (killVX || 0) * 0.5;
+    enemy._deathSlideVZ = (killVZ || 0) * 0.5;
     _tmpV3.set(x, y, z);
     enemy._die('pistol', _tmpV3);
 
@@ -1721,6 +2012,10 @@
     }
 
     playerStats.kills++;
+    _incrementKillCombo();
+    _updateKillCountHUD();
+    // Boss hit-stop
+    if (enemy.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(8);
     }
@@ -1778,6 +2073,9 @@
           } else {
             playerStats.hp -= LEAPING_DAMAGE;
           }
+          // Screen shake on player damage (0.25s minimum duration)
+          const _lDmgRatio = _clamp(LEAPING_DAMAGE / (playerStats.maxHp || 100), 0.003, 0.015);
+          _triggerShake(_lDmgRatio, 0.25);
           if (playerStats && playerStats.hp <= 0) {
             playerStats.hp = 0;
             gameOver();
@@ -2539,6 +2837,9 @@
           } else {
             playerStats.hp -= SLIME_DAMAGE;
           }
+          // Screen shake on player damage (0.25s minimum duration)
+          const _sDmgRatio = _clamp(SLIME_DAMAGE / (playerStats.maxHp || 100), 0.003, 0.015);
+          _triggerShake(_sDmgRatio, 0.25);
           // Sandbox HP guard: always check game-over via playerStats (works even if
           // player.takeDamage doesn't call gameOver() itself in sandbox context)
           if (playerStats && playerStats.hp <= 0) {
@@ -2635,6 +2936,55 @@
   }
 
   function _onLevelUp() {
+    // ── Shockwave ring: expanding golden ring at player position ──
+    if (player && player.mesh && scene) {
+      try {
+        const ringGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: 0xFFDD00,
+          transparent: true,
+          opacity: 0.9,
+          side: THREE.DoubleSide,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.copy(player.mesh.position);
+        ring.rotation.x = -Math.PI / 2;
+        scene.add(ring);
+        _lvlUpRings.push(ring);
+
+        // Shockwave damage: deal 25 dmg to enemies within 6 units
+        const px = player.mesh.position.x;
+        const pz = player.mesh.position.z;
+        const shockRadius = 6;
+        const shockRadiusSq = shockRadius * shockRadius;
+        // Reuse scratch array to avoid per-level-up GC allocation
+        _allEnemiesScratch.length = 0;
+        for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
+        for (let _ci = 0; _ci < _activeCrawlers.length; _ci++) _allEnemiesScratch.push(_activeCrawlers[_ci]);
+        for (let _li = 0; _li < _activeLeapingSlimes.length; _li++) _allEnemiesScratch.push(_activeLeapingSlimes[_li]);
+        for (let i = 0; i < _allEnemiesScratch.length; i++) {
+          const e = _allEnemiesScratch[i];
+          if (!e || !e.active || e.dead || e.dying) continue;
+          const em = e.mesh || e.group;
+          if (!em) continue;
+          const dx = em.position.x - px;
+          const dz = em.position.z - pz;
+          if (dx * dx + dz * dz <= shockRadiusSq) {
+            e.hp = (e.hp || 0) - 25;
+            if (e.hp <= 0) {
+              if (e.enemyType === 'crawler') {
+                _killCrawler(e, 1.0, 0, 0);
+              } else if (e.enemyType === 'leaping_slime') {
+                _killLeapingSlime(e, 1.0, 0, 0);
+              } else {
+                _killSlime(e, 1.0, 0, 0);
+              }
+            }
+          }
+        }
+      } catch(e) { console.warn('[LvlUp shockwave] error:', e); }
+    }
+
     // ── Fiery "LEVEL UP" text animation (Grind Survivors style) ──
     // Spawns a massive burning text above the player before showing the upgrade modal.
     _spawnFireLevelUpText();
@@ -4757,6 +5107,9 @@
           playerStats.hp -= dmg;
           if (playerStats.hp <= 0) { playerStats.hp = 0; gameOver(); }
         }
+        // Screen shake on player damage (0.25s minimum duration)
+        const _swDmgRatio = _clamp(dmg / (playerStats.maxHp || 100), 0.003, 0.015);
+        _triggerShake(_swDmgRatio, 0.25);
       }
     };
     sw.onDeath = function() {
@@ -4819,8 +5172,10 @@
     _tmpV3b.set(hx, hy, hz);
     if (isCrit) {
       createFloatingText(actualDmg, _tmpV3b, '#FFD700', actualDmg);
+      _showDamageNumber(hx, hy, hz, actualDmg, sw.dead, true);
     } else {
       createFloatingText(actualDmg, _tmpV3b, '#c8c7c0', actualDmg);
+      _showDamageNumber(hx, hy, hz, actualDmg, sw.dead, false);
     }
 
     // Blood on hit
@@ -4857,6 +5212,10 @@
     }
 
     playerStats.kills++;
+    _incrementKillCombo();
+    _updateKillCountHUD();
+    // Boss hit-stop
+    if (sw.isBoss) { if (_hitStopRemaining < 120) _hitStopRemaining = 120; }
     if (window.GameRageCombat && typeof GameRageCombat.addRage === 'function') {
       GameRageCombat.addRage(15);
     }
@@ -4971,6 +5330,8 @@
     },
 
     _spawnPhase: function(phase) {
+      // Wave flash: dramatic full-screen white flash on each new wave
+      _triggerWaveFlash();
       switch (phase) {
         case 0:
           _showWaveNotification('WAVE START — 3 Slimes incoming!', '#ffdd44', 2500);
@@ -5401,6 +5762,37 @@
       _updateCameraShake(dt);
       _updateFlashPool(dt);
 
+      // Kill combo: countdown timer and fade out when expired
+      if (_killComboTimer > 0) {
+        _killComboTimer -= dt;
+        if (_killComboTimer <= 0) {
+          _killCombo = 0;
+          var comboEl = document.getElementById('kill-combo-display');
+          if (comboEl) {
+            comboEl.style.transition = 'opacity 0.4s ease';
+            comboEl.style.opacity = '0';
+          }
+        }
+      }
+      _updateComboVignette();
+
+      // Level-up shockwave ring animation
+      for (var _ri = _lvlUpRings.length - 1; _ri >= 0; _ri--) {
+        var _ring = _lvlUpRings[_ri];
+        _ring.scale.x += 0.35 * dt * 60;
+        _ring.scale.z += 0.35 * dt * 60;
+        _ring.material.opacity -= 0.025 * dt * 60;
+        if (_ring.material.opacity <= 0) {
+          scene.remove(_ring);
+          _ring.geometry.dispose();
+          _ring.material.dispose();
+          _lvlUpRings.splice(_ri, 1);
+        }
+      }
+
+      // Persistent HUD: session timer and kill count
+      _updatePersistentHUD(dt);
+
       _refreshHUD(dt);
 
       // Tick player status effects (StatusBar depletion)
@@ -5684,6 +6076,7 @@
 
       _buildSandboxOverlay();
       _refreshExpBar();
+      _initPersistentHUD(); // Initialize kill count and session timer HUD
 
       // Attach X button handler for levelup-modal (game-screens.js not loaded in sandbox)
       const xBtn = document.getElementById('levelup-x-btn');
