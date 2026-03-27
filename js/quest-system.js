@@ -650,7 +650,7 @@
           startRunBtn.onclick = () => {
             document.body.removeChild(overlay);
             // In sandbox 2.0 mode, reload the page to start a fresh run (CHANGE 5)
-            if (window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'))) {
+            if (_isSandboxMode) {
               window.location.reload();
             } else {
               startGame();

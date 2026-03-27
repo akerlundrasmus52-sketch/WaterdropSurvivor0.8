@@ -116,9 +116,11 @@
     try { pauseOverlayCount = 0; window.pauseOverlayCount = 0; } catch (_) {}
     if (typeof _syncJoystickZone === 'function') _syncJoystickZone();
   };
-  // ── Quest & companion stubs (quest system loads but quests aren't used yet) ──
+  // ── Quest & companion stubs ──────────────────────────────────────────────────
+  // progressTutorialQuest is exposed by camp-skill-system.js as window.progressTutorialQuest.
+  // This no-op stub only activates if camp-skill-system.js hasn't loaded yet.
   if (typeof progressTutorialQuest === 'undefined' && typeof window.progressTutorialQuest === 'undefined') {
-    window.progressTutorialQuest = function () {}; // no-op: quests not active yet
+    window.progressTutorialQuest = function () {}; // fallback: camp-skill-system not loaded
   }
   if (typeof droneTurrets === 'undefined') {
     window.droneTurrets = [];
@@ -233,8 +235,8 @@
   // screen from the main game (which requires systems not loaded here).
   if (typeof gameOver === 'undefined') {
     window.gameOver = function () {
-      // Evaluate run quests before showing death screen (CHANGE 3)
-      if (typeof _checkSandboxRunQuestProgress === 'function') _checkSandboxRunQuestProgress();
+      // Evaluate run quests before showing death screen (CHANGE 3) — pass endOfRun=true
+      if (typeof _checkSandboxRunQuestProgress === 'function') _checkSandboxRunQuestProgress(true);
       // Reset all new v2 systems before unloading
       if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
       if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
@@ -5511,26 +5513,46 @@
   // ─── Run Quest Progress Checker (CHANGE 2) ───────────────────────────────────
   // Called after every kill and when the death/end-run screen appears.
   // Mirrors the logic in js/game-over-reset.js so quests complete in sandbox.
-  function _checkSandboxRunQuestProgress() {
+  // Pass endOfRun=true when called from gameOver() to also check end-of-run quests.
+  function _checkSandboxRunQuestProgress(endOfRun) {
     if (!saveData || !saveData.tutorialQuests) return;
     if (typeof window.progressTutorialQuest !== 'function') return;
     const tq = saveData.tutorialQuests;
     const cq = tq.currentQuest;
     if (!cq) return;
     const elapsedSec = _sandboxRunStartTime ? (Date.now() - _sandboxRunStartTime) / 1000 : 0;
+    // Kill-count quests (safe to check mid-run)
     if (cq === 'quest1_kill3'          && _sandboxRunKills >= 3)   window.progressTutorialQuest('quest1_kill3', true);
     if (cq === 'quest4_kill10'         && _sandboxRunKills >= 10)  window.progressTutorialQuest('quest4_kill10', true);
-    if (cq === 'quest6_survive2min'    && elapsedSec >= 120)       window.progressTutorialQuest('quest6_survive2min', true);
     if (cq === 'quest8_kill10'         && _sandboxRunKills >= 10)  window.progressTutorialQuest('quest8_kill10', true);
     if (cq === 'quest10_kill15'        && _sandboxRunKills >= 15)  window.progressTutorialQuest('quest10_kill15', true);
     if (cq === 'quest14_kill25'        && _sandboxRunKills >= 25)  window.progressTutorialQuest('quest14_kill25', true);
     if (cq === 'quest15b_runKill12'    && _sandboxRunKills >= 12)  window.progressTutorialQuest('quest15b_runKill12', true);
     if (cq === 'quest26_kill20'        && _sandboxRunKills >= 20)  window.progressTutorialQuest('quest26_kill20', true);
-    if (cq === 'quest28_survive3min'   && elapsedSec >= 180)       window.progressTutorialQuest('quest28_survive3min', true);
-    if (cq === 'firstRunDeath')                                    window.progressTutorialQuest('firstRunDeath', true);
     if (cq === 'quest_annunaki1'       && _sandboxRunKills >= 100) window.progressTutorialQuest('quest_annunaki1', true);
+    if (cq === 'quest19c_growAdult'    && _sandboxRunKills >= 8)   window.progressTutorialQuest('quest19c_growAdult', true);
+    // Survival-time quests (safe to check mid-run via per-second tick)
+    if (cq === 'quest6_survive2min'    && elapsedSec >= 120)       window.progressTutorialQuest('quest6_survive2min', true);
+    if (cq === 'quest28_survive3min'   && elapsedSec >= 180)       window.progressTutorialQuest('quest28_survive3min', true);
+    if (cq === 'quest_dailyRoutine'    && elapsedSec >= 120)       window.progressTutorialQuest('quest_dailyRoutine', true);
+    if (cq === 'quest19b_growJuvenile' && elapsedSec >= 60)        window.progressTutorialQuest('quest19b_growJuvenile', true);
+    // Level-based quests (safe to check mid-run)
+    if (cq === 'quest_harvester'       && playerStats && playerStats.lvl >= 3)  window.progressTutorialQuest('quest_harvester', true);
+    if (cq === 'quest_annunaki3'       && playerStats && playerStats.lvl >= 50) window.progressTutorialQuest('quest_annunaki3', true);
+    if (cq === 'quest3_reachLevel5'    && playerStats && playerStats.lvl >= 5)  window.progressTutorialQuest('quest3_reachLevel5', true);
+    // Boss defeat / special state quests (safe mid-run once flag is set)
     if (cq === 'quest_pushingLimits'   && tq.firstBossDefeated)    window.progressTutorialQuest('quest_pushingLimits', true);
-    if (cq === 'quest_eggHunt'         && tq.mysteriousEggFound) window.progressTutorialQuest('quest_eggHunt', true);
+    if (cq === 'quest_eggHunt'         && tq.mysteriousEggFound)   window.progressTutorialQuest('quest_eggHunt', true);
+    // Resource quests (safe mid-run; resources tracked across runs)
+    if (cq === 'quest_firstBlood') {
+      const r = saveData.resources || {};
+      if ((r.wood || 0) >= 30 && (r.stone || 0) >= 30) window.progressTutorialQuest('quest_firstBlood', true);
+    }
+    if (cq === 'quest_gainingStats' && (saveData.totalKills || 0) >= 300) window.progressTutorialQuest('quest_gainingStats', true);
+    // End-of-run only: firstRunDeath requires the player to actually die/end the run
+    if (endOfRun) {
+      if (cq === 'firstRunDeath') window.progressTutorialQuest('firstRunDeath', true);
+    }
   }
 
   // ─── Sequential Kill-Based Wave Manager ──────────────────────────────────────
@@ -6098,6 +6120,11 @@
         const _epz = player.mesh.position.z - window._mysteriousEggObject.position.z;
         if (_epx * _epx + _epz * _epz <= 4) { // within 2 units (2^2 = 4)
           if (saveData.tutorialQuests) saveData.tutorialQuests.mysteriousEggFound = true;
+          // Dispose GPU resources before removing from scene
+          window._mysteriousEggObject.traverse(function(child) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+          });
           scene.remove(window._mysteriousEggObject);
           window._mysteriousEggObject = null;
           _showWaveNotification('🥚 You found the Mysterious Egg!', '#8B5CF6', 3000);
