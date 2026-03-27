@@ -1829,10 +1829,10 @@
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 20, stone: 20, coal: 20 },
+        rewardResources: { wood: 30, stone: 30 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
+        message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>30 Wood</b> · 🪨 <b>30 Stone</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
         nextQuest: 'quest_craftAllTools',
         conditions: ['firstRunDeath']
       },
@@ -1906,12 +1906,12 @@
         conditions: ['quest_firstBlood']
       },
 
-      // === STEP 6: The Egg Hunt — Reach Level 15 + find egg ===
+      // === STEP 6: The Egg Hunt — Reach Level 10 + defeat The Grey boss ===
       quest_eggHunt: {
         id: 'quest_eggHunt',
         name: 'The Egg Hunt',
-        description: 'Reach Level 15 in a single run and explore the map to find the Mysterious Egg.',
-        objectives: 'Reach Level 15 and find the Mysterious Egg',
+        description: 'Defeat The Grey — an alien boss that appears in the new world. It guards a mysterious egg. Reach Level 10 and defeat it to claim the egg.',
+        objectives: 'Reach Level 10 and defeat The Grey boss',
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -1965,7 +1965,7 @@
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 10, stone: 10, coal: 10, iron: 3, leather: 3 },
+        rewardResources: { wood: 15, stone: 15, iron: 3, leather: 3 },
         unlockBuilding: 'forge',
         message: "🔨 Forge Unlocked! You received starter materials.",
         nextQuest: 'questForge0b_craftTools',
@@ -1995,7 +1995,7 @@
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 3,
-        rewardResources: { wood: 5, stone: 5, coal: 5 },
+        rewardResources: { wood: 8, stone: 8 },
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
@@ -2011,7 +2011,7 @@
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 15, stone: 15, coal: 15 },
+        rewardResources: { wood: 23, stone: 23 },
         message: "Skills unlocked! 🌟<br><br>You got extra building materials too — now walk up to any unlocked building plot and build it!<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
         nextQuest: 'quest3_stonehengeGear',
         conditions: ['quest1_kill3']
@@ -3284,14 +3284,14 @@
         saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) + quest.rewardSAP;
         showStatChange(`+${quest.rewardSAP} Special Atk Points!`);
       }
-      // Give resource rewards (wood, stone, coal) for building quests
+      // Give resource rewards (wood, stone) for building quests
       if (quest.rewardResources) {
         if (!saveData.resources) saveData.resources = {};
         const flyItems = [];
         for (const [res, amt] of Object.entries(quest.rewardResources)) {
           saveData.resources[res] = (saveData.resources[res] || 0) + amt;
           showStatChange(`+${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}!`);
-          const iconMap = { wood: '🪵', stone: '🪨', coal: '🖤', iron: '⚙️', leather: '🥩', crystal: '💎' };
+          const iconMap = { wood: '🪵', stone: '🪨', iron: '⚙️', leather: '🥩', crystal: '💎' };
           flyItems.push({ icon: iconMap[res] || '📦', label: `+${amt} ${res}` });
         }
         // Animate resource icons flying into HUD

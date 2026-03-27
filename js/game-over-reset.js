@@ -140,8 +140,8 @@
         if (currentQuest.id === 'quest_gainingStats' && (saveData.totalKills || 0) >= 300) {
           progressTutorialQuest('quest_gainingStats', true);
         }
-        // Step 6: The Egg Hunt — Reach Level 15 + found mysterious egg
-        if (currentQuest.id === 'quest_eggHunt' && playerStats.lvl >= 15 && saveData.tutorialQuests.mysteriousEggFound) {
+        // Step 6: The Egg Hunt — Reach Level 10 + defeat The Grey boss
+        if (currentQuest.id === 'quest_eggHunt' && playerStats.lvl >= 10 && saveData.tutorialQuests.mysteriousEggFound) {
           progressTutorialQuest('quest_eggHunt', true);
         }
         // Step 7: A New Friend — auto-completes on return to camp (handled below)
