@@ -10303,10 +10303,10 @@
 }
 
 @keyframes annunaki-death {
-  0% { opacity: 1; transform: scale(1) rotate(0deg); }
-  40% { transform: scale(1.1) rotate(-5deg); }
-  70% { transform: scale(0.95) rotate(3deg) translateY(20px); }
-  100% { opacity: 0; transform: scale(0.8) rotate(-8deg) translateY(60px); }
+  0% { opacity: 1; transform: translateX(-50%) scale(1) rotate(0deg); }
+  40% { transform: translateX(-50%) scale(1.1) rotate(-5deg); }
+  70% { transform: translateX(-50%) scale(0.95) rotate(3deg) translateY(20px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8) rotate(-8deg) translateY(60px); }
 }
 
 .annunaki-dying {
