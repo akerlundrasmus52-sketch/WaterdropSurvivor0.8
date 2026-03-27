@@ -5737,6 +5737,8 @@
     _advancePhase: function(nextPhase) {
       this._phase      = nextPhase;
       this._phaseKills = 0;
+      // PERFORMANCE FIX 1E: Clean up wave debris before spawning next wave
+      _cleanupWaveDebris();
       // Small delay so player sees the kill before next enemies appear
       const self = this;
       SeqWaveManager._setTimeout(function() { self._spawnPhase(nextPhase); }, 800);
@@ -5901,8 +5903,46 @@
     }
   };
 
+  // ── PERFORMANCE FIX 1E: Wave Cleanup Function ────────────────────────────────
+  // Clears all projectile DOM elements, floating damage numbers, health bars, and
+  // particle elements between waves to prevent memory buildup.
+  function _cleanupWaveDebris() {
+    // Clear floating damage numbers (from createFloatingText pool)
+    const damageNums = document.querySelectorAll('div[style*="position:fixed"][style*="pointer-events:none"][style*="font-family:Impact"]');
+    damageNums.forEach(el => {
+      if (el.style.display !== 'none') {
+        el.style.display = 'none';
+      }
+    });
+
+    // Clear any projectile DOM elements (if any weapons create DOM projectiles)
+    const projectileDivs = document.querySelectorAll('.projectile, .bullet-trail, .projectile-glow');
+    projectileDivs.forEach(el => el.remove());
+
+    // Clear any particle effect elements
+    const particleDivs = document.querySelectorAll('.particle, .explosion-particle, .blood-particle');
+    particleDivs.forEach(el => el.remove());
+
+    // Clear all active projectiles from the pool
+    while (_activeProjList.length > 0) {
+      const proj = _activeProjList.pop();
+      if (proj && proj.mesh && proj.mesh.parent) {
+        proj.mesh.parent.remove(proj.mesh);
+      }
+      _projPool.push(proj);
+    }
+
+    // Clear trauma system debris if available
+    if (window.TraumaSystem && typeof TraumaSystem.clearAll === 'function') {
+      TraumaSystem.clearAll();
+    }
+  }
+
   // ─── Main animation loop ──────────────────────────────────────────────────────
   function _animate(nowMs) {
+    // PERFORMANCE FIX 1A: Cancel any previous rAF before scheduling the next one
+    // This prevents multiple overlapping rAF loops if _boot() is called more than once
+    if (_rafId !== null) cancelAnimationFrame(_rafId);
     _rafId = requestAnimationFrame(_animate);
 
     try {
@@ -6565,6 +6605,8 @@
       }
 
       // Start loop
+      // PERFORMANCE FIX 1A: Cancel any previous rAF before starting a new loop
+      if (_rafId !== null) cancelAnimationFrame(_rafId);
       _lastTime = performance.now();
       _rafId = requestAnimationFrame(_animate);
 
