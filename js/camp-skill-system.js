@@ -1829,10 +1829,10 @@
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 20, stone: 20, coal: 20 },
+        rewardResources: { wood: 30, stone: 30 },
         unlockBuilding: 'forge',
         triggerOnDeath: true,
-        message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>20 Wood</b> · 🪨 <b>20 Stone</b> · 🖤 <b>20 Coal</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
+        message: "🔨 <b>Fabrication Node Unlocked!</b><br><br>You received:<br>&nbsp;🪵 <b>30 Wood</b> · 🪨 <b>30 Stone</b><br>&nbsp;💰 <b>50 Gold</b><br><br><i>A.I.D.A: 'Resource gathering requires tools. Build the Forge and equip yourself.'</i><br><br>🎯 <b>NEXT:</b> Build the Forge, then buy gathering tools (1 Gold each)!",
         nextQuest: 'quest_craftAllTools',
         conditions: ['firstRunDeath']
       },
@@ -1906,12 +1906,12 @@
         conditions: ['quest_firstBlood']
       },
 
-      // === STEP 6: The Egg Hunt — Reach Level 15 + find egg ===
+      // === STEP 6: The Egg Hunt — Reach Level 10 + defeat The Grey boss ===
       quest_eggHunt: {
         id: 'quest_eggHunt',
         name: 'The Egg Hunt',
-        description: 'Reach Level 15 in a single run and explore the map to find the Mysterious Egg.',
-        objectives: 'Reach Level 15 and find the Mysterious Egg',
+        description: 'Defeat The Grey — an alien boss that appears in the new world. It guards a mysterious egg. Reach Level 10 and defeat it to claim the egg.',
+        objectives: 'Reach Level 10 and defeat The Grey boss',
         claim: 'Main Building',
         rewardGold: 0,
         rewardSkillPoints: 0,
@@ -1965,7 +1965,7 @@
         claim: 'Main Building',
         rewardGold: 75,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 10, stone: 10, coal: 10, iron: 3, leather: 3 },
+        rewardResources: { wood: 15, stone: 15, iron: 3, leather: 3 },
         unlockBuilding: 'forge',
         message: "🔨 Forge Unlocked! You received starter materials.",
         nextQuest: 'questForge0b_craftTools',
@@ -1995,7 +1995,7 @@
         claim: 'Main Building',
         rewardGold: 50,
         rewardSkillPoints: 3,
-        rewardResources: { wood: 5, stone: 5, coal: 5 },
+        rewardResources: { wood: 8, stone: 8 },
         unlockBuilding: 'skillTree',
         message: "Outstanding, Droplet! 🎯<br><br>You've proven your combat worth. The <b>Skill Tree</b> is now unlocked at camp!<br><br>Head to the <b>Skill Tree</b> tab and spend your <b>3 Skill Points</b> to grow stronger.",
         nextQuest: 'quest2_spendSkills',
@@ -2011,7 +2011,7 @@
         claim: 'Main Building',
         rewardGold: 100,
         rewardSkillPoints: 1,
-        rewardResources: { wood: 15, stone: 15, coal: 15 },
+        rewardResources: { wood: 23, stone: 23 },
         message: "Skills unlocked! 🌟<br><br>You got extra building materials too — now walk up to any unlocked building plot and build it!<br><br>Head to <b>Stonehenge</b> on the map — a glowing chest awaits you there with your first piece of gear!",
         nextQuest: 'quest3_stonehengeGear',
         conditions: ['quest1_kill3']
@@ -2845,7 +2845,7 @@
     }
     
     // ── Build Overlay: click-to-build with resource requirements and 0-100% animation ──
-    // Building N requires N of each: wood, stone, coal.
+    // Building N requires N of each: wood, stone.
     // Resources are checked and deducted on build. Progress shown as 0→100% with phases.
     function _showBuildOverlay(buildingId, buildingName) {
       window._buildOverlayActive = true;
@@ -2864,8 +2864,7 @@
       var res = (saveData.resources) || {};
       var hasWood  = (res.wood  || 0) >= cost;
       var hasStone = (res.stone || 0) >= cost;
-      var hasCoal  = (res.coal  || 0) >= cost;
-      var canBuild = hasWood && hasStone && hasCoal;
+      var canBuild = hasWood && hasStone;
 
       var overlay = document.createElement('div');
       overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Bangers,cursive;';
@@ -2891,8 +2890,7 @@
         mats.style.cssText = 'display:flex;justify-content:center;gap:14px;margin:0 0 16px;';
         var matDefs = [
           { icon: '🪵', label: 'Wood',  have: res.wood  || 0, ok: hasWood },
-          { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone },
-          { icon: '🖤', label: 'Coal',  have: res.coal  || 0, ok: hasCoal }
+          { icon: '🪨', label: 'Stone', have: res.stone || 0, ok: hasStone }
         ];
         matDefs.forEach(function (m) {
           var box = document.createElement('div');
@@ -2981,7 +2979,6 @@
         var r = saveData.resources || {};
         r.wood  = Math.max(0, (r.wood  || 0) - cost);
         r.stone = Math.max(0, (r.stone || 0) - cost);
-        r.coal  = Math.max(0, (r.coal  || 0) - cost);
         if (window.GameHarvesting) window.GameHarvesting.refreshHUD();
 
         var startMs = Date.now();
@@ -3106,7 +3103,7 @@
           setTimeout(function () {
             if (window.CampWorld && window.CampWorld.isActive) {
               window.CampWorld.showBennySpeech(
-                '> Next node requires: Wood x' + nextCost + ', Stone x' + nextCost + ', Coal x' + nextCost + '. Gather immediately.'
+                '> Next node requires: Wood x' + nextCost + ', Stone x' + nextCost + '. Gather immediately.'
               );
               setTimeout(function () { window.CampWorld.hideBennySpeech(); }, 5000);
             }
@@ -3287,14 +3284,14 @@
         saveData.specialAtkPoints = (saveData.specialAtkPoints || 0) + quest.rewardSAP;
         showStatChange(`+${quest.rewardSAP} Special Atk Points!`);
       }
-      // Give resource rewards (wood, stone, coal) for building quests
+      // Give resource rewards (wood, stone) for building quests
       if (quest.rewardResources) {
         if (!saveData.resources) saveData.resources = {};
         const flyItems = [];
         for (const [res, amt] of Object.entries(quest.rewardResources)) {
           saveData.resources[res] = (saveData.resources[res] || 0) + amt;
           showStatChange(`+${amt} ${res.charAt(0).toUpperCase() + res.slice(1)}!`);
-          const iconMap = { wood: '🪵', stone: '🪨', coal: '🖤', iron: '⚙️', leather: '🥩', crystal: '💎' };
+          const iconMap = { wood: '🪵', stone: '🪨', iron: '⚙️', leather: '🥩', crystal: '💎' };
           flyItems.push({ icon: iconMap[res] || '📦', label: `+${amt} ${res}` });
         }
         // Animate resource icons flying into HUD
@@ -3765,11 +3762,11 @@
       const nextCost = saveData.buildingProgress && saveData.buildingProgress.nextBuildingCost;
       if (nextCost && readyToClaim.length > 0) {
         const res = saveData.resources || {};
-        const w = res.wood || 0, s = res.stone || 0, c = res.coal || 0;
-        if (w < nextCost || s < nextCost || c < nextCost) {
+        const w = res.wood || 0, s = res.stone || 0;
+        if (w < nextCost || s < nextCost) {
           const remEl = document.createElement('div');
           remEl.style.cssText = 'font-size: 10px; color: #aaa; margin-top: 3px;';
-          remEl.textContent = `🏗️ Next build needs: 🪵${Math.min(w,nextCost)}/${nextCost} 🪨${Math.min(s,nextCost)}/${nextCost} 🖤${Math.min(c,nextCost)}/${nextCost}`;
+          remEl.textContent = `🏗️ Next build needs: 🪵${Math.min(w,nextCost)}/${nextCost} 🪨${Math.min(s,nextCost)}/${nextCost}`;
           questTracker.appendChild(remEl);
         }
       }

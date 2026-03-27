@@ -3291,8 +3291,8 @@
       } catch(e) { console.warn('[LvlUp shockwave] error:', e); }
     }
 
-    // ── Egg Hunt quest: spawn mysterious egg at level 15 (CHANGE 7) ──
-    if (playerStats.lvl >= 15 &&
+    // ── Egg Hunt quest: spawn The Grey boss at level 10 (CHANGE 7) ──
+    if (playerStats.lvl >= 10 &&
         saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest_eggHunt' &&
         !window._mysteriousEggSpawned && player && player.mesh && scene) {
       try {
