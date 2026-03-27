@@ -195,12 +195,19 @@ this.squishAmount = 0;
 // Idle wobble
 this.wobblePhase  = Math.random() * Math.PI * 2;
 
+// Bob animation (ambient idle)
+this._bobPhase = Math.random() * Math.PI * 2;
+
 // Push
 this.pushX = 0;
 this.pushZ = 0;
 
 // Hit flash
 this.flashTimer  = 0;
+
+// Death slide velocity (set from sandbox kill functions)
+this._deathSlideVX = 0;
+this._deathSlideVZ = 0;
 }
 
 // ── Reset for reuse from pool ──────────────────
@@ -244,6 +251,9 @@ this.squishTimer = 0;
 this.squishAmount= 0;
 this.flashTimer  = 0;
 this.wobblePhase = Math.random() * Math.PI * 2;
+this._bobPhase   = Math.random() * Math.PI * 2;
+this._deathSlideVX = 0;
+this._deathSlideVZ = 0;
 
 // Wounds — deactivate all
 for (var i = 0; i < this.wounds.length; i++) {
@@ -339,9 +349,10 @@ if (spd > 0.1) {
 this.mesh.rotation.y = Math.atan2(this.vx, this.vz);
 }
 } else {
-// Idle wobble
+// Idle bob
+this._bobPhase += dt * 2.5;
 this.wobblePhase += dt * 1.5;
-var idleWobble = Math.sin(this.wobblePhase) * 0.02;
+var idleWobble = Math.sin(this._bobPhase) * 0.06;
 this.mesh.position.y = this.scale * 0.5 + idleWobble;
 if (this.squishTimer <= 0) {
 this.mesh.scale.set(
@@ -1325,6 +1336,14 @@ var data   = this.deathData;
 var pos    = this.mesh.position;
 var MAX_TIME = 4.0;
 
+// Death slide: apply kill velocity for first 0.3 seconds with friction
+if (this.deathTimer < 0.3 && (this._deathSlideVX || this._deathSlideVZ)) {
+  pos.x += this._deathSlideVX * dt;
+  pos.z += this._deathSlideVZ * dt;
+  this._deathSlideVX *= 0.85;
+  this._deathSlideVZ *= 0.85;
+}
+
 // Emit blood trail during death movement
 if (this.deathTimer < 2.5 && Math.random() < 0.5) {
 this._dropTrail();
@@ -1570,6 +1589,8 @@ if (this._fadeInterval) { clearInterval(this._fadeInterval); this._fadeInterval 
 this.alive  = false;
 this.dying  = false;
 this.active = false;
+this._deathSlideVX = 0;
+this._deathSlideVZ = 0;
 if (this.mesh) { this.mesh.visible = false; this.mesh.material.opacity = 1.0; this.mesh.material.transparent = false; }
 if (this.shadowMesh) this.shadowMesh.visible = false;
 if (this.eyeL) { this.eyeL.visible = false; this.eyeR.visible = false; }

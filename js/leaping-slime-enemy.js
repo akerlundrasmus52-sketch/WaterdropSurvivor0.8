@@ -133,6 +133,13 @@ function LeapingSlimeEnemy() {
   this.flashTimer      = 0;
   this.lastDamageTime  = 0;
 
+  // Idle bob animation
+  this._bobPhase       = Math.random() * Math.PI * 2;
+
+  // Death slide velocity
+  this._deathSlideVX   = 0;
+  this._deathSlideVZ   = 0;
+
   // Three.js objects (built once in pool, reused every spawn)
   this.mesh            = null;   // THREE.Group — root container
   this.body            = null;   // body mesh
@@ -178,6 +185,11 @@ LeapingSlimeEnemy.prototype.spawn = function(x, z, waveLevel) {
   // Start in IDLE, pick a random wait before first jump
   this.state      = 'IDLE';
   this.stateTimer = LEAP_CFG.IDLE_TIME_MIN + Math.random() * (LEAP_CFG.IDLE_TIME_MAX - LEAP_CFG.IDLE_TIME_MIN);
+
+  // Reset per-spawn properties
+  this._bobPhase     = Math.random() * Math.PI * 2;
+  this._deathSlideVX = 0;
+  this._deathSlideVZ = 0;
 
   // Place mesh
   this.mesh.position.set(x, 0, z);
@@ -263,7 +275,10 @@ LeapingSlimeEnemy.prototype._stateIdle = function(dt) {
   // Smoothly lerp body back to resting scale
   _v1.set(this.size, this.size, this.size);
   this.body.scale.lerp(_v1, Math.min(10 * dt, 1.0));
-  this.body.position.y = this.size;
+
+  // Gentle vertical bob
+  this._bobPhase += dt * 2.5;
+  this.body.position.y = this.size + Math.sin(this._bobPhase) * 0.06;
 
   // Smoothly close mouth
   _v1.set(this.size, this.size * 0.05, this.size);
@@ -285,7 +300,10 @@ LeapingSlimeEnemy.prototype._statePreparing = function(dt, playerPos) {
   var scaleXZ = (1.0 + chargeProgress * 0.4) * this.size;
 
   this.body.scale.set(scaleXZ, scaleY, scaleXZ);
-  this.body.position.y = scaleY;  // keep flush with ground
+
+  // Gentle bob continues into preparing state
+  this._bobPhase += dt * 2.5;
+  this.body.position.y = scaleY + Math.sin(this._bobPhase) * 0.04 * (1.0 - chargeProgress);
 
   // Slightly open mouth in anticipation
   this.mouth.scale.set(this.size, this.size * 0.5 * chargeProgress, this.size);
@@ -446,6 +464,15 @@ LeapingSlimeEnemy.prototype._die = function(weaponKey, hitPoint) {
 
 // ─── Death animation update ────────────────────────────────────────────────
 LeapingSlimeEnemy.prototype._updateDeath = function(dt) {
+  // Death slide: apply kill velocity for first 0.3 seconds with friction
+  var elapsed = 0.55 - this.deathTimer;
+  if (elapsed < 0.3 && (this._deathSlideVX || this._deathSlideVZ)) {
+    this.mesh.position.x += this._deathSlideVX * dt;
+    this.mesh.position.z += this._deathSlideVZ * dt;
+    this._deathSlideVX *= 0.85;
+    this._deathSlideVZ *= 0.85;
+  }
+
   this.deathTimer -= dt;
 
   // Shrink and fade out
@@ -467,6 +494,8 @@ LeapingSlimeEnemy.prototype._cleanup = function() {
   this.active = false;
   this.dead   = true;
   this.dying  = false;
+  this._deathSlideVX = 0;
+  this._deathSlideVZ = 0;
 
   if (this.mesh) {
     this.mesh.visible = false;

@@ -56,8 +56,8 @@ const XP_CFG = {
   STAR_POINTS: 5,              // 5-pointed star
 
   // Magnetism
-  MAGNET_RANGE: 4.0,           // Pickup range
-  MAGNET_SPEED: 0.5,           // Pull speed
+  MAGNET_RANGE: 8.0,           // Pickup range (quadratic pull within 8 units)
+  MAGNET_SPEED: 3.0,           // Base pull speed at edge of range
   COLLECT_RANGE: 0.8,          // Collection distance
 
   // Pool size
@@ -364,8 +364,9 @@ class XPStar {
       // Lift off ground when magnetized
       this.onGround = false;
 
-      // Pull toward player with increasing speed as it gets closer
-      const pullStrength = XP_CFG.MAGNET_SPEED * (1 - dist / XP_CFG.MAGNET_RANGE);
+      // Quadratic ramp-up: starts slow at 8 units, accelerates as star gets closer
+      const t = Math.max(0, (8 - dist) / 8); // 0 at 8 units, 1 at 0 units
+      const pullStrength = XP_CFG.MAGNET_SPEED * (1 + t * t * 4);
       this.mesh.position.x += (dx / dist) * pullStrength * dt * 60;
       this.mesh.position.y += (dy / dist) * pullStrength * dt * 60;
       this.mesh.position.z += (dz / dist) * pullStrength * dt * 60;
@@ -390,8 +391,19 @@ class XPStar {
   deactivate() {
     this.active = false;
     if (this.mesh) {
-      this.mesh.visible = false;
-      this.mesh.position.set(0, -1000, 0); // Park off-screen
+      // Scale pop: 1.4 this frame, then 0.001 next frame, then hide
+      this.mesh.scale.set(1.4, 1.4, 1.4);
+      requestAnimationFrame(() => {
+        if (this.mesh) {
+          this.mesh.scale.set(0.001, 0.001, 0.001);
+          requestAnimationFrame(() => {
+            if (this.mesh) {
+              this.mesh.visible = false;
+              this.mesh.position.set(0, -1000, 0); // Park off-screen
+            }
+          });
+        }
+      });
     }
   }
 

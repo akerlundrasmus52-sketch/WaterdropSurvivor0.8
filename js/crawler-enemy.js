@@ -108,6 +108,8 @@ function CrawlerEnemy() {
   this.dying = false;
   this.dead = false;
   this.deathTimer = 0;
+  this._deathSlideVX = 0;
+  this._deathSlideVZ = 0;
 }
 
 // ── Build mesh ──────────────────────────────────
@@ -247,6 +249,8 @@ CrawlerEnemy.prototype.spawn = function(x, z, waveLevel) {
   this.active = true;
   this.dying = false;
   this.dead = false;
+  this._deathSlideVX = 0;
+  this._deathSlideVZ = 0;
   this.level = waveLevel || 1;
   
   var lvlScale = 1.0 + (this.level - 1) * 0.25;
@@ -324,6 +328,13 @@ CrawlerEnemy.prototype.update = function(dt, playerPos) {
   
   if (this.dying) {
     this.deathTimer += dt;
+    // Death slide: apply kill velocity for first 0.3 seconds with friction
+    if (this.deathTimer < 0.3 && (this._deathSlideVX || this._deathSlideVZ)) {
+      this.group.position.x += this._deathSlideVX * dt;
+      this.group.position.z += this._deathSlideVZ * dt;
+      this._deathSlideVX *= 0.85;
+      this._deathSlideVZ *= 0.85;
+    }
     // Fade out segments over 2 seconds
     var fade = 1.0 - this.deathTimer / 2.0;
     if (fade <= 0) {
@@ -574,6 +585,8 @@ CrawlerEnemy.prototype.update = function(dt, playerPos) {
 CrawlerEnemy.prototype._cleanup = function() {
   this.alive = false;
   this.active = false;
+  this._deathSlideVX = 0;
+  this._deathSlideVZ = 0;
   if (this.group) this.group.visible = false;
 };
 
