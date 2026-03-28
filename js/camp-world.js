@@ -16,6 +16,35 @@
 (function () {
   'use strict';
 
+  // ── Section 4: Sandbox 2.0 guard ─────────────────────────────────────────────
+  // If we are running inside sandbox.html, freeze ALL Three.js render loops and
+  // skip world/scene construction entirely.  Data constants are still accessible
+  // so dependent code that reads them does not break.
+  var _isSandboxEnv = (typeof window !== 'undefined') &&
+    (window.location.pathname.includes('sandbox.html') ||
+     !!document.getElementById('game-container'));
+  if (_isSandboxEnv) {
+    window.CampWorld = {
+      isActive: false, menuOpen: false,
+      pauseInput: function () {}, resumeInput: function () {},
+      _forceResumeInput: function () {},
+      enter: function () {}, exit: function () {},
+      update: function () {}, render: function () {},
+      refreshBuildings: function () {},
+      playBuildingAppearAnimation: function () {},
+      playBuildingUnlockAnimation: function () {},
+      bennyWalkToBuild: function () {},
+      bennyWalkToBuildThenDialog: function () {},
+      showBennyContextualHint: function () {},
+      showBennySpeech: function () {}, hideBennySpeech: function () {},
+      interactIncubator: function () {},
+      unlockBuilding: function () {},
+      onResize: function () {}, warmUp: function () {},
+      _SANDBOX_FROZEN: true,
+    };
+    console.log('[CampWorld] Sandbox 2.0 detected — Three.js camp world frozen.');
+    return;
+  }
   // ──────────────────────────────────────────────────────────
   // Constants
   // ──────────────────────────────────────────────────────────

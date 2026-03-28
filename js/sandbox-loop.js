@@ -471,6 +471,66 @@
   // ─── Damage Number Pool (CHANGE 8) ───────────────────────────────────────────
   let _dmgNumPool = null; // lazy-init pool of span elements
 
+  // ─── Phase 1: 2-D Gore Canvas (screen-space particle overlay) ─────────────────
+  let _goreCanvas2D = null;
+  let _goreCtx2D   = null;
+  const _goreParticles2D = []; // { x, y, vx, vy, color, size, life, maxLife }
+
+  /** Spawn a screen-space 2D gore particle (splatter, impact sparks, etc.) */
+  function _spawnGoreParticle2D(sx, sy, color, count) {
+    count = count || 6;
+    for (var i = 0; i < count; i++) {
+      var angle = Math.random() * Math.PI * 2;
+      var speed = 40 + Math.random() * 120;
+      _goreParticles2D.push({
+        x: sx, y: sy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 60,
+        color: color || '#cc0000',
+        size: 2 + Math.random() * 4,
+        life: 0.6 + Math.random() * 0.6,
+        maxLife: 0,
+      });
+      _goreParticles2D[_goreParticles2D.length - 1].maxLife =
+        _goreParticles2D[_goreParticles2D.length - 1].life;
+    }
+  }
+
+  function _updateGoreCanvas2D(dt) {
+    if (!_goreCanvas2D) {
+      _goreCanvas2D = document.getElementById('gore-canvas-2d');
+      if (_goreCanvas2D) {
+        _goreCtx2D = _goreCanvas2D.getContext('2d');
+      }
+    }
+    if (!_goreCtx2D) return;
+    // Sync canvas resolution to window
+    if (_goreCanvas2D.width !== window.innerWidth) _goreCanvas2D.width = window.innerWidth;
+    if (_goreCanvas2D.height !== window.innerHeight) _goreCanvas2D.height = window.innerHeight;
+    _goreCtx2D.clearRect(0, 0, _goreCanvas2D.width, _goreCanvas2D.height);
+    // Update + draw particles
+    for (var i = _goreParticles2D.length - 1; i >= 0; i--) {
+      var p = _goreParticles2D[i];
+      p.life -= dt;
+      if (p.life <= 0) { _goreParticles2D.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 200 * dt; // gravity
+      var alpha = Math.max(0, p.life / p.maxLife);
+      _goreCtx2D.globalAlpha = alpha;
+      _goreCtx2D.fillStyle = p.color;
+      _goreCtx2D.beginPath();
+      _goreCtx2D.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+      _goreCtx2D.fill();
+    }
+    _goreCtx2D.globalAlpha = 1;
+  }
+
+  // Expose spawn function globally so enemy death handlers can call it
+  window._spawnGoreParticle2D = function(sx, sy, color, count) {
+    _spawnGoreParticle2D(sx, sy, color, count);
+  };
+
   // ─── Pooled PointLight Flash System ──────────────────────────────────────────
   // Pre-allocated PointLights for muzzle flashes / hit lights.  Zero new THREE.PointLight
   // after _buildFlashPool() is called.  Exposed as window._acquireFlash for
@@ -984,8 +1044,26 @@
   // ─── Damage Number Pool helpers ───────────────────────────────────────────────
   function _initDmgNumPool() {
     if (_dmgNumPool) return;
+    // Use DOMPool pre-allocated elements if available (Phase 1 zero-lag pooling)
+    if (window.DOMPool && window.DOMPool.initialized) {
+      _dmgNumPool = [];
+      // The DOMPool pre-allocates 100 dmgNumber elements; we reference the pool
+      // for acquire/release but keep our local list for legacy lookup compatibility.
+      for (var j = 0; j < 20; j++) {
+        var poolEl = window.DOMPool.get('dmgNumber');
+        if (poolEl) {
+          poolEl.className = 'damage-number';
+          poolEl.style.opacity = '0';
+          poolEl.style.display = 'none';
+          _dmgNumPool.push(poolEl);
+          window.DOMPool.release(poolEl);
+        }
+      }
+      if (_dmgNumPool.length > 0) return;
+    }
+    // Fallback: create elements directly (DOMPool not yet initialized)
     _dmgNumPool = [];
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 100; i++) {
       var sp = document.createElement('span');
       sp.className = 'damage-number';
       sp.style.cssText = [
@@ -999,6 +1077,7 @@
         'display:none',
         'transition:opacity 0.6s ease',
         'user-select:none',
+        'will-change:transform,opacity',
       ].join(';');
       document.body.appendChild(sp);
       _dmgNumPool.push(sp);
@@ -5571,6 +5650,11 @@
 
   // ─── Object pool init ─────────────────────────────────────────────────────────
   function _initPools() {
+    // Phase 1: Initialize DOMPool for zero-lag DOM element pre-allocation
+    if (window.DOMPool && typeof window.DOMPool.init === 'function') {
+      window.DOMPool.init();
+      console.log('[SandboxLoop] DOMPool pre-allocated (100 dmgNumber, 200 projectile, 150 enemyBadge elements)');
+    }
     // Initialize the GameObjectPool (trail pool) with the active scene
     if (window.GameObjectPool && typeof GameObjectPool.init === 'function') {
       GameObjectPool.init(scene);
@@ -6636,6 +6720,8 @@
       } else {
         renderer.render(scene, camera);
       }
+      // Phase 1: Draw 2D gore canvas overlay (screen-space effects, zero Three.js overhead)
+      _updateGoreCanvas2D(dt);
     } catch (e) {
       if (!_animateErrorShown) {
         _animateErrorShown = true;
