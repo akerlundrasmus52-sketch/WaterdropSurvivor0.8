@@ -34,6 +34,126 @@ function rollUpgradeRarity() {
 
 // Returns a copy of an upgrade with rarity applied — scaled stats and updated desc/apply
 function makeRarityScaledUpgrade(u) {
+
+// ── Phase 1: Advanced Unlockable Sandbox Cards ────────────────────────────────
+// These cards are ONLY available in a Sandbox run if the player has previously
+// unlocked them by pulling them from the Camp Lucky Wheel.
+// saveData.unlockedSandboxCards = ['vampiricTouch', 'chainLightning', …]
+//
+// Each card definition has:
+//   id         – matches the key in saveData.unlockedSandboxCards
+//   icon       – emoji displayed on the card
+//   title      – card title (ALL CAPS)
+//   desc       – one-line description shown on the card
+//   rarity     – assigned rarity (these are always Epic or higher)
+//   apply()    – mutates playerStats and/or sets a flag read by sandbox-loop.js
+// ─────────────────────────────────────────────────────────────────────────────
+const ADVANCED_SANDBOX_CARDS = [
+  {
+    id: 'vampiricTouch',
+    icon: '🩸',
+    title: 'VAMPIRIC TOUCH',
+    desc: 'Life Steal: +1% of damage dealt is restored as HP',
+    rarity: UPGRADE_RARITIES[2], // Epic
+    campDisplayName: 'Vampiric Touch',
+    campDesc: 'Unlocks the VAMPIRIC TOUCH Level-Up Card for Sandbox runs — drain life from every kill.',
+    apply: () => {
+      if (typeof playerStats === 'undefined') return;
+      playerStats.lifeSteal          = Math.min(0.5, (playerStats.lifeSteal || 0) + 0.01);
+      playerStats.lifeStealPercent   = playerStats.lifeSteal;
+      playerStats.lifeStealPercentage= playerStats.lifeSteal;
+      playerStats.lifesteal          = playerStats.lifeSteal;
+      playerStats._vampiricTouchUnlocked = true;
+      if (typeof showStatChange === 'function') showStatChange('🩸 Vampiric Touch: +1% Life Steal');
+    },
+  },
+  {
+    id: 'chainLightning',
+    icon: '⚡',
+    title: 'CHAIN LIGHTNING',
+    desc: 'Attacks have a 10% chance to jump to an additional target',
+    rarity: UPGRADE_RARITIES[2], // Epic
+    campDisplayName: 'Chain Lightning',
+    campDesc: 'Unlocks the CHAIN LIGHTNING Level-Up Card — electricity arcs between enemies.',
+    apply: () => {
+      if (typeof playerStats === 'undefined') return;
+      playerStats.chainLightningChance = Math.min(0.75, (playerStats.chainLightningChance || 0) + 0.10);
+      playerStats.chainChance          = playerStats.chainLightningChance;
+      playerStats._chainLightningUnlocked = true;
+      if (typeof showStatChange === 'function') showStatChange('⚡ Chain Lightning: +10% chain chance');
+    },
+  },
+  {
+    id: 'explosiveCorpses',
+    icon: '💥',
+    title: 'EXPLOSIVE CORPSES',
+    desc: 'Enemies have a 15% chance to explode on death for AoE damage',
+    rarity: UPGRADE_RARITIES[3], // Legendary
+    campDisplayName: 'Explosive Corpses',
+    campDesc: 'Unlocks EXPLOSIVE CORPSES — slain enemies detonate in a burst of gore.',
+    apply: () => {
+      if (typeof playerStats === 'undefined') return;
+      playerStats.explosiveDeathChance = Math.min(0.75, (playerStats.explosiveDeathChance || 0) + 0.15);
+      playerStats._explosiveCorporseUnlocked = true;
+      if (typeof showStatChange === 'function') showStatChange('💥 Explosive Corpses: +15% explode chance');
+    },
+  },
+  {
+    id: 'thornsArmor',
+    icon: '🌵',
+    title: 'THORNS ARMOR',
+    desc: 'Reflect 20% of incoming damage back to attackers',
+    rarity: UPGRADE_RARITIES[2], // Epic
+    campDisplayName: 'Thorns Armor',
+    campDesc: 'Unlocks THORNS ARMOR — attackers take reflected damage on every hit.',
+    apply: () => {
+      if (typeof playerStats === 'undefined') return;
+      playerStats.thornsPercent = Math.min(0.75, (playerStats.thornsPercent || 0) + 0.20);
+      playerStats.thornsDamage  = (playerStats.thornsDamage || 0) + 5;
+      playerStats._thornsArmorUnlocked = true;
+      if (typeof showStatChange === 'function') showStatChange('🌵 Thorns Armor: reflect 20% damage');
+    },
+  },
+  {
+    id: 'divineCritical',
+    icon: '✨',
+    title: 'DIVINE CRITICAL',
+    desc: '+10% Crit Chance, +50% Crit Multiplier',
+    rarity: UPGRADE_RARITIES[3], // Legendary
+    campDisplayName: 'Divine Critical',
+    campDesc: 'Unlocks DIVINE CRITICAL — devastating critical strikes blessed by the heavens.',
+    apply: () => {
+      if (typeof playerStats === 'undefined') return;
+      playerStats.critChance           = Math.min(0.90, (playerStats.critChance || 0.10) + 0.10);
+      playerStats.criticalHitChance    = playerStats.critChance;
+      playerStats.critDmg              = (playerStats.critDmg || 1.5) + 0.50;
+      playerStats.critMultiplier       = playerStats.critDmg;
+      playerStats.critDamageMultiplier = playerStats.critDmg;
+      playerStats._divineCritUnlocked  = true;
+      if (typeof showStatChange === 'function') showStatChange('✨ Divine Critical: +10% Crit / +50% Crit Mult');
+    },
+  },
+];
+window.ADVANCED_SANDBOX_CARDS = ADVANCED_SANDBOX_CARDS;
+
+/**
+ * getUnlockedSandboxCards()
+ * Returns the subset of ADVANCED_SANDBOX_CARDS that the player has unlocked
+ * via the Camp Lucky Wheel (ids stored in saveData.unlockedSandboxCards).
+ */
+function getUnlockedSandboxCards() {
+  var sd = (typeof window !== 'undefined' && window.saveData) ||
+           (typeof saveData !== 'undefined' ? saveData : null);
+  if (!sd || !Array.isArray(sd.unlockedSandboxCards) || sd.unlockedSandboxCards.length === 0) {
+    return [];
+  }
+  return ADVANCED_SANDBOX_CARDS.filter(function (c) {
+    return sd.unlockedSandboxCards.indexOf(c.id) !== -1;
+  });
+}
+window.getUnlockedSandboxCards = getUnlockedSandboxCards;
+
+// ─────────────────────────────────────────────────────────────────────────────
   const rarity = rollUpgradeRarity();
   const s = rarity.scale;
   const scaled = Object.assign({}, u, {
@@ -1465,6 +1585,24 @@ window.spawnBossChest = function(x, z) {
       }
 
       try {
+      // Phase 1: Inject unlocked advanced sandbox cards into the choices pool.
+      // Only cards the player has pulled from the Camp Lucky Wheel are injected.
+      // We add at most 1 advanced card per level-up screen to maintain balance.
+      try {
+        var _unlockedAdvanced = (typeof getUnlockedSandboxCards === 'function') ? getUnlockedSandboxCards() : [];
+        if (_unlockedAdvanced.length > 0) {
+          // Shuffle and pick one unlocked card that isn't already in choices
+          var _existingIds = new Set(choices.map(function(c) { return c.id; }));
+          var _eligible = _unlockedAdvanced.filter(function(c) { return !_existingIds.has(c.id); });
+          if (_eligible.length > 0) {
+            var _pick = _eligible[Math.floor(Math.random() * _eligible.length)];
+            // Wrap in a rarity-annotated object so it renders with the right card style
+            var _advCard = Object.assign({}, _pick, { _rarity: _pick.rarity });
+            choices.push(_advCard);
+          }
+        }
+      } catch(e) { console.warn('[LevelUp] Advanced card injection failed:', e); }
+
       // Apply rarity scaling to all choices that don't already have a rarity assigned
       choices = choices.map(u => (u._rarity ? u : makeRarityScaledUpgrade(u)));
 

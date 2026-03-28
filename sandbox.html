@@ -587,6 +587,9 @@
   <!-- ── Three.js canvas target ─────────────────────────────────────────── -->
   <div id="game-container"></div>
 
+  <!-- ── Phase 1: 2-D Gore Canvas overlay (pointer-events:none, drawn every RAF frame) -->
+  <canvas id="gore-canvas-2d" aria-hidden="true" style="pointer-events:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;"></canvas>
+
   <!-- ── Visual FX overlays ─────────────────────────────────────────────── -->
   <div id="low-hp-vignette"></div>
   <div id="blood-splatter-overlay" aria-hidden="true"></div>

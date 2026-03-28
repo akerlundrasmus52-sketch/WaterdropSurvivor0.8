@@ -548,3 +548,128 @@ window.enemyPool = (function () {
 
   return { acquireEnemy, _return, get totalFree() { return totalFree(); } };
 }());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOMPool — Phase 1 Zero-Lag DOM Element Pooling
+//
+// Pre-allocates DOM elements on initialisation so document.createElement is
+// never called during active combat.  Elements are hidden (display:none) when
+// inactive and activated via DOMPool.get() / DOMPool.release().
+//
+// Usage:
+//   DOMPool.init()                         — call once at sandbox boot
+//   DOMPool.get('dmgNumber')               — borrow an inactive element
+//   DOMPool.release(el)                    — return element to pool
+// ─────────────────────────────────────────────────────────────────────────────
+window.DOMPool = (function () {
+  'use strict';
+
+  const POOL_SIZES = {
+    dmgNumber: 100,   // floating damage / crit numbers
+    projectile: 200,  // 2-D projectile overlay elements (reserved for future use)
+    enemyBadge: 150,  // enemy HP-bar / name badges (reserved for future use)
+  };
+
+  const _pools   = {};  // type → [ element ]
+  const _active  = new Set();
+  let   _initialized = false;
+
+  function _makeElement(type) {
+    const el = document.createElement('span');
+    el.dataset.poolType = type;
+    el.style.cssText = [
+      'position:fixed',
+      'pointer-events:none',
+      'font-weight:bold',
+      'font-size:18px',
+      'text-shadow:1px 1px 3px black',
+      'z-index:9997',
+      'opacity:0',
+      'display:none',
+      'transition:none',
+      'user-select:none',
+      'will-change:transform,opacity',
+    ].join(';');
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+
+  /**
+   * Pre-allocate all pool elements and attach them to the DOM.
+   * Safe to call multiple times (idempotent).
+   */
+  function init() {
+    if (_initialized) return;
+    _initialized = true;
+    Object.keys(POOL_SIZES).forEach(function (type) {
+      _pools[type] = [];
+      var count = POOL_SIZES[type];
+      for (var i = 0; i < count; i++) {
+        _pools[type].push(_makeElement(type));
+      }
+    });
+    console.log('[DOMPool] Pre-allocated', Object.keys(POOL_SIZES).map(function (t) {
+      return POOL_SIZES[t] + ' ' + t;
+    }).join(', ') + ' elements.');
+  }
+
+  /**
+   * Borrow an inactive element from the pool.
+   * Returns null if all elements are in use (pool exhausted).
+   *
+   * @param {string} type - Pool category: 'dmgNumber' | 'projectile' | 'enemyBadge'
+   * @returns {HTMLElement|null}
+   */
+  function get(type) {
+    var pool = _pools[type];
+    if (!pool) return null;
+    for (var i = 0; i < pool.length; i++) {
+      var el = pool[i];
+      if (!_active.has(el)) {
+        _active.add(el);
+        el.style.display = 'block';
+        el.style.opacity = '1';
+        el.style.transition = 'none';
+        return el;
+      }
+    }
+    // Pool exhausted — create a temporary overflow element (no pre-allocation perf issue
+    // since this is a rare edge case rather than every-frame allocation)
+    var overflow = _makeElement(type);
+    _active.add(overflow);
+    overflow.style.display = 'block';
+    overflow.style.opacity = '1';
+    return overflow;
+  }
+
+  /**
+   * Return an element to the pool after use.
+   * Hides the element and removes all inline content/class changes.
+   *
+   * @param {HTMLElement} el
+   */
+  function release(el) {
+    if (!el) return;
+    _active.delete(el);
+    el.style.display = 'none';
+    el.style.opacity = '0';
+    el.style.transition = 'none';
+    el.style.top = '0px';
+    el.style.left = '0px';
+    el.style.transform = '';
+    el.style.color = '';
+    el.textContent = '';
+    el.className = '';
+  }
+
+  /** Returns the number of currently active (in-use) elements for a given type. */
+  function activeCount(type) {
+    var pool = _pools[type];
+    if (!pool) return 0;
+    return pool.filter(function (el) { return _active.has(el); }).length;
+  }
+
+  return { init, get, release, activeCount, get initialized() { return _initialized; } };
+}());

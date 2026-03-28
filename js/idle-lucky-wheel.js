@@ -185,7 +185,35 @@ window.GameLuckyWheel = (function () {
     if (window.GameAccount) {
       window.GameAccount.addXP(5, 'Wheel spin', saveData);
     }
-    return { ok: true, segment: segment, prize: segment.label, description: description };
+
+    // Phase 1 — Gacha to Roguelike Unlocks (Section 5D)
+    // On each spin there is a 15% chance to also unlock a new advanced sandbox card
+    // (if the player hasn't already unlocked all of them).
+    var _sandboxUnlockResult = null;
+    try {
+      var _advCards = window.ADVANCED_SANDBOX_CARDS;
+      if (_advCards && _advCards.length > 0) {
+        if (!Array.isArray(saveData.unlockedSandboxCards)) {
+          saveData.unlockedSandboxCards = [];
+        }
+        var _locked = _advCards.filter(function (c) {
+          return saveData.unlockedSandboxCards.indexOf(c.id) === -1;
+        });
+        if (_locked.length > 0 && Math.random() < 0.15) {
+          var _newCard = _locked[Math.floor(Math.random() * _locked.length)];
+          saveData.unlockedSandboxCards.push(_newCard.id);
+          _sandboxUnlockResult = _newCard;
+          // Persist immediately
+          if (typeof saveSaveData === 'function') { try { saveSaveData(); } catch (_) {} }
+          // Show "NEW ABILITY UNLOCKED" notification
+          _showSandboxCardUnlock(_newCard);
+        }
+      }
+    } catch (e) {
+      console.warn('[LuckyWheel] Sandbox card unlock check failed:', e);
+    }
+
+    return { ok: true, segment: segment, prize: segment.label, description: description, sandboxCardUnlocked: _sandboxUnlockResult };
   }
 
   var RARITY_COLORS = {

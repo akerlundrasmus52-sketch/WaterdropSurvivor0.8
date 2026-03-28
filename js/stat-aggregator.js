@@ -157,6 +157,42 @@
         expGainBonus: 0, itemDropRate: 1.0,
         criticalHitChance: 0.10, criticalHitDamageMulti: 1.5,
 
+        // ── ARPG Proc Stats (Phase 1 Ultimate Stat Engine) ───────────────────
+        critMultiplier: 1.5,           // total crit damage multiplier (alias of critDmg)
+        lifeStealPercentage: 0,        // % of damage dealt restored as HP (canonical Phase 1 name)
+        chainLightningChance: 0,       // chance (0–1) for hit to chain lightning to nearby enemy
+        chainLightningTargets: 1,      // number of additional targets hit by chain lightning
+        chainLightningDamage: 0.5,     // chain lightning damage as fraction of base hit
+        explosiveDeathChance: 0,       // chance (0–1) for slain enemy to detonate AoE
+        explosiveDeathRadius: 3.0,     // AoE radius of explosive corpse
+        explosiveDeathDamage: 0,       // flat AoE damage (0 = auto-scale from base damage)
+        thornsDamage: 0,               // flat damage reflected to attackers per hit
+        thornsPercent: 0,              // % of incoming damage reflected (0–1)
+        xpMultiplier: 1.0,             // XP gain multiplier (already present, re-declared for clarity)
+        resourceDropMultiplier: 1.0,   // resource / gold drop rate multiplier
+        dodgeChanceTotal: 0,           // total dodge chance (capped at 0.75)
+        bleedChance: 0,                // chance to apply bleed DoT (0–1)
+        bleedDamage: 0,                // bleed damage per tick
+        bleedDuration: 3.0,            // bleed duration in seconds
+        stunChance: 0,                 // chance to stun enemy on hit (0–1)
+        stunDuration: 1.0,             // stun duration in seconds
+        shieldReflect: 0,              // flat damage absorbed by shield then reflected
+        aoeBlastRadius: 0,             // bonus AoE radius on explosive abilities
+        extraProjectiles: 0,           // +N bonus projectiles on each shot
+        ricochetChance: 0,             // chance for projectile to bounce to new target
+        summonDamageBonus: 0,          // damage bonus for summoned allies / turrets
+        cooldownReduction: 0,          // global ability cooldown reduction % (0–1)
+        flatDamageBonus: 0,            // flat damage added to every hit
+        percentDamageBonus: 0,         // % damage bonus added to every hit (0–1)
+        overhealShield: 0,             // max HP that can overflow as a shield (% of maxHp)
+        executionThreshold: 0,         // instantly kill enemies below this HP % (0–1)
+        // ── Sandbox-only Proc Activation Flags ───────────────────────────────
+        _vampiricTouchUnlocked: false,
+        _chainLightningUnlocked: false,
+        _explosiveCorporseUnlocked: false,
+        _thornsArmorUnlocked: false,
+        _divineCritUnlocked: false,
+
         // ── Stamina ──────────────────────────────────────────────────────────
         stamina: 100, maxStamina: 100, staminaRegen: 8, dashStaminaCost: 49,
       };
@@ -901,8 +937,23 @@
     // Spiritual: legacy name is spellEchoChance; spiritualEcho is the display alias.
     stats.spellEchoChance    = Math.max(stats.spellEchoChance || 0, stats.spiritualEcho || 0);
     stats.spiritualEcho      = stats.spellEchoChance;    // canonical display copy
-    stats.lifesteal          = Math.max(stats.lifesteal || 0, stats.lifeSteal || 0);
+    stats.lifesteal          = Math.max(stats.lifesteal || 0, stats.lifeSteal || 0, stats.lifeStealPercent || 0, stats.lifeStealPercentage || 0);
     stats.lifeSteal          = stats.lifesteal;           // canonical display copy
+    stats.lifeStealPercent   = stats.lifesteal;           // alias
+    stats.lifeStealPercentage = stats.lifesteal;          // Phase 1 canonical alias
+
+    // ARPG Proc Stats: sync canonical Phase 1 names with legacy aliases
+    stats.chainLightningChance  = Math.max(stats.chainLightningChance || 0, stats.chainChance || 0);
+    stats.chainChance            = stats.chainLightningChance;
+    stats.thornsDamage           = Math.max(stats.thornsDamage || 0, 0);
+    stats.thornsPercent          = Math.max(stats.thornsPercent || 0, 0);
+    stats.explosiveDeathChance   = Math.max(stats.explosiveDeathChance || 0, 0);
+    stats.resourceDropMultiplier = Math.max(stats.resourceDropMultiplier || 1.0, stats.itemDropRate || 1.0);
+    stats.itemDropRate           = stats.resourceDropMultiplier;
+    stats.dodgeChanceTotal       = Math.min(0.75, Math.max(stats.dodgeChanceTotal || 0, stats.dodgeChance || 0, stats.evadeChance || 0));
+    stats.dodgeChance            = stats.dodgeChanceTotal;
+    stats.evadeChance            = stats.dodgeChanceTotal;
+    stats.critMultiplier         = Math.max(stats.critMultiplier || 1.5, stats.critDmg || 1.5);
 
     // Dash: dashInvincibilityFrames is the engine name; dashIframes is the display alias.
     stats.dashInvincibilityFrames = Math.max(stats.dashInvincibilityFrames || 8, stats.dashIframes || 8);
@@ -1038,12 +1089,119 @@
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // StatAggregator singleton — Phase 1 ARPG Stat Pipeline
+  //
+  // FinalStats = BaseProfileStats + CampBuildingBonuses + NeuralMatrixBonuses
+  //            + EquippedGear + SandboxTemporaryBuffs
+  //
+  // Usage:
+  //   StatAggregator.getStat('critChance')         → final value
+  //   StatAggregator.addSandboxBuff('armor', 10)   → adds temporary +10 armor
+  //   StatAggregator.clearSandboxBuffs()           → wipes all temporary buffs
+  //   StatAggregator.recalculate()                 → rebuilds FinalStats from scratch
+  // ─────────────────────────────────────────────────────────────────────────────
+  var _sandboxBuffs = {};       // { statName: totalAddedValue }
+  var _cachedFinalStats = null; // last recalculated result (null = stale)
+
+  var StatAggregator = {
+    /**
+     * Read the final value of any named stat, including all sources + sandbox buffs.
+     * Falls back to window.playerStats if no cache is available (e.g. outside sandbox).
+     */
+    getStat: function (statName) {
+      if (!_cachedFinalStats) {
+        // Lazy-build the cache on first access
+        _cachedFinalStats = calculateTotalPlayerStats();
+      }
+      var base = _cachedFinalStats[statName];
+      var buff = _sandboxBuffs[statName] || 0;
+      if (typeof base === 'number') return base + buff;
+      // For non-numeric stats (bool, string) buffs are not applicable
+      if (buff && typeof base === 'undefined') return buff;
+      return base;
+    },
+
+    /**
+     * Add a temporary sandbox buff.  The buff stacks additively on top of the
+     * permanent base stat.  Calling this does NOT mutate playerStats directly;
+     * getStat() will fold it in on the next read.
+     *
+     * @param {string} statName  - e.g. 'armor', 'critChance'
+     * @param {number} value     - amount to add (can be negative)
+     */
+    addSandboxBuff: function (statName, value) {
+      _sandboxBuffs[statName] = (_sandboxBuffs[statName] || 0) + value;
+      // Also apply to live playerStats so existing code that reads playerStats
+      // directly stays in sync.
+      if (typeof window !== 'undefined' && window.playerStats &&
+          typeof window.playerStats[statName] === 'number') {
+        window.playerStats[statName] = (window.playerStats[statName] || 0) + value;
+      }
+    },
+
+    /**
+     * Remove a previously added sandbox buff (exact amount subtracted).
+     */
+    removeSandboxBuff: function (statName, value) {
+      StatAggregator.addSandboxBuff(statName, -(value || 0));
+    },
+
+    /**
+     * Wipe ALL sandbox temporary buffs and revert playerStats to base values.
+     * Call at the start of a new run or on player death.
+     */
+    clearSandboxBuffs: function () {
+      var names = Object.keys(_sandboxBuffs);
+      if (names.length > 0 && typeof window !== 'undefined' && window.playerStats) {
+        names.forEach(function (statName) {
+          var buffAmt = _sandboxBuffs[statName] || 0;
+          if (typeof window.playerStats[statName] === 'number') {
+            window.playerStats[statName] -= buffAmt;
+          }
+        });
+      }
+      _sandboxBuffs = {};
+    },
+
+    /**
+     * Force a full recalculation from all permanent sources.
+     * Updates both the internal cache and window.playerStats.
+     */
+    recalculate: function () {
+      _cachedFinalStats = calculateTotalPlayerStats();
+      // Reapply sandbox buffs on top of the fresh base
+      if (typeof window !== 'undefined' && window.playerStats) {
+        Object.assign(window.playerStats, _cachedFinalStats);
+        var names = Object.keys(_sandboxBuffs);
+        names.forEach(function (statName) {
+          var buffAmt = _sandboxBuffs[statName] || 0;
+          if (buffAmt && typeof window.playerStats[statName] === 'number') {
+            window.playerStats[statName] += buffAmt;
+          }
+        });
+      }
+      return _cachedFinalStats;
+    },
+
+    /** Invalidate the cached FinalStats so next getStat() call rebuilds it. */
+    invalidate: function () {
+      _cachedFinalStats = null;
+    },
+
+    /** Read-only snapshot of current sandbox-only buffs (for debug / UI). */
+    getSandboxBuffs: function () {
+      return Object.assign({}, _sandboxBuffs);
+    },
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // Expose to global scope
   // ─────────────────────────────────────────────────────────────────────────────
   window.calculateTotalPlayerStats = calculateTotalPlayerStats;
   window.recalculateAllStats       = recalculateAllStats;
   window.hardResetGame             = hardResetGame;
+  window.StatAggregator            = StatAggregator;
 
-  console.log('[StatAggregator] calculateTotalPlayerStats, recalculateAllStats, hardResetGame registered.');
+  console.log('[StatAggregator] calculateTotalPlayerStats, recalculateAllStats, hardResetGame, StatAggregator registered.');
 
 }());
