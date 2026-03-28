@@ -2807,10 +2807,10 @@
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2
       );
-      if (forceOpts && forceOpts.dirX !== undefined) {
+      if (forceOpts && isFinite(forceOpts.dirX) && isFinite(forceOpts.dirZ)) {
         // High-force directional launch: biased strongly toward knockback direction
-        const _fPow    = forceOpts.power  !== undefined ? forceOpts.power  : 0.30;
-        const _fSpread = forceOpts.spread !== undefined ? forceOpts.spread : 0.35;
+        const _fPow    = (forceOpts.power  !== undefined && isFinite(forceOpts.power))  ? forceOpts.power  : 0.30;
+        const _fSpread = (forceOpts.spread !== undefined && isFinite(forceOpts.spread)) ? forceOpts.spread : 0.35;
         chunk.vx = forceOpts.dirX * _fPow + (Math.random() - 0.5) * _fSpread;
         chunk.vy = 0.25 + Math.random() * 0.15; // stay airborne 20-32 frames at 60fps
         chunk.vz = forceOpts.dirZ * _fPow + (Math.random() - 0.5) * _fSpread;
@@ -3307,13 +3307,17 @@
         for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
         for (let _ci = 0; _ci < _activeCrawlers.length; _ci++) _allEnemiesScratch.push(_activeCrawlers[_ci]);
         for (let _li = 0; _li < _activeLeapingSlimes.length; _li++) _allEnemiesScratch.push(_activeLeapingSlimes[_li]);
-        for (let _swi = 0; _swi < _activeSkinwalkers.length; _swi++) _allEnemiesScratch.push(_activeSkinwalkers[_swi]);
+        // Note: skinwalkers are handled in a dedicated loop below — they use parts.root,
+        //       don't define `active`, and need takeDamage()/_killSkinwalker() instead of _killSlime().
 
         for (let i = 0; i < _allEnemiesScratch.length; i++) {
           const e = _allEnemiesScratch[i];
           if (!e || !e.active || e.dead || e.dying) continue;
           const em = e.mesh || e.group;
           if (!em) continue;
+          // Resolve the actual render mesh for material overrides.
+          // For leaping slimes e.mesh is a THREE.Group (no .material) — use e.body instead.
+          const renderMesh = (em.material) ? em : (e.body && e.body.material ? e.body : null);
           const dx = em.position.x - px;
           const dz = em.position.z - pz;
           const distSq = dx * dx + dz * dz;
@@ -3358,10 +3362,10 @@
               _killSlime(e, 4.0, kbDirX * 14, kbDirZ * 14);
             }
             // Override corpse color: skin entirely ripped off → raw flesh red (not dark green)
-            if (em && em.material) {
-              em.material.color.setHex(0xCC1111);
-              if (em.material.emissive) em.material.emissive.setHex(0x880000);
-              em.material.emissiveIntensity = 0.45;
+            if (renderMesh) {
+              renderMesh.material.color.setHex(0xCC1111);
+              if (renderMesh.material.emissive) renderMesh.material.emissive.setHex(0x880000);
+              renderMesh.material.emissiveIntensity = 0.45;
             }
           } else if (distSq <= _nearRSq) {
             // ── ZONE 2: 1-2m — HP=1 (one-shot-to-finish), ~2/3 skin ripped off ──
@@ -3369,13 +3373,15 @@
             // Advance damage stage to critical (stage 4) so next hit triggers proper death
             if (e.damageStage !== undefined) e.damageStage = 4;
             // Visual: dark bloody red showing ~2/3 exposed raw flesh
-            if (em && em.material) {
-              em.material.color.setHex(0x881122);
-              if (em.material.emissive) em.material.emissive.setHex(0x550000);
-              em.material.emissiveIntensity = 0.30;
+            if (renderMesh) {
+              renderMesh.material.color.setHex(0x881122);
+              if (renderMesh.material.emissive) renderMesh.material.emissive.setHex(0x550000);
+              renderMesh.material.emissiveIntensity = 0.30;
             }
             if (window.GoreSim && typeof GoreSim.onHit === 'function') {
-              GoreSim.onHit(e, 'pistol', { x: ex, y: ey, z: ez }, { x: -kbDirX, y: 0, z: -kbDirZ });
+              _tmpV3.set(ex, ey, ez);
+              _tmpV3b.set(-kbDirX, 0, -kbDirZ);
+              GoreSim.onHit(e, 'pistol', _tmpV3, _tmpV3b);
             }
             if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 100, {
@@ -3395,18 +3401,77 @@
             // Advance damage stage to 2 (significant but survivable)
             if (e.damageStage !== undefined && e.damageStage < 2) e.damageStage = 2;
             // Visual: partial bloody color — 1/3 of skin stripped showing raw red beneath
-            if (em && em.material) {
-              em.material.color.setHex(0xBB3322);
-              if (em.material.emissive) em.material.emissive.setHex(0x440000);
-              em.material.emissiveIntensity = 0.15;
+            if (renderMesh) {
+              renderMesh.material.color.setHex(0xBB3322);
+              if (renderMesh.material.emissive) renderMesh.material.emissive.setHex(0x440000);
+              renderMesh.material.emissiveIntensity = 0.15;
             }
             if (window.GoreSim && typeof GoreSim.onHit === 'function') {
-              GoreSim.onHit(e, 'pistol', { x: ex, y: ey, z: ez }, { x: -kbDirX, y: 0, z: -kbDirZ });
+              _tmpV3.set(ex, ey, ez);
+              _tmpV3b.set(-kbDirX, 0, -kbDirZ);
+              GoreSim.onHit(e, 'pistol', _tmpV3, _tmpV3b);
             }
             if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 40, {
                 spdMin: 2, spdMax: 9, rMin: 0.010, rMax: 0.025, life: 3.0, visc: 0.50,
                 enemyType: e.enemyType || 'slime',
+              });
+            }
+            _placeBloodStain(ex, ez);
+            _placeBloodStain(ex + kbDirX * 1.5, ez + kbDirZ * 1.5);
+          }
+        }
+
+        // ── Skinwalkers: dedicated loop (no `active`, uses parts.root, needs takeDamage) ──
+        for (let _swi = 0; _swi < _activeSkinwalkers.length; _swi++) {
+          const e = _activeSkinwalkers[_swi];
+          if (!e || e.dead || !e.parts || !e.parts.root) continue;
+          const _swPos = e.parts.root.position;
+          const dx = _swPos.x - px;
+          const dz = _swPos.z - pz;
+          const distSq = dx * dx + dz * dz;
+          if (distSq > _outerRSq) continue;
+
+          const dist    = Math.sqrt(distSq) || 0.01;
+          const kbDirX  = dx / dist;
+          const kbDirZ  = dz / dist;
+          const ex = _swPos.x, ey = _swPos.y + 1.0, ez = _swPos.z;
+
+          if (distSq <= _killRSq) {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 200, {
+                spdMin: 10, spdMax: 24, rMin: 0.018, rMax: 0.055, life: 5.0, visc: 0.25,
+                enemyType: 'skinwalker',
+              });
+            }
+            for (let _s = 1; _s <= 6; _s++) {
+              _placeBloodStain(ex + kbDirX * _s, ez + kbDirZ * _s, 0.18 + Math.random() * 0.20);
+            }
+            e.takeDamage(9999);
+            if (e.dead) _killSkinwalker(e);
+          } else if (distSq <= _nearRSq) {
+            // Leave skinwalker at 1 HP — next hit kills
+            const _swDmg = Math.max(0, (e.hp || 1) - 1);
+            if (_swDmg > 0) e.takeDamage(_swDmg);
+            if (e.dead) _killSkinwalker(e);
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 100, {
+                spdMin: 5, spdMax: 16, rMin: 0.015, rMax: 0.040, life: 4.0, visc: 0.35,
+                enemyType: 'skinwalker',
+              });
+            }
+            for (let _s = 1; _s <= 3; _s++) {
+              _placeBloodStain(ex + kbDirX * _s * 1.2, ez + kbDirZ * _s * 1.2, 0.14 + Math.random() * 0.16);
+            }
+          } else {
+            // Half HP
+            const _swDmg = Math.floor((e.hp || 1) * 0.5);
+            if (_swDmg > 0) e.takeDamage(_swDmg);
+            if (e.dead) _killSkinwalker(e);
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 40, {
+                spdMin: 2, spdMax: 9, rMin: 0.010, rMax: 0.025, life: 3.0, visc: 0.50,
+                enemyType: 'skinwalker',
               });
             }
             _placeBloodStain(ex, ez);
