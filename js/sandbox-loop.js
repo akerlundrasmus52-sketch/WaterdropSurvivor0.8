@@ -2779,7 +2779,11 @@
 
   // Spawn flying flesh chunks using pre-allocated pool (no new THREE.Mesh during gameplay)
   // color parameter can be either a single hex color or an array of colors to choose from
-  function _spawnFleshChunks(slot, count, large, color) {
+  // forceOpts (optional 5th param): { dirX, dirZ, power, spread } — applies a strong
+  //   directional launch so chunks fly 5-7 m in the knockback direction before landing.
+  //   physics is per-frame (no dt): vy=0.25-0.40 keeps chunks airborne ~20-32 frames,
+  //   horizontal power 0.28-0.38 gives ~5.6-12 m travel before ground-friction stops them.
+  function _spawnFleshChunks(slot, count, large, color, forceOpts) {
     const pos = slot.mesh.position;
     // Default to green slime colors if no color provided
     const defaultColors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
@@ -2803,9 +2807,18 @@
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2
       );
-      chunk.vx = (Math.random() - 0.5) * 0.12;
-      chunk.vy = 0.08 + Math.random() * 0.12;
-      chunk.vz = (Math.random() - 0.5) * 0.12;
+      if (forceOpts && isFinite(forceOpts.dirX) && isFinite(forceOpts.dirZ)) {
+        // High-force directional launch: biased strongly toward knockback direction
+        const _fPow    = (forceOpts.power  !== undefined && isFinite(forceOpts.power))  ? forceOpts.power  : 0.30;
+        const _fSpread = (forceOpts.spread !== undefined && isFinite(forceOpts.spread)) ? forceOpts.spread : 0.35;
+        chunk.vx = forceOpts.dirX * _fPow + (Math.random() - 0.5) * _fSpread;
+        chunk.vy = 0.25 + Math.random() * 0.15; // stay airborne 20-32 frames at 60fps
+        chunk.vz = forceOpts.dirZ * _fPow + (Math.random() - 0.5) * _fSpread;
+      } else {
+        chunk.vx = (Math.random() - 0.5) * 0.12;
+        chunk.vy = 0.08 + Math.random() * 0.12;
+        chunk.vz = (Math.random() - 0.5) * 0.12;
+      }
       chunk.rotSpeedX = (Math.random() - 0.5) * 0.3;
       chunk.rotSpeedY = (Math.random() - 0.5) * 0.3;
       chunk.rotSpeedZ = (Math.random() - 0.5) * 0.3;
@@ -3243,51 +3256,226 @@
   }
 
   function _onLevelUp() {
-    // ── Shockwave ring: expanding golden ring at player position ──
+    // ── Force wave: layered shockwave rings + distance-based brutal damage ──
     if (player && player.mesh && scene) {
       try {
-        const ringGeo = new THREE.RingGeometry(0.1, 0.35, 32);
-        const ringMat = new THREE.MeshBasicMaterial({
-          color: 0xFFDD00,
-          transparent: true,
-          opacity: 0.85,
-          side: THREE.DoubleSide,
-          depthWrite: false,
-        });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.copy(player.mesh.position);
-        ring.rotation.x = -Math.PI / 2;
-        scene.add(ring);
-        _lvlUpRings.push(ring);
-
-        // Shockwave damage: deal 25 dmg to enemies within 6 units
         const px = player.mesh.position.x;
+        const py = player.mesh.position.y;
         const pz = player.mesh.position.z;
-        const shockRadius = 6;
-        const shockRadiusSq = shockRadius * shockRadius;
-        // Reuse scratch array to avoid per-level-up GC allocation
+
+        // Spawn 4 nested shockwave rings (white inner flash → orange → crimson → dark bloody outer)
+        // Each entry: [color, initialOpacity, innerR, outerR, expandRate, fadeRate]
+        const _ringDefs = [
+          [0xFFFFFF, 1.00, 0.05, 0.20, 0.55, 0.042],
+          [0xFF8800, 0.90, 0.08, 0.38, 0.40, 0.026],
+          [0xFF2200, 0.80, 0.07, 0.52, 0.28, 0.016],
+          [0x880033, 0.60, 0.06, 0.75, 0.16, 0.009],
+        ];
+        for (let _rdi = 0; _rdi < _ringDefs.length; _rdi++) {
+          const _rd = _ringDefs[_rdi];
+          const _rGeo = new THREE.RingGeometry(_rd[2], _rd[3], 48);
+          const _rMat = new THREE.MeshBasicMaterial({
+            color: _rd[0], transparent: true, opacity: _rd[1],
+            side: THREE.DoubleSide, depthWrite: false,
+          });
+          const _rMesh = new THREE.Mesh(_rGeo, _rMat);
+          _rMesh.position.set(px, py + 0.05, pz);
+          _rMesh.rotation.x = -Math.PI / 2;
+          _rMesh._expandRate = _rd[4];
+          _rMesh._fadeRate   = _rd[5];
+          scene.add(_rMesh);
+          _lvlUpRings.push(_rMesh);
+        }
+
+        // Ground impact burst at player feet (level-up is not a hot path so new alloc is fine)
+        if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+          BloodV2.rawBurstUpward(px, py + 0.1, pz, 60, {
+            spdMin: 3, spdMax: 9, rMin: 0.012, rMax: 0.030, life: 2.5, visc: 0.45,
+          });
+        }
+
+        // ── Distance-based force wave damage ──
+        // Gun damage is used as the baseline (same power as 1 shot)
+        const _gunDmg = (weapons && weapons.gun && weapons.gun.damage > 0)
+          ? Math.round(weapons.gun.damage * ((playerStats && playerStats.strength) || 1.0))
+          : 15;
+        const _killRSq  = 1.0 * 1.0;  // < 1m  → instant brutal kill, flesh flies 5-7m
+        const _nearRSq  = 2.0 * 2.0;  // < 2m  → HP=1 (one-shot-to-finish), heavy gore
+        const _outerRSq = 5.0 * 5.0;  // < 5m  → half HP, skin partially ripped
+
         _allEnemiesScratch.length = 0;
         for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
         for (let _ci = 0; _ci < _activeCrawlers.length; _ci++) _allEnemiesScratch.push(_activeCrawlers[_ci]);
         for (let _li = 0; _li < _activeLeapingSlimes.length; _li++) _allEnemiesScratch.push(_activeLeapingSlimes[_li]);
+        // Note: skinwalkers are handled in a dedicated loop below — they use parts.root,
+        //       don't define `active`, and need takeDamage()/_killSkinwalker() instead of _killSlime().
+
         for (let i = 0; i < _allEnemiesScratch.length; i++) {
           const e = _allEnemiesScratch[i];
           if (!e || !e.active || e.dead || e.dying) continue;
           const em = e.mesh || e.group;
           if (!em) continue;
+          // Resolve the actual render mesh for material overrides.
+          // For leaping slimes e.mesh is a THREE.Group (no .material) — use e.body instead.
+          const renderMesh = (em.material) ? em : (e.body && e.body.material ? e.body : null);
           const dx = em.position.x - px;
           const dz = em.position.z - pz;
-          if (dx * dx + dz * dz <= shockRadiusSq) {
-            e.hp = (e.hp || 0) - 25;
-            if (e.hp <= 0) {
-              if (e.enemyType === 'crawler') {
-                _killCrawler(e, 1.0, 0, 0);
-              } else if (e.enemyType === 'leaping_slime') {
-                _killLeapingSlime(e, 1.0, 0, 0);
-              } else {
-                _killSlime(e, 1.0, 0, 0);
-              }
+          const distSq = dx * dx + dz * dz;
+          if (distSq > _outerRSq) continue;
+
+          // Knockback: strong impulse pushing enemy toward ~5m away
+          const dist = Math.sqrt(distSq) || 0.01;
+          const kbDirX = dx / dist;
+          const kbDirZ = dz / dist;
+          const pushStrength = (5.0 - dist) * 3.5 + 8.0;
+          e.knockbackVx = kbDirX * pushStrength;
+          e.knockbackVz = kbDirZ * pushStrength;
+
+          const ex = em.position.x;
+          const ey = em.position.y + 0.4;
+          const ez = em.position.z;
+
+          // Raw flesh/blood colors used across all zones
+          const _fleshCols = [0xCC1111, 0xAA0000, 0x881111, 0xFF2222, 0xBB0000];
+
+          if (distSq <= _killRSq) {
+            // ── ZONE 1: < 1m — brutal instant kill ──
+            // Massive blood burst
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 200, {
+                spdMin: 10, spdMax: 24, rMin: 0.018, rMax: 0.055, life: 5.0, visc: 0.25,
+                enemyType: e.enemyType || 'slime',
+              });
             }
+            // High-force flesh chunks fly 5-7 m in knockback direction then leave slide marks
+            _spawnFleshChunks(e, 18 + Math.floor(Math.random() * 8), true, _fleshCols,
+              { dirX: kbDirX, dirZ: kbDirZ, power: 0.32, spread: 0.35 });
+            // Slide trail: blood stains every ~1m along knockback direction for 6 meters
+            for (let _s = 1; _s <= 6; _s++) {
+              _placeBloodStain(ex + kbDirX * _s, ez + kbDirZ * _s, 0.18 + Math.random() * 0.20);
+            }
+            if (e.enemyType === 'crawler') {
+              _killCrawler(e, 4.0, kbDirX * 14, kbDirZ * 14);
+            } else if (e.enemyType === 'leaping_slime') {
+              _killLeapingSlime(e, 4.0, kbDirX * 14, kbDirZ * 14);
+            } else {
+              _killSlime(e, 4.0, kbDirX * 14, kbDirZ * 14);
+            }
+            // Override corpse color: skin entirely ripped off → raw flesh red (not dark green)
+            if (renderMesh) {
+              renderMesh.material.color.setHex(0xCC1111);
+              if (renderMesh.material.emissive) renderMesh.material.emissive.setHex(0x880000);
+              renderMesh.material.emissiveIntensity = 0.45;
+            }
+          } else if (distSq <= _nearRSq) {
+            // ── ZONE 2: 1-2m — HP=1 (one-shot-to-finish), ~2/3 skin ripped off ──
+            e.hp = 1;
+            // Advance damage stage to critical (stage 4) so next hit triggers proper death
+            if (e.damageStage !== undefined) e.damageStage = 4;
+            // Visual: dark bloody red showing ~2/3 exposed raw flesh
+            if (renderMesh) {
+              renderMesh.material.color.setHex(0x881122);
+              if (renderMesh.material.emissive) renderMesh.material.emissive.setHex(0x550000);
+              renderMesh.material.emissiveIntensity = 0.30;
+            }
+            if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+              _tmpV3.set(ex, ey, ez);
+              _tmpV3b.set(-kbDirX, 0, -kbDirZ);
+              GoreSim.onHit(e, 'pistol', _tmpV3, _tmpV3b);
+            }
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 100, {
+                spdMin: 5, spdMax: 16, rMin: 0.015, rMax: 0.040, life: 4.0, visc: 0.35,
+                enemyType: e.enemyType || 'slime',
+              });
+            }
+            // Medium-force flesh chunks (partial skin strips)
+            _spawnFleshChunks(e, 10 + Math.floor(Math.random() * 5), true, _fleshCols,
+              { dirX: kbDirX, dirZ: kbDirZ, power: 0.20, spread: 0.40 });
+            for (let _s = 1; _s <= 3; _s++) {
+              _placeBloodStain(ex + kbDirX * _s * 1.2, ez + kbDirZ * _s * 1.2, 0.14 + Math.random() * 0.16);
+            }
+          } else {
+            // ── ZONE 3: 2-5m — half HP, ~1/3 skin ripped ──
+            e.hp = Math.max(1, Math.floor((e.hp || _gunDmg * 2) * 0.5));
+            // Advance damage stage to 2 (significant but survivable)
+            if (e.damageStage !== undefined && e.damageStage < 2) e.damageStage = 2;
+            // Visual: partial bloody color — 1/3 of skin stripped showing raw red beneath
+            if (renderMesh) {
+              renderMesh.material.color.setHex(0xBB3322);
+              if (renderMesh.material.emissive) renderMesh.material.emissive.setHex(0x440000);
+              renderMesh.material.emissiveIntensity = 0.15;
+            }
+            if (window.GoreSim && typeof GoreSim.onHit === 'function') {
+              _tmpV3.set(ex, ey, ez);
+              _tmpV3b.set(-kbDirX, 0, -kbDirZ);
+              GoreSim.onHit(e, 'pistol', _tmpV3, _tmpV3b);
+            }
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 40, {
+                spdMin: 2, spdMax: 9, rMin: 0.010, rMax: 0.025, life: 3.0, visc: 0.50,
+                enemyType: e.enemyType || 'slime',
+              });
+            }
+            _placeBloodStain(ex, ez);
+            _placeBloodStain(ex + kbDirX * 1.5, ez + kbDirZ * 1.5);
+          }
+        }
+
+        // ── Skinwalkers: dedicated loop (no `active`, uses parts.root, needs takeDamage) ──
+        for (let _swi = 0; _swi < _activeSkinwalkers.length; _swi++) {
+          const e = _activeSkinwalkers[_swi];
+          if (!e || e.dead || !e.parts || !e.parts.root) continue;
+          const _swPos = e.parts.root.position;
+          const dx = _swPos.x - px;
+          const dz = _swPos.z - pz;
+          const distSq = dx * dx + dz * dz;
+          if (distSq > _outerRSq) continue;
+
+          const dist    = Math.sqrt(distSq) || 0.01;
+          const kbDirX  = dx / dist;
+          const kbDirZ  = dz / dist;
+          const ex = _swPos.x, ey = _swPos.y + 1.0, ez = _swPos.z;
+
+          if (distSq <= _killRSq) {
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 200, {
+                spdMin: 10, spdMax: 24, rMin: 0.018, rMax: 0.055, life: 5.0, visc: 0.25,
+                enemyType: 'skinwalker',
+              });
+            }
+            for (let _s = 1; _s <= 6; _s++) {
+              _placeBloodStain(ex + kbDirX * _s, ez + kbDirZ * _s, 0.18 + Math.random() * 0.20);
+            }
+            e.takeDamage(9999);
+            if (e.dead) _killSkinwalker(e);
+          } else if (distSq <= _nearRSq) {
+            // Leave skinwalker at 1 HP — next hit kills
+            const _swDmg = Math.max(0, (e.hp || 1) - 1);
+            if (_swDmg > 0) e.takeDamage(_swDmg);
+            if (e.dead) _killSkinwalker(e);
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 100, {
+                spdMin: 5, spdMax: 16, rMin: 0.015, rMax: 0.040, life: 4.0, visc: 0.35,
+                enemyType: 'skinwalker',
+              });
+            }
+            for (let _s = 1; _s <= 3; _s++) {
+              _placeBloodStain(ex + kbDirX * _s * 1.2, ez + kbDirZ * _s * 1.2, 0.14 + Math.random() * 0.16);
+            }
+          } else {
+            // Half HP
+            const _swDmg = Math.floor((e.hp || 1) * 0.5);
+            if (_swDmg > 0) e.takeDamage(_swDmg);
+            if (e.dead) _killSkinwalker(e);
+            if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+              BloodV2.rawBurst(ex, ey, ez, 40, {
+                spdMin: 2, spdMax: 9, rMin: 0.010, rMax: 0.025, life: 3.0, visc: 0.50,
+                enemyType: 'skinwalker',
+              });
+            }
+            _placeBloodStain(ex, ez);
+            _placeBloodStain(ex + kbDirX * 1.5, ez + kbDirZ * 1.5);
           }
         }
       } catch(e) { console.warn('[LvlUp shockwave] error:', e); }
@@ -6401,12 +6589,14 @@
       }
       _updateComboVignette();
 
-      // Level-up shockwave ring animation
+      // Level-up shockwave ring animation (supports per-ring _expandRate/_fadeRate)
       for (var _ri = _lvlUpRings.length - 1; _ri >= 0; _ri--) {
         var _ring = _lvlUpRings[_ri];
-        _ring.scale.x += 0.38 * dt * 60;
-        _ring.scale.z += 0.38 * dt * 60;
-        _ring.material.opacity -= 0.022 * dt * 60;
+        var _rExp  = (_ring._expandRate !== undefined) ? _ring._expandRate : 0.38;
+        var _rFade = (_ring._fadeRate   !== undefined) ? _ring._fadeRate   : 0.022;
+        _ring.scale.x += _rExp  * dt * 60;
+        _ring.scale.z += _rExp  * dt * 60;
+        _ring.material.opacity -= _rFade * dt * 60;
         if (_ring.material.opacity <= 0) {
           scene.remove(_ring);
           _ring.geometry.dispose();
