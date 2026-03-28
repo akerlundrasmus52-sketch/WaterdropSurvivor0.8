@@ -2779,7 +2779,11 @@
 
   // Spawn flying flesh chunks using pre-allocated pool (no new THREE.Mesh during gameplay)
   // color parameter can be either a single hex color or an array of colors to choose from
-  function _spawnFleshChunks(slot, count, large, color) {
+  // forceOpts (optional 5th param): { dirX, dirZ, power, spread } — applies a strong
+  //   directional launch so chunks fly 5-7 m in the knockback direction before landing.
+  //   physics is per-frame (no dt): vy=0.25-0.40 keeps chunks airborne ~20-32 frames,
+  //   horizontal power 0.28-0.38 gives ~5.6-12 m travel before ground-friction stops them.
+  function _spawnFleshChunks(slot, count, large, color, forceOpts) {
     const pos = slot.mesh.position;
     // Default to green slime colors if no color provided
     const defaultColors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
@@ -2803,9 +2807,18 @@
         Math.random() * Math.PI * 2,
         Math.random() * Math.PI * 2
       );
-      chunk.vx = (Math.random() - 0.5) * 0.12;
-      chunk.vy = 0.08 + Math.random() * 0.12;
-      chunk.vz = (Math.random() - 0.5) * 0.12;
+      if (forceOpts && forceOpts.dirX !== undefined) {
+        // High-force directional launch: biased strongly toward knockback direction
+        const _fPow    = forceOpts.power  !== undefined ? forceOpts.power  : 0.30;
+        const _fSpread = forceOpts.spread !== undefined ? forceOpts.spread : 0.35;
+        chunk.vx = forceOpts.dirX * _fPow + (Math.random() - 0.5) * _fSpread;
+        chunk.vy = 0.25 + Math.random() * 0.15; // stay airborne 20-32 frames at 60fps
+        chunk.vz = forceOpts.dirZ * _fPow + (Math.random() - 0.5) * _fSpread;
+      } else {
+        chunk.vx = (Math.random() - 0.5) * 0.12;
+        chunk.vy = 0.08 + Math.random() * 0.12;
+        chunk.vz = (Math.random() - 0.5) * 0.12;
+      }
       chunk.rotSpeedX = (Math.random() - 0.5) * 0.3;
       chunk.rotSpeedY = (Math.random() - 0.5) * 0.3;
       chunk.rotSpeedZ = (Math.random() - 0.5) * 0.3;
@@ -3318,14 +3331,21 @@
           const ey = em.position.y + 0.4;
           const ez = em.position.z;
 
+          // Raw flesh/blood colors used across all zones
+          const _fleshCols = [0xCC1111, 0xAA0000, 0x881111, 0xFF2222, 0xBB0000];
+
           if (distSq <= _killRSq) {
-            // ── ZONE 1: < 1m — brutal instant kill, flesh/parts fly 5-7m, blood slide trail ──
+            // ── ZONE 1: < 1m — brutal instant kill ──
+            // Massive blood burst
             if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
               BloodV2.rawBurst(ex, ey, ez, 200, {
                 spdMin: 10, spdMax: 24, rMin: 0.018, rMax: 0.055, life: 5.0, visc: 0.25,
                 enemyType: e.enemyType || 'slime',
               });
             }
+            // High-force flesh chunks fly 5-7 m in knockback direction then leave slide marks
+            _spawnFleshChunks(e, 18 + Math.floor(Math.random() * 8), true, _fleshCols,
+              { dirX: kbDirX, dirZ: kbDirZ, power: 0.32, spread: 0.35 });
             // Slide trail: blood stains every ~1m along knockback direction for 6 meters
             for (let _s = 1; _s <= 6; _s++) {
               _placeBloodStain(ex + kbDirX * _s, ez + kbDirZ * _s, 0.18 + Math.random() * 0.20);
@@ -3337,9 +3357,23 @@
             } else {
               _killSlime(e, 4.0, kbDirX * 14, kbDirZ * 14);
             }
+            // Override corpse color: skin entirely ripped off → raw flesh red (not dark green)
+            if (em && em.material) {
+              em.material.color.setHex(0xCC1111);
+              if (em.material.emissive) em.material.emissive.setHex(0x880000);
+              em.material.emissiveIntensity = 0.45;
+            }
           } else if (distSq <= _nearRSq) {
-            // ── ZONE 2: 1-2m — HP set to 1 so next hit finishes them, heavy gore (2/3 skin ripped) ──
+            // ── ZONE 2: 1-2m — HP=1 (one-shot-to-finish), ~2/3 skin ripped off ──
             e.hp = 1;
+            // Advance damage stage to critical (stage 4) so next hit triggers proper death
+            if (e.damageStage !== undefined) e.damageStage = 4;
+            // Visual: dark bloody red showing ~2/3 exposed raw flesh
+            if (em && em.material) {
+              em.material.color.setHex(0x881122);
+              if (em.material.emissive) em.material.emissive.setHex(0x550000);
+              em.material.emissiveIntensity = 0.30;
+            }
             if (window.GoreSim && typeof GoreSim.onHit === 'function') {
               GoreSim.onHit(e, 'pistol', { x: ex, y: ey, z: ez }, { x: -kbDirX, y: 0, z: -kbDirZ });
             }
@@ -3349,12 +3383,23 @@
                 enemyType: e.enemyType || 'slime',
               });
             }
+            // Medium-force flesh chunks (partial skin strips)
+            _spawnFleshChunks(e, 10 + Math.floor(Math.random() * 5), true, _fleshCols,
+              { dirX: kbDirX, dirZ: kbDirZ, power: 0.20, spread: 0.40 });
             for (let _s = 1; _s <= 3; _s++) {
               _placeBloodStain(ex + kbDirX * _s * 1.2, ez + kbDirZ * _s * 1.2, 0.14 + Math.random() * 0.16);
             }
           } else {
-            // ── ZONE 3: 2-5m — half HP, skin partially ripped ──
+            // ── ZONE 3: 2-5m — half HP, ~1/3 skin ripped ──
             e.hp = Math.max(1, Math.floor((e.hp || _gunDmg * 2) * 0.5));
+            // Advance damage stage to 2 (significant but survivable)
+            if (e.damageStage !== undefined && e.damageStage < 2) e.damageStage = 2;
+            // Visual: partial bloody color — 1/3 of skin stripped showing raw red beneath
+            if (em && em.material) {
+              em.material.color.setHex(0xBB3322);
+              if (em.material.emissive) em.material.emissive.setHex(0x440000);
+              em.material.emissiveIntensity = 0.15;
+            }
             if (window.GoreSim && typeof GoreSim.onHit === 'function') {
               GoreSim.onHit(e, 'pistol', { x: ex, y: ey, z: ez }, { x: -kbDirX, y: 0, z: -kbDirZ });
             }
