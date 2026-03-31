@@ -56,9 +56,9 @@ const XP_CFG = {
   STAR_POINTS: 5,              // 5-pointed star
 
   // Magnetism
-  MAGNET_RANGE: 8.0,           // Pickup range (quadratic pull within 8 units)
-  MAGNET_SPEED: 3.0,           // Base pull speed at edge of range
-  COLLECT_RANGE: 0.8,          // Collection distance
+  MAGNET_RANGE: 12.0,          // Pickup range (quadratic pull within 12 units) - increased from 8.0 for better early game experience
+  MAGNET_SPEED: 3.5,           // Base pull speed at edge of range - increased from 3.0 for faster collection
+  COLLECT_RANGE: 1.2,          // Collection distance - increased from 0.8 so players don't need to be "millimeters away"
 
   // Pool size
   POOL_SIZE: 60,               // Pre-allocated stars (BUG C: increased from 50 to 60)
@@ -128,6 +128,9 @@ function _buildSharedAssets() {
 
   _sharedGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
   _sharedGeometry.center();
+  // Set a large bounding sphere once on the shared geometry to ensure stars are
+  // never culled by the camera frustum. Done here so it is only allocated once.
+  _sharedGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
   // One material template per rarity; each star clones its own instance
   _rarityMaterials = XP_CFG.RARITIES.map(r => new THREE.MeshPhysicalMaterial({
