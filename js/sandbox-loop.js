@@ -458,7 +458,7 @@
 
   // ─── Level-Up Shockwave Rings (pooled: pre-allocated once, reused) ──────────
   let _lvlUpRings = [];       // active expanding ring meshes (references into _lvlUpRingPool)
-  const _lvlUpRingPool = [];  // pre-allocated ring meshes (4 slots, never disposed)
+  const _lvlUpRingPool = [];  // pre-allocated ring meshes (pool size = _ringDefs.length, never disposed)
   let _lvlUpRingsInited = false;
 
   // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
@@ -1516,6 +1516,8 @@
   }
 
   /** Update lingering corpses: heartbeat blood pumping, growing blood pool, eventual cleanup. */
+  // Math.pow(0.85, dt*60) = exp(ln(0.85)*dt*60) — precompute the rate constant
+  const DEATH_SLIDE_DECAY_RATE = Math.log(0.85) * 60;
   function _updateCorpses(dt) {
     for (let i = _activeCorpses.length - 1; i >= 0; i--) {
       const c = _activeCorpses[i];
@@ -1526,9 +1528,7 @@
       if (c.timer < 0.3 && c.slot && c.slot.mesh && (c.slot._deathSlideVX || c.slot._deathSlideVZ)) {
         c.slot.mesh.position.x += (c.slot._deathSlideVX || 0) * dt;
         c.slot.mesh.position.z += (c.slot._deathSlideVZ || 0) * dt;
-        // dt-scaled exponential decay: 0.85 per frame at 60 FPS
-        // Math.pow(0.85, dt*60) = exp(ln(0.85)*dt*60) = exp(-9.7546*dt)
-        const deathSlideDecay = Math.exp(-9.7546 * dt);
+        const deathSlideDecay = Math.exp(DEATH_SLIDE_DECAY_RATE * dt);
         c.slot._deathSlideVX = (c.slot._deathSlideVX || 0) * deathSlideDecay;
         c.slot._deathSlideVZ = (c.slot._deathSlideVZ || 0) * deathSlideDecay;
         // Keep blood pool position synced
@@ -3283,7 +3283,7 @@
           [0xFF2200, 0.80, 0.07, 0.52, 0.28, 0.016],
           [0x880033, 0.60, 0.06, 0.75, 0.16, 0.009],
         ];
-        // Lazy-init the pool once (pre-allocate 4 ring meshes, reuse every level-up)
+        // Lazy-init the pool once (pre-allocate ring meshes for all defs (currently 6), reuse every level-up)
         if (!_lvlUpRingsInited) {
           _lvlUpRingsInited = true;
           for (let _rdi = 0; _rdi < _ringDefs.length; _rdi++) {
@@ -3300,6 +3300,12 @@
             _lvlUpRingPool.push(_rMesh);
           }
         }
+        // Deactivate any currently-active rings from a prior level-up before reactivating
+        for (let _rci = 0; _rci < _lvlUpRings.length; _rci++) {
+          _lvlUpRings[_rci].visible = false;
+          _lvlUpRings[_rci].material.opacity = 0;
+        }
+        _lvlUpRings.length = 0;
         // Activate pooled rings: reset position, scale, opacity
         for (let _rdi = 0; _rdi < _ringDefs.length; _rdi++) {
           const _rd = _ringDefs[_rdi];
@@ -3571,11 +3577,11 @@
   // DOM elements pooled: created once, reused on every level-up (no DOM churn)
   var _fireLvlContainer = null;
   var _fireLvlTextEl = null;
-  var _fireLvlEmberEls = [];
   var _fireLvlEmbers = [];
   var _FIRE_EMBER_COUNT = 36;
   var _fireLvlInited = false;
   var _fireLvlEmberColors = ['#FF4500','#FFD700','#FF6600','#FFA500'];
+  var _fireLvlRafId = 0; // tracks active RAF so back-to-back level-ups cancel the prior animation
 
   function _initFireLevelUpPool() {
     if (_fireLvlInited) return;
@@ -3644,13 +3650,18 @@
         'will-change:transform,opacity',
       ].join(';');
       document.body.appendChild(ember);
-      _fireLvlEmberEls.push(ember);
       _fireLvlEmbers.push({ el: ember, x: 0, y: 0, vx: 0, vy: 0, rot: 0, rotV: 0, life: 0, maxLife: 0, isAsh: false });
     }
   }
 
   function _spawnFireLevelUpText() {
     _initFireLevelUpPool();
+
+    // Cancel any prior animation loop so back-to-back level-ups don't fight over DOM elements
+    if (_fireLvlRafId) {
+      cancelAnimationFrame(_fireLvlRafId);
+      _fireLvlRafId = 0;
+    }
 
     // Reset container
     _fireLvlContainer.style.display = 'flex';
@@ -3693,6 +3704,7 @@
       for (var i = 0; i < embers.length; i++) {
         embers[i].el.style.opacity = '0';
       }
+      _fireLvlRafId = 0;
     }
 
     function animFrame() {
@@ -3771,9 +3783,9 @@
         em.el.style.opacity = '' + Math.max(0, em.life / em.maxLife);
       }
 
-      requestAnimationFrame(animFrame);
+      _fireLvlRafId = requestAnimationFrame(animFrame);
     }
-    requestAnimationFrame(animFrame);
+    _fireLvlRafId = requestAnimationFrame(animFrame);
   }
 
   // ─── Sandbox weapon effects (sword, samurai sword, aura) ────────────────────
