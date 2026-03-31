@@ -3197,9 +3197,12 @@
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
     // Use playerStats.pickupRange as a direct multiplier (default 1.0 = normal range)
     // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (8 units) by the radiusMultiplier.
-    const radiusMultiplier = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
+    const _baseMultiplier = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
       ? _xpStats.pickupRange
       : 1.0;
+    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (8.0)
+    const _magnetStacks = (window._sandboxXpMagnetRunStacks || 0);
+    const radiusMultiplier = _baseMultiplier + (_magnetStacks * 2.5 / 8.0);
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
