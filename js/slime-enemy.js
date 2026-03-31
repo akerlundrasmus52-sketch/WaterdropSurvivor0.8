@@ -1709,6 +1709,7 @@ var bodyMat = new THREE.MeshLambertMaterial({
 var body = new THREE.Mesh(bodyGeo, bodyMat);
 body.castShadow    = true;
 body.receiveShadow = false;
+body.frustumCulled = false; // prevent slimes vanishing at screen edges
 body.visible       = false;
 scene.add(body);
 s.mesh = body;

@@ -579,6 +579,7 @@ var LeapingSlimePool = {
     var body = new THREE.Mesh(bodyGeo, bodyMat);
     body.castShadow    = true;
     body.receiveShadow = false;
+    body.frustumCulled = false; // prevent body vanishing at screen edges
     body.scale.set(s, s, s);
     body.position.y = s;
     group.add(body);

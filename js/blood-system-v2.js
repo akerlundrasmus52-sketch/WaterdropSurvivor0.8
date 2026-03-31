@@ -727,6 +727,7 @@ for (var i = 0; i < CFG.CHUNK_COUNT; i++) {
 var geo  = shapes[i % shapes.length];
 var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.visible = false;
+mesh.frustumCulled = false; // prevent chunks vanishing at screen edges
 _scene.add(mesh);
 var c    = makeChunk();
 c.mesh   = mesh;
@@ -754,6 +755,7 @@ var mesh = new THREE.Mesh(geo, mat.clone());
 mesh.rotation.x = -Math.PI / 2;
 mesh.position.y = CFG.GROUND_Y;
 mesh.visible    = false;
+mesh.frustumCulled = false; // prevent decals vanishing at screen edges
 mesh.renderOrder = 2;
 _scene.add(mesh);
 var d = makeDecal();

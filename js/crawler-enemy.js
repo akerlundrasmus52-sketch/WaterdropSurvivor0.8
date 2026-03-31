@@ -136,6 +136,7 @@ CrawlerEnemy.prototype._buildMesh = function(scene) {
   this.headMesh = new THREE.Mesh(headGeo, headMat);
   this.headMesh.position.set(0, CRAWLER_CFG.HEAD_RADIUS * 0.6, 0);
   this.headMesh.castShadow = true;
+  this.headMesh.frustumCulled = false; // prevent vanishing at screen edges
   this.group.add(this.headMesh);
   
   // Eyes (cute, small, on top of head)
@@ -222,6 +223,7 @@ CrawlerEnemy.prototype._buildMesh = function(scene) {
     var segMesh = new THREE.Mesh(segGeo, segMat);
     segMesh.position.set(0, CRAWLER_CFG.SEGMENT_RADIUS * 0.5, -(s + 1) * CRAWLER_CFG.SEGMENT_GAP);
     segMesh.castShadow = true;
+    segMesh.frustumCulled = false; // prevent segment vanishing at screen edges
     // Scale slightly smaller toward tail
     var taper = 1.0 - s * 0.08;
     segMesh.scale.set(taper, taper, taper);
