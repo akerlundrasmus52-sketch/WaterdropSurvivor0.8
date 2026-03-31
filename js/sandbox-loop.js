@@ -3195,18 +3195,14 @@
 
     // Respect pickup-range / XP collection-radius upgrades, if available
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
-    // Build target absolute radius in world units, then convert to multiplier for XPStarSystem.
-    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (8 units) by the provided radiusMultiplier.
-    const _magnetBase    = window._sandboxXpMagnetBase || 1.5; // start very small — earn upgrades
-    const _magnetRunBonus = (window._sandboxXpMagnetRunStacks || 0) * 2.5;  // 2.5 units per run stack
-    // Use playerStats.pickupRange if the aggregator set it (incorporates skill tree magnetism bonus)
-    const _baseRadius = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
+    // Use playerStats.pickupRange as a direct multiplier (default 1.0 = normal range)
+    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (8 units) by the radiusMultiplier.
+    const _baseMultiplier = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
       ? _xpStats.pickupRange
-      : _magnetBase;
-    const _targetRadius   = _baseRadius + _magnetRunBonus;
-    const _magnetCfgRange = (window.XP_CFG && typeof window.XP_CFG.MAGNET_RANGE === 'number')
-      ? window.XP_CFG.MAGNET_RANGE : 8;
-    const radiusMultiplier = _magnetCfgRange > 0 ? (_targetRadius / _magnetCfgRange) : 1;
+      : 1.0;
+    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (8.0)
+    const _magnetStacks = (window._sandboxXpMagnetRunStacks || 0);
+    const radiusMultiplier = _baseMultiplier + (_magnetStacks * 2.5 / 8.0);
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
