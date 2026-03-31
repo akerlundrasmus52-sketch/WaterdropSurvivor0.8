@@ -1523,9 +1523,12 @@
     for (let i = _activeCorpses.length - 1; i >= 0; i--) {
       const c = _activeCorpses[i];
 
-      // If the slot was reactivated as a new enemy, abandon this corpse entry
-      // immediately — do NOT touch the mesh, just clean up the blood pool.
-      if (c.slot && c.slot.active) {
+      // Internal pool-slime reuse check: if the slot was reactivated as a new slime,
+      // abandon this stale corpse entry without touching the mesh.
+      // Intentionally scoped to slimes only — crawlers and leaping slimes keep
+      // active=true throughout their death animations, so a broader check would
+      // incorrectly discard their corpse entries on the very first frame.
+      if (c.slot && c.slot.active && c.slot.enemyType === 'slime') {
         if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
         if (c.poolSlot) _corpseBloodFreeList.push(c.poolSlot);
         _activeCorpses.splice(i, 1);
