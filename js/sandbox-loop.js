@@ -1362,6 +1362,7 @@
       const mesh = new THREE.Mesh(_slimeBaseGeo, mat);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      mesh.frustumCulled = false; // prevent enemies vanishing at screen edges
       mesh.visible = false; // inactive until spawned
       scene.add(mesh);
 
@@ -1521,6 +1522,19 @@
   function _updateCorpses(dt) {
     for (let i = _activeCorpses.length - 1; i >= 0; i--) {
       const c = _activeCorpses[i];
+
+      // Internal pool-slime reuse check: if the slot was reactivated as a new slime,
+      // abandon this stale corpse entry without touching the mesh.
+      // Intentionally scoped to slimes only — crawlers and leaping slimes keep
+      // active=true throughout their death animations, so a broader check would
+      // incorrectly discard their corpse entries on the very first frame.
+      if (c.slot && c.slot.active && c.slot.enemyType === 'slime') {
+        if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
+        if (c.poolSlot) _corpseBloodFreeList.push(c.poolSlot);
+        _activeCorpses.splice(i, 1);
+        continue;
+      }
+
       c.timer += dt;
       const lifeRatio = c.timer / c.lingerDuration; // 0 → 1 over linger duration
 
@@ -6498,21 +6512,31 @@
           for (let _ei = 0; _ei < _arr.length; _ei++) {
             const _e = _arr[_ei];
             const _mesh = _e && (_e.mesh || (_e.parts && _e.parts.root));
-            if (_e && _e.active && _e.alive && _mesh && !_mesh.visible && _mesh.position && _mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
+            // Use a unified "alive" check: works for slimes (dead), crawlers/leapers (alive), skinwalkers (dead)
+            // _e.alive === undefined means the property doesn't exist (internal slimes) — treat as alive
+            const _eAlive = _e && !_e.dead && (_e.alive === true || _e.alive === undefined);
+            if (_eAlive && _mesh && !_mesh.visible && _mesh.position && _mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
               _mesh.visible = true;
               console.warn('[InvisibilityFix] Restored visibility for ' + _entry.type, _e);
             }
           }
         }
 
-        // Check XP stars - ensure all active stars are visible
+        // Check XP stars - ensure all active stars are visible and have non-zero scale
         if (window.XPStarSystem && window.XPStarSystem._activeStars) {
           const _activeStars = window.XPStarSystem._activeStars;
           for (let _si = 0; _si < _activeStars.length; _si++) {
             const _star = _activeStars[_si];
-            if (_star && _star.active && _star.mesh && !_star.mesh.visible && _star.mesh.position && _star.mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
-              _star.mesh.visible = true;
-              console.warn('[InvisibilityFix] Restored visibility for XP star', _star);
+            if (_star && _star.active && _star.mesh && _star.mesh.position && _star.mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
+              if (!_star.mesh.visible) {
+                _star.mesh.visible = true;
+                console.warn('[InvisibilityFix] Restored visibility for XP star', _star);
+              }
+              // Also restore if scale was accidentally zeroed out
+              if (_star.mesh.scale.x < 0.001) {
+                _star.mesh.scale.set(1, 1, 1);
+                console.warn('[InvisibilityFix] Restored scale for XP star', _star);
+              }
             }
           }
         }

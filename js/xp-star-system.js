@@ -399,25 +399,33 @@ class XPStar {
   }
 
   deactivate() {
+    const wasActive = this.active;
     this.active = false;
     if (this.mesh) {
       // Use a token so stale RAF callbacks (from a quickly-reused star) don't interfere
       const token = ++this._deactivateToken;
-      // Scale pop: 1.4 this frame, then 0.001 next frame, then hide
-      this.mesh.scale.set(1.4, 1.4, 1.4);
-      requestAnimationFrame(() => {
-        if (this._deactivateToken !== token) return; // star was reused — abort
-        if (this.mesh) {
-          this.mesh.scale.set(0.001, 0.001, 0.001);
-          requestAnimationFrame(() => {
-            if (this._deactivateToken !== token) return; // star was reused — abort
-            if (this.mesh) {
-              this.mesh.visible = false;
-              this.mesh.position.set(0, -1000, 0); // Park off-screen
-            }
-          });
-        }
-      });
+      if (wasActive) {
+        // Scale pop: 1.4 this frame, then 0.001 next frame, then hide
+        this.mesh.scale.set(1.4, 1.4, 1.4);
+        requestAnimationFrame(() => {
+          if (this._deactivateToken !== token) return; // star was reused — abort
+          if (this.mesh) {
+            this.mesh.scale.set(0.001, 0.001, 0.001);
+            requestAnimationFrame(() => {
+              if (this._deactivateToken !== token) return; // star was reused — abort
+              if (this.mesh) {
+                this.mesh.visible = false;
+                this.mesh.position.set(0, -1000, 0); // Park off-screen
+              }
+            });
+          }
+        });
+      } else {
+        // Never active — hide immediately, no pop animation
+        this.mesh.visible = false;
+        this.mesh.scale.set(0.001, 0.001, 0.001);
+        this.mesh.position.set(0, -1000, 0);
+      }
     }
   }
 
@@ -454,7 +462,14 @@ const XPStarManager = {
       const star = new XPStar();
       star._createMesh();
       scene.add(star.mesh);
-      star.deactivate();
+      // Hide immediately without the pop animation (star was never active)
+      star.active = false;
+      star._deactivateToken++; // initialize token so future deactivate RAFs can cancel correctly
+      if (star.mesh) {
+        star.mesh.visible = false;
+        star.mesh.scale.set(0.001, 0.001, 0.001);
+        star.mesh.position.set(0, -1000, 0);
+      }
       this._pool.push(star);
     }
 
