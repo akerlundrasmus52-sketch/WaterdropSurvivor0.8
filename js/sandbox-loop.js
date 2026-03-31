@@ -456,8 +456,10 @@
   let _killCombo      = 0;    // current combo count
   let _killComboTimer = 0;    // countdown before combo resets (seconds)
 
-  // ─── Level-Up Shockwave Rings ────────────────────────────────────────────────
-  let _lvlUpRings = [];       // active expanding ring meshes
+  // ─── Level-Up Shockwave Rings (pooled: pre-allocated once, reused) ──────────
+  let _lvlUpRings = [];       // active expanding ring meshes (references into _lvlUpRingPool)
+  const _lvlUpRingPool = [];  // pre-allocated ring meshes (4 slots, never disposed)
+  let _lvlUpRingsInited = false;
 
   // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
   let _sessionTimerSecs    = 0; // total elapsed seconds since boot
@@ -1163,18 +1165,24 @@
       p.distSq = ddx * ddx + ddz * ddz;
 
       // Bullet color: bright yellow/white near muzzle (< 1 unit), copper-red farther
+      // Skip expensive Math.sqrt when projectile is beyond color-change range (distSq > 36 → dist > 6)
       if (p.mat) {
-        const dist = Math.sqrt(p.distSq);
-        if (dist < 1.0) {
-          const t = dist;
-          const r = 255, g = Math.round(255 * (1 - t * 0.2)), b = Math.round(200 * (1 - t));
-          p.mat.color.setRGB(r/255, g/255, b/255);
+        if (p.distSq > 36) {
+          // Beyond 6m: final copper color (no sqrt needed)
+          p.mat.color.setRGB(0.6, 0.133, 0);
         } else {
-          const t = Math.min(1, (dist - 1.0) / 5.0);
-          const r = Math.round(0xFF * (1 - t * 0.4));
-          const g = Math.round(0xAA * (1 - t * 0.8));
-          const b = Math.round(0x22 * (1 - t));
-          p.mat.color.setRGB(r/255, g/255, b/255);
+          const dist = Math.sqrt(p.distSq);
+          if (dist < 1.0) {
+            const t = dist;
+            const r = 255, g = Math.round(255 * (1 - t * 0.2)), b = Math.round(200 * (1 - t));
+            p.mat.color.setRGB(r/255, g/255, b/255);
+          } else {
+            const t = Math.min(1, (dist - 1.0) / 5.0);
+            const r = Math.round(0xFF * (1 - t * 0.4));
+            const g = Math.round(0xAA * (1 - t * 0.8));
+            const b = Math.round(0x22 * (1 - t));
+            p.mat.color.setRGB(r/255, g/255, b/255);
+          }
         }
       }
       if (p.distSq > PROJECTILE_RANGE_SQ) {
@@ -1519,7 +1527,8 @@
         c.slot.mesh.position.x += (c.slot._deathSlideVX || 0) * dt;
         c.slot.mesh.position.z += (c.slot._deathSlideVZ || 0) * dt;
         // dt-scaled exponential decay: 0.85 per frame at 60 FPS
-        const deathSlideDecay = Math.pow(0.85, dt * 60);
+        // Math.pow(0.85, dt*60) = exp(ln(0.85)*dt*60) = exp(-9.7546*dt)
+        const deathSlideDecay = Math.exp(-9.7546 * dt);
         c.slot._deathSlideVX = (c.slot._deathSlideVX || 0) * deathSlideDecay;
         c.slot._deathSlideVZ = (c.slot._deathSlideVZ || 0) * deathSlideDecay;
         // Keep blood pool position synced
@@ -3033,10 +3042,10 @@
             const pupilOffsetX = Math.sin(angle) * 0.03; // Horizontal pupil movement
             const pupilOffsetZ = Math.cos(angle) * 0.03; // Depth pupil movement
             // Apply to each pupil
-            s.eyePupils.forEach(pupil => {
-              pupil.position.x = pupilOffsetX;
-              pupil.position.z = 0.06 + pupilOffsetZ; // Base Z + offset
-            });
+            for (var _epi = 0; _epi < s.eyePupils.length; _epi++) {
+              s.eyePupils[_epi].position.x = pupilOffsetX;
+              s.eyePupils[_epi].position.z = 0.06 + pupilOffsetZ;
+            }
           }
         }
       }
@@ -3052,11 +3061,11 @@
         if (s.isBlinking) {
           const bp = Math.min(1, s.blinkTimer / 0.1);
           const eyeScaleY = bp < 0.5 ? Math.max(0.05, 1 - bp * 2) : Math.max(0.05, (bp - 0.5) * 2);
-          s.eyeMeshes.forEach(eye => { eye.scale.y = eyeScaleY; });
+          for (var _ebi = 0; _ebi < s.eyeMeshes.length; _ebi++) s.eyeMeshes[_ebi].scale.y = eyeScaleY;
           if (bp >= 1) {
             s.isBlinking = false;
             s.blinkTimer = 0;
-            s.eyeMeshes.forEach(eye => { eye.scale.y = 1; });
+            for (var _ebi2 = 0; _ebi2 < s.eyeMeshes.length; _ebi2++) s.eyeMeshes[_ebi2].scale.y = 1;
           }
         }
       }
@@ -3106,11 +3115,13 @@
       );
 
       // Knockback physics — gentle decay to prevent stutter
+      // Math.pow(0.05, dt) replaced with exp(ln(0.05)*dt) ≈ exp(-2.996*dt) for perf
       if (Math.abs(s.knockbackVx) > 0.005 || Math.abs(s.knockbackVz) > 0.005) {
         s.mesh.position.x += s.knockbackVx * dt * 4;
         s.mesh.position.z += s.knockbackVz * dt * 4;
-        s.knockbackVx *= Math.pow(0.05, dt);
-        s.knockbackVz *= Math.pow(0.05, dt);
+        var _kbDecay = Math.exp(-2.9957 * dt); // equivalent to Math.pow(0.05, dt)
+        s.knockbackVx *= _kbDecay;
+        s.knockbackVz *= _kbDecay;
       }
 
       // Move toward player (sx, sz already defined above)
@@ -3259,27 +3270,47 @@
         const py = player.mesh.position.y;
         const pz = player.mesh.position.z;
 
-        // Spawn 4 nested shockwave rings (white inner flash → orange → crimson → dark bloody outer)
-        // Each entry: [color, initialOpacity, innerR, outerR, expandRate, fadeRate]
+        // Pooled shockwave rings: enhanced force wave with energy pulse
+        // [color, initialOpacity, innerR, outerR, expandRate, fadeRate]
+        // Ring 0: Central bright energy flash (fast-expanding white/gold disc)
+        // Ring 1: Fast energy pulse ring (bright cyan-white, outruns everything)
+        // Ring 2-5: Original layered rings (white → orange → crimson → dark)
         const _ringDefs = [
+          [0xFFEECC, 0.95, 0.00, 0.30, 0.80, 0.065],
+          [0xCCFFFF, 0.85, 0.10, 0.25, 0.70, 0.050],
           [0xFFFFFF, 1.00, 0.05, 0.20, 0.55, 0.042],
           [0xFF8800, 0.90, 0.08, 0.38, 0.40, 0.026],
           [0xFF2200, 0.80, 0.07, 0.52, 0.28, 0.016],
           [0x880033, 0.60, 0.06, 0.75, 0.16, 0.009],
         ];
+        // Lazy-init the pool once (pre-allocate 4 ring meshes, reuse every level-up)
+        if (!_lvlUpRingsInited) {
+          _lvlUpRingsInited = true;
+          for (let _rdi = 0; _rdi < _ringDefs.length; _rdi++) {
+            const _rd = _ringDefs[_rdi];
+            const _rGeo = new THREE.RingGeometry(_rd[2], _rd[3], 48);
+            const _rMat = new THREE.MeshBasicMaterial({
+              color: _rd[0], transparent: true, opacity: _rd[1],
+              side: THREE.DoubleSide, depthWrite: false,
+            });
+            const _rMesh = new THREE.Mesh(_rGeo, _rMat);
+            _rMesh.rotation.x = -Math.PI / 2;
+            _rMesh.visible = false;
+            scene.add(_rMesh);
+            _lvlUpRingPool.push(_rMesh);
+          }
+        }
+        // Activate pooled rings: reset position, scale, opacity
         for (let _rdi = 0; _rdi < _ringDefs.length; _rdi++) {
           const _rd = _ringDefs[_rdi];
-          const _rGeo = new THREE.RingGeometry(_rd[2], _rd[3], 48);
-          const _rMat = new THREE.MeshBasicMaterial({
-            color: _rd[0], transparent: true, opacity: _rd[1],
-            side: THREE.DoubleSide, depthWrite: false,
-          });
-          const _rMesh = new THREE.Mesh(_rGeo, _rMat);
+          const _rMesh = _lvlUpRingPool[_rdi];
+          _rMesh.material.color.setHex(_rd[0]);
+          _rMesh.material.opacity = _rd[1];
           _rMesh.position.set(px, py + 0.05, pz);
-          _rMesh.rotation.x = -Math.PI / 2;
+          _rMesh.scale.set(1, 1, 1);
           _rMesh._expandRate = _rd[4];
           _rMesh._fadeRate   = _rd[5];
-          scene.add(_rMesh);
+          _rMesh.visible = true;
           _lvlUpRings.push(_rMesh);
         }
 
@@ -3537,15 +3568,26 @@
   }
 
   // ── Fiery LEVEL UP text: Grind Survivors style with Eye of Horus ──
-  function _spawnFireLevelUpText() {
-    // Wrap container: both eye + text vertically centered
-    const container = document.createElement('div');
-    container.style.cssText = [
+  // DOM elements pooled: created once, reused on every level-up (no DOM churn)
+  var _fireLvlContainer = null;
+  var _fireLvlTextEl = null;
+  var _fireLvlEmberEls = [];
+  var _fireLvlEmbers = [];
+  var _FIRE_EMBER_COUNT = 36;
+  var _fireLvlInited = false;
+  var _fireLvlEmberColors = ['#FF4500','#FFD700','#FF6600','#FFA500'];
+
+  function _initFireLevelUpPool() {
+    if (_fireLvlInited) return;
+    _fireLvlInited = true;
+
+    _fireLvlContainer = document.createElement('div');
+    _fireLvlContainer.style.cssText = [
       'position:fixed',
       'left:50%',
       'top:38%',
       'transform:translate(-50%,-50%) scale(0) translateY(30px)',
-      'display:flex',
+      'display:none',
       'flex-direction:column',
       'align-items:center',
       'z-index:10000',
@@ -3554,8 +3596,7 @@
       'will-change:transform,opacity',
     ].join(';');
 
-    // Eye of Horus SVG (black/gold, glowing) above the text
-    const eyeEl = document.createElement('div');
+    var eyeEl = document.createElement('div');
     eyeEl.innerHTML = [
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" style="width:clamp(60px,12vw,120px);height:auto;filter:drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 18px #FF8C00);margin-bottom:4px;">',
       '  <defs>',
@@ -3565,30 +3606,22 @@
       '      <stop offset="100%" style="stop-color:#B8860B"/>',
       '    </linearGradient>',
       '  </defs>',
-      '  <!-- Eye outline (outer shape) -->',
       '  <path d="M10,30 Q30,4 60,4 Q90,4 110,30 Q90,56 60,56 Q30,56 10,30 Z" fill="url(#eyeGrad)" stroke="#000" stroke-width="2"/>',
-      '  <!-- Eye white -->',
       '  <ellipse cx="60" cy="30" rx="24" ry="18" fill="#F8F0D0"/>',
-      '  <!-- Iris -->',
       '  <circle cx="60" cy="30" r="13" fill="#1a0800"/>',
-      '  <!-- Pupil glow -->',
       '  <circle cx="60" cy="30" r="7" fill="#000"/>',
       '  <circle cx="55" cy="25" r="3" fill="#FFD700" opacity="0.9"/>',
-      '  <!-- Horus mark below eye — vertical line -->',
       '  <line x1="60" y1="48" x2="60" y2="56" stroke="url(#eyeGrad)" stroke-width="2.5"/>',
-      '  <!-- Horus curl left -->',
       '  <path d="M60,56 Q45,60 38,54 Q34,50 38,46" fill="none" stroke="url(#eyeGrad)" stroke-width="2.5" stroke-linecap="round"/>',
-      '  <!-- Horus tear drop right -->',
       '  <path d="M60,56 Q70,58 72,52" fill="none" stroke="url(#eyeGrad)" stroke-width="2" stroke-linecap="round"/>',
       '</svg>'
     ].join('');
     eyeEl.style.cssText = 'display:block;text-align:center;';
-    container.appendChild(eyeEl);
+    _fireLvlContainer.appendChild(eyeEl);
 
-    // Main LEVEL UP text
-    const el = document.createElement('div');
-    el.textContent = 'LEVEL UP';
-    el.style.cssText = [
+    _fireLvlTextEl = document.createElement('div');
+    _fireLvlTextEl.textContent = 'LEVEL UP';
+    _fireLvlTextEl.style.cssText = [
       'font-family:"Cinzel Decorative","Bangers","Impact","Arial Black",sans-serif',
       'font-size:clamp(44px,9vw,88px)',
       'font-weight:900',
@@ -3598,80 +3631,94 @@
       'white-space:nowrap',
       'line-height:1',
     ].join(';');
-    container.appendChild(el);
+    _fireLvlContainer.appendChild(_fireLvlTextEl);
+    document.body.appendChild(_fireLvlContainer);
 
-    document.body.appendChild(container);
-
-    // Ash/ember particles
-    const embers = [];
-    const EMBER_COUNT = 36;
-    for (let i = 0; i < EMBER_COUNT; i++) {
-      const ember = document.createElement('div');
-      const size = 2 + Math.random() * 6;
-      const isAsh = Math.random() < 0.4;
+    for (var i = 0; i < _FIRE_EMBER_COUNT; i++) {
+      var ember = document.createElement('div');
       ember.style.cssText = [
         'position:fixed',
-        'width:' + size + 'px',
-        'height:' + (isAsh ? size * 0.5 : size) + 'px',
-        'background:' + (isAsh ? '#999' : (['#FF4500','#FFD700','#FF6600','#FFA500'][Math.floor(Math.random() * 4)])),
-        'border-radius:' + (isAsh ? '1px' : '50%'),
         'pointer-events:none',
         'z-index:10001',
         'opacity:0',
         'will-change:transform,opacity',
-        'box-shadow:0 0 ' + (isAsh ? '2px 1px rgba(150,150,150,0.5)' : '5px 2px rgba(255,100,0,0.7)'),
       ].join(';');
       document.body.appendChild(ember);
-      embers.push({
-        el: ember,
-        x: 0, y: 0,
-        vx: (Math.random() - 0.5) * (isAsh ? 80 : 240),
-        vy: -(isAsh ? 20 : 60) - Math.random() * (isAsh ? 100 : 180),
-        rot: Math.random() * 360,
-        rotV: (Math.random() - 0.5) * 400,
-        life: 0.4 + Math.random() * (isAsh ? 1.0 : 0.7),
-        maxLife: 0,
-        isAsh,
-      });
+      _fireLvlEmberEls.push(ember);
+      _fireLvlEmbers.push({ el: ember, x: 0, y: 0, vx: 0, vy: 0, rot: 0, rotV: 0, life: 0, maxLife: 0, isAsh: false });
+    }
+  }
+
+  function _spawnFireLevelUpText() {
+    _initFireLevelUpPool();
+
+    // Reset container
+    _fireLvlContainer.style.display = 'flex';
+    _fireLvlContainer.style.opacity = '0';
+    _fireLvlContainer.style.transform = 'translate(-50%,-50%) scale(0) translateY(30px)';
+    _fireLvlTextEl.style.color = '#FFD700';
+    _fireLvlTextEl.style.textShadow = '0 0 14px #FF4500,0 0 30px #FF6600,0 0 55px #FF8C00,0 0 90px rgba(255,69,0,0.4),3px 3px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000';
+
+    // Reset embers with randomized properties
+    for (var i = 0; i < _FIRE_EMBER_COUNT; i++) {
+      var em = _fireLvlEmbers[i];
+      var size = 2 + Math.random() * 6;
+      var isAsh = Math.random() < 0.4;
+      em.el.style.width = size + 'px';
+      em.el.style.height = (isAsh ? size * 0.5 : size) + 'px';
+      em.el.style.background = isAsh ? '#999' : _fireLvlEmberColors[Math.floor(Math.random() * 4)];
+      em.el.style.borderRadius = isAsh ? '1px' : '50%';
+      em.el.style.boxShadow = '0 0 ' + (isAsh ? '2px 1px rgba(150,150,150,0.5)' : '5px 2px rgba(255,100,0,0.7)');
+      em.el.style.opacity = '0';
+      em.x = 0; em.y = 0;
+      em.vx = (Math.random() - 0.5) * (isAsh ? 80 : 240);
+      em.vy = -(isAsh ? 20 : 60) - Math.random() * (isAsh ? 100 : 180);
+      em.rot = Math.random() * 360;
+      em.rotV = (Math.random() - 0.5) * 400;
+      em.life = 0.4 + Math.random() * (isAsh ? 1.0 : 0.7);
+      em.maxLife = 0;
+      em.isAsh = isAsh;
     }
 
-    const startTime = performance.now();
-    let _lastFrameTime = startTime;
-    const totalDuration = 1700; // ms
+    var startTime = performance.now();
+    var _lastFrameTime = startTime;
+    var totalDuration = 1700;
+    var container = _fireLvlContainer;
+    var el = _fireLvlTextEl;
+    var embers = _fireLvlEmbers;
 
-    function _cleanupLevelUpFX() {
-      if (container.parentNode) container.parentNode.removeChild(container);
-      for (let i = 0; i < embers.length; i++) {
-        if (embers[i].el.parentNode) embers[i].el.parentNode.removeChild(embers[i].el);
+    function _hideLevelUpFX() {
+      container.style.display = 'none';
+      container.style.opacity = '0';
+      for (var i = 0; i < embers.length; i++) {
+        embers[i].el.style.opacity = '0';
       }
     }
 
     function animFrame() {
-      const now = performance.now();
-      const elapsed = now - startTime;
-      const dt = Math.min(0.05, (now - _lastFrameTime) / 1000);
+      var now = performance.now();
+      var elapsed = now - startTime;
+      var dt = Math.min(0.05, (now - _lastFrameTime) / 1000);
       _lastFrameTime = now;
-      const t = elapsed / totalDuration;
+      var t = elapsed / totalDuration;
 
       if (t < 0.18) {
-        // Phase 1: explosive pop-in from below, rising upward
-        const p = t / 0.18;
-        const easeP = 1 - Math.pow(1 - p, 3); // ease-out cubic
-        const scale = easeP * 1.3;
-        const yOff = (1 - easeP) * 60; // rises from 60px below
+        var p = t / 0.18;
+        var easeP = 1 - (1 - p) * (1 - p) * (1 - p);
+        var scale = easeP * 1.3;
+        var yOff = (1 - easeP) * 60;
         container.style.opacity = '' + Math.min(1, p * 3);
         container.style.transform = 'translate(-50%,-50%) scale(' + scale + ') translateY(' + yOff + 'px)';
       } else if (t < 0.32) {
-        // Phase 2: bounce settle + spawn embers/ash
-        const p = (t - 0.18) / 0.14;
-        const scale = 1.3 - 0.2 * p;
+        var p = (t - 0.18) / 0.14;
+        var scale = 1.3 - 0.2 * p;
         container.style.transform = 'translate(-50%,-50%) scale(' + scale + ') translateY(0)';
         container.style.opacity = '1';
         if (p < 0.6) {
-          const cx = window.innerWidth / 2;
-          const cy = window.innerHeight * 0.38;
-          for (let i = 0; i < embers.length; i++) {
-            const em = embers[i];
+          var cx = window.innerWidth / 2;
+          var cy = window.innerHeight * 0.38;
+          for (var i = 0; i < embers.length; i++) {
+            var em = embers[i];
             if (em.maxLife === 0) {
               em.maxLife = em.life;
               em.x = cx + (Math.random() - 0.5) * 160;
@@ -3681,47 +3728,42 @@
           }
         }
       } else if (t < 0.72) {
-        // Phase 3: hold, pulsing glow, continues rising slowly
-        const p = (t - 0.32) / 0.40;
-        const pulse = 1.1 + 0.04 * Math.sin(p * Math.PI * 5);
-        const yRise = -18 * p; // slowly drifts upward
+        var p = (t - 0.32) / 0.40;
+        var pulse = 1.1 + 0.04 * Math.sin(p * Math.PI * 5);
+        var yRise = -18 * p;
         container.style.transform = 'translate(-50%,calc(-50% + ' + yRise + 'px)) scale(' + pulse + ')';
         container.style.opacity = '1';
-        // Gradually shift from gold to ashen grey (burning to ash)
-        const ashBlend = Math.max(0, (p - 0.5) / 0.5);
+        var ashBlend = Math.max(0, (p - 0.5) / 0.5);
         if (ashBlend > 0) {
-          const r = Math.round(255 * (1 - ashBlend * 0.5));
-          const g = Math.round(215 * (1 - ashBlend * 0.6));
-          const b = Math.round(0 + ashBlend * 60);
+          var r = Math.round(255 * (1 - ashBlend * 0.5));
+          var g = Math.round(215 * (1 - ashBlend * 0.6));
+          var b = Math.round(0 + ashBlend * 60);
           el.style.color = 'rgb(' + r + ',' + g + ',' + b + ')';
         }
       } else if (t < 1) {
-        // Phase 4: disintegrate upward — text turns to ash and vanishes
-        const p = (t - 0.72) / 0.28;
-        const yRise = -18 - 80 * p; // accelerates upward
-        const scale = 1.1 + 0.15 * p; // grows slightly as it rises
-        const fadeOut = 1 - Math.pow(p, 1.5);
+        var p = (t - 0.72) / 0.28;
+        var yRise = -18 - 80 * p;
+        var scale = 1.1 + 0.15 * p;
+        var fadeOut = 1 - p * Math.sqrt(p);
         container.style.transform = 'translate(-50%,calc(-50% + ' + yRise + 'px)) scale(' + scale + ')';
         container.style.opacity = '' + Math.max(0, fadeOut);
-        // Full ash: grey, desaturated
-        const gr = Math.round(160 + 50 * p);
+        var gr = Math.round(160 + 50 * p);
         el.style.color = 'rgb(' + gr + ',' + gr + ',' + gr + ')';
         el.style.textShadow = '0 0 ' + (8 + 20 * p) + 'px rgba(180,180,180,' + (0.5 * (1 - p)) + ')';
       } else {
-        _cleanupLevelUpFX();
+        _hideLevelUpFX();
         return;
       }
 
-      // Update ember/ash particles
-      for (let i = 0; i < embers.length; i++) {
-        const em = embers[i];
+      for (var i = 0; i < embers.length; i++) {
+        var em = embers[i];
         if (em.maxLife === 0) continue;
         em.life -= dt;
         if (em.life <= 0) { em.el.style.opacity = '0'; continue; }
         em.x += em.vx * dt;
         em.y += em.vy * dt;
-        em.vy += (em.isAsh ? 10 : 25) * dt; // ash drifts slower
-        em.vx *= em.isAsh ? 0.995 : 0.99; // ash drifts on air
+        em.vy += (em.isAsh ? 10 : 25) * dt;
+        em.vx *= em.isAsh ? 0.995 : 0.99;
         em.rot += em.rotV * dt;
         em.el.style.left = em.x + 'px';
         em.el.style.top = em.y + 'px';
@@ -6476,18 +6518,22 @@
         // UFO engine lights pulsing
         if (landmarks.ufo) {
           if (landmarks.ufo.engineLights) {
-            landmarks.ufo.engineLights.forEach((light, idx) => {
-              light.userData.phase = (light.userData.phase || 0) + dt * 2;
-              const pulseFactor = 0.7 + Math.sin(light.userData.phase) * 0.3;
-              light.material.opacity = pulseFactor;
-              light.scale.setScalar(0.8 + pulseFactor * 0.4);
-            });
+            var _uelArr = landmarks.ufo.engineLights;
+            for (var _uelI = 0; _uelI < _uelArr.length; _uelI++) {
+              var _uel = _uelArr[_uelI];
+              _uel.userData.phase = (_uel.userData.phase || 0) + dt * 2;
+              var pulseFactor = 0.7 + Math.sin(_uel.userData.phase) * 0.3;
+              _uel.material.opacity = pulseFactor;
+              _uel.scale.setScalar(0.8 + pulseFactor * 0.4);
+            }
           }
           if (landmarks.ufo.enginePointLights) {
-            landmarks.ufo.enginePointLights.forEach((light, idx) => {
-              light.userData.phase = (light.userData.phase || 0) + dt * 2;
-              light.intensity = 2.0 + Math.sin(light.userData.phase) * 1.0;
-            });
+            var _uplArr = landmarks.ufo.enginePointLights;
+            for (var _uplI = 0; _uplI < _uplArr.length; _uplI++) {
+              var _upl = _uplArr[_uplI];
+              _upl.userData.phase = (_upl.userData.phase || 0) + dt * 2;
+              _upl.intensity = 2.0 + Math.sin(_upl.userData.phase) * 1.0;
+            }
           }
         }
 
@@ -6503,11 +6549,13 @@
 
           // Rotate energy rings at different speeds
           if (landmarks.obelisk.rings && landmarks.obelisk.rings.length > 0) {
-            landmarks.obelisk.rings.forEach((ring, idx) => {
-              ring.userData.phase = (ring.userData.phase || 0) + dt * ring.userData.speed;
-              ring.rotation.z = ring.userData.phase;
-              ring.material.opacity = (0.3 - idx * 0.08) + Math.sin(ring.userData.phase * 1.5) * 0.1;
-            });
+            var _orArr = landmarks.obelisk.rings;
+            for (var _orI = 0; _orI < _orArr.length; _orI++) {
+              var _or = _orArr[_orI];
+              _or.userData.phase = (_or.userData.phase || 0) + dt * _or.userData.speed;
+              _or.rotation.z = _or.userData.phase;
+              _or.material.opacity = (0.3 - _orI * 0.08) + Math.sin(_or.userData.phase * 1.5) * 0.1;
+            }
           }
 
           // Pulse the top and base lights
@@ -6523,25 +6571,26 @@
 
           // Pulse pylon crystals
           if (landmarks.obelisk.pylonCrystals && landmarks.obelisk.pylonCrystals.length > 0) {
-            landmarks.obelisk.pylonCrystals.forEach(crystal => {
-              crystal.userData.phase = (crystal.userData.phase || 0) + dt * 2.5;
-              crystal.rotation.y += dt * 1.2;
-              crystal.material.opacity = 0.6 + Math.sin(obeliskPhase * 2 + crystal.userData.phase) * 0.2;
-            });
+            var _pcArr = landmarks.obelisk.pylonCrystals;
+            for (var _pcI = 0; _pcI < _pcArr.length; _pcI++) {
+              var _pc = _pcArr[_pcI];
+              _pc.userData.phase = (_pc.userData.phase || 0) + dt * 2.5;
+              _pc.rotation.y += dt * 1.2;
+              _pc.material.opacity = 0.6 + Math.sin(obeliskPhase * 2 + _pc.userData.phase) * 0.2;
+            }
           }
         }
 
         // Lake sparkles animation (waterfall removed)
         if (landmarks.lake && landmarks.lake.sparkles) {
-          landmarks.lake.sparkles.forEach(sparkle => {
-            sparkle.userData.phase = (sparkle.userData.phase || 0) + 0.02 * sparkle.userData.speed;
-            sparkle.material.opacity = 0.3 + Math.abs(Math.sin(sparkle.userData.phase)) * 0.7;
-            sparkle.scale.set(
-              1 + Math.sin(sparkle.userData.phase * 2) * 0.5,
-              1,
-              1 + Math.sin(sparkle.userData.phase * 2) * 0.5
-            );
-          });
+          var _lsArr = landmarks.lake.sparkles;
+          for (var _lsI = 0; _lsI < _lsArr.length; _lsI++) {
+            var _ls = _lsArr[_lsI];
+            _ls.userData.phase = (_ls.userData.phase || 0) + 0.02 * _ls.userData.speed;
+            _ls.material.opacity = 0.3 + Math.abs(Math.sin(_ls.userData.phase)) * 0.7;
+            var _lsScale = 1 + Math.sin(_ls.userData.phase * 2) * 0.5;
+            _ls.scale.set(_lsScale, 1, _lsScale);
+          }
         }
 
         // Annunaki Tablet glow + glyph shimmer + dust motes
@@ -6609,9 +6658,9 @@
         _ring.scale.z += _rExp  * dt * 60;
         _ring.material.opacity -= _rFade * dt * 60;
         if (_ring.material.opacity <= 0) {
-          scene.remove(_ring);
-          _ring.geometry.dispose();
-          _ring.material.dispose();
+          // Pooled: just hide — no dispose, no scene.remove (stays in scene invisible)
+          _ring.visible = false;
+          _ring.material.opacity = 0;
           _lvlUpRings.splice(_ri, 1);
         }
       }
