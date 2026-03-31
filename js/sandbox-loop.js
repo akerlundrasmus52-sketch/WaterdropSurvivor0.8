@@ -3115,13 +3115,13 @@
       );
 
       // Knockback physics — gentle decay to prevent stutter
-      // Math.pow(0.05, dt) replaced with exp(ln(0.05)*dt) ≈ exp(-2.996*dt) for perf
+      // Math.pow(0.05, dt) replaced with exp(-2.9957*dt) for perf (called per-slime per-frame)
       if (Math.abs(s.knockbackVx) > 0.005 || Math.abs(s.knockbackVz) > 0.005) {
         s.mesh.position.x += s.knockbackVx * dt * 4;
         s.mesh.position.z += s.knockbackVz * dt * 4;
-        var _kbDecay = Math.exp(-2.9957 * dt); // equivalent to Math.pow(0.05, dt)
-        s.knockbackVx *= _kbDecay;
-        s.knockbackVz *= _kbDecay;
+        var _knockbackDecay = Math.exp(-2.9957 * dt); // equivalent to Math.pow(0.05, dt)
+        s.knockbackVx *= _knockbackDecay;
+        s.knockbackVz *= _knockbackDecay;
       }
 
       // Move toward player (sx, sz already defined above)
@@ -3704,7 +3704,7 @@
 
       if (t < 0.18) {
         var p = t / 0.18;
-        var easeP = 1 - (1 - p) * (1 - p) * (1 - p);
+        var easeP = 1 - Math.pow(1 - p, 3); // ease-out cubic
         var scale = easeP * 1.3;
         var yOff = (1 - easeP) * 60;
         container.style.opacity = '' + Math.min(1, p * 3);
@@ -3744,7 +3744,7 @@
         var p = (t - 0.72) / 0.28;
         var yRise = -18 - 80 * p;
         var scale = 1.1 + 0.15 * p;
-        var fadeOut = 1 - p * Math.sqrt(p);
+        var fadeOut = 1 - Math.pow(p, 1.5);
         container.style.transform = 'translate(-50%,calc(-50% + ' + yRise + 'px)) scale(' + scale + ')';
         container.style.opacity = '' + Math.max(0, fadeOut);
         var gr = Math.round(160 + 50 * p);
