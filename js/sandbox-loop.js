@@ -3196,13 +3196,13 @@
     // Respect pickup-range / XP collection-radius upgrades, if available
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
     // Use playerStats.pickupRange as a direct multiplier (default 1.0 = normal range)
-    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (8 units) by the radiusMultiplier.
+    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (12 units) by the radiusMultiplier.
     const _baseMultiplier = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
       ? _xpStats.pickupRange
       : 1.0;
-    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (8.0)
+    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (12.0)
     const _magnetStacks = (window._sandboxXpMagnetRunStacks || 0);
-    const radiusMultiplier = _baseMultiplier + (_magnetStacks * 2.5 / 8.0);
+    const radiusMultiplier = _baseMultiplier + (_magnetStacks * 2.5 / 12.0);
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
@@ -6425,10 +6425,13 @@
         WorldObjects.update(dt);
       }
 
-      // ── Universal invisible enemy safety net (once per second) ───────────────
+      // ── Universal invisible entity safety net (once per second) ──────────────
+      // Fixes: Enemies, XP stars, and blood particles disappearing unexpectedly
       _visibilityCheckTimer += dt;
       if (_visibilityCheckTimer >= 1.0) {
         _visibilityCheckTimer = 0;
+
+        // Check enemies
         const _enemyArrays = [
           { arr: _activeSlimes,       type: 'slime' },
           { arr: _activeCrawlers,     type: 'crawler' },
@@ -6445,6 +6448,32 @@
               _mesh.visible = true;
               console.warn('[InvisibilityFix] Restored visibility for ' + _entry.type, _e);
             }
+          }
+        }
+
+        // Check XP stars - ensure all active stars are visible
+        if (window.XPStarSystem && window.XPStarSystem._activeStars) {
+          const _activeStars = window.XPStarSystem._activeStars;
+          for (let _si = 0; _si < _activeStars.length; _si++) {
+            const _star = _activeStars[_si];
+            if (_star && _star.active && _star.mesh && !_star.mesh.visible && _star.mesh.position && _star.mesh.position.y > MIN_VISIBLE_Y_THRESHOLD) {
+              _star.mesh.visible = true;
+              console.warn('[InvisibilityFix] Restored visibility for XP star', _star);
+            }
+          }
+        }
+
+        // Check blood system InstancedMesh visibility (shouldn't be needed with frustumCulled=false, but defensive)
+        if (window.BloodV2 && window.BloodV2._dropIM) {
+          if (!window.BloodV2._dropIM.visible) {
+            window.BloodV2._dropIM.visible = true;
+            console.warn('[InvisibilityFix] Restored visibility for blood drops InstancedMesh');
+          }
+        }
+        if (window.BloodV2 && window.BloodV2._mistIM) {
+          if (!window.BloodV2._mistIM.visible) {
+            window.BloodV2._mistIM.visible = true;
+            console.warn('[InvisibilityFix] Restored visibility for blood mist InstancedMesh');
           }
         }
       }
