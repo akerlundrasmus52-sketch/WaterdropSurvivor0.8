@@ -128,6 +128,9 @@ function _buildSharedAssets() {
 
   _sharedGeometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
   _sharedGeometry.center();
+  // Set a large bounding sphere once on the shared geometry to ensure stars are
+  // never culled by the camera frustum. Done here so it is only allocated once.
+  _sharedGeometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
 
   // One material template per rarity; each star clones its own instance
   _rarityMaterials = XP_CFG.RARITIES.map(r => new THREE.MeshPhysicalMaterial({
@@ -283,10 +286,6 @@ class XPStar {
     this.mesh.receiveShadow = false;
     // BUG E: Disable frustum culling — stars must be visible at all distances and angles
     this.mesh.frustumCulled = false;
-    // FIX: Set a large bounding sphere to ensure stars are never culled by the camera frustum
-    // This prevents stars from disappearing when they're technically outside the view frustum
-    // but should still be visible (e.g., at screen edges or when rotating camera quickly)
-    this.mesh.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 999);
   }
 
   update(dt, playerX, playerY, playerZ, radiusMultiplier) {

@@ -6462,20 +6462,6 @@
             }
           }
         }
-
-        // Check blood system InstancedMesh visibility (shouldn't be needed with frustumCulled=false, but defensive)
-        if (window.BloodV2 && window.BloodV2._dropIM) {
-          if (!window.BloodV2._dropIM.visible) {
-            window.BloodV2._dropIM.visible = true;
-            console.warn('[InvisibilityFix] Restored visibility for blood drops InstancedMesh');
-          }
-        }
-        if (window.BloodV2 && window.BloodV2._mistIM) {
-          if (!window.BloodV2._mistIM.visible) {
-            window.BloodV2._mistIM.visible = true;
-            console.warn('[InvisibilityFix] Restored visibility for blood mist InstancedMesh');
-          }
-        }
       }
 
       // Atmospheric weather particles and dynamic sky cycle
