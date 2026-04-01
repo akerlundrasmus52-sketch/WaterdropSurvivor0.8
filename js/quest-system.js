@@ -222,54 +222,64 @@
       
       const popup = document.createElement('div');
       popup.style.cssText = `
-        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
-        border: 6px solid #FFD700;
-        border-radius: 10px;
-        padding: 20px;
+        background: linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%);
+        border: 3px solid #00ffff;
+        border-radius: 15px;
+        padding: 25px;
         max-width: 90vw;
         width: 90%;
         max-height: 85vh;
         overflow-y: auto;
         box-sizing: border-box;
         text-align: center;
-        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 
-          0 0 40px rgba(255,215,0,0.6),
-          inset 0 0 30px rgba(0,0,0,0.3);
-        font-family: 'Bangers', cursive;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), borderPulse 2s ease-in-out infinite;
+        box-shadow:
+          0 0 30px rgba(0, 255, 255, 0.5),
+          0 0 60px rgba(138, 43, 226, 0.4),
+          inset 0 0 40px rgba(0, 255, 255, 0.1),
+          inset 0 0 80px rgba(138, 43, 226, 0.2);
+        font-family: 'Courier New', monospace;
+        position: relative;
       `;
       
       popup.innerHTML = `
         <div style="
-          font-size: 32px; 
-          color: #FFD700; 
-          font-weight: bold; 
+          font-size: 32px;
+          color: #00ffff;
+          font-weight: bold;
           margin-bottom: 25px;
-          text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
-          letter-spacing: 2px;
+          text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #8a2be2, 2px 2px 4px #000;
+          letter-spacing: 4px;
+          font-family: 'Courier New', monospace;
+          text-transform: uppercase;
         ">${title}</div>
         <div style="
-          font-size: 16px; 
-          color: #FFF; 
-          line-height: 1.8; 
+          font-size: 16px;
+          color: #e0e0ff;
+          line-height: 1.8;
           margin-bottom: 30px;
-          font-family: 'Bangers', cursive;
-          letter-spacing: 0.5px;
-          background: rgba(0,0,0,0.3);
+          font-family: 'Courier New', monospace;
+          letter-spacing: 1px;
+          background: rgba(0, 0, 0, 0.5);
           padding: 20px;
           border-radius: 10px;
-          border: 2px solid rgba(255,215,0,0.3);
+          border: 2px solid rgba(0, 255, 255, 0.3);
+          box-shadow: inset 0 0 20px rgba(138, 43, 226, 0.3);
         ">${message}</div>
         <button class="btn" style="
-          font-size: 22px; 
-          padding: 15px 40px; 
-          background: #FFD700; 
+          font-size: 20px;
+          padding: 15px 40px;
+          background: linear-gradient(135deg, #00ffff 0%, #8a2be2 100%);
           color: #000;
-          font-family: 'Bangers', cursive;
-          border: 3px solid #000;
-          box-shadow: 4px 4px 0 #000;
-          letter-spacing: 1px;
-        ">${buttonText}</button>
+          font-family: 'Courier New', monospace;
+          border: 2px solid #00ffff;
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.6), 0 0 30px rgba(138, 43, 226, 0.4);
+          letter-spacing: 2px;
+          font-weight: bold;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        " onmouseover="this.style.boxShadow='0 0 25px rgba(0, 255, 255, 0.9), 0 0 50px rgba(138, 43, 226, 0.7)'" onmouseout="this.style.boxShadow='0 0 15px rgba(0, 255, 255, 0.6), 0 0 30px rgba(138, 43, 226, 0.4)'">${buttonText}</button>
       `;
       
       let comicClosed = false;

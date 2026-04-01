@@ -5410,23 +5410,31 @@
     #you-died-banner {
       display: none;
       position: fixed;
-      top: 22%;
+      top: 30%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-family: 'Bangers', cursive;
+      font-family: 'Courier New', monospace;
       font-size: 64px;
-      color: #FF2222;
+      color: #00ffff;
       text-shadow:
-        -3px -3px 0 #000,
-        3px -3px 0 #000,
-        -3px 3px 0 #000,
-        3px 3px 0 #000,
-        0 0 30px rgba(255,34,34,0.9),
-        0 0 60px rgba(255,34,34,0.4);
-      letter-spacing: 6px;
+        0 0 10px #00ffff,
+        0 0 20px #00ffff,
+        0 0 40px #8a2be2,
+        0 0 80px #8a2be2,
+        2px 2px 4px #000;
+      letter-spacing: 8px;
       pointer-events: none;
       z-index: 300;
-      animation: you-died-pop 0.5s ease-out;
+      animation: you-died-pop 0.5s ease-out, annunakiGlow 1.5s ease-in-out infinite;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(10, 0, 21, 0.9) 0%, rgba(26, 0, 51, 0.9) 100%);
+      padding: 40px;
+      border: 3px solid #00ffff;
+      border-radius: 20px;
+      box-shadow:
+        0 0 30px rgba(0, 255, 255, 0.6),
+        0 0 60px rgba(138, 43, 226, 0.5),
+        inset 0 0 40px rgba(0, 255, 255, 0.1);
     }
     @keyframes you-died-pop {
       0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
@@ -10540,6 +10548,46 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Annunaki alien mystical border pulse animation */
+@keyframes borderPulse {
+  0%, 100% {
+    border-color: #00ffff;
+    box-shadow:
+      0 0 30px rgba(0, 255, 255, 0.5),
+      0 0 60px rgba(138, 43, 226, 0.4),
+      inset 0 0 40px rgba(0, 255, 255, 0.1),
+      inset 0 0 80px rgba(138, 43, 226, 0.2);
+  }
+  50% {
+    border-color: #8a2be2;
+    box-shadow:
+      0 0 40px rgba(138, 43, 226, 0.7),
+      0 0 80px rgba(0, 255, 255, 0.5),
+      inset 0 0 50px rgba(138, 43, 226, 0.3),
+      inset 0 0 100px rgba(0, 255, 255, 0.2);
+  }
+}
+
+/* Annunaki glow animation for YOU DIED banner */
+@keyframes annunakiGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px #00ffff,
+      0 0 20px #00ffff,
+      0 0 40px #8a2be2,
+      0 0 80px #8a2be2,
+      2px 2px 4px #000;
+  }
+  50% {
+    text-shadow:
+      0 0 20px #00ffff,
+      0 0 40px #00ffff,
+      0 0 60px #8a2be2,
+      0 0 120px #8a2be2,
+      2px 2px 4px #000;
   }
 }
 
