@@ -246,9 +246,10 @@
 
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
-      // Hide the YOU DIED banner when the gameover screen appears
+      // Hide the YOU DIED banner and death stats when the gameover screen appears
       const youDiedBanner = document.getElementById('you-died-banner');
       if (youDiedBanner) youDiedBanner.style.display = 'none';
+      hideDeathStatsOverlay();
       // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
       const isFirstRun = saveData.totalRuns === 1;
       document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';

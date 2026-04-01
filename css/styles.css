@@ -5428,6 +5428,7 @@
       z-index: 300;
       background: linear-gradient(120deg, #2affd0 0%, #ffe09a 60%, #2affd0 100%);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
       animation: you-died-pop 0.5s ease-out, quest-holo-pulse 4s ease-in-out infinite;
     }
@@ -5462,6 +5463,7 @@
       flex-direction: column;
       animation: quest-holo-pulse 4s ease-in-out infinite;
       overflow: hidden;
+      pointer-events: none;
     }
     #death-stats-box::before {
       content: '';

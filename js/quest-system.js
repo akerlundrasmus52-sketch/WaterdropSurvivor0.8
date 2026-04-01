@@ -150,7 +150,7 @@
         overflow-y: auto;
         box-sizing: border-box;
         text-align: center;
-        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), quest-holo-pulse 2.5s ease-in-out infinite;
       `;
       
       popup.innerHTML = `
@@ -229,7 +229,7 @@
         overflow-y: auto;
         box-sizing: border-box;
         text-align: center;
-        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), quest-holo-pulse 2.5s ease-in-out infinite;
         font-family: 'Bangers', cursive;
       `;
       
