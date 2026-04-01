@@ -36,15 +36,22 @@
                                 (window.eiffelQuest?.active);
 
       // Also update quest state so active quests are properly cleaned up
+      // Reset landmark quests completely so they can be attempted again in the next run
       if (window.windmillQuest?.active) {
         windmillQuest.active = false;
         windmillQuest.failed = true;
+        windmillQuest.hasCompleted = false; // Allow retry in next run
+        windmillQuest.rewardGiven = false;  // Reset reward flag
       }
       if (window.montanaQuest?.active) {
         montanaQuest.active = false;
+        montanaQuest.hasCompleted = false; // Allow retry in next run
+        montanaQuest.kills = 0;            // Reset kill counter
       }
       if (window.eiffelQuest?.active) {
         eiffelQuest.active = false;
+        eiffelQuest.hasCompleted = false; // Allow retry in next run
+        eiffelQuest.kills = 0;            // Reset kill counter
       }
       // Reset pause counter
       pauseOverlayCount = 0;
