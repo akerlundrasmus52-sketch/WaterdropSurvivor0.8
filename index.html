@@ -871,6 +871,25 @@
 
   <!-- You Died Banner (shown for ~3s on game over trigger) -->
   <div id="you-died-banner">YOU DIED</div>
+  <div id="death-stats-box" aria-live="polite">
+    <div class="death-stats-title">Run Debrief</div>
+    <div class="stat-row">
+      <span class="stat-label">⏱️ Time</span>
+      <span id="death-stat-time" class="stat-value">0s</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">⚔️ Kills</span>
+      <span id="death-stat-kills" class="stat-value">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">📊 Level</span>
+      <span id="death-stat-level" class="stat-value">1</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">💰 Gold</span>
+      <span id="death-stat-gold" class="stat-value">0</span>
+    </div>
+  </div>
 
   <!-- AI Chat Reminder Bubble (shown on 1st and every 5th run/camp visit) -->
   <div id="chat-reminder-bubble"></div>

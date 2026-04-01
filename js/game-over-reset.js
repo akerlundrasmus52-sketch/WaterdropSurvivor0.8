@@ -7,6 +7,28 @@
     // on the very first run when gameOver() has never been called.
     let _landmarkQuestWasActive = false;
 
+    function showDeathStatsOverlay(stats) {
+      const box = document.getElementById('death-stats-box');
+      if (!box) return;
+      const { survivalTime, kills, level, goldEarned } = stats;
+      const rows = {
+        'death-stat-time': `${survivalTime || 0}s`,
+        'death-stat-kills': `${kills || 0}`,
+        'death-stat-level': `${level || 1}`,
+        'death-stat-gold': `${goldEarned || 0}`
+      };
+      Object.entries(rows).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      });
+      box.style.display = 'flex';
+    }
+
+    function hideDeathStatsOverlay() {
+      const box = document.getElementById('death-stats-box');
+      if (box) box.style.display = 'none';
+    }
+
     function gameOver() {
       setGameOver(true);
       setGamePaused(true);
@@ -62,6 +84,15 @@
       // Calculate run stats
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
       const goldEarned = playerStats.gold - runStartGold;
+      showDeathStatsOverlay({
+        survivalTime,
+        kills: playerStats.kills,
+        level: playerStats.lvl,
+        goldEarned
+      });
+      if (typeof playSound === 'function') {
+        try { playSound('death'); } catch (e) { /* ignore */ }
+      }
       
       // Track items gained this run (initialize if not present)
       if (!window.runLootGained) window.runLootGained = [];
@@ -274,6 +305,7 @@
 
     function resetGame() {
       stopDroneHum(); // Stop drone sound on reset
+      hideDeathStatsOverlay();
 
       // Reset joystick state to prevent "stuck joystick" after camp/game-over
       if (typeof joystickLeft !== 'undefined') {

@@ -131,7 +131,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.9);
+        background: radial-gradient(ellipse at center, rgba(6,10,18,0.92), rgba(0,0,0,0.97));
         z-index: 100;
         display: flex;
         align-items: center;
@@ -140,11 +140,10 @@
       `;
       
       const popup = document.createElement('div');
+      popup.className = 'quest-holo-panel';
       popup.style.cssText = `
-        background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
-        border: 3px solid #FFD700;
         border-radius: 20px;
-        padding: 20px;
+        padding: 22px;
         max-width: 90vw;
         width: 90%;
         max-height: 85vh;
@@ -152,13 +151,12 @@
         box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 0 0 30px rgba(255,215,0,0.5);
       `;
       
       popup.innerHTML = `
-        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">${title}</div>
-        <div style="font-size: 18px; color: #FFF; line-height: 1.6; margin-bottom: 30px;">${message}</div>
-        <button class="btn" style="font-size: 18px; padding: 12px 30px; background: #FFD700; color: #000;">${buttonText}</button>
+        <div class="quest-holo-title" style="font-size: 28px; margin-bottom: 18px;">${title}</div>
+        <div class="quest-holo-body" style="font-size: 18px; line-height: 1.6; padding: 16px; margin-bottom: 24px;">${message}</div>
+        <button class="btn quest-holo-btn" style="font-size: 18px; padding: 12px 30px;">${buttonText}</button>
       `;
       
       // Add X close button
@@ -212,7 +210,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0,0,0,0.95);
+        background: radial-gradient(ellipse at center, rgba(6,10,18,0.94), rgba(0,0,0,0.98));
         z-index: 100;
         display: flex;
         align-items: center;
@@ -221,11 +219,10 @@
       `;
       
       const popup = document.createElement('div');
+      popup.className = 'quest-holo-panel';
       popup.style.cssText = `
-        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
-        border: 6px solid #FFD700;
-        border-radius: 10px;
-        padding: 20px;
+        border-radius: 14px;
+        padding: 22px;
         max-width: 90vw;
         width: 90%;
         max-height: 85vh;
@@ -233,43 +230,13 @@
         box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 
-          0 0 40px rgba(255,215,0,0.6),
-          inset 0 0 30px rgba(0,0,0,0.3);
         font-family: 'Bangers', cursive;
       `;
       
       popup.innerHTML = `
-        <div style="
-          font-size: 32px; 
-          color: #FFD700; 
-          font-weight: bold; 
-          margin-bottom: 25px;
-          text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
-          letter-spacing: 2px;
-        ">${title}</div>
-        <div style="
-          font-size: 16px; 
-          color: #FFF; 
-          line-height: 1.8; 
-          margin-bottom: 30px;
-          font-family: 'Bangers', cursive;
-          letter-spacing: 0.5px;
-          background: rgba(0,0,0,0.3);
-          padding: 20px;
-          border-radius: 10px;
-          border: 2px solid rgba(255,215,0,0.3);
-        ">${message}</div>
-        <button class="btn" style="
-          font-size: 22px; 
-          padding: 15px 40px; 
-          background: #FFD700; 
-          color: #000;
-          font-family: 'Bangers', cursive;
-          border: 3px solid #000;
-          box-shadow: 4px 4px 0 #000;
-          letter-spacing: 1px;
-        ">${buttonText}</button>
+        <div class="quest-holo-title" style="font-size: 32px; margin-bottom: 22px;">${title}</div>
+        <div class="quest-holo-body" style="font-size: 16px; line-height: 1.8; margin-bottom: 26px; padding: 20px; letter-spacing: 0.5px;">${message}</div>
+        <button class="btn quest-holo-btn" style="font-size: 22px; padding: 15px 40px;">${buttonText}</button>
       `;
       
       let comicClosed = false;
@@ -653,7 +620,7 @@
             if (_isSandboxMode) {
               window.location.reload();
             } else {
-              startGame();
+              window.location.href = 'sandbox.html';
             }
           };
         }
