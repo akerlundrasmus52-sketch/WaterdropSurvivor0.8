@@ -326,6 +326,10 @@
       
       // Reset run loot tracking
       window.runLootGained = [];
+      if (window.BloodV2 && typeof window.BloodV2.setParticleEffects === 'function') {
+        const effectsEnabled = !window.gameSettings || window.gameSettings.particleEffects !== false;
+        window.BloodV2.setParticleEffects(effectsEnabled);
+      }
       
       // Time system: start at 18:00 (Evening) when a landmark quest was active
       // on the previous run, otherwise default to 06:00 (Morning).
