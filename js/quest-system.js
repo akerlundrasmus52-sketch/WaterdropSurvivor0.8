@@ -224,6 +224,10 @@
       
       const popup = document.createElement('div');
       popup.style.cssText = `
+        background: linear-gradient(135deg, #0a0015 0%, #1a0033 50%, #0a0015 100%);
+        border: 3px solid #00ffff;
+        border-radius: 15px;
+        padding: 25px;
         background: linear-gradient(160deg, #0d0015 0%, #07000e 50%, #0a0510 100%);
         border: 3px solid #C9A227;
         border-radius: 4px;
@@ -234,6 +238,14 @@
         overflow-y: auto;
         box-sizing: border-box;
         text-align: center;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), borderPulse 2s ease-in-out infinite;
+        box-shadow:
+          0 0 30px rgba(0, 255, 255, 0.5),
+          0 0 60px rgba(138, 43, 226, 0.4),
+          inset 0 0 40px rgba(0, 255, 255, 0.1),
+          inset 0 0 80px rgba(138, 43, 226, 0.2);
+        font-family: 'Courier New', monospace;
+        position: relative;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
         box-shadow: 0 0 30px rgba(201,162,39,0.5), 0 0 60px rgba(0,255,100,0.1);
         outline: 1px solid rgba(201,162,39,0.2);
@@ -243,6 +255,41 @@
       
       popup.innerHTML = `
         <div style="
+          font-size: 32px;
+          color: #00ffff;
+          font-weight: bold;
+          margin-bottom: 25px;
+          text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #8a2be2, 2px 2px 4px #000;
+          letter-spacing: 4px;
+          font-family: 'Courier New', monospace;
+          text-transform: uppercase;
+        ">${title}</div>
+        <div style="
+          font-size: 16px;
+          color: #e0e0ff;
+          line-height: 1.8;
+          margin-bottom: 30px;
+          font-family: 'Courier New', monospace;
+          letter-spacing: 1px;
+          background: rgba(0, 0, 0, 0.5);
+          padding: 20px;
+          border-radius: 10px;
+          border: 2px solid rgba(0, 255, 255, 0.3);
+          box-shadow: inset 0 0 20px rgba(138, 43, 226, 0.3);
+        ">${message}</div>
+        <button class="btn comic-info-close-btn" style="
+          font-size: 20px;
+          padding: 15px 40px;
+          background: linear-gradient(135deg, #00ffff 0%, #8a2be2 100%);
+          color: #000;
+          font-family: 'Courier New', monospace;
+          border: 2px solid #00ffff;
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.6), 0 0 30px rgba(138, 43, 226, 0.4);
+          letter-spacing: 2px;
+          font-weight: bold;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all 0.3s ease;
           font-size: 30px; 
           color: #C9A227; 
           font-weight: bold; 

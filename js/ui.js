@@ -167,6 +167,23 @@ function showYouDiedBanner(duration) {
   const banner = document.getElementById('you-died-banner');
   if (!banner) return;
 
+  // Calculate current run stats
+  const survivalTime = !gameStartTime ? 0 : Math.floor((Date.now() - gameStartTime) / 1000);
+  const kills = (typeof playerStats !== 'undefined' && playerStats && playerStats.kills) || 0;
+  const level = (typeof playerStats !== 'undefined' && playerStats && playerStats.lvl) || 0;
+
+  // Update banner content with Annunaki-themed stats
+  banner.innerHTML = `
+    <div style="font-size: 72px; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 20px #00ffff, 0 0 40px #8a2be2, 4px 4px 8px #000;">
+      ◊ SYSTEM TERMINATED ◊
+    </div>
+    <div style="font-size: 24px; font-family: 'Courier New', monospace; color: #e0e0ff; text-shadow: 0 0 10px #00ffff;">
+      <div style="margin: 10px 0;">⧗ TIME: ${survivalTime}s</div>
+      <div style="margin: 10px 0;">⚔ KILLS: ${kills}</div>
+      <div style="margin: 10px 0;">⧫ LEVEL: ${level}</div>
+    </div>
+  `;
+
   // Populate death stats from current playerStats / gameStartTime
   // Falls back to _sandboxRunStartTime for sandbox.html
   try {
