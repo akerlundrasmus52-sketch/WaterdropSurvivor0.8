@@ -69,6 +69,10 @@
 
       // Update skill icons panel (weapons + passives at top-right)
       _updateSkillIcons();
+
+      // Update in-game gold counter
+      const _hudGold = document.getElementById('hud-gold');
+      if (_hudGold) _hudGold.textContent = '💰 ' + (playerStats.gold || 0);
       
       // REGION DISPLAY: Update current region based on player position
       updateRegionDisplay();

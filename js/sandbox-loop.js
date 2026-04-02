@@ -3227,7 +3227,11 @@
       : 1.0;
     // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (12.0)
     const _magnetStacks = (window._sandboxXpMagnetRunStacks || 0);
-    const radiusMultiplier = _baseMultiplier + (_magnetStacks * 2.5 / 12.0);
+    // playerStats.magnetRange (set by Magnet Drop building) overrides base range when larger
+    const _playerMagnetRange = (_xpStats && typeof _xpStats.magnetRange === 'number' && _xpStats.magnetRange > 12.0)
+      ? _xpStats.magnetRange / 12.0
+      : _baseMultiplier;
+    const radiusMultiplier = _playerMagnetRange + (_magnetStacks * 2.5 / 12.0);
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
