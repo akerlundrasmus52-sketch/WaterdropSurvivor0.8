@@ -1245,6 +1245,7 @@
         if (bonus.pickupRange)        playerStats.pickupRange        = (playerStats.pickupRange || 1.0) + bonus.pickupRange;
         if (bonus.dropRate)           playerStats.dropRate           = (playerStats.dropRate || 1.0) + bonus.dropRate;
         if (bonus.auraRange)          playerStats.auraRange          = (playerStats.auraRange || 1.0) + bonus.auraRange;
+        if (bonus.magnetRange)        playerStats.magnetRange        = Math.max((playerStats.magnetRange || 6.0), bonus.magnetRange);
         // Elemental
         if (bonus.fireDamage)         playerStats.fireDamage         = (playerStats.fireDamage || 0) + bonus.fireDamage;
         if (bonus.iceDamage)          playerStats.iceDamage          = (playerStats.iceDamage || 0) + bonus.iceDamage;

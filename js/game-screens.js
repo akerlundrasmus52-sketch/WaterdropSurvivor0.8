@@ -1963,6 +1963,9 @@ function updateGoldDisplays() {
   const shopGold = document.getElementById('shop-gold');
   if (menuGold) menuGold.innerText = goldText;
   if (shopGold) shopGold.innerText = goldText;
+  // Also refresh the in-game HUD gold counter
+  const hudGold = document.getElementById('hud-gold');
+  if (hudGold) hudGold.textContent = '💰 ' + (typeof playerStats !== 'undefined' && playerStats ? playerStats.gold : 0);
 }
 
 function spawnWaterDroplet(pos) {

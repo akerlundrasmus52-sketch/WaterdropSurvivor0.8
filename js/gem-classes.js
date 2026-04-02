@@ -444,7 +444,7 @@
       constructor(x, z, amount) {
         this.amount = amount;
         this.active = true;
-        this.magnetRange = 4;
+        this.magnetRange = 6.0;  // Base magnetic attraction range (world units)
         this.collectRange = 0.8;
         this.vx = 0;
         this.vz = 0;
@@ -629,7 +629,8 @@
           this.mesh.rotation.y += 0.15;
         } else if (this.type === 'multiple') {
           // Multiple coins orbiting and spinning
-          this.coins.forEach((coinData, i) => {
+          for (let i = 0; i < this.coins.length; i++) {
+            const coinData = this.coins[i];
             coinData.angle += this.orbitSpeed;
             const radius = 0.4;
             coinData.mesh.position.x = this.centerPos.x + Math.cos(coinData.angle) * radius;
@@ -643,7 +644,7 @@
               const baseY = 0.3;
               coinData.mesh.position.y = baseY + Math.sin(this.wobblePhase) * 0.1;
             }
-          });
+          }
         } else if (this.type === 'bag') {
           // Bag swaying
           this.mesh.rotation.z = Math.sin(this.wobblePhase) * 0.1;
@@ -676,23 +677,50 @@
           }
         }
         
-        // NO MAGNET - player must walk over gold to collect it
-        const dx = playerPos.x - this.mesh.position.x;
-        const dz = playerPos.z - this.mesh.position.z;
+        // Gold magnet: attracted toward player when within range
+        // For 'multiple' type, measure from centerPos; for others, measure from mesh position
+        const _coinOrigin = (this.type === 'multiple' && this.centerPos) ? this.centerPos : this.mesh.position;
+        const dx = playerPos.x - _coinOrigin.x;
+        const dz = playerPos.z - _coinOrigin.z;
         const dist = Math.sqrt(dx*dx + dz*dz);
-        
-        // Collect ONLY when player is very close
+
+        // Scale magnet range by player pickup stat (default 1.0)
+        // playerStats.magnetRange is set by the Magnet Drop camp building (large override)
+        const _ps = (typeof window.playerStats !== 'undefined' && window.playerStats) || null;
+        const _pickupMult = (_ps && typeof _ps.pickupRange === 'number' && _ps.pickupRange > 0) ? _ps.pickupRange : 1.0;
+        const _baseMagnetRange = this.magnetRange * _pickupMult;
+        const _hasMagnetOverride = _ps && typeof _ps.magnetRange === 'number' && _ps.magnetRange > 0;
+        const _magnetRange = (_hasMagnetOverride && _ps.magnetRange > _baseMagnetRange)
+          ? _ps.magnetRange
+          : _baseMagnetRange;
+
+        if (dist < _magnetRange && dist > this.collectRange) {
+          // Pull coin toward player (0.016 ≈ 1/60s fixed timestep approximation)
+          const MAGNET_SPEED = 4.0;
+          const FIXED_DT = 0.016;
+          const norm = dist > 0.001 ? 1 / dist : 0;
+          this.vx += dx * norm * MAGNET_SPEED * FIXED_DT;
+          this.vz += dz * norm * MAGNET_SPEED * FIXED_DT;
+          const speed = Math.sqrt(this.vx * this.vx + this.vz * this.vz);
+          if (speed > MAGNET_SPEED) { const sf = MAGNET_SPEED / speed; this.vx *= sf; this.vz *= sf; }
+          // Move center anchor; individual coin meshes are repositioned relative to it in the animation block above
+          const anchorRef = (this.type === 'multiple') ? this.centerPos : this.mesh.position;
+          anchorRef.x += this.vx * FIXED_DT;
+          anchorRef.z += this.vz * FIXED_DT;
+        }
+
+        // Collect when close enough
         if (dist < this.collectRange) {
           addGold(this.amount);
           playSound('coin');
           
-          // Gold collect particles - 20 sparkles + flash
-          spawnParticles(this.mesh.position, 0xFFD700, 8); // Reduced for performance
-          spawnParticles(this.mesh.position, 0xFFFFFF, 3); // Reduced for performance
+          // Gold collect particles - sparkles + flash at pickup origin
+          spawnParticles(_coinOrigin, 0xFFD700, 8); // Reduced for performance
+          spawnParticles(_coinOrigin, 0xFFFFFF, 3); // Reduced for performance
           
           // Flash effect - bright point light
           const flashLight = new THREE.PointLight(0xFFD700, 4, 8);
-          flashLight.position.copy(this.mesh.position);
+          flashLight.position.copy(_coinOrigin);
           flashLight.position.y += 1;
           scene.add(flashLight);
           flashLights.push(flashLight);
