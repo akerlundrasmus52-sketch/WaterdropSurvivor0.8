@@ -688,9 +688,11 @@
         // playerStats.magnetRange is set by the Magnet Drop camp building (large override)
         const _ps = (typeof window.playerStats !== 'undefined' && window.playerStats) || null;
         const _pickupMult = (_ps && typeof _ps.pickupRange === 'number' && _ps.pickupRange > 0) ? _ps.pickupRange : 1.0;
-        const _magnetRange = (_ps && typeof _ps.magnetRange === 'number' && _ps.magnetRange > this.magnetRange)
+        const _baseMagnetRange = this.magnetRange * _pickupMult;
+        const _hasMagnetOverride = _ps && typeof _ps.magnetRange === 'number' && _ps.magnetRange > 0;
+        const _magnetRange = (_hasMagnetOverride && _ps.magnetRange > _baseMagnetRange)
           ? _ps.magnetRange
-          : this.magnetRange * _pickupMult;
+          : _baseMagnetRange;
 
         if (dist < _magnetRange && dist > this.collectRange) {
           // Pull coin toward player (0.016 ≈ 1/60s fixed timestep approximation)
@@ -701,13 +703,10 @@
           this.vz += dz * norm * MAGNET_SPEED * FIXED_DT;
           const speed = Math.sqrt(this.vx * this.vx + this.vz * this.vz);
           if (speed > MAGNET_SPEED) { const sf = MAGNET_SPEED / speed; this.vx *= sf; this.vz *= sf; }
-          const meshRef = (this.type === 'multiple') ? this.centerPos : this.mesh.position;
-          meshRef.x += this.vx * FIXED_DT;
-          meshRef.z += this.vz * FIXED_DT;
-          if (this.type === 'multiple') {
-            this.mesh.position.x = this.centerPos.x;
-            this.mesh.position.z = this.centerPos.z;
-          }
+          // Move center anchor; individual coin meshes are repositioned relative to it in the animation block above
+          const anchorRef = (this.type === 'multiple') ? this.centerPos : this.mesh.position;
+          anchorRef.x += this.vx * FIXED_DT;
+          anchorRef.z += this.vz * FIXED_DT;
         }
 
         // Collect when close enough
