@@ -266,7 +266,7 @@
           border: 2px solid rgba(0, 255, 255, 0.3);
           box-shadow: inset 0 0 20px rgba(138, 43, 226, 0.3);
         ">${message}</div>
-        <button class="btn" style="
+        <button class="btn comic-info-close-btn" style="
           font-size: 20px;
           padding: 15px 40px;
           background: linear-gradient(135deg, #00ffff 0%, #8a2be2 100%);
@@ -279,7 +279,7 @@
           text-transform: uppercase;
           cursor: pointer;
           transition: all 0.3s ease;
-        " onmouseover="this.style.boxShadow='0 0 25px rgba(0, 255, 255, 0.9), 0 0 50px rgba(138, 43, 226, 0.7)'" onmouseout="this.style.boxShadow='0 0 15px rgba(0, 255, 255, 0.6), 0 0 30px rgba(138, 43, 226, 0.4)'">${buttonText}</button>
+        ">${buttonText}</button>
       `;
       
       let comicClosed = false;

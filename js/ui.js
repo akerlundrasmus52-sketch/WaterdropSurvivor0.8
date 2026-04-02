@@ -168,9 +168,9 @@ function showYouDiedBanner(duration) {
   if (!banner) return;
 
   // Calculate current run stats
-  const survivalTime = typeof gameStartTime !== 'undefined' ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
-  const kills = typeof playerStats !== 'undefined' ? playerStats.kills : 0;
-  const level = typeof playerStats !== 'undefined' ? playerStats.lvl : 0;
+  const survivalTime = !gameStartTime ? 0 : Math.floor((Date.now() - gameStartTime) / 1000);
+  const kills = (typeof playerStats !== 'undefined' && playerStats && playerStats.kills) || 0;
+  const level = (typeof playerStats !== 'undefined' && playerStats && playerStats.lvl) || 0;
 
   // Update banner content with Annunaki-themed stats
   banner.innerHTML = `

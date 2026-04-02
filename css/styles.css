@@ -10591,3 +10591,8 @@
   }
 }
 
+/* Comic info overlay close button hover — no inline event handlers */
+#comic-info-overlay .comic-info-close-btn:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.9), 0 0 50px rgba(138, 43, 226, 0.7) !important;
+}
+

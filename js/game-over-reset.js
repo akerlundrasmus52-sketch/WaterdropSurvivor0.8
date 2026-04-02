@@ -35,23 +35,29 @@
       _landmarkQuestWasActive = (window.montanaQuest?.active) ||
                                 (window.eiffelQuest?.active);
 
-      // Also update quest state so active quests are properly cleaned up
-      // Reset landmark quests completely so they can be attempted again in the next run
-      if (window.windmillQuest?.active) {
+      // Reset all landmark quests on game over so each new run starts fresh.
+      // This covers quests that were active, completed, or in a failed/cooldown state.
+      if (window.windmillQuest) {
         windmillQuest.active = false;
-        windmillQuest.failed = true;
-        windmillQuest.hasCompleted = false; // Allow retry in next run
-        windmillQuest.rewardGiven = false;  // Reset reward flag
+        windmillQuest.failed = false;
+        windmillQuest.hasCompleted = false;
+        windmillQuest.rewardGiven = false;
+        windmillQuest.rewardReady = false;
+        windmillQuest.failedCooldown = false;
+        windmillQuest.dialogueOpen = false;
+        windmillQuest.timer = 0;
       }
-      if (window.montanaQuest?.active) {
+      if (window.montanaQuest) {
         montanaQuest.active = false;
-        montanaQuest.hasCompleted = false; // Allow retry in next run
-        montanaQuest.kills = 0;            // Reset kill counter
+        montanaQuest.hasCompleted = false;
+        montanaQuest.kills = 0;
+        montanaQuest.timer = 0;
       }
-      if (window.eiffelQuest?.active) {
+      if (window.eiffelQuest) {
         eiffelQuest.active = false;
-        eiffelQuest.hasCompleted = false; // Allow retry in next run
-        eiffelQuest.kills = 0;            // Reset kill counter
+        eiffelQuest.hasCompleted = false;
+        eiffelQuest.kills = 0;
+        eiffelQuest.timer = 0;
       }
       // Reset pause counter
       pauseOverlayCount = 0;
