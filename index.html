@@ -743,18 +743,18 @@
 
   <!-- Game Over Screen -->
   <div id="gameover-screen">
-    <div style="background: linear-gradient(135deg, #0e1225 0%, #060a18 100%); border: 4px solid #FFD700; outline: 3px solid rgba(255,170,0,0.4); outline-offset: 2px; border-radius: 16px; padding: 22px 20px; max-width: 90vw; width: 480px; max-height: 88vh; overflow-y: auto; box-sizing: border-box; box-shadow: 0 12px 40px rgba(0,0,0,0.95), 0 0 50px rgba(255,215,0,0.4), inset 0 0 30px rgba(0,0,0,0.8); position: relative;">
-    <h1 style="color: #FF4444; font-family: 'Bangers', cursive; font-size: 38px; text-shadow: 3px 3px 0 #000, -2px -2px 0 #000, 0 0 20px rgba(255,68,68,0.7); letter-spacing: 4px; margin-bottom: 8px;">💀 GAME OVER</h1>
+    <div style="background: linear-gradient(160deg, #0d0015 0%, #07000e 50%, #0a0510 100%); border: 3px solid #C9A227; outline: 1px solid rgba(201,162,39,0.25); outline-offset: 4px; border-radius: 4px; padding: 22px 20px; max-width: 90vw; width: 480px; max-height: 88vh; overflow-y: auto; box-sizing: border-box; box-shadow: 0 12px 40px rgba(0,0,0,0.97), 0 0 40px rgba(201,162,39,0.4), 0 0 80px rgba(0,255,100,0.08), inset 0 0 30px rgba(0,0,0,0.9); position: relative;">
+    <h1 style="color: #FF3333; font-family: 'Bangers', cursive; font-size: 38px; text-shadow: 3px 3px 0 #000, -2px -2px 0 #000, 0 0 30px rgba(255,34,34,0.8), 0 0 60px rgba(255,34,34,0.3); letter-spacing: 6px; margin-bottom: 8px;">💀 GAME OVER</h1>
     <div style="max-width: 90vw; max-height: 65vh; margin: 10px auto; box-sizing: border-box; overflow-y: auto;">
-      <h3 style="color: #FFD700; font-family: 'Bangers', cursive; font-size: 22px; margin-bottom: 12px; letter-spacing: 2px;">Run Summary</h3>
-      <div style="text-align: left; background: rgba(0,0,0,0.5); padding: 18px; border-radius: 10px; margin-bottom: 15px; border: 2px solid rgba(255,215,0,0.2);">
-        <p id="final-score" style="font-size: 17px; margin: 7px 0;">⏱️ Survived: 0s</p>
-        <p id="final-kills" style="font-size: 17px; margin: 7px 0;">⚔️ Kills: 0</p>
-        <p id="final-level" style="font-size: 17px; margin: 7px 0;">📊 Final Level: 1</p>
-        <p id="gold-earned" style="font-size: 19px; margin: 7px 0; color: #FFD700; font-weight: bold;">💰 Gold Earned: 0</p>
-        <p id="total-gold" style="font-size: 17px; margin: 7px 0; color: #FFD700;">💵 Total Gold: 0</p>
-        <div id="loot-summary" style="margin-top: 12px; padding-top: 12px; border-top: 2px solid rgba(255,215,0,0.3);">
-          <p style="font-size: 15px; color: #FFD700; margin-bottom: 8px;">🎁 Loot & Equipment:</p>
+      <h3 style="color: #C9A227; font-family: 'Bangers', cursive; font-size: 20px; margin-bottom: 12px; letter-spacing: 3px; text-shadow: 0 0 10px rgba(201,162,39,0.6);">— RUN DEBRIEF —</h3>
+      <div style="text-align: left; background: rgba(0,0,0,0.6); padding: 16px; border-radius: 2px; margin-bottom: 15px; border: 1px solid rgba(201,162,39,0.3);">
+        <p style="font-size: 16px; margin: 6px 0; color: #E8D5A3;">⏱️ Survived: <span id="final-score">0s</span></p>
+        <p style="font-size: 16px; margin: 6px 0; color: #E8D5A3;">⚔️ Kills: <span id="final-kills">0</span></p>
+        <p style="font-size: 16px; margin: 6px 0; color: #E8D5A3;">📊 Final Level: <span id="final-level">1</span></p>
+        <p style="font-size: 17px; margin: 6px 0; color: #C9A227; font-weight: bold;">💰 Gold Earned: <span id="gold-earned">0</span></p>
+        <p style="font-size: 15px; margin: 6px 0; color: #C9A227;">💵 Total Gold: <span id="total-gold">0</span></p>
+        <div id="loot-summary" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(201,162,39,0.3);">
+          <p style="font-size: 14px; color: #C9A227; margin-bottom: 8px; letter-spacing: 2px;">🎁 LOOT &amp; EQUIPMENT</p>
           <div id="loot-items" style="font-size: 14px; color: #DDD; line-height: 1.8;">
             <p style="margin: 5px 0;">No items gained this run</p>
           </div>
@@ -762,9 +762,9 @@
       </div>
     </div>
     <div style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; justify-content: center; padding-bottom: 8px;">
-      <button class="btn" id="goto-camp-btn" style="background: #8B4513; border: 3px solid #000; width: auto; min-width: 140px;">⛺ GO TO CAMP</button>
-      <button class="btn" id="quit-to-menu-btn" style="background: #555; border: 3px solid #000; width: auto; min-width: 140px;">📋 QUIT TO MENU</button>
-      <button class="btn" id="restart-btn" style="border: 3px solid #000; width: auto; min-width: 140px;">🔄 START RUN</button>
+      <button class="btn" id="goto-camp-btn" style="background: linear-gradient(to bottom,#6b3010,#3d1a08); border: 2px solid #C9A227; width: auto; min-width: 140px; letter-spacing: 2px;">⛺ GO TO CAMP</button>
+      <button class="btn" id="quit-to-menu-btn" style="background: linear-gradient(to bottom,#333,#1a1a1a); border: 2px solid rgba(201,162,39,0.5); width: auto; min-width: 140px; letter-spacing: 2px;">📋 QUIT TO MENU</button>
+      <button class="btn" id="restart-btn" style="background: linear-gradient(to bottom,#1a5c2a,#0d3316); border: 2px solid #C9A227; width: auto; min-width: 140px; letter-spacing: 2px;">🔄 START RUN</button>
     </div>
     </div>
   </div>
@@ -870,7 +870,15 @@
   <div id="farmer-quest-indicator">?</div>
 
   <!-- You Died Banner (shown for ~3s on game over trigger) -->
-  <div id="you-died-banner">YOU DIED</div>
+  <div id="you-died-banner">
+    <div id="you-died-text">YOU DIED</div>
+    <div id="you-died-stats">
+      <div class="yd-label">— RUN SUMMARY —</div>
+      <div class="yd-row"><span>⏱ TIME</span><span id="yd-time">0s</span></div>
+      <div class="yd-row"><span>⚔ KILLS</span><span id="yd-kills">0</span></div>
+      <div class="yd-row"><span>📊 LEVEL</span><span id="yd-level">1</span></div>
+    </div>
+  </div>
 
   <!-- AI Chat Reminder Bubble (shown on 1st and every 5th run/camp visit) -->
   <div id="chat-reminder-bubble"></div>

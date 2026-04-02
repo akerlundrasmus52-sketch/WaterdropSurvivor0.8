@@ -141,9 +141,9 @@
       
       const popup = document.createElement('div');
       popup.style.cssText = `
-        background: linear-gradient(to bottom, #2a3a4a, #1a2a3a);
-        border: 3px solid #FFD700;
-        border-radius: 20px;
+        background: linear-gradient(160deg, #0d0015 0%, #07000e 50%, #0a0510 100%);
+        border: 3px solid #C9A227;
+        border-radius: 4px;
         padding: 20px;
         max-width: 90vw;
         width: 90%;
@@ -152,13 +152,15 @@
         box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 0 0 30px rgba(255,215,0,0.5);
+        box-shadow: 0 0 30px rgba(201,162,39,0.5), 0 0 60px rgba(0,255,100,0.1);
+        outline: 1px solid rgba(201,162,39,0.2);
+        outline-offset: 3px;
       `;
       
       popup.innerHTML = `
-        <div style="font-size: 28px; color: #FFD700; font-weight: bold; margin-bottom: 20px;">${title}</div>
-        <div style="font-size: 18px; color: #FFF; line-height: 1.6; margin-bottom: 30px;">${message}</div>
-        <button class="btn" style="font-size: 18px; padding: 12px 30px; background: #FFD700; color: #000;">${buttonText}</button>
+        <div style="font-size: 28px; color: #C9A227; font-weight: bold; margin-bottom: 20px; font-family:'Bangers',cursive; letter-spacing: 3px; text-shadow: 0 0 15px rgba(201,162,39,0.8);">${title}</div>
+        <div style="font-size: 17px; color: #E8D5A3; line-height: 1.7; margin-bottom: 30px;">${message}</div>
+        <button class="btn" style="font-size: 18px; padding: 12px 30px; background: linear-gradient(to bottom,#C9A227,#8B6914); color: #000; border: 2px solid #000; letter-spacing: 2px;">${buttonText}</button>
       `;
       
       // Add X close button
@@ -222,9 +224,9 @@
       
       const popup = document.createElement('div');
       popup.style.cssText = `
-        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
-        border: 6px solid #FFD700;
-        border-radius: 10px;
+        background: linear-gradient(160deg, #0d0015 0%, #07000e 50%, #0a0510 100%);
+        border: 3px solid #C9A227;
+        border-radius: 4px;
         padding: 20px;
         max-width: 90vw;
         width: 90%;
@@ -233,42 +235,42 @@
         box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 
-          0 0 40px rgba(255,215,0,0.6),
-          inset 0 0 30px rgba(0,0,0,0.3);
+        box-shadow: 0 0 30px rgba(201,162,39,0.5), 0 0 60px rgba(0,255,100,0.1);
+        outline: 1px solid rgba(201,162,39,0.2);
+        outline-offset: 3px;
         font-family: 'Bangers', cursive;
       `;
       
       popup.innerHTML = `
         <div style="
-          font-size: 32px; 
-          color: #FFD700; 
+          font-size: 30px; 
+          color: #C9A227; 
           font-weight: bold; 
           margin-bottom: 25px;
-          text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
-          letter-spacing: 2px;
+          text-shadow: 0 0 15px rgba(201,162,39,0.9), 2px 2px 0 #000;
+          letter-spacing: 3px;
         ">${title}</div>
         <div style="
           font-size: 16px; 
-          color: #FFF; 
+          color: #E8D5A3; 
           line-height: 1.8; 
           margin-bottom: 30px;
           font-family: 'Bangers', cursive;
           letter-spacing: 0.5px;
-          background: rgba(0,0,0,0.3);
-          padding: 20px;
-          border-radius: 10px;
-          border: 2px solid rgba(255,215,0,0.3);
+          background: rgba(0,0,0,0.4);
+          padding: 18px;
+          border-radius: 2px;
+          border: 1px solid rgba(201,162,39,0.3);
         ">${message}</div>
         <button class="btn" style="
-          font-size: 22px; 
-          padding: 15px 40px; 
-          background: #FFD700; 
+          font-size: 20px; 
+          padding: 14px 38px; 
+          background: linear-gradient(to bottom, #C9A227, #8B6914);
           color: #000;
           font-family: 'Bangers', cursive;
-          border: 3px solid #000;
-          box-shadow: 4px 4px 0 #000;
-          letter-spacing: 1px;
+          border: 2px solid #000;
+          box-shadow: 3px 3px 0 #000;
+          letter-spacing: 2px;
         ">${buttonText}</button>
       `;
       
@@ -494,11 +496,9 @@
       
       const panel = document.createElement('div');
       panel.style.cssText = `
-        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3a 100%);
-        background-image: radial-gradient(circle at 3px 3px, rgba(255,215,0,0.08) 2px, transparent 2px);
-        background-size: 15px 15px;
-        border: 6px solid #FFD700;
-        border-radius: 10px;
+        background: linear-gradient(160deg, #0d0015 0%, #07000e 50%, #0a0510 100%);
+        border: 3px solid #C9A227;
+        border-radius: 4px;
         padding: 20px;
         max-width: 90vw;
         width: 90%;
@@ -507,13 +507,15 @@
         box-sizing: border-box;
         text-align: center;
         animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 0 0 40px rgba(255,215,0,0.6), inset 0 0 30px rgba(0,0,0,0.3);
+        box-shadow: 0 0 30px rgba(201,162,39,0.5), 0 0 60px rgba(0,255,100,0.1);
+        outline: 1px solid rgba(201,162,39,0.2);
+        outline-offset: 3px;
         font-family: 'Bangers', cursive;
       `;
       
       let content = `
-        <div style="font-size: 32px; color: #FFD700; font-weight: bold; margin-bottom: 20px; text-shadow: 3px 3px 0 #000, -1px -1px 0 #000; letter-spacing: 2px;">📜 MAIN BUILDING</div>
-        <div style="font-size: 16px; color: #AAA; margin-bottom: 30px; font-family: Arial, sans-serif;">Claim completed quests to unlock rewards and progress!</div>
+        <div style="font-size: 30px; color: #C9A227; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 15px rgba(201,162,39,0.8), 2px 2px 0 #000; letter-spacing: 3px;">📜 MAIN BUILDING</div>
+        <div style="font-size: 15px; color: #888; margin-bottom: 25px; font-family: Arial, sans-serif; letter-spacing: 1px;">Claim completed quests to unlock rewards and progress!</div>
       `;
       
       // Initialize tutorial quest arrays if they don't exist
@@ -527,19 +529,19 @@
       // Show ready-to-claim quests
       if (saveData.tutorialQuests.readyToClaim.length > 0) {
         content += `<div style="text-align: left; margin-bottom: 20px;">`;
-        content += `<div style="font-size: 20px; color: #FFD700; margin-bottom: 15px;">✨ Ready to Claim:</div>`;
+        content += `<div style="font-size: 20px; color: #C9A227; margin-bottom: 15px; letter-spacing: 2px;">✨ Ready to Claim:</div>`;
         
         saveData.tutorialQuests.readyToClaim.forEach(questId => {
           const quest = TUTORIAL_QUESTS[questId];
           if (!quest) return;
           
           content += `
-            <div style="background: rgba(255,215,0,0.1); border: 2px solid #FFD700; border-radius: 10px; padding: 15px; margin-bottom: 10px;">
-              <div style="font-size: 18px; color: #FFD700; margin-bottom: 5px;">${quest.name}</div>
-              <div style="font-size: 14px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
+            <div style="background: rgba(201,162,39,0.08); border: 1px solid #C9A227; border-radius: 2px; padding: 14px; margin-bottom: 10px;">
+              <div style="font-size: 17px; color: #C9A227; margin-bottom: 5px;">${quest.name}</div>
+              <div style="font-size: 13px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
               <button class="btn claim-quest-btn" data-quest-id="${questId}" 
                       aria-label="Claim quest reward"
-                      style="font-size: 16px; padding: 10px 20px; background: #FFD700; color: #000; cursor: pointer; font-weight: bold;">
+                      style="font-size: 15px; padding: 9px 20px; background: linear-gradient(to bottom,#C9A227,#8B6914); color: #000; cursor: pointer; font-weight: bold; border: 2px solid #000; letter-spacing: 1px;">
                 🎁 Claim Reward
               </button>
             </div>
@@ -551,9 +553,9 @@
         const _pbBld = saveData.tutorialQuests.pendingBuildBuilding;
         const _pbDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[_pbBld] : null;
         const _pbName = _pbDef ? _pbDef.name : 'the unlocked building';
-        content += `<div style="font-size: 16px; color: #5DADE2; margin-bottom: 20px;">🔨 Build the <b>${_pbName}</b> before your next quest can start!</div>`;
+        content += `<div style="font-size: 15px; color: #00FF66; margin-bottom: 20px; letter-spacing: 1px;">🔨 Build the <b>${_pbName}</b> before your next quest can start!</div>`;
       } else {
-        content += `<div style="font-size: 16px; color: #888; margin-bottom: 20px;">No quests ready to claim. Complete your active quest!</div>`;
+        content += `<div style="font-size: 15px; color: #666; margin-bottom: 20px; letter-spacing: 1px;">No quests ready to claim. Complete your active quest!</div>`;
       }
       
       // Show active quest or pending build task
@@ -561,11 +563,11 @@
       if (currentQuest) {
         content += `
           <div style="text-align: left; margin-bottom: 20px;">
-            <div style="font-size: 20px; color: #5DADE2; margin-bottom: 15px;">📍 Active Quest:</div>
-            <div style="background: rgba(93,173,226,0.1); border: 2px solid #5DADE2; border-radius: 10px; padding: 15px;">
-              <div style="font-size: 18px; color: #5DADE2; margin-bottom: 5px;">${currentQuest.name}</div>
-              <div style="font-size: 14px; color: #AAA;">${currentQuest.description}</div>
-              <div style="font-size: 12px; color: #777; margin-top: 5px;">Objective: ${currentQuest.objectives}</div>
+            <div style="font-size: 19px; color: #00FF66; margin-bottom: 15px; letter-spacing: 2px;">📍 Active Quest:</div>
+            <div style="background: rgba(0,255,100,0.06); border: 1px solid rgba(0,255,100,0.4); border-radius: 2px; padding: 14px;">
+              <div style="font-size: 17px; color: #00FF66; margin-bottom: 5px;">${currentQuest.name}</div>
+              <div style="font-size: 13px; color: #AAA;">${currentQuest.description}</div>
+              <div style="font-size: 12px; color: #666; margin-top: 5px; letter-spacing: 1px;">Objective: ${currentQuest.objectives}</div>
             </div>
           </div>
         `;
@@ -575,10 +577,10 @@
         const _abName = _abDef ? _abDef.name : 'Building';
         content += `
           <div style="text-align: left; margin-bottom: 20px;">
-            <div style="font-size: 20px; color: #FF9933; margin-bottom: 15px;">🔨 Build Required:</div>
-            <div style="background: rgba(255,153,51,0.1); border: 2px solid #FF9933; border-radius: 10px; padding: 15px;">
-              <div style="font-size: 18px; color: #FF9933; margin-bottom: 5px;">Build the ${_abName}</div>
-              <div style="font-size: 14px; color: #AAA;">Walk to the ${_abName} in camp and build it to continue your quest line!</div>
+            <div style="font-size: 19px; color: #FF9933; margin-bottom: 15px; letter-spacing: 2px;">🔨 Build Required:</div>
+            <div style="background: rgba(255,153,51,0.08); border: 1px solid rgba(255,153,51,0.5); border-radius: 2px; padding: 14px;">
+              <div style="font-size: 17px; color: #FF9933; margin-bottom: 5px;">Build the ${_abName}</div>
+              <div style="font-size: 13px; color: #AAA;">Walk to the ${_abName} in camp and build it to continue your quest line!</div>
             </div>
           </div>
         `;
@@ -586,7 +588,7 @@
       
       // Show completed quests count
       content += `
-        <div style="font-size: 14px; color: #AAA; margin-top: 20px;">
+        <div style="font-size: 13px; color: #555; margin-top: 20px; letter-spacing: 2px;">
           Completed Quests: ${saveData.tutorialQuests.completedQuests.length} / ${Object.keys(TUTORIAL_QUESTS).length}
         </div>
       `;
@@ -595,10 +597,10 @@
       const _isSandboxMode = window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'));
       const _startRunLabel = _isSandboxMode ? '▶ Restart Run' : '▶ Start New Run';
       content += `
-        <button class="btn start-run-btn" style="margin-top: 20px; font-size: 18px; padding: 12px 35px; background: #27ae60; color: #FFF; margin-right: 10px;">
+        <button class="btn start-run-btn" style="margin-top: 20px; font-size: 17px; padding: 12px 32px; background: linear-gradient(to bottom,#1a5c2a,#0d3316); color: #FFF; margin-right: 10px; border: 2px solid #C9A227; letter-spacing: 2px;">
           ${_startRunLabel}
         </button>
-        <button class="btn" style="margin-top: 20px; font-size: 16px; padding: 10px 30px; background: #888; color: #FFF;">
+        <button class="btn quest-hall-close-btn" style="margin-top: 20px; font-size: 15px; padding: 10px 28px; background: linear-gradient(to bottom,#2a2a2a,#111); color: #999; border: 1px solid rgba(201,162,39,0.4); letter-spacing: 1px;">
           Close
         </button>
       `;
@@ -649,11 +651,13 @@
         } else {
           startRunBtn.onclick = () => {
             document.body.removeChild(overlay);
-            // In sandbox 2.0 mode, reload the page to start a fresh run (CHANGE 5)
-            if (_isSandboxMode) {
-              window.location.reload();
-            } else {
+            if (typeof startGame === 'function') {
               startGame();
+            } else if (typeof resetGame === 'function') {
+              resetGame();
+              if (typeof startCountdown === 'function') startCountdown();
+            } else if (_isSandboxMode) {
+              window.location.reload();
             }
           };
         }
@@ -667,7 +671,7 @@
       };
       
       // Close button handler
-      const closeBtn = panel.querySelector('.btn[style*="background: #888"]');
+      const closeBtn = panel.querySelector('.quest-hall-close-btn');
       closeBtn.onclick = questHallClose;
       
       // Add X close button to quest hall panel
