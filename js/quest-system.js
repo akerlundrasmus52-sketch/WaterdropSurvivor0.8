@@ -698,13 +698,11 @@
         } else {
           startRunBtn.onclick = () => {
             document.body.removeChild(overlay);
-            if (typeof startGame === 'function') {
-              startGame();
-            } else if (typeof resetGame === 'function') {
-              resetGame();
-              if (typeof startCountdown === 'function') startCountdown();
-            } else if (_isSandboxMode) {
+            // In sandbox 2.0 mode, reload the page to start a fresh run
+            if (_isSandboxMode) {
               window.location.reload();
+            } else {
+              window.location.href = 'sandbox.html';
             }
           };
         }

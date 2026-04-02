@@ -120,6 +120,27 @@ function playSound(type) {
     shatter.connect(hp); hp.connect(shatterG); shatterG.connect(audioCtx.destination);
     shatter.start(now); shatter.stop(now + 0.08);
 
+  } else if (type === 'death') {
+    const fade = audioCtx.createGain();
+    fade.gain.setValueAtTime(0.35, now);
+    fade.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+    const lowpass = audioCtx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.setValueAtTime(600, now);
+    lowpass.frequency.exponentialRampToValueAtTime(120, now + 0.4);
+    const noise = createNoise(0.5);
+    noise.connect(lowpass); lowpass.connect(fade); fade.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now + 0.55);
+    const tone = audioCtx.createOscillator();
+    const toneGain = audioCtx.createGain();
+    tone.type = 'sine';
+    tone.frequency.setValueAtTime(180, now);
+    tone.frequency.exponentialRampToValueAtTime(60, now + 0.5);
+    toneGain.gain.setValueAtTime(0.18, now);
+    toneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+    tone.connect(toneGain); toneGain.connect(audioCtx.destination);
+    tone.start(now); tone.stop(now + 0.5);
+
   } else if (type === 'heal') {
     // heal.mp3: Reverse-water-drop sound (bloop going up in pitch)
     const osc = audioCtx.createOscillator();
