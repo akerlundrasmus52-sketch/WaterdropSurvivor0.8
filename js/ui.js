@@ -168,12 +168,16 @@ function showYouDiedBanner(duration) {
   if (!banner) return;
 
   // Populate death stats from current playerStats / gameStartTime
+  // Falls back to _sandboxRunStartTime for sandbox.html
   try {
     const t = document.getElementById('yd-time');
     const k = document.getElementById('yd-kills');
     const l = document.getElementById('yd-level');
-    if (t && typeof gameStartTime !== 'undefined') {
-      const secs = Math.floor((Date.now() - gameStartTime) / 1000);
+    const _start = (typeof gameStartTime !== 'undefined' && gameStartTime)
+      ? gameStartTime
+      : (typeof _sandboxRunStartTime !== 'undefined' ? _sandboxRunStartTime : null);
+    if (t && _start) {
+      const secs = Math.floor((Date.now() - _start) / 1000);
       const mm = Math.floor(secs / 60), ss = secs % 60;
       t.textContent = mm > 0 ? `${mm}m ${ss}s` : `${ss}s`;
     }
@@ -183,8 +187,7 @@ function showYouDiedBanner(duration) {
 
   // Force animation restart by toggling display
   banner.style.display = 'none';
-  // eslint-disable-next-line no-unused-expressions
-  banner.offsetWidth; // reflow to restart CSS animations
+  void banner.offsetWidth; // reflow to restart CSS animations
   banner.style.display = 'block';
 
   setTimeout(() => {
