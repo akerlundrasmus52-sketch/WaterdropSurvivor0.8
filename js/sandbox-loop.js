@@ -100,9 +100,26 @@
     };
   }
   if (typeof showYouDiedBanner === 'undefined') {
-    window.showYouDiedBanner = function () {
+    window.showYouDiedBanner = function (duration) {
+      duration = duration || 4500;
       const b = document.getElementById('you-died-banner');
-      if (b) { b.style.display = 'block'; setTimeout(function () { b.style.display = 'none'; }, 2000); }
+      if (!b) return;
+      // Populate stats if elements exist
+      try {
+        var t = document.getElementById('yd-time');
+        var k = document.getElementById('yd-kills');
+        var l = document.getElementById('yd-level');
+        if (t && typeof _sandboxRunStartTime !== 'undefined' && _sandboxRunStartTime) {
+          var secs = Math.floor((Date.now() - _sandboxRunStartTime) / 1000);
+          t.textContent = secs >= 60 ? Math.floor(secs/60)+'m '+(secs%60)+'s' : secs+'s';
+        }
+        if (k && window.playerStats) k.textContent = window.playerStats.kills || 0;
+        if (l && window.playerStats) l.textContent = window.playerStats.lvl || 1;
+      } catch (e) {}
+      b.style.display = 'none';
+      b.offsetWidth; // reflow to restart CSS animation
+      b.style.display = 'block';
+      setTimeout(function () { b.style.display = 'none'; }, duration);
     };
   }
   if (typeof setGamePaused === 'undefined') {
@@ -244,21 +261,28 @@
       var _runBonus = Math.min(50, Math.floor(_runKills * (1 + _elapsedSec / 60)));
       if (window.GameAccount && typeof window.GameAccount.addXP === 'function') window.GameAccount.addXP(_runBonus, 'Run End Bonus', saveData);
       if (typeof _checkSandboxAchievements === 'function') _checkSandboxAchievements();
-      // Reset all new v2 systems before unloading
-      if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
-      if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
-      if (window.SlimePool && typeof window.SlimePool.reset === 'function') window.SlimePool.reset();
-      if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
-      if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
-      if (window.LeapingSlimePool && typeof window.LeapingSlimePool.reset === 'function') window.LeapingSlimePool.reset();
-      SeqWaveManager.reset();
-      const b = document.getElementById('you-died-banner');
-      if (b) {
-        b.style.display = 'block';
-        setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
+
+      // Show YOU DIED banner with stats FIRST so player can read them
+      if (typeof showYouDiedBanner === 'function') {
+        showYouDiedBanner(GAME_OVER_RELOAD_DELAY_MS);
       } else {
-        location.reload();
+        const b = document.getElementById('you-died-banner');
+        if (b) b.style.display = 'block';
       }
+
+      // Reset blood/gore systems after a short delay so the death scene stays visible briefly
+      setTimeout(function () {
+        if (window.BloodV2 && typeof window.BloodV2.reset === 'function') window.BloodV2.reset();
+        if (window.GoreSim && typeof window.GoreSim.reset === 'function') window.GoreSim.reset();
+        if (window.SlimePool && typeof window.SlimePool.reset === 'function') window.SlimePool.reset();
+        if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
+        if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
+        if (window.LeapingSlimePool && typeof window.LeapingSlimePool.reset === 'function') window.LeapingSlimePool.reset();
+        SeqWaveManager.reset();
+      }, 800); // brief delay so blood/gore stays visible for dramatic effect
+
+      // Reload page after the full delay
+      setTimeout(function () { location.reload(); }, GAME_OVER_RELOAD_DELAY_MS);
     };
   }
 
@@ -301,7 +325,7 @@
   };
 
   // ─── Constants ───────────────────────────────────────────────────────────────
-  const GAME_OVER_RELOAD_DELAY_MS = 2000;    // ms to show "YOU DIED" before page reload
+  const GAME_OVER_RELOAD_DELAY_MS = 4500;    // ms to show "YOU DIED" + stats before page reload
   const SLIME_HP            = 80;
   const SLIME_SPEED         = 1.8;           // world units / second
   const SLIME_DAMAGE        = 22;            // contact damage per hit (brutally hard before upgrades)
@@ -6540,6 +6564,13 @@
             }
           }
         }
+
+        // Check blood instanced meshes — ensure they aren't accidentally hidden
+        if (window.BloodV2 && typeof window.BloodV2.getMeshes === 'function') {
+          const _bMeshes = window.BloodV2.getMeshes();
+          if (_bMeshes.drops && !_bMeshes.drops.visible) _bMeshes.drops.visible = true;
+          if (_bMeshes.mist  && !_bMeshes.mist.visible)  _bMeshes.mist.visible  = true;
+        }
       }
 
       // Atmospheric weather particles and dynamic sky cycle
@@ -7069,6 +7100,7 @@
       _xpMagnetRunStacks = 0;
       window._sandboxXpMagnetRunStacks = 0;
       _sandboxRunStartTime = Date.now();
+      window.gameStartTime = _sandboxRunStartTime; // expose for ui.js showYouDiedBanner
       if (saveData.tutorialQuests) saveData.tutorialQuests.killsThisRun = 0;
       // Track total runs — keep stats.* and top-level counter in sync
       if (saveData) {

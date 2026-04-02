@@ -7,28 +7,6 @@
     // on the very first run when gameOver() has never been called.
     let _landmarkQuestWasActive = false;
 
-    function showDeathStatsOverlay(stats) {
-      const box = document.getElementById('death-stats-box');
-      if (!box) return;
-      const { survivalTime, kills, level, goldEarned } = stats;
-      const rows = {
-        'death-stat-time': `${survivalTime || 0}s`,
-        'death-stat-kills': `${kills || 0}`,
-        'death-stat-level': `${level || 1}`,
-        'death-stat-gold': `${goldEarned || 0}`
-      };
-      Object.entries(rows).forEach(([id, val]) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-      });
-      box.style.display = 'flex';
-    }
-
-    function hideDeathStatsOverlay() {
-      const box = document.getElementById('death-stats-box');
-      if (box) box.style.display = 'none';
-    }
-
     function gameOver() {
       setGameOver(true);
       setGamePaused(true);
@@ -57,16 +35,29 @@
       _landmarkQuestWasActive = (window.montanaQuest?.active) ||
                                 (window.eiffelQuest?.active);
 
-      // Also update quest state so active quests are properly cleaned up
-      if (window.windmillQuest?.active) {
+      // Reset all landmark quests on game over so each new run starts fresh.
+      // This covers quests that were active, completed, or in a failed/cooldown state.
+      if (window.windmillQuest) {
         windmillQuest.active = false;
-        windmillQuest.failed = true;
+        windmillQuest.failed = false;
+        windmillQuest.hasCompleted = false;
+        windmillQuest.rewardGiven = false;
+        windmillQuest.rewardReady = false;
+        windmillQuest.failedCooldown = false;
+        windmillQuest.dialogueOpen = false;
+        windmillQuest.timer = 0;
       }
-      if (window.montanaQuest?.active) {
+      if (window.montanaQuest) {
         montanaQuest.active = false;
+        montanaQuest.hasCompleted = false;
+        montanaQuest.kills = 0;
+        montanaQuest.timer = 0;
       }
-      if (window.eiffelQuest?.active) {
+      if (window.eiffelQuest) {
         eiffelQuest.active = false;
+        eiffelQuest.hasCompleted = false;
+        eiffelQuest.kills = 0;
+        eiffelQuest.timer = 0;
       }
       // Reset pause counter
       pauseOverlayCount = 0;
@@ -84,12 +75,6 @@
       // Calculate run stats
       const survivalTime = Math.floor((Date.now() - gameStartTime) / 1000);
       const goldEarned = playerStats.gold - runStartGold;
-      showDeathStatsOverlay({
-        survivalTime,
-        kills: playerStats.kills,
-        level: playerStats.lvl,
-        goldEarned
-      });
       if (typeof playSound === 'function') {
         try { playSound('death'); } catch (e) { /* ignore */ }
       }
@@ -246,10 +231,9 @@
 
       // Display game over screen
       document.getElementById('gameover-screen').style.display = 'flex';
-      // Hide the YOU DIED banner and death stats when the gameover screen appears
+      // Hide the YOU DIED banner when the gameover screen appears
       const youDiedBanner = document.getElementById('you-died-banner');
       if (youDiedBanner) youDiedBanner.style.display = 'none';
-      hideDeathStatsOverlay();
       // On first run, only show "Go to Camp" button; restore all buttons on subsequent runs
       const isFirstRun = saveData.totalRuns === 1;
       document.getElementById('restart-btn').style.display = isFirstRun ? 'none' : '';
@@ -306,7 +290,6 @@
 
     function resetGame() {
       stopDroneHum(); // Stop drone sound on reset
-      hideDeathStatsOverlay();
 
       // Reset joystick state to prevent "stuck joystick" after camp/game-over
       if (typeof joystickLeft !== 'undefined') {

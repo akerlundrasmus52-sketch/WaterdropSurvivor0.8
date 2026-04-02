@@ -2021,6 +2021,9 @@ kill:    kill,
 update:  update,
 reset:   reset,
 
+// Expose instanced mesh references so external systems (safety-net) can check visibility
+getMeshes: function() { return { drops: _dropIM, mist: _mistIM }; },
+
 // Data tables — extend these to add new weapons/enemies
 WEAPONS:     WEAPONS,
 ANATOMY:     ANATOMY,
