@@ -659,6 +659,20 @@
               // Fallback for sandbox 2.0 mode where startGame may not be defined
               if (typeof resetGame === 'function') resetGame();
               if (typeof startCountdown === 'function') startCountdown();
+              // Final fallback for sandbox.html where none of the start functions are loaded:
+              // reload the page so the sandbox run actually restarts.
+              if (
+                typeof startGame !== 'function' &&
+                typeof resetGame !== 'function' &&
+                typeof startCountdown !== 'function' &&
+                typeof _isSandboxMode !== 'undefined' &&
+                _isSandboxMode === true &&
+                typeof window !== 'undefined' &&
+                window.location &&
+                typeof window.location.reload === 'function'
+              ) {
+                window.location.reload();
+              }
             }
           };
         }
