@@ -376,7 +376,6 @@ window.spawnBossChest = function(x, z) {
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
       const SHARD_COUNT = 28;
-      const shards = [];
 
       // Get the card's rarity color for shard tinting
       const rarityClass = Array.from(cardEl.classList).find(c => c.startsWith('rarity-')) || '';
@@ -1724,12 +1723,13 @@ window.spawnBossChest = function(x, z) {
         }
 
         // Shared "apply and close" logic called when hold completes
+        let _isApplying = false;
         const applyUpgradeAndClose = () => {
+          if (_isApplying) return;
+          _isApplying = true;
           const allCards = list.querySelectorAll('.upgrade-card');
           allCards.forEach(c => {
-            if (c !== card) {
-              c.style.pointerEvents = 'none';
-            }
+            c.style.pointerEvents = 'none';
             c.classList.remove('holding');
           });
 

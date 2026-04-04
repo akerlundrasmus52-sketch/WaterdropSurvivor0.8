@@ -3332,7 +3332,7 @@
       metalness: 0.9, roughness: 0.2,
     });
     for (let i = 0; i < GOLD_POOL_SIZE; i++) {
-      const mesh = new THREE.Mesh(geo, mat.clone());
+      const mesh = new THREE.Mesh(geo, mat);
       mesh.frustumCulled = false;
       mesh.visible = false;
       mesh.position.set(0, -1000, 0);
