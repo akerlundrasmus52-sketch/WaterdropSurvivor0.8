@@ -1144,6 +1144,11 @@
   }
 
   function _updatePersistentHUD(dt) {
+    // Blood Moon countdown
+    if (_bloodMoonActive) {
+      _bloodMoonTimer -= dt;
+      if (_bloodMoonTimer <= 0) _endBloodMoon();
+    }
     // Update session timer
     _sessionTimerAccum += dt;
     if (_sessionTimerAccum >= 1.0) {
@@ -2406,7 +2411,7 @@
         const now = Date.now();
         if (now - c.lastDamageTime > 400) {
           c.lastDamageTime = now;
-          const crawlerDmg = window.CRAWLER_CFG ? window.CRAWLER_CFG.BASE_DAMAGE : 18;
+          const crawlerDmg = (window.CRAWLER_CFG ? window.CRAWLER_CFG.BASE_DAMAGE : 18) * (_bloodMoonActive ? BLOOD_MOON_DAMAGE_MULT : 1);
           if (typeof player.takeDamage === 'function') {
             player.takeDamage(crawlerDmg, 'crawler', c.mesh.position);
           } else {
@@ -2733,13 +2738,14 @@
         const now = Date.now();
         if (now - e.lastDamageTime > LEAPING_COOLDOWN) {
           e.lastDamageTime = now;
+          const leapingDmgEffective = LEAPING_DAMAGE * (_bloodMoonActive ? BLOOD_MOON_DAMAGE_MULT : 1);
           if (typeof player.takeDamage === 'function') {
-            player.takeDamage(LEAPING_DAMAGE, 'leaping_slime', e.mesh.position);
+            player.takeDamage(leapingDmgEffective, 'leaping_slime', e.mesh.position);
           } else {
-            playerStats.hp -= LEAPING_DAMAGE;
+            playerStats.hp -= leapingDmgEffective;
           }
           // Screen shake on player damage (0.25s minimum duration)
-          const _lDmgRatio = _clamp(LEAPING_DAMAGE / (playerStats.maxHp || 100), 0.003, 0.015);
+          const _lDmgRatio = _clamp(leapingDmgEffective / (playerStats.maxHp || 100), 0.003, 0.015);
           _triggerShake(_lDmgRatio, 0.25);
           if (playerStats && playerStats.hp <= 0) {
             playerStats.hp = 0;
@@ -3512,13 +3518,14 @@
         const now = Date.now();
         if (now - s.lastDamageTime > 500) {
           s.lastDamageTime = now;
+          const slimeDmgEffective = SLIME_DAMAGE * (_bloodMoonActive ? BLOOD_MOON_DAMAGE_MULT : 1);
           if (typeof player.takeDamage === 'function') {
-            player.takeDamage(SLIME_DAMAGE, 'slime', s.mesh.position);
+            player.takeDamage(slimeDmgEffective, 'slime', s.mesh.position);
           } else {
-            playerStats.hp -= SLIME_DAMAGE;
+            playerStats.hp -= slimeDmgEffective;
           }
           // Screen shake on player damage (0.25s minimum duration)
-          const _sDmgRatio = _clamp(SLIME_DAMAGE / (playerStats.maxHp || 100), 0.003, 0.015);
+          const _sDmgRatio = _clamp(slimeDmgEffective / (playerStats.maxHp || 100), 0.003, 0.015);
           _triggerShake(_sDmgRatio, 0.25);
           // Sandbox HP guard: always check game-over via playerStats (works even if
           // player.takeDamage doesn't call gameOver() itself in sandbox context)
@@ -3765,6 +3772,7 @@
     }
   }
 
+  function _refreshExpBar() {
     try {
       const pct = Math.min(100, (playerStats.exp / playerStats.expReq) * 100);
       const fill = document.getElementById('exp-fill');
