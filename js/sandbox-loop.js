@@ -3702,6 +3702,7 @@
     }
   }
 
+  function _refreshExpBar() {
     try {
       const pct = Math.min(100, (playerStats.exp / playerStats.expReq) * 100);
       const fill = document.getElementById('exp-fill');
