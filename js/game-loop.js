@@ -18,6 +18,50 @@
     // Each entry: { x, z, timer (seconds remaining), mesh }
     window._eventHorizonHoles = [];
 
+    // Pool of pre-allocated hole mesh pairs to avoid per-spawn geometry allocation.
+    // Pairs are hidden when inactive and re-used when a new hole is requested.
+    const EVENT_HORIZON_POOL_SIZE = 8;
+    const _eventHorizonMeshPool = []; // { sphere, ring, inUse }
+    let _eventHorizonPoolReady = false;
+
+    function _initEventHorizonPool() {
+      if (_eventHorizonPoolReady || typeof THREE === 'undefined' || typeof scene === 'undefined') return;
+      const sphereGeo = new THREE.SphereGeometry(0.9, 16, 16);
+      const sphereMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.85 });
+      const ringGeo   = new THREE.RingGeometry(0.9, 1.4, 32);
+      const ringMat   = new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+      for (let _hi = 0; _hi < EVENT_HORIZON_POOL_SIZE; _hi++) {
+        const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+        sphere.visible = false;
+        scene.add(sphere);
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2;
+        ring.visible = false;
+        scene.add(ring);
+        sphere._glowRing = ring;
+        _eventHorizonMeshPool.push({ sphere, ring, inUse: false });
+      }
+      _eventHorizonPoolReady = true;
+    }
+
+    function _acquireEventHorizonMesh() {
+      _initEventHorizonPool();
+      for (let _hi = 0; _hi < _eventHorizonMeshPool.length; _hi++) {
+        if (!_eventHorizonMeshPool[_hi].inUse) {
+          _eventHorizonMeshPool[_hi].inUse = true;
+          return _eventHorizonMeshPool[_hi];
+        }
+      }
+      return null; // pool exhausted (all 8 holes active simultaneously)
+    }
+
+    function _releaseEventHorizonMesh(pair) {
+      if (!pair) return;
+      pair.sphere.visible = false;
+      pair.ring.visible   = false;
+      pair.inUse = false;
+    }
+
     // ─── Neural Matrix: active blood pool counter (for Blood Alchemy regen) ─────
     // Incremented by emitPoolGrow wrapper, decremented on expiry.
     window._activeBloodPools = 0;
@@ -27,19 +71,17 @@
       if (!window._eventHorizonHoles) window._eventHorizonHoles = [];
       let holeMesh = null;
       if (typeof THREE !== 'undefined' && typeof scene !== 'undefined') {
-        const geo = new THREE.SphereGeometry(0.9, 16, 16);
-        const mat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.85 });
-        holeMesh = new THREE.Mesh(geo, mat);
-        holeMesh.position.set(pos.x, 0.12, pos.z);
-        scene.add(holeMesh);
-        // Outer glow ring — DoubleSide so it's visible from the camera above
-        const glowGeo = new THREE.RingGeometry(0.9, 1.4, 32);
-        const glowMat = new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-        const glowRing = new THREE.Mesh(glowGeo, glowMat);
-        glowRing.rotation.x = -Math.PI / 2;
-        glowRing.position.set(pos.x, 0.12, pos.z);
-        scene.add(glowRing);
-        holeMesh._glowRing = glowRing;
+        const pair = _acquireEventHorizonMesh();
+        if (pair) {
+          holeMesh = pair.sphere;
+          holeMesh.position.set(pos.x, 0.12, pos.z);
+          holeMesh.scale.set(1, 1, 1);
+          holeMesh.visible = true;
+          pair.ring.position.set(pos.x, 0.12, pos.z);
+          pair.ring.visible = true;
+          holeMesh._glowRing = pair.ring;
+          holeMesh._poolPair = pair;
+        }
       }
       window._eventHorizonHoles.push({ x: pos.x, z: pos.z, timer: 1.5, mesh: holeMesh });
     };
@@ -1026,9 +1068,13 @@
           }
           // Remove expired holes
           if (hole.timer <= 0) {
-            if (hole.mesh && scene) {
-              scene.remove(hole.mesh);
-              if (hole.mesh._glowRing) scene.remove(hole.mesh._glowRing);
+            if (hole.mesh) {
+              if (hole.mesh._poolPair) {
+                _releaseEventHorizonMesh(hole.mesh._poolPair);
+              } else if (scene) {
+                scene.remove(hole.mesh);
+                if (hole.mesh._glowRing) scene.remove(hole.mesh._glowRing);
+              }
             }
             window._eventHorizonHoles.splice(hi, 1);
           }
