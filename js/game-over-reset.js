@@ -291,6 +291,9 @@
     function resetGame() {
       stopDroneHum(); // Stop drone sound on reset
 
+      // PERFORMANCE FIX: Cleanup event listeners to prevent memory leaks
+      if (typeof _cleanupInput === 'function') _cleanupInput();
+
       // Reset joystick state to prevent "stuck joystick" after camp/game-over
       if (typeof joystickLeft !== 'undefined') {
         joystickLeft.active = false;
@@ -1011,6 +1014,10 @@
       setGamePaused(true);  // Start paused, countdown will unpause (PR #70)
       setGameActive(false);  // Not active until countdown completes (PR #70)
       document.getElementById('gameover-screen').style.display = 'none';
+
+      // PERFORMANCE FIX: Re-initialize event listeners after cleanup
+      if (typeof _initInput === 'function') _initInput();
+
       updateHUD();
     }
 

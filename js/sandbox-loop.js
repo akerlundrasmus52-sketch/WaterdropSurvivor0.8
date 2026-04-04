@@ -4756,31 +4756,39 @@
   // Pre-allocated camera follow target (avoids new Vector3 every frame)
   const _camTarget  = new THREE.Vector3();
 
-  function _initInput() {
-    document.addEventListener('keydown', function (e) {
-      _keysDown[e.code] = true;
-      // 'E' key: attempt to gather resources from nearby trees/rocks
-      if (e.code === 'KeyE' && window.WorldObjects && player && player.mesh) {
-        var result = WorldObjects.tryGather(player.mesh.position.x, player.mesh.position.z);
-        if (result) {
-          _tmpV3.set(player.mesh.position.x, player.mesh.position.y + 1.5, player.mesh.position.z);
-          createFloatingText('+' + result.amount + ' ' + result.type, _tmpV3, result.type === 'wood' ? '#8B6B3A' : '#9A9A9A');
-        }
+  // Named event handlers for proper cleanup (prevents memory leaks)
+  function _onKeyDown(e) {
+    _keysDown[e.code] = true;
+    // 'E' key: attempt to gather resources from nearby trees/rocks
+    if (e.code === 'KeyE' && window.WorldObjects && player && player.mesh) {
+      var result = WorldObjects.tryGather(player.mesh.position.x, player.mesh.position.z);
+      if (result) {
+        _tmpV3.set(player.mesh.position.x, player.mesh.position.y + 1.5, player.mesh.position.z);
+        createFloatingText('+' + result.amount + ' ' + result.type, _tmpV3, result.type === 'wood' ? '#8B6B3A' : '#9A9A9A');
       }
-    });
-    document.addEventListener('keyup',   function (e) { _keysDown[e.code] = false; });
+    }
+  }
 
-    // Mouse: project onto ground plane (y=0) — uses pre-allocated objects (no GC)
-    document.addEventListener('mousemove', function (e) {
-      if (!camera || !renderer) return;
-      const rect = renderer.domElement.getBoundingClientRect();
-      _mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      _mouseNDC.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-      _mouseRay.setFromCamera(_mouseNDC, camera);
-      _mouseRay.ray.intersectPlane(_mousePlane, _mousePt);
-      _mouse.worldX = _mousePt.x;
-      _mouse.worldZ = _mousePt.z;
-    });
+  function _onKeyUp(e) {
+    _keysDown[e.code] = false;
+  }
+
+  function _onMouseMove(e) {
+    if (!camera || !renderer) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    _mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    _mouseNDC.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+    _mouseRay.setFromCamera(_mouseNDC, camera);
+    _mouseRay.ray.intersectPlane(_mousePlane, _mousePt);
+    _mouse.worldX = _mousePt.x;
+    _mouse.worldZ = _mousePt.z;
+  }
+
+  function _initInput() {
+    // Add event listeners for keyboard and mouse
+    document.addEventListener('keydown', _onKeyDown);
+    document.addEventListener('keyup', _onKeyUp);
+    document.addEventListener('mousemove', _onMouseMove);
 
     // Joystick: left = move, right = aim/shoot
     const jZone = document.getElementById('joystick-zone');
@@ -4789,6 +4797,21 @@
       jZone.addEventListener('touchmove',   _onTouchMove,   { passive: false });
       jZone.addEventListener('touchend',    _onTouchEnd,    { passive: false });
       jZone.addEventListener('touchcancel', _onTouchEnd,    { passive: false });
+    }
+  }
+
+  // PERFORMANCE FIX: Cleanup event listeners to prevent memory leaks across game resets
+  function _cleanupInput() {
+    document.removeEventListener('keydown', _onKeyDown);
+    document.removeEventListener('keyup', _onKeyUp);
+    document.removeEventListener('mousemove', _onMouseMove);
+
+    const jZone = document.getElementById('joystick-zone');
+    if (jZone) {
+      jZone.removeEventListener('touchstart', _onTouchStart);
+      jZone.removeEventListener('touchmove', _onTouchMove);
+      jZone.removeEventListener('touchend', _onTouchEnd);
+      jZone.removeEventListener('touchcancel', _onTouchEnd);
     }
   }
 
