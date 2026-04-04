@@ -966,8 +966,9 @@ _updateStream(_streams[i], dt);
 }
 
 // ── Update per-enemy wounds (dripping) ───
-_goreMap.forEach(function(gs) {
-if (!gs.alive) return;
+for (var _gsEntry of _goreMap.values()) {
+var gs = _gsEntry;
+if (!gs.alive) continue;
 var col = ENEMY_BLOOD[gs.type] || ENEMY_BLOOD.default;
 var ex = gs.enemy.mesh ? gs.enemy.mesh.position.x : 0;
 var ey = gs.enemy.mesh ? gs.enemy.mesh.position.y : 0;
@@ -977,7 +978,7 @@ var evz = gs.enemy.velocity ? gs.enemy.velocity.z : 0;
 for (var j = 0; j < gs.wounds.length; j++) {
 _updateWound(gs.wounds[j], dt, ex, ey, ez, evx, evz, col);
 }
-});
+}
 
 // ── Fade decals ──────────────────────────
 // Throttle: only check 10 decals per frame to save CPU.
@@ -1756,12 +1757,9 @@ default:
 _burstRadial(ex, ey, ez, 180, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58);
 _burstUpward(ex, ey, ez, 40, col.base, 5.0, 14.0, 0.012, 0.030, 3.0, 0.58);
 if (Math.random() < 0.5) _spawnChunks(ex, ey, ez, null, 3+Math.floor(Math.random()*4), wp, col);
-[0, 120, 240].forEach(function(delay) {
-  setTimeout(function() {
-    if (!_ready) return;
-    _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58);
-  }, delay);
-});
+setTimeout(function() { if (_ready) _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58); }, 0);
+setTimeout(function() { if (_ready) _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58); }, 120);
+setTimeout(function() { if (_ready) _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58); }, 240);
 break;
 }
 

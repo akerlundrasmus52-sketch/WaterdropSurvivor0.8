@@ -1894,10 +1894,10 @@
     slot.mesh.position.y = 0.12; // lay on ground
     // Reset eye pupils to center (dead stare)
     if (slot.eyePupils) {
-      slot.eyePupils.forEach(pupil => {
-        pupil.position.x = 0;
-        pupil.position.z = 0.06; // Center position
-      });
+      for (var _ep = 0; _ep < slot.eyePupils.length; _ep++) {
+        slot.eyePupils[_ep].position.x = 0;
+        slot.eyePupils[_ep].position.z = 0.06; // Center position
+      }
     }
     // HP bars removed
     // Growing blood pool under corpse
@@ -4684,13 +4684,14 @@
     const ui = document.getElementById('revolver-ui');
     if (!ui) return;
     const bullets = ui.querySelectorAll('.revolver-bullet');
-    bullets.forEach(function(b, i) {
+    for (var _bi = 0; _bi < bullets.length; _bi++) {
+      var b = bullets[_bi];
       if (_isReloading) {
-        b.className = 'revolver-bullet' + (i < _reloadAnimFrame ? ' loaded' : ' empty');
+        b.className = 'revolver-bullet' + (_bi < _reloadAnimFrame ? ' loaded' : ' empty');
       } else {
-        b.className = 'revolver-bullet' + (i < _revolverAmmo ? ' loaded' : ' empty');
+        b.className = 'revolver-bullet' + (_bi < _revolverAmmo ? ' loaded' : ' empty');
       }
-    });
+    }
     const label = ui.querySelector('.revolver-label');
     if (label) {
       label.textContent = _isReloading ? 'RELOADING...' : (_revolverAmmo + '/' + REVOLVER_MAX_AMMO);
@@ -4759,7 +4760,14 @@
   // Pre-allocated camera follow target (avoids new Vector3 every frame)
   const _camTarget  = new THREE.Vector3();
 
+  let _inputInitialized = false;
+
   function _initInput() {
+    // Guard against double registration — listeners should only be attached once
+    // per page lifetime, even if initialization is accidentally re-entered.
+    if (_inputInitialized) return;
+    _inputInitialized = true;
+
     document.addEventListener('keydown', function (e) {
       _keysDown[e.code] = true;
       // 'E' key: attempt to gather resources from nearby trees/rocks
@@ -4986,48 +4994,78 @@
   const DEFAULT_QUALITY = 'ultra';
 
   // ─── FPS Tracking & Auto-Quality Adjustment ───────────────────────────────────
-  let _fpsSamples = [];
-  let _fpsCheckTimer = 0;
-  let _autoQualityEnabled = true;
-  let _hasAutoAdjusted = false;
-  const FPS_SAMPLE_COUNT = 60; // Track 60 frames (1 second at 60fps)
-  const FPS_CHECK_INTERVAL = 2.0; // Check every 2 seconds
-  const FPS_LOW_THRESHOLD = 30; // If average FPS drops below 30
-  const FPS_VERY_LOW_THRESHOLD = 20; // If average FPS drops below 20
+  // Circular buffer — zero allocations every frame (no push/shift GC pressure)
+  const FPS_SAMPLE_COUNT    = 60;  // 60 frames ≈ 1 second at 60 fps
+  const FPS_CHECK_INTERVAL  = 2.0; // re-evaluate every 2 seconds
+  const FPS_TARGET          = 60;  // desired minimum FPS
+  const FPS_VERY_LOW_THRESHOLD = 40; // urgent: drop two quality levels
+  const FPS_LOW_THRESHOLD      = 55; // moderate: drop one quality level
+  const FPS_HIGH_THRESHOLD     = 70; // comfortable: allow one quality step up
+
+  const _fpsBuf   = new Float32Array(FPS_SAMPLE_COUNT); // pre-allocated, GC-free
+  let   _fpsBufIdx   = 0;
+  let   _fpsBufFull  = false; // true once we've filled the buffer at least once
+  let   _fpsCheckTimer = 0;
+  let   _autoQualityEnabled = true;
+  // Quality tier order for stepping up/down
+  const _qualityTiers = ['ultralow', 'low', 'medium', 'high', 'ultra'];
 
   function _trackFPS(dt) {
-    if (!_autoQualityEnabled || _hasAutoAdjusted) return;
+    if (!_autoQualityEnabled) return;
+    // Skip sampling when the tab is backgrounded or gameplay is paused/frozen —
+    // throttled rAF in background tabs produces artificially low frame times that
+    // would wrongly trigger a quality drop.
+    if (document.hidden || window.isPaused || _hitStopRemaining > 0) return;
 
-    const fps = dt > 0 ? 1.0 / dt : 60;
-    _fpsSamples.push(fps);
-    if (_fpsSamples.length > FPS_SAMPLE_COUNT) {
-      _fpsSamples.shift();
-    }
+    const fps = dt > 0 ? 1.0 / dt : FPS_TARGET;
+    _fpsBuf[_fpsBufIdx] = fps;
+    _fpsBufIdx = (_fpsBufIdx + 1) % FPS_SAMPLE_COUNT;
+    if (_fpsBufIdx === 0) _fpsBufFull = true;
 
     _fpsCheckTimer += dt;
-    if (_fpsCheckTimer >= FPS_CHECK_INTERVAL && _fpsSamples.length >= FPS_SAMPLE_COUNT) {
-      _fpsCheckTimer = 0;
+    if (_fpsCheckTimer < FPS_CHECK_INTERVAL) return;
+    _fpsCheckTimer = 0;
 
-      // Calculate average FPS
-      const avgFPS = _fpsSamples.reduce((a, b) => a + b, 0) / _fpsSamples.length;
+    // Calculate average FPS — plain loop, zero allocations
+    var _fpsSum = 0;
+    var _fpsLen = _fpsBufFull ? FPS_SAMPLE_COUNT : _fpsBufIdx;
+    if (_fpsLen === 0) return; // no samples yet
+    for (var _fi = 0; _fi < _fpsLen; _fi++) _fpsSum += _fpsBuf[_fi];
+    const avgFPS = _fpsSum / _fpsLen;
 
-      // Get current quality
-      let currentQuality = DEFAULT_QUALITY;
+    // Normalize current quality to a known tier; guard against unknown stored values
+    let currentQuality = DEFAULT_QUALITY;
+    try { currentQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
+    let tierIdx = _qualityTiers.indexOf(currentQuality);
+    if (tierIdx < 0) tierIdx = _qualityTiers.indexOf(DEFAULT_QUALITY); // clamp unknown values
+
+    // Auto-adjust: step down when FPS is too low, step up when FPS is comfortable
+    if (avgFPS < FPS_VERY_LOW_THRESHOLD && tierIdx > 0) {
+      // Very low FPS — drop two tiers at once for quick relief
+      const newTier = _qualityTiers[Math.max(0, tierIdx - 2)];
+      console.log(`[Auto-Quality] FPS ${avgFPS.toFixed(1)} < ${FPS_VERY_LOW_THRESHOLD} — dropping to ${newTier}`);
+      _applyGraphicsQuality(newTier);
+      _showPerformanceNotification(`Performance mode: ${newTier.toUpperCase()}`);
+    } else if (avgFPS < FPS_LOW_THRESHOLD && tierIdx > 0) {
+      // Below target — drop one tier
+      const newTier = _qualityTiers[tierIdx - 1];
+      console.log(`[Auto-Quality] FPS ${avgFPS.toFixed(1)} < ${FPS_LOW_THRESHOLD} — dropping to ${newTier}`);
+      _applyGraphicsQuality(newTier);
+      _showPerformanceNotification(`Performance mode: ${newTier.toUpperCase()}`);
+    } else if (avgFPS >= FPS_HIGH_THRESHOLD && tierIdx < _qualityTiers.length - 1) {
+      // Plenty of headroom — step up one tier, capped at user's chosen ceiling
+      let userTierIdx = _qualityTiers.length - 1; // default: no ceiling
       try {
-        currentQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY;
+        const saved = localStorage.getItem('sandboxGraphicsQualityUser');
+        if (saved) {
+          const idx = _qualityTiers.indexOf(saved);
+          if (idx >= 0) userTierIdx = idx;
+        }
       } catch (_) {}
-
-      // Auto-adjust if performance is poor
-      if (avgFPS < FPS_VERY_LOW_THRESHOLD && currentQuality !== 'ultralow') {
-        console.log(`[Auto-Detect] FPS too low (${avgFPS.toFixed(1)}). Switching to ULTRA LOW quality.`);
-        _applyGraphicsQuality('ultralow');
-        _hasAutoAdjusted = true;
-        _showPerformanceNotification('Performance mode enabled (Ultra Low)');
-      } else if (avgFPS < FPS_LOW_THRESHOLD && currentQuality !== 'ultralow' && currentQuality !== 'low') {
-        console.log(`[Auto-Detect] FPS below threshold (${avgFPS.toFixed(1)}). Switching to LOW quality.`);
-        _applyGraphicsQuality('low');
-        _hasAutoAdjusted = true;
-        _showPerformanceNotification('Performance mode enabled (Low)');
+      if (tierIdx < userTierIdx) {
+        const newTier = _qualityTiers[tierIdx + 1];
+        console.log(`[Auto-Quality] FPS ${avgFPS.toFixed(1)} >= ${FPS_HIGH_THRESHOLD} — stepping up to ${newTier}`);
+        _applyGraphicsQuality(newTier);
       }
     }
   }
@@ -5121,6 +5159,21 @@
     if (window.gameSettings) window.gameSettings.quality = quality;
     console.log('[SandboxLoop] Graphics quality applied:', quality);
   }
+
+  /**
+   * Called when the player explicitly picks a quality setting.
+   * Records the choice as the auto-quality ceiling so auto-adjust
+   * never steps higher than the user's preference.
+   * Exposed on window so settings-ui.js (which calls window.applyGraphicsQuality)
+   * can delegate through this function.
+   */
+  function _setUserQualityPreference(quality) {
+    try { localStorage.setItem('sandboxGraphicsQualityUser', quality); } catch (_) {}
+    _applyGraphicsQuality(quality);
+  }
+  // Override the global applyGraphicsQuality hook so the settings UI
+  // records the user's preference ceiling alongside applying the quality.
+  window.applyGraphicsQuality = _setUserQualityPreference;
 
   // ─── Settings modal + UI Calibration entry (sandbox) ─────────────────────────
   function _initSandboxSettings() {
@@ -6396,19 +6449,17 @@
   function _cleanupWaveDebris() {
     // Clear floating damage numbers (from createFloatingText pool)
     const damageNums = document.querySelectorAll('div[style*="position:fixed"][style*="pointer-events:none"][style*="font-family:Impact"]');
-    damageNums.forEach(el => {
-      if (el.style.display !== 'none') {
-        el.style.display = 'none';
-      }
-    });
+    for (var _di = 0; _di < damageNums.length; _di++) {
+      if (damageNums[_di].style.display !== 'none') damageNums[_di].style.display = 'none';
+    }
 
     // Clear any projectile DOM elements (if any weapons create DOM projectiles)
     const projectileDivs = document.querySelectorAll('.projectile, .bullet-trail, .projectile-glow');
-    projectileDivs.forEach(el => el.remove());
+    for (var _pi = 0; _pi < projectileDivs.length; _pi++) projectileDivs[_pi].remove();
 
     // Clear any particle effect elements
     const particleDivs = document.querySelectorAll('.particle, .explosion-particle, .blood-particle');
-    particleDivs.forEach(el => el.remove());
+    for (var _parI = 0; _parI < particleDivs.length; _parI++) particleDivs[_parI].remove();
 
     // Clear all active projectiles without breaking the pooling system
     if (Array.isArray(_activeProjList) && _activeProjList.length > 0) {
