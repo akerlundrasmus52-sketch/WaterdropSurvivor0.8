@@ -288,6 +288,15 @@ CrawlerEnemy.prototype.spawn = function(x, z, waveLevel) {
   this.mouthOpen = 0;
   this.lastDamageTime = 0;
   this.woundCount = 0;
+  this._bulletHoleIndex = 0;
+  if (this._bulletHoles && this._bulletHoles.length) {
+    for (var bh = 0; bh < this._bulletHoles.length; bh++) {
+      if (this._bulletHoles[bh]) {
+        this._bulletHoles[bh].visible = false;
+        this._bulletHoles[bh].position.set(0, -10, 0);
+      }
+    }
+  }
   
   // Position group
   if (this.group) {

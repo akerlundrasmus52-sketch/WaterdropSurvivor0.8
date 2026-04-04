@@ -1721,11 +1721,58 @@
     return closest;
   }
 
+  // ── Shared kill/bullet-hole helpers ─────────────────────────────────────────
+  const _KILL_VARIANT_COUNT = 3;
+  function _normalizeWeaponKey(key) {
+    if (!key) return 'gun';
+    const k = String(key).toLowerCase();
+    if (k.indexOf('shotgun') !== -1) return 'shotgun';
+    if (k.indexOf('fire') !== -1 || k.indexOf('flame') !== -1) return 'fire';
+    if (k.indexOf('sword') !== -1 || k.indexOf('blade') !== -1 || k.indexOf('katana') !== -1) return 'sword';
+    return k;
+  }
+  // Map sandbox-normalized weapon types to the keys expected by GoreSim/BloodV2
+  function _goreSimWeaponKey(key) {
+    const norm = _normalizeWeaponKey(key);
+    if (norm === 'fire') return 'flame';
+    if (norm === 'gun')  return 'pistol';
+    return norm; // shotgun, sword, etc. match directly
+  }
+  function _pickKillVariant() {
+    return Math.floor(Math.random() * _KILL_VARIANT_COUNT);
+  }
+  const _BULLET_HOLE_MAX_PER_ENEMY = 12;
+  function _addEnemyBulletHole(enemy, parent, dirX, dirZ, radius, yOffset) {
+    if (!enemy || !parent) return;
+    if (!enemy._bulletHoles) enemy._bulletHoles = [];
+    if (enemy._bulletHoleIndex === undefined) enemy._bulletHoleIndex = 0;
+    const idx = enemy._bulletHoleIndex % _BULLET_HOLE_MAX_PER_ENEMY;
+    ensureBulletHoleMaterials && ensureBulletHoleMaterials();
+    const geo = (typeof bulletHoleGeo !== 'undefined' && bulletHoleGeo) ? bulletHoleGeo : new THREE.CircleGeometry(0.08, 8);
+    const baseMat = (typeof bulletHoleMat !== 'undefined' && bulletHoleMat) ? bulletHoleMat : null;
+    let hole = enemy._bulletHoles[idx];
+    if (!hole) {
+      const mat = baseMat ? baseMat.clone() : new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
+      hole = new THREE.Mesh(geo, mat);
+      hole.frustumCulled = false;
+      enemy._bulletHoles[idx] = hole;
+    }
+    if (hole.parent !== parent) parent.add(hole);
+    const ny = (yOffset !== undefined) ? yOffset : (0.12 + Math.random() * 0.25);
+    const nx = dirX, nz = dirZ;
+    hole.position.set(nx * radius, ny, nz * radius);
+    hole.lookAt(parent.localToWorld(new THREE.Vector3(nx * 2, ny, nz * 2)));
+    hole.visible = true;
+    enemy._bulletHoleIndex = idx + 1;
+    return hole;
+  }
+
   function _hitSlime(projectile, slot) {
     if (!slot || !slot.active || slot.dead) return;
 
     // Determine hit force from weapon (gun = 1.0)
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
+    const weaponKey = (projectile && projectile.weaponKey) || 'gun';
     // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
     const damage = (projectile && projectile.weaponDmg > 0)
       ? projectile.weaponDmg
@@ -1862,17 +1909,19 @@
 
     if (slot.hp <= 0) {
       _triggerProjectileExplosion(projectile, slot.mesh.position.x, slot.mesh.position.z);
-      _killSlime(slot, hitForce, projectile.vx || 0, projectile.vz || 0);
+      _killSlime(slot, hitForce, projectile.vx || 0, projectile.vz || 0, weaponKey);
     } else {
       _triggerProjectileExplosion(projectile, slot.mesh.position.x, slot.mesh.position.z);
       _updateSlimeHPBar(slot);
     }
   }
 
-  function _killSlime(slot, hitForce, killVX, killVZ) {
+  function _killSlime(slot, hitForce, killVX, killVZ, weaponKey) {
     const x = slot.mesh.position.x;
     const y = slot.mesh.position.y + 0.4; // center of body
     const z = slot.mesh.position.z;
+    const weaponType = _normalizeWeaponKey(weaponKey);
+    const killVariant = _pickKillVariant();
 
     // Hit-stop: freeze simulation for a brief moment — gives attacks a heavy, impactful feel
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS);
@@ -1881,29 +1930,108 @@
 
     // ── GORE SIMULATOR: Weapon-specific death reaction ──────────────────────
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(slot, 'pistol', null);
+      GoreSim.onKill(slot, _goreSimWeaponKey(weaponKey), null);
+    }
+
+    // Weapon-driven kill styling
+    let burstCount = 80;
+    let burstOpts  = { spdMin: 3, spdMax: 14, rMin: 0.010, rMax: 0.030, life: 3.5, visc: 0.55, enemyType: 'slime' };
+    let chunkCount = 12 + Math.floor(Math.random() * 8);
+    let chunkColors = null;
+    let chunkForce = null;
+    let stainScale = 1.0;
+    let slideScale = 0.5;
+    let corpseLinger = 15;
+    let extraFx = null;
+
+    switch (weaponType) {
+      case 'shotgun':
+        burstCount = 130;
+        burstOpts.spdMin = 4; burstOpts.spdMax = 18;
+        burstOpts.rMax = 0.034;
+        chunkCount = 18 + Math.floor(Math.random() * 8);
+        stainScale = 1.4;
+        slideScale = 0.9;
+        if (killVariant === 1) {
+          burstCount = 160;
+          burstOpts.spdMax = 22;
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 50, {
+                enemyType: 'slime', spdMin: 6, spdMax: 14, rMin: 0.009, rMax: 0.024, life: 3.2, visc: 0.50
+              });
+            }
+          };
+        } else if (killVariant === 2) {
+          chunkCount = 22;
+          slideScale = 1.1;
+          chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.65, spread: 0.55 };
+        }
+        break;
+      case 'sword':
+        burstCount = 70;
+        burstOpts.spdMin = 2.0; burstOpts.spdMax = 10.0;
+        burstOpts.rMin = 0.008; burstOpts.rMax = 0.026;
+        chunkCount = 14;
+        slideScale = 0.65;
+        if (killVariant === 0) {
+          chunkForce = { dirX: (killVX || 0.8), dirZ: (killVZ || 0), power: 0.55, spread: 0.40 };
+        } else if (killVariant === 1) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.15, z, 35, {
+                enemyType: 'slime', spdMin: 3, spdMax: 9, rMin: 0.007, rMax: 0.022, life: 2.4
+              });
+            }
+          };
+        } else {
+          slideScale = 0.85;
+          if (slot.mesh) slot.mesh.rotation.y += (Math.random() < 0.5 ? -1 : 1) * Math.PI * 0.4;
+        }
+        break;
+      case 'fire':
+        burstCount = 50;
+        burstOpts = { color: 0x552211, spdMin: 2.5, spdMax: 8.5, rMin: 0.006, rMax: 0.020, life: 2.5, visc: 0.70, enemyType: 'slime' };
+        chunkColors = [0x553311, 0x331a0c, 0x220b06];
+        chunkCount = 8 + Math.floor(Math.random() * 3);
+        stainScale = 1.15;
+        slideScale = 0.35;
+        corpseLinger = 18;
+        if (slot.mesh && slot.mesh.material) slot.mesh.material.color.setHex(0x332011);
+        if (killVariant === 1) {
+          burstCount = 70;
+          burstOpts.color = 0x663000;
+        } else if (killVariant === 2) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.05, z, 30, {
+                color: 0xff5500, spdMin: 4, spdMax: 10, rMin: 0.008, rMax: 0.022, life: 2.8
+              });
+            }
+          };
+        }
+        break;
     }
 
     // Hollywood-style overdone slime death burst
-    window.BloodV2 && BloodV2.rawBurst(x, y, z, 80, {
-      spdMin: 3, spdMax: 14, rMin: 0.010, rMax: 0.030, life: 3.5, visc: 0.55,
-      enemyType: 'slime'
-    });
-    _spawnFleshChunks(slot, 12 + Math.floor(Math.random() * 8), true);
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
+    }
+    _spawnFleshChunks(slot, chunkCount, true, chunkColors, chunkForce);
+    if (extraFx) extraFx();
 
     // Place a blood stain decal on the ground at the kill position
-    _placeBloodStain(x, z);
+    _placeBloodStain(x, z, (0.15 + Math.random() * 0.25) * stainScale);
 
-    // ── GORE: Corpse linger for 15 seconds with heartbeat blood pumping ──────────
+    // ── GORE: Corpse linger for N seconds with heartbeat blood pumping ──────────
     // Remove from active list but keep the mesh visible as a "corpse"
-    const corpseLinger = 15; // all corpses stay on ground for 15 seconds
     const idx = _activeSlimes.indexOf(slot);
     if (idx !== -1) _activeSlimes.splice(idx, 1);
     slot.active = false;
     slot.dead = true;
     // Set death slide velocity for corpse movement
-    slot._deathSlideVX = (killVX || 0) * 0.5;
-    slot._deathSlideVZ = (killVZ || 0) * 0.5;
+    slot._deathSlideVX = (killVX || 0) * slideScale;
+    slot._deathSlideVZ = (killVZ || 0) * slideScale;
     // CRITICAL FIX: Ensure corpse mesh stays visible!
     slot.mesh.visible = true;
     // Flatten the corpse mesh and darken to a bloody grey
@@ -1988,6 +2116,7 @@
   function _hitCrawler(projectile, crawler) {
     if (!crawler || !crawler.active || crawler.dead || crawler.dying) return;
 
+    const weaponKey = (projectile && projectile.weaponKey) || 'gun';
     const hitForce = 1.0 + (weapons && weapons.gun ? (weapons.gun.level - 1) * 0.15 : 0);
     // Use weapon-specific damage if the projectile carries it, otherwise fall back to gun stats
     const damage = (projectile && projectile.weaponDmg > 0)
@@ -2053,48 +2182,125 @@
       wound.scale.setScalar(0.5);
     }
 
+    // Dedicated bullet-hole decal (ensures visibility on every enemy colour)
+    if (projectile) {
+      const len = Math.sqrt((projectile.vx || 0) * (projectile.vx || 0) + (projectile.vz || 0) * (projectile.vz || 0)) || 1;
+      const nhx = (projectile.vx || 0) / len;
+      const nhz = (projectile.vz || 0) / len;
+      _addEnemyBulletHole(crawler, crawler.group, nhx, nhz, 0.55, 0.12 + Math.random() * 0.25);
+    }
+
     if (crawler.hp <= 0) {
       _triggerProjectileExplosion(projectile, cx, cz);
-      _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0);
+      _killCrawler(crawler, hitForce, projectile.vx || 0, projectile.vz || 0, weaponKey);
     } else {
       _triggerProjectileExplosion(projectile, cx, cz);
       _placeBloodStain(cx, cz, 0.15 + Math.random() * 0.25);
     }
   }
 
-  function _killCrawler(crawler, hitForce, killVX, killVZ) {
+  function _killCrawler(crawler, hitForce, killVX, killVZ, weaponKey) {
     const x = crawler.mesh.position.x;
     const y = 0.4;
     const z = crawler.mesh.position.z;
+    const weaponType = _normalizeWeaponKey(weaponKey);
+    const killVariant = _pickKillVariant();
 
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 1.5);
     _triggerShake(SHAKE_KILL_BASE * 1.3 + Math.min(SHAKE_KILL_CAP, (hitForce - 1) * SHAKE_KILL_SCALE));
 
     // Gore sim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(crawler, 'pistol', null);
+      GoreSim.onKill(crawler, _goreSimWeaponKey(weaponKey), null);
+    }
+
+    let burstCount = 60;
+    let burstOpts  = { enemyType: 'crawler', spdMin: 2.5, spdMax: 12.0, rMin: 0.010, rMax: 0.030, life: 3.4, visc: 0.60 };
+    let chunkColors = [0x8B4513, 0x6B3410, 0x5C3010, 0xDEB887];
+    let chunkCount  = 6 + Math.floor(Math.random() * 5);
+    let chunkForce  = null;
+    let stainScale  = 1.0;
+    let slideScale  = 0.5;
+    let corpseLinger = 45;
+    let extraFx = null;
+
+    switch (weaponType) {
+      case 'shotgun':
+        burstCount = 110;
+        burstOpts.spdMin = 5; burstOpts.spdMax = 18;
+        burstOpts.rMax = 0.038;
+        chunkCount = 10 + Math.floor(Math.random() * 6);
+        stainScale = 1.5;
+        slideScale = 1.1;
+        chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.80, spread: 0.60 };
+        if (killVariant === 1) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.15, z, 45, { enemyType: 'crawler', spdMin: 7, spdMax: 16, rMin: 0.010, rMax: 0.026, life: 3.0, visc: 0.55 });
+            }
+          };
+        } else if (killVariant === 2) {
+          chunkCount = 14;
+          slideScale = 1.2;
+        }
+        break;
+      case 'sword':
+        burstCount = 70;
+        burstOpts.spdMin = 3.0; burstOpts.spdMax = 11.0;
+        burstOpts.rMin = 0.009; burstOpts.rMax = 0.026;
+        chunkCount = 9 + Math.floor(Math.random() * 4);
+        slideScale = 0.7;
+        chunkForce = { dirX: (killVX || 0.5), dirZ: (killVZ || 0), power: 0.55, spread: 0.35 };
+        if (killVariant === 1) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 30, { enemyType: 'crawler', spdMin: 4, spdMax: 10, rMin: 0.008, rMax: 0.020, life: 2.2 });
+            }
+          };
+        } else if (killVariant === 2 && crawler.headMesh) {
+          crawler.headMesh.rotation.y += (Math.random() < 0.5 ? -1 : 1) * 0.5;
+        }
+        break;
+      case 'fire':
+        burstCount = 50;
+        burstOpts = { enemyType: 'crawler', color: 0x663311, spdMin: 2.0, spdMax: 9.0, rMin: 0.008, rMax: 0.022, life: 2.6, visc: 0.72 };
+        chunkColors = [0x4d2b10, 0x2a1608, 0x3b220f];
+        chunkCount = 6 + Math.floor(Math.random() * 3);
+        stainScale = 1.2;
+        slideScale = 0.35;
+        corpseLinger = 50;
+        if (killVariant === 2) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.08, z, 28, { color: 0xff6600, spdMin: 3, spdMax: 9, rMin: 0.008, rMax: 0.020, life: 2.4 });
+            }
+          };
+        }
+        break;
     }
 
     // Hollywood-style overdone crawler death burst
-    window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'crawler' });
+    if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
+      BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
+    }
 
     // Spawn brown crawler/worm flesh chunks
-    const crawlerColors = [0x8B4513, 0x6B3410, 0x5C3010, 0xDEB887];
-    _spawnFleshChunks(crawler, 6 + Math.floor(Math.random() * 5), true, crawlerColors);
+    _spawnFleshChunks(crawler, chunkCount, true, chunkColors, chunkForce);
+    if (extraFx) extraFx();
 
-    _placeBloodStain(x, z);
+    _placeBloodStain(x, z, (0.15 + Math.random() * 0.25) * stainScale);
 
     // Mark as dying (crawler death animation handles fade)
     crawler.dying = true;
     crawler.deathTimer = 0;
-    crawler._deathSlideVX = (killVX || 0) * 0.5;
-    crawler._deathSlideVZ = (killVZ || 0) * 0.5;
+    crawler._deathSlideVX = (killVX || 0) * slideScale;
+    crawler._deathSlideVZ = (killVZ || 0) * slideScale;
     const cidx = _activeCrawlers.indexOf(crawler);
     if (cidx !== -1) _activeCrawlers.splice(cidx, 1);
 
-    // Corpse stays 15 seconds
+    // Corpse linger duration is driven by corpseLinger
     const _cbSlot2 = _acquireCorpseBlood(x, 0.03, z, 0x442200, 0.7);
-    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: 45, bloodTimer: 0, poolMesh: _cbSlot2?.mesh || null, poolMat: _cbSlot2?.mat || null, poolSlot: _cbSlot2 || null, x, z });
+    _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh: _cbSlot2?.mesh || null, poolMat: _cbSlot2?.mat || null, poolSlot: _cbSlot2 || null, x, z });
 
     // ══════════ NEW XP STAR SYSTEM V2 ══════════
     // Crawler drops green stars — use actual maxHp to keep scaling consistent
@@ -2285,6 +2491,14 @@
       GoreSim.onHit(enemy, weaponKey, _tmpV3, hitNormal);
     }
 
+    // Bullet hole decal
+    if (projectile && enemy.mesh) {
+      const len = Math.sqrt((projectile.vx || 0) * (projectile.vx || 0) + (projectile.vz || 0) * (projectile.vz || 0)) || 1;
+      const nhx = (projectile.vx || 0) / len;
+      const nhz = (projectile.vz || 0) / len;
+      _addEnemyBulletHole(enemy, enemy.mesh, nhx, nhz, enemy.size * 1.1, enemy.size * 0.35);
+    }
+
     // Screen shake (lighter than green slime — it's smaller)
     const hpRatio = enemy.hp / enemy.maxHp;
     const shakeAmt = hpRatio < 0.33 ? SHAKE_HEAVY_INTENSITY * 0.6
@@ -2294,7 +2508,7 @@
 
     if (enemy.hp <= 0) {
       _triggerProjectileExplosion(projectile, enemy.mesh.position.x, enemy.mesh.position.z);
-      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0);
+      _killLeapingSlime(enemy, hitForce, projectile ? projectile.vx || 0 : 0, projectile ? projectile.vz || 0 : 0, weaponKey);
     } else {
       _triggerProjectileExplosion(projectile, enemy.mesh.position.x, enemy.mesh.position.z);
       _placeBloodStain(enemy.mesh.position.x, enemy.mesh.position.z, 0.15 + Math.random() * 0.25);
@@ -2302,41 +2516,98 @@
   }
 
   /** Kill a leaping slime, spawn loot and effects. */
-  function _killLeapingSlime(enemy, hitForce, killVX, killVZ) {
+  function _killLeapingSlime(enemy, hitForce, killVX, killVZ, weaponKey) {
     if (!enemy || enemy.dead) return;
     const x = enemy.mesh.position.x;
     const y = enemy.mesh.position.y + enemy.size;
     const z = enemy.mesh.position.z;
+    const weaponType = _normalizeWeaponKey(weaponKey);
+    const killVariant = _pickKillVariant();
 
     // Hit-stop & camera shake (lighter than green slime kill)
     _triggerHitStop(HIT_STOP_KILL_DURATION_MS * 0.8);
     _triggerShake(SHAKE_KILL_BASE * 0.7 + Math.min(SHAKE_KILL_CAP * 0.7, (hitForce - 1) * SHAKE_KILL_SCALE));
 
+    let burstCount = 60;
+    let burstOpts  = { enemyType: 'leaping_slime', spdMin: 2.5, spdMax: 10.0, rMin: 0.008, rMax: 0.022, life: 3.0, visc: 0.55 };
+    let chunkColors = [0x00bfff, 0x0090cc, 0x005f99, 0x00ffff];
+    let chunkCount  = 4 + Math.floor(Math.random() * 3);
+    let chunkForce  = null;
+    let stainScale  = 1.0;
+    let slideScale  = 0.5;
+    let corpseLinger = 8;
+    let extraFx = null;
+
+    switch (weaponType) {
+      case 'shotgun':
+        burstCount = 100;
+        burstOpts.spdMin = 5; burstOpts.spdMax = 16; burstOpts.rMax = 0.030;
+        chunkCount = 7 + Math.floor(Math.random() * 4);
+        stainScale = 1.35;
+        slideScale = 1.0;
+        chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.70, spread: 0.55 };
+        if (killVariant === 1) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 30, { enemyType: 'leaping_slime', spdMin: 6, spdMax: 12, rMin: 0.009, rMax: 0.022, life: 2.8 });
+            }
+          };
+        } else if (killVariant === 2) {
+          chunkCount = 10;
+          slideScale = 1.2;
+        }
+        break;
+      case 'sword':
+        burstCount = 45;
+        burstOpts.spdMin = 2.0; burstOpts.spdMax = 9.0;
+        burstOpts.rMin = 0.007; burstOpts.rMax = 0.021;
+        chunkCount = 6;
+        slideScale = 0.7;
+        chunkForce = { dirX: (killVX || 0.5), dirZ: (killVZ || 0), power: 0.45, spread: 0.35 };
+        if (killVariant === 2 && enemy.mesh) {
+          enemy.mesh.rotation.y += (Math.random() < 0.5 ? -1 : 1) * 0.35;
+        }
+        break;
+      case 'fire':
+        burstCount = 40;
+        burstOpts = { enemyType: 'leaping_slime', color: 0x336699, spdMin: 2.2, spdMax: 8.5, rMin: 0.007, rMax: 0.020, life: 2.6, visc: 0.70 };
+        chunkColors = [0x225a7a, 0x1a3c52, 0x11232f];
+        chunkCount = 5;
+        stainScale = 1.1;
+        slideScale = 0.3;
+        corpseLinger = 10;
+        if (killVariant === 2) {
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.05, z, 26, { color: 0xff6600, spdMin: 3, spdMax: 9, rMin: 0.008, rMax: 0.021, life: 2.5 });
+            }
+          };
+        }
+        break;
+    }
+
     // Light-blue gore burst
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
-      BloodV2.rawBurst(x, y, z, 18, { enemyType: 'leaping_slime' });
+      BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     } else if (window.BloodSystem) {
       if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, 18, { spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100 });
+        BloodSystem.emitBurst({ x, y, z }, burstCount, { spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100 });
       }
       if (typeof BloodSystem.emitGuts === 'function') {
         BloodSystem.emitGuts({ x, y, z }, 6);
       }
     }
+    if (extraFx) extraFx();
 
     // GoreSim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(enemy, 'pistol', null);
+      GoreSim.onKill(enemy, _goreSimWeaponKey(weaponKey), null);
     }
 
-    // Hollywood-style overdone leaping slime death burst
-    window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'leaping_slime' });
-
     // Spawn blue slime flesh chunks
-    const blueSlimeColors = [0x00bfff, 0x0090cc, 0x005f99, 0x00ffff];
-    _spawnFleshChunks(enemy, 4 + Math.floor(Math.random() * 3), false, blueSlimeColors);
+    _spawnFleshChunks(enemy, chunkCount, false, chunkColors, chunkForce);
 
-    _placeBloodStain(x, z);
+    _placeBloodStain(x, z, (0.15 + Math.random() * 0.25) * stainScale);
 
     // Remove from active list
     const idx = _activeLeapingSlimes.indexOf(enemy);
@@ -2344,15 +2615,15 @@
 
     // Trigger death animation inside the instance — set _tmpV3 to kill position first
     // Set death slide velocities before calling _die so _updateDeath can use them
-    enemy._deathSlideVX = (killVX || 0) * 0.5;
-    enemy._deathSlideVZ = (killVZ || 0) * 0.5;
+    enemy._deathSlideVX = (killVX || 0) * slideScale;
+    enemy._deathSlideVZ = (killVZ || 0) * slideScale;
     _tmpV3.set(x, y, z);
-    enemy._die('pistol', _tmpV3);
+    enemy._die(_goreSimWeaponKey(weaponKey), _tmpV3);
 
-    // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
+    // Linger corpse duration is driven by corpseLinger
     const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
     _activeCorpses.push({
-      slot: enemy, timer: 0, lingerDuration: 8, bloodTimer: 0,
+      slot: enemy, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0,
       poolMesh: _cbSlot3?.mesh || null, poolMat: _cbSlot3?.mat || null, poolSlot: _cbSlot3 || null, x, z
     });
 
