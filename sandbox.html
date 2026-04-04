@@ -1001,33 +1001,31 @@
   <script src="js/three.min.js"></script>
 
   <!--
-    Bloom post-processing scripts — loaded dynamically from CDN only when
-    the user opts in via localStorage ("enableBloom" = "1").
-    This avoids an unconditional runtime dependency on unpkg.com and keeps the
-    offline / CDN-outage risk opt-in only.
-
-    Version is pinned to the same THREE.REVISION as the local three.min.js (r155).
-    Scripts are inserted with async=false so they execute in dependency order.
+    Post-processing scripts (bloom + motion blur) — loaded by default unless the user
+    explicitly opts out via localStorage ("disablePostProcessing" = "1").
     If any script fails to load the try-catch in sandbox-loop.js falls back to
     standard renderer.render() automatically.
 
-    To enable bloom during a session open DevTools and run:
-        localStorage.setItem('enableBloom', '1');  location.reload();
-    To disable:
-        localStorage.removeItem('enableBloom');     location.reload();
+    Version is pinned to the same THREE.REVISION as the local three.min.js (r155).
+    Scripts are inserted with async=false so they execute in dependency order.
+
+    To disable post-processing (e.g. on very low-end hardware):
+        localStorage.setItem('disablePostProcessing', '1');  location.reload();
+    To re-enable:
+        localStorage.removeItem('disablePostProcessing');     location.reload();
   -->
   <script>
     (function () {
-      var bloomEnabled = false;
+      var ppEnabled = true;
       try {
-        if (window.localStorage && window.localStorage.getItem('enableBloom') === '1') {
-          bloomEnabled = true;
+        if (window.localStorage && window.localStorage.getItem('disablePostProcessing') === '1') {
+          ppEnabled = false;
         }
       } catch (e) {
-        bloomEnabled = false;
+        ppEnabled = false;
       }
 
-      if (!bloomEnabled) return;
+      if (!ppEnabled) return;
 
       var base = 'https://unpkg.com/three@0.155.0/examples/js/';
       var scripts = [
@@ -1036,7 +1034,9 @@
         base + 'postprocessing/ShaderPass.js',
         base + 'shaders/LuminosityHighPassShader.js',
         base + 'postprocessing/UnrealBloomPass.js',
-        base + 'shaders/CopyShader.js'
+        base + 'shaders/CopyShader.js',
+        base + 'shaders/AfterImageShader.js',
+        base + 'postprocessing/AfterImagePass.js'
       ];
 
       var head = document.head || document.getElementsByTagName('head')[0];

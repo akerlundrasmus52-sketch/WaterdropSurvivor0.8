@@ -524,6 +524,9 @@
   // ─── Sky Color Day/Night Cycle ────────────────────────────────────────────────
   var _skyTime = 0.25; // Start at "morning" (0=midnight, 0.25=sunrise, 0.5=noon, 0.75=sunset)
   var _skySpeed = 0.008; // Full day cycle in ~125 seconds
+  // Motion blur damping constant — shared by AfterImagePass setup and quality toggle.
+  // Higher value = more persistent trail; 0 = no motion blur; 1 = infinite smear.
+  var MOTION_BLUR_DAMP = 0.87;
   var _skyColors = [
     { time: 0.0,  sky: 0x0a0a1a, fog: 0x0a0a1a, ambInt: 0.15, sunInt: 0.2  },  // Midnight
     { time: 0.2,  sky: 0x1a1025, fog: 0x1a1025, ambInt: 0.2,  sunInt: 0.4  },  // Pre-dawn
@@ -4915,6 +4918,7 @@
     sun.shadow.bias           = -0.001; // reduce shadow acne
     sun.shadow.normalBias     = 0.02;
     scene.add(sun);
+    scene.add(sun.target); // target must be in scene for updateMatrixWorld() to work
 
     // Soft fill light from opposite side for rim lighting
     const fill = new THREE.DirectionalLight(0x8899ff, 0.35);
@@ -4936,7 +4940,7 @@
       if (window._bloomComposer) window._bloomComposer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // Bloom post-processing — graceful fallback if CDN scripts didn't load
+    // Post-processing — graceful fallback if CDN scripts didn't load
     try {
       if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
         const composer = new THREE.EffectComposer(renderer);
@@ -4949,10 +4953,20 @@
         );
         composer.addPass(bloomPass);
         window._bloomComposer = composer;
+        window._bloomPass = bloomPass;
+
+        // Motion blur via AfterImagePass — trails previous frames for a velocity smear
+        if (THREE.AfterImagePass) {
+          const afterImagePass = new THREE.AfterImagePass(MOTION_BLUR_DAMP);
+          composer.addPass(afterImagePass);
+          window._afterImagePass = afterImagePass;
+          console.log('[SandboxLoop] Motion blur (AfterImagePass) enabled');
+        }
+
         console.log('[SandboxLoop] Bloom post-processing enabled');
       }
     } catch(e) {
-      console.warn('[SandboxLoop] Bloom setup failed, using standard rendering:', e);
+      console.warn('[SandboxLoop] Post-processing setup failed, using standard rendering:', e);
     }
 
     // Apply saved quality after renderer is set up
@@ -4963,11 +4977,11 @@
   // Maps quality key → renderer configuration.
   // Called once at boot (from saved preference) and dynamically when user changes.
   const QUALITY_DESCS = {
-    ultralow: 'Shadows OFF · Pixel ratio 0.5× · No tone mapping — best for budget phones',
-    low:      'Shadows OFF · Pixel ratio 1× · Linear tone mapping — good for S10/mid-range',
-    medium:   'Shadows ON  · Pixel ratio 1× · Linear tone mapping — balanced (default)',
-    high:     'Shadows ON (PCF) · Pixel ratio ≤1.5× · Filmic tone mapping — modern phones',
-    ultra:    'Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping — iPhone 16 / PC',
+    ultralow: 'Shadows OFF · Pixel ratio 0.5× · No tone mapping · No post-FX — best for budget phones',
+    low:      'Shadows OFF · Pixel ratio 1× · Linear tone mapping · No post-FX — good for S10/mid-range',
+    medium:   'Shadows ON  · Pixel ratio 1× · Linear tone mapping · Bloom — balanced (default)',
+    high:     'Shadows ON (PCF) · Pixel ratio ≤1.5× · Filmic tone mapping · Bloom + Motion Blur — modern phones',
+    ultra:    'Shadows ON (PCFSoft) · Native pixel ratio · Filmic tone mapping · Bloom + Motion Blur — iPhone 16 / PC',
   };
   const DEFAULT_QUALITY = 'ultra';
 
@@ -5085,6 +5099,17 @@
     }
     // Force shader recompile so shadow map type change takes effect
     renderer.shadowMap.needsUpdate = true;
+    // Toggle bloom and motion blur based on quality tier
+    if (window._bloomPass) {
+      // Disable bloom entirely at ultralow/low for max performance
+      var bloomOn = (quality !== 'ultralow' && quality !== 'low');
+      window._bloomPass.strength = bloomOn ? 0.4 : 0.0;
+    }
+    if (window._afterImagePass) {
+      // Motion blur only at high / ultra; disable at lower tiers
+      var mbOn = (quality === 'high' || quality === 'ultra');
+      window._afterImagePass.uniforms['damp'].value = mbOn ? MOTION_BLUR_DAMP : 0.0;
+    }
     // Persist selection
     try { localStorage.setItem('sandboxGraphicsQuality', quality); } catch (_) {}
     // Update gameSettings global if present
@@ -6946,9 +6971,21 @@
       // Sun position follows the cycle; suppress when below horizon
       if (window._sandboxLights.sun) {
         var sunAngle = _skyTime * Math.PI * 2;
-        var sunY = Math.sin(sunAngle) * 40 + 10;
-        window._sandboxLights.sun.position.set(Math.cos(sunAngle) * 60, sunY, 20);
+        var sunElevation = Math.sin(sunAngle);
+        var sunY = sunElevation * 40 + 10;
+        // Anchor sun relative to player so shadows cast correctly as player moves
+        var _px = (player && player.mesh) ? player.mesh.position.x : 0;
+        var _pz = (player && player.mesh) ? player.mesh.position.z : 0;
+        window._sandboxLights.sun.position.set(_px + Math.cos(sunAngle) * 60, Math.max(5, sunY), _pz + 20);
         window._sandboxLights.sun.intensity = sunY < 0 ? 0 : sunInt;
+        // Point shadow camera at player so shadows stay sharp around the action
+        if (window._sandboxLights.sun.target) {
+          window._sandboxLights.sun.target.position.set(_px, 0, _pz);
+          window._sandboxLights.sun.target.updateMatrixWorld();
+        }
+        // Sharper shadows when sun is low on the horizon (dramatic side shadows)
+        var shadowBlurRadius = Math.max(1, 4 - Math.abs(sunElevation) * 3);
+        window._sandboxLights.sun.shadow.radius = shadowBlurRadius;
       }
     }
 
