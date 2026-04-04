@@ -462,15 +462,16 @@
         })
       },
       shrine: {
-        name: 'Shrine',
-        icon: '⭐',
-        description: 'Commune with spirits',
+        name: 'The Artifact Shrine',
+        icon: '🏛️',
+        description: 'A mystical shrine that holds powerful Artifacts. Artifacts provide massive passive stat boosts and only drop from Bosses or Void Expeditions. Upgrade to unlock up to 3 Artifact slots.',
         baseCost: 250,
         costMultiplier: 1.5,
-        maxCost: 100000,
+        maxCost: 5000,
         bonus: (level) => ({
-          gold: 0.1 * level,
-          regen: 0.5 * level
+          artifactSlots: level,
+          critDamage: 0.1 * level,
+          voidLifesteal: 0.02 * level
         })
       }
     };
@@ -1952,7 +1953,7 @@
         unlockBuildingExtra: 'warehouse',
         triggerOnDeath: true,
         message: "🏆 <b>Boss Entity Neutralised!</b><br><br><b>Special Combat Routines Arena</b> and <b>Warehouse</b> are now online!<br><br><i>A.I.D.A: 'The Tesla Tower is the final anomaly. Nikola stumbled upon the crash frequency in 1899. His tower was built to amplify it. When you reach it... you will understand everything. Trust me.'</i>",
-        nextQuest: 'quest2_spendSkills',
+        nextQuest: 'quest_shrineCalibrate',
         conditions: ['quest_newFriend']
       },
 
@@ -2695,6 +2696,23 @@
         message: "👁️‍🗨️ <b>THE ANNUNAKI ACKNOWLEDGE THE WATER.</b><br><br><i>A.I.D.A: 'You were supposed to melt. Every simulation predicted it. The Annunaki wrote 47 civilisations into their frequency logs — all of them dissolved back into the collective. Not you. You are the anomaly. You are hard water. You are the 48th variable. And I... I did not account for this. I apologise. I think.'</i><br><br>🌊 <b>The lake calls. But you are no longer sure you want to answer.</b>",
         nextQuest: null,
         conditions: ['quest_annunaki2']
+      },
+
+      // === ARTIFACT SHRINE ARC: Calibrate and rebuild the ancient shrine ===
+      quest_shrineCalibrate: {
+        id: 'quest_shrineCalibrate',
+        name: 'Signal from the Ruins',
+        description: "A.I.D.A has detected a high-frequency anomaly from old ruins in the camp. Survive for 3 minutes in a single run to calibrate the Shrine's frequency.",
+        objectives: 'Survive for 3 minutes in a single run',
+        claim: 'Quest Hall',
+        rewardGold: 300,
+        rewardSkillPoints: 2,
+        rewardResources: { wood: 50, stone: 75 },
+        unlockBuilding: 'shrine',
+        triggerOnDeath: true,
+        message: "🏛️ <b>Shrine Frequency Calibrated!</b><br><br><i>A.I.D.A: 'Calibration complete. The resonance is stable. We can now rebuild The Artifact Shrine using Wood and Stone. Artifacts housed within it will amplify your combat potential in ways conventional gear cannot.'</i><br><br>The <b>Artifact Shrine</b> can now be built in the camp!<br><br>Walk to the shrine ruins and construct it to unlock your first Artifact slot.",
+        nextQuest: 'quest2_spendSkills',
+        conditions: ['quest_pushingLimits']
       }
     };
 
@@ -2707,6 +2725,7 @@
       'companionHouse': 'quest_gainingStats',
       'specialAttacks': 'quest_pushingLimits',
       'warehouse': 'quest_pushingLimits',
+      'shrine': 'quest_shrineCalibrate',
       // === Legacy/extended progression (backward compat for old saves past quest 8) ===
       'trainingHall': 'quest5_upgradeAttr',
       'tavern': 'quest8_kill10',
@@ -3632,7 +3651,23 @@
     function showNextQuestPopup(questId) {
       const quest = TUTORIAL_QUESTS[questId];
       if (!quest) return;
-      
+
+      // For the Artifact Shrine quest, show a full CinematicDialogue before the standard popup
+      if (questId === 'quest_shrineCalibrate' && typeof window.showCinematicDialogue === 'function') {
+        window.showCinematicDialogue(
+          'A.I.D.A.',
+          "Droplet, my sensors detect a high-frequency anomaly from the old ruins in the camp. It's a Shrine of some sort. I need raw combat data to calibrate its frequency.",
+          () => {
+            showComicInfoBox(
+              `🏛️ ${quest.name}`,
+              `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,
+              'Continue'
+            );
+          }
+        );
+        return;
+      }
+
       showComicInfoBox(
         `📜 ${quest.name}`,
         `${quest.description}<br><br><b>Objective:</b> ${quest.objectives}${quest.claim ? `<br><b>Claim:</b> ${quest.claim}` : ''}`,

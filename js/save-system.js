@@ -79,6 +79,9 @@
         amulet: null         // Accessory amulet slot (Phase 1)
       },
       inventory: [],
+      // Artifact System
+      artifacts: [],
+      equippedArtifacts: [null, null, null],
       // Phase 5: Companion System
       companions: {
         greyAlien: { unlocked: true, level: 1, xp: 0, skills: {} },
@@ -117,7 +120,7 @@
         trainingGrounds: { level: 0, maxLevel: 1, unlocked: false },
         library: { level: 0, maxLevel: 1, unlocked: false },
         workshop: { level: 0, maxLevel: 1, unlocked: false },
-        shrine: { level: 0, maxLevel: 1, unlocked: false },
+        shrine: { level: 0, maxLevel: 3, unlocked: false },
         specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
         warehouse: { level: 0, maxLevel: 1, unlocked: false },
         tavern:    { level: 0, maxLevel: 1, unlocked: false },
@@ -415,6 +418,8 @@
           saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
           saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
           saveData.inventory = saveData.inventory || [];
+          saveData.artifacts = saveData.artifacts || [];
+          saveData.equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };

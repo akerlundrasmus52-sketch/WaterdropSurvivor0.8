@@ -348,7 +348,148 @@
       setTimeout(comicCloseHandler, 15000);
     }
 
-    // NEW: Show Quest Hall UI for claiming completed quests
+    /**
+     * showCinematicDialogue(speakerName, text, onClose)
+     * Film-style letterboxed AIDA dialogue: black bars top/bottom (≈28% each),
+     * typewriter text in the middle third, with the Annunaki cyan/purple aesthetic.
+     */
+    function showCinematicDialogue(speakerName, text, onClose) {
+      // Suppress in sandbox
+      if (window._engine2SandboxMode === true || window.location.pathname.includes('sandbox.html')) {
+        if (onClose) onClose();
+        return;
+      }
+
+      const wasGameActive = typeof isGameActive !== 'undefined' && isGameActive && !isGameOver;
+      if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(true);
+
+      const overlay = document.createElement('div');
+      overlay.id = 'cinematic-dialogue-overlay';
+      overlay.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'z-index:10000', 'pointer-events:all', 'cursor:pointer',
+        'animation:cinematicFadeIn 0.6s ease-out forwards'
+      ].join(';');
+
+      // Top black bar (≈28% of screen)
+      const topBar = document.createElement('div');
+      topBar.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:28%',
+        'background:#000'
+      ].join(';');
+
+      // Bottom black bar (≈28% of screen)
+      const bottomBar = document.createElement('div');
+      bottomBar.style.cssText = [
+        'position:absolute', 'bottom:0', 'left:0', 'width:100%', 'height:28%',
+        'background:#000'
+      ].join(';');
+
+      // Centre area (44% of screen) — translucent for cinematic feel
+      const centreArea = document.createElement('div');
+      centreArea.style.cssText = [
+        'position:absolute', 'top:28%', 'left:0', 'width:100%', 'height:44%',
+        'background:rgba(0,0,0,0.82)',
+        'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
+        'gap:14px', 'padding:0 8%', 'box-sizing:border-box'
+      ].join(';');
+
+      // Speaker name badge
+      const speakerEl = document.createElement('div');
+      speakerEl.style.cssText = [
+        'color:#00ffff', 'font-family:Bangers,cursive', 'font-size:clamp(13px,2.5vw,20px)',
+        'letter-spacing:4px', 'text-transform:uppercase',
+        'text-shadow:0 0 12px rgba(0,255,255,0.9),0 0 24px rgba(0,255,255,0.5)',
+        'border-bottom:1px solid rgba(0,255,255,0.35)', 'padding-bottom:6px',
+        'width:100%', 'text-align:left'
+      ].join(';');
+      speakerEl.textContent = `◈ ${speakerName}`;
+
+      // Dialogue text container with typewriter effect
+      const textEl = document.createElement('div');
+      textEl.style.cssText = [
+        'color:#E8D5A3', 'font-family:Courier New,monospace',
+        'font-size:clamp(13px,2.2vw,19px)', 'line-height:1.7',
+        'width:100%', 'text-align:left',
+        'text-shadow:0 0 6px rgba(0,255,255,0.15)'
+      ].join(';');
+      textEl.textContent = '';
+
+      // "Tap to continue" hint at bottom of centre area
+      const tapHint = document.createElement('div');
+      tapHint.style.cssText = [
+        'color:rgba(201,162,39,0.7)', 'font-family:Courier New,monospace',
+        'font-size:clamp(10px,1.6vw,13px)', 'letter-spacing:2px',
+        'position:absolute', 'bottom:8%', 'right:5%',
+        'animation:cinematicTapPulse 1.4s ease-in-out infinite'
+      ].join(';');
+      tapHint.textContent = '▶  TAP TO CONTINUE';
+      tapHint.style.opacity = '0';
+
+      centreArea.appendChild(speakerEl);
+      centreArea.appendChild(textEl);
+      centreArea.appendChild(tapHint);
+
+      // Scanline overlay for CRT feel
+      const scanline = document.createElement('div');
+      scanline.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)',
+        'pointer-events:none', 'z-index:1'
+      ].join(';');
+
+      overlay.appendChild(topBar);
+      overlay.appendChild(centreArea);
+      overlay.appendChild(bottomBar);
+      overlay.appendChild(scanline);
+      document.body.appendChild(overlay);
+
+      // Typewriter effect
+      let charIdx = 0;
+      let typewriterDone = false;
+      const typeSpeed = 32; // ms per char
+      const typeTimer = setInterval(() => {
+        if (charIdx < text.length) {
+          textEl.textContent += text[charIdx];
+          charIdx++;
+        } else {
+          clearInterval(typeTimer);
+          typewriterDone = true;
+          tapHint.style.opacity = '1';
+          tapHint.style.transition = 'opacity 0.5s';
+        }
+      }, typeSpeed);
+
+      let closed = false;
+      function closeCinematic() {
+        if (closed) return;
+        closed = true;
+        clearInterval(typeTimer);
+        overlay.style.animation = 'cinematicFadeOut 0.4s ease-in forwards';
+        setTimeout(() => {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(false);
+          if (onClose) onClose();
+        }, 380);
+      }
+
+      // Clicking/tapping: if typewriter still running — skip to end; else close
+      overlay.addEventListener('click', () => {
+        if (!typewriterDone) {
+          clearInterval(typeTimer);
+          textEl.textContent = text;
+          typewriterDone = true;
+          tapHint.style.opacity = '1';
+          tapHint.style.transition = 'opacity 0.5s';
+        } else {
+          closeCinematic();
+        }
+      });
+
+      // Safety: auto-close after 18 s
+      setTimeout(closeCinematic, 18000);
+    }
+    window.showCinematicDialogue = showCinematicDialogue;
     function showQuestHall() {
       // Guard: Quest Hall must be built (level > 0) before it can be entered
       var _qmData = saveData.campBuildings && saveData.campBuildings.questMission;
@@ -2664,99 +2805,372 @@
 
       const modal = document.createElement('div');
       modal.id = 'inventory-screen-modal';
-      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:200;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;';
+      modal.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'background:rgba(0,0,0,0.97)', 'z-index:200',
+        'display:flex', 'flex-direction:column', 'overflow:hidden'
+      ].join(';');
 
+      // ─── Header ──────────────────────────────────────────────────
       const currencies = [
-        { icon: '🪙', name: 'Gold', value: saveData.gold || 0 },
-        { icon: '💎', name: 'Gems', value: saveData.gems || 0 },
-        { icon: '✨', name: 'Essence', value: saveData.essence || 0 }
+        { icon: '🪙', name: 'Gold',    value: saveData.gold    || 0 },
+        { icon: '💎', name: 'Gems',    value: saveData.gems    || 0 },
+        { icon: '✨', name: 'Essence', value: saveData.essence || 0 },
       ];
-
       const currencyHTML = currencies.map(c =>
-        `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,215,0,0.1);border:1px solid #FFD700;border-radius:8px;padding:8px 14px;margin:4px;">
-          <span style="font-size:20px;">${c.icon}</span>
-          <span style="color:#FFD700;font-size:16px;font-weight:bold;">${c.value.toLocaleString()}</span>
-          <span style="color:#aaa;font-size:12px;">${c.name}</span>
+        `<div class="inv-currency-chip">
+          <span style="font-size:18px;">${c.icon}</span>
+          <span style="color:#FFD700;font-weight:bold;">${c.value.toLocaleString()}</span>
+          <span style="color:#888;font-size:11px;">${c.name}</span>
         </div>`
       ).join('');
 
-      // Special Items section
-      let specialItemsHTML = '';
+      const headerEl = document.createElement('div');
+      headerEl.style.cssText = [
+        'display:flex', 'align-items:center', 'justify-content:space-between',
+        'padding:12px 18px', 'border-bottom:1px solid rgba(201,162,39,0.3)',
+        'background:linear-gradient(135deg,#0d0015 0%,#07000e 100%)',
+        'flex-shrink:0'
+      ].join(';');
+      headerEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:26px;">⚔️</span>
+          <div>
+            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:22px;letter-spacing:2px;">EQUIPMENT &amp; INVENTORY</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${currencyHTML}</div>
+          </div>
+        </div>
+        <button id="inv-back-btn" class="inv-back-btn">← Back</button>
+      `;
+
+      // ─── Main body: left list + right visual panel ────────────────
+      const bodyEl = document.createElement('div');
+      bodyEl.style.cssText = [
+        'display:flex', 'flex:1', 'overflow:hidden', 'min-height:0'
+      ].join(';');
+
+      // ── LEFT: gear list ──────────────────────────────────────────
+      const leftPanel = document.createElement('div');
+      leftPanel.style.cssText = [
+        'width:320px', 'min-width:220px', 'flex-shrink:0',
+        'overflow-y:auto', 'padding:14px',
+        'border-right:1px solid rgba(201,162,39,0.2)',
+        'background:rgba(0,0,0,0.4)'
+      ].join(';');
+
+      // Special items
+      let specialHTML = '';
       if (saveData.hasCompanionEgg) {
         const alreadyHatched = saveData.companionEggHatched;
-        specialItemsHTML += `
-          <div style="background:linear-gradient(135deg,rgba(0,255,180,0.15),rgba(0,100,80,0.3));border:2px solid #00FFB4;border-radius:12px;padding:16px;margin:8px 0;display:flex;align-items:center;gap:14px;">
-            <div style="font-size:48px;animation:pulse 1.5s ease-in-out infinite;">🥚</div>
+        specialHTML = `<div class="inv-section-title">✨ Special Items</div>
+          <div class="inv-special-egg">
+            <span style="font-size:36px;">🥚</span>
             <div style="flex:1;">
-              <div style="color:#00FFB4;font-size:18px;font-weight:bold;">Mysterious Companion Egg</div>
-              <div style="color:#aaa;font-size:13px;margin:4px 0;">Found at the UFO crash site in Area 51. Something stirs within...</div>
-              <div style="color:#FFD700;font-size:12px;">★★★ LEGENDARY ★★★</div>
+              <div style="color:#00FFB4;font-weight:bold;font-size:14px;">Companion Egg</div>
+              <div style="color:#aaa;font-size:11px;">Found at UFO crash site</div>
             </div>
-            <div>
-              ${alreadyHatched
-                ? '<span style="color:#00FF88;font-size:13px;">✅ Hatched</span>'
-                : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:8px;padding:10px 16px;color:#000;font-weight:bold;cursor:pointer;font-size:13px;">Place in Companion House →</button>`
-              }
-            </div>
+            ${alreadyHatched
+              ? '<span style="color:#00FF88;font-size:12px;">✅ Hatched</span>'
+              : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" class="inv-equip-btn">Place →</button>`
+            }
           </div>`;
       }
 
-      // Gear inventory
+      // Gear items (draggable)
       const gear = saveData.inventory || [];
-      const gearHTML = gear.length === 0
-        ? '<div style="color:#666;text-align:center;padding:20px;">No gear collected yet. Complete runs to find gear!</div>'
+      const gearListHTML = gear.length === 0
+        ? '<div style="color:#555;text-align:center;padding:24px;font-size:13px;">No gear yet. Complete runs to find equipment!</div>'
         : gear.map((item, idx) => {
-          const rarityColor = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
-          const rarityStars = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
-          const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(g => g && g.id === item.id);
-          return `
-            <div style="background:rgba(255,255,255,0.05);border:1px solid ${rarityColor};border-radius:8px;padding:12px;margin:6px 0;display:flex;align-items:center;gap:12px;">
-              <div style="font-size:32px;">${item.type === 'ring' ? '💍' : item.type === 'amulet' ? '📿' : item.type === 'helmet' ? '⛑️' : item.type === 'boots' ? '👢' : '🛡️'}</div>
-              <div style="flex:1;">
-                <div style="color:${rarityColor};font-size:15px;font-weight:bold;">${item.name}</div>
-                <div style="color:#aaa;font-size:12px;">${item.description || ''}</div>
-                <div style="color:${rarityColor};font-size:11px;">${rarityStars} ${(item.rarity || 'common').toUpperCase()}</div>
+            const rc = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
+            const rs  = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
+            const typeIcon = { ring:'💍', amulet:'📿', helmet:'⛑️', headband:'🎀', boots:'👢', necklace:'📿', earrings:'💎' }[item.type] || '🛡️';
+            const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(g => g && g.id === item.id);
+            const isSlotEquipped = saveData.equippedGear && saveData.equippedGear[item.type] && saveData.equippedGear[item.type].id === item.id;
+            return `<div class="inv-gear-item${isEquipped ? ' inv-equipped' : ''}"
+                        draggable="true"
+                        data-idx="${idx}"
+                        data-type="${item.type || 'ring'}"
+                        data-id="${item.id || idx}"
+                        style="border-color:${rc};">
+              <span style="font-size:26px;">${typeIcon}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="color:${rc};font-weight:bold;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+                <div style="color:#888;font-size:10px;">${rs} ${(item.rarity||'common').toUpperCase()} · ${item.type||'gear'}</div>
+                ${item.description ? `<div style="color:#999;font-size:10px;margin-top:2px;">${item.description}</div>` : ''}
               </div>
-              <div>
+              <div style="flex-shrink:0;">
                 ${isEquipped
-                  ? '<span style="color:#FFD700;font-size:12px;">✅ Equipped</span>'
-                  : `<button onclick="equipItemFromInventory(${idx})" style="background:rgba(255,215,0,0.2);border:1px solid #FFD700;border-radius:6px;padding:6px 12px;color:#FFD700;cursor:pointer;font-size:12px;">Equip</button>`
+                  ? `<span style="color:#FFD700;font-size:11px;display:block;text-align:center;">✅<br>Equipped</span>`
+                  : `<button onclick="equipItemFromInventory(${idx})" class="inv-equip-btn">Equip</button>`
                 }
               </div>
             </div>`;
-        }).join('');
+          }).join('');
 
-      modal.innerHTML = `
-        <div style="max-width:640px;width:100%;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="color:#FFD700;margin:0;font-size:22px;">📦 Inventory</h2>
-            <button id="inv-back-btn" style="background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:8px 16px;color:#fff;cursor:pointer;">← Back to Camp</button>
-          </div>
-
-          <div style="background:rgba(255,215,0,0.05);border:1px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="color:#FFD700;font-size:14px;font-weight:bold;margin-bottom:10px;">💰 Currencies</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">${currencyHTML}</div>
-          </div>
-
-          ${saveData.hasCompanionEgg ? `
-          <div style="background:rgba(0,255,180,0.05);border:1px solid #00FFB4;border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="color:#00FFB4;font-size:14px;font-weight:bold;margin-bottom:10px;">✨ Special Items</div>
-            ${specialItemsHTML}
-          </div>` : ''}
-
-          <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:12px;padding:16px;">
-            <div style="color:#fff;font-size:14px;font-weight:bold;margin-bottom:10px;">⚔️ Gear (${gear.length} items)</div>
-            ${gearHTML}
-          </div>
-        </div>
+      leftPanel.innerHTML = `
+        <div class="inv-section-title">⚔️ Gear (${gear.length})</div>
+        ${specialHTML}
+        ${gearListHTML}
       `;
 
+      // ── RIGHT: Visual equipment panel ───────────────────────────
+      const rightPanel = document.createElement('div');
+      rightPanel.style.cssText = [
+        'flex:1', 'display:flex', 'flex-direction:column',
+        'align-items:center', 'justify-content:center',
+        'padding:20px', 'overflow:hidden', 'position:relative',
+        'background:radial-gradient(ellipse at center,rgba(10,0,30,0.95) 0%,rgba(0,0,0,1) 100%)'
+      ].join(';');
+
+      // Section title
+      const rightTitle = document.createElement('div');
+      rightTitle.style.cssText = 'color:#C9A227;font-family:Bangers,cursive;font-size:18px;letter-spacing:3px;margin-bottom:16px;text-shadow:0 0 10px rgba(201,162,39,0.6);';
+      rightTitle.textContent = '◈ EQUIP YOUR DROPLET ◈';
+      rightPanel.appendChild(rightTitle);
+
+      // Visual centre: canvas + surrounding slots
+      const visualArea = document.createElement('div');
+      visualArea.style.cssText = 'position:relative;width:320px;height:360px;flex-shrink:0;';
+
+      // 3D player preview canvas
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.id = 'inv-player-preview-canvas';
+      previewCanvas.width  = 220;
+      previewCanvas.height = 320;
+      previewCanvas.style.cssText = [
+        'position:absolute', 'left:50%', 'top:50%',
+        'transform:translate(-50%,-50%)',
+        'border:1px solid rgba(0,255,255,0.2)',
+        'border-radius:12px',
+        'background:rgba(0,0,15,0.9)',
+        'box-shadow:0 0 20px rgba(0,255,255,0.15),inset 0 0 30px rgba(138,43,226,0.1)'
+      ].join(';');
+      visualArea.appendChild(previewCanvas);
+
+      // Define equipment slot positions (around the canvas)
+      const equippedGear = saveData.equippedGear || {};
+      const slots = [
+        { key:'headband', label:'Headband', icon:'🎀', top:'-22px',  left:'50%',  transform:'translateX(-50%)',  tipDir:'top'    },
+        { key:'necklace', label:'Necklace', icon:'📿', top:'25%',   left:'-56px', transform:'',                  tipDir:'left'   },
+        { key:'ring',     label:'Ring 1',  icon:'💍', top:'60%',   left:'-56px', transform:'',                  tipDir:'left'   },
+        { key:'earrings', label:'Earrings',icon:'💎', top:'25%',   right:'-56px',transform:'',                  tipDir:'right'  },
+        { key:'amulet',   label:'Necklace',icon:'📿', top:'60%',   right:'-56px',transform:'',                  tipDir:'right'  },
+      ];
+
+      slots.forEach(sl => {
+        const equippedItem = equippedGear[sl.key];
+        const slot = document.createElement('div');
+        slot.className = 'inv-vis-slot';
+        slot.dataset.slotKey = sl.key;
+        slot.title = `${sl.label} slot — drag gear here`;
+        // Positioning
+        const posStyles = ['position:absolute', 'width:48px', 'height:52px'];
+        if (sl.top    !== undefined) posStyles.push(`top:${sl.top}`);
+        if (sl.left   !== undefined) posStyles.push(`left:${sl.left}`);
+        if (sl.right  !== undefined) posStyles.push(`right:${sl.right}`);
+        if (sl.transform) posStyles.push(`transform:${sl.transform}`);
+        slot.style.cssText = posStyles.join(';');
+        slot.innerHTML = equippedItem
+          ? `<span style="font-size:24px;" title="${equippedItem.name}">${
+              { ring:'💍', amulet:'📿', helmet:'⛑️', headband:'🎀', boots:'👢', necklace:'📿', earrings:'💎' }[equippedItem.type] || '🛡️'
+            }</span><div class="inv-vis-slot-label">${equippedItem.name.substring(0,9)}</div>`
+          : `<span style="font-size:22px;opacity:0.45;">${sl.icon}</span><div class="inv-vis-slot-label" style="opacity:0.5;">${sl.label}</div>`;
+
+        // Drag-over highlight
+        slot.addEventListener('dragover', e => {
+          e.preventDefault();
+          slot.classList.add('inv-vis-slot-dragover');
+        });
+        slot.addEventListener('dragleave', () => slot.classList.remove('inv-vis-slot-dragover'));
+        slot.addEventListener('drop', e => {
+          e.preventDefault();
+          slot.classList.remove('inv-vis-slot-dragover');
+          const idx  = parseInt(e.dataTransfer.getData('text/inv-idx'), 10);
+          const type = e.dataTransfer.getData('text/inv-type');
+          if (isNaN(idx)) return;
+          // Only allow dropping matching type (or be lenient)
+          if (type && sl.key !== type && !(sl.key === 'ring' && type === 'ring') && !(sl.key === 'amulet' && type === 'amulet')) {
+            if (typeof showStatChange === 'function') showStatChange(`❌ Wrong slot type (${type} ≠ ${sl.key})`);
+            return;
+          }
+          const item = (saveData.inventory || [])[idx];
+          if (!item) return;
+          if (!saveData.equippedGear) saveData.equippedGear = {};
+          saveData.equippedGear[sl.key] = item;
+          saveSaveData();
+          if (typeof showStatChange === 'function') showStatChange(`✅ ${item.name} equipped to ${sl.label}!`);
+          modal.remove();
+          showInventoryScreen();
+          // Update 3D camp player model if possible
+          if (window.CampWorld && typeof window.CampWorld.updatePlayerEquipment === 'function') {
+            window.CampWorld.updatePlayerEquipment(sl.key, item);
+          }
+        });
+
+        // Double-click to unequip
+        slot.addEventListener('dblclick', () => {
+          if (!equippedItem) return;
+          if (!saveData.equippedGear) return;
+          delete saveData.equippedGear[sl.key];
+          saveSaveData();
+          modal.remove();
+          showInventoryScreen();
+        });
+
+        visualArea.appendChild(slot);
+      });
+
+      rightPanel.appendChild(visualArea);
+
+      // Drag-source setup on list items (after DOM is appended)
+      // Done via event delegation on leftPanel after append
+
+      // Hint text
+      const hintEl = document.createElement('div');
+      hintEl.style.cssText = 'color:rgba(201,162,39,0.55);font-size:11px;margin-top:18px;font-family:Courier New,monospace;letter-spacing:1px;text-align:center;';
+      hintEl.innerHTML = 'DRAG ITEMS → SLOTS &nbsp;·&nbsp; DOUBLE-CLICK SLOT TO UNEQUIP';
+      rightPanel.appendChild(hintEl);
+
+      // Assemble
+      bodyEl.appendChild(leftPanel);
+      bodyEl.appendChild(rightPanel);
+      modal.appendChild(headerEl);
+      modal.appendChild(bodyEl);
       document.body.appendChild(modal);
 
-      document.getElementById('inv-back-btn').onclick = () => {
+      // ── Back button ──────────────────────────────────────────────
+      modal.querySelector('#inv-back-btn').onclick = () => {
         modal.remove();
         if (campScreen) campScreen.style.display = 'flex';
       };
+
+      // ── Drag-source events on gear list ─────────────────────────
+      leftPanel.querySelectorAll('.inv-gear-item[draggable]').forEach(el => {
+        el.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/inv-idx',  el.dataset.idx);
+          e.dataTransfer.setData('text/inv-type', el.dataset.type);
+          el.style.opacity = '0.5';
+        });
+        el.addEventListener('dragend', () => { el.style.opacity = ''; });
+      });
+
+      // ── 3D player preview (mini Three.js scene) ─────────────────
+      try {
+        const THREE = window.THREE;
+        if (THREE && previewCanvas) {
+          const pRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true, alpha: true });
+          pRenderer.setSize(220, 320);
+          pRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          pRenderer.setClearColor(0x00000f, 0.9);
+
+          const pScene  = new THREE.Scene();
+          const pCamera = new THREE.PerspectiveCamera(45, 220 / 320, 0.1, 50);
+          pCamera.position.set(0, 0.5, 3.6);
+          pCamera.lookAt(0, 0.4, 0);
+
+          // Lights
+          pScene.add(new THREE.AmbientLight(0x8866aa, 1.2));
+          const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+          keyLight.position.set(2, 4, 3);
+          pScene.add(keyLight);
+          const fillLight = new THREE.PointLight(0x00ffff, 1.2, 12);
+          fillLight.position.set(-2, 2, 2);
+          pScene.add(fillLight);
+          const rimLight = new THREE.PointLight(0xC9A227, 0.8, 10);
+          rimLight.position.set(0, -1, -2);
+          pScene.add(rimLight);
+
+          // ── Build player mesh (matches camp-world.js _buildPlayerMesh logic) ──
+          const pGrp = new THREE.Group();
+          const bodyMat = new THREE.MeshPhongMaterial({ color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.3, shininess: 80, transparent: true, opacity: 0.92 });
+          const limbMat = new THREE.MeshPhongMaterial({ color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.2, transparent: true, opacity: 0.86 });
+
+          // Body
+          const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 4), bodyMat);
+          pGrp.add(body);
+          // Head
+          const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 4), bodyMat);
+          head.position.y = 0.42;
+          pGrp.add(head);
+          // Eyes
+          const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF });
+          [-0.12, 0.12].forEach((x, i) => {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), eyeMat);
+            eye.position.set(x, 0.48, 0.38);
+            pGrp.add(eye);
+          });
+          // Arms
+          const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8), limbMat);
+          leftArm.position.set(-0.38, -0.04, 0.05); leftArm.rotation.z = Math.PI / 5;
+          pGrp.add(leftArm);
+          const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8), limbMat);
+          rightArm.position.set(0.38, -0.04, 0.05); rightArm.rotation.z = -Math.PI / 5;
+          pGrp.add(rightArm);
+          // Legs
+          const legMat = limbMat.clone();
+          [-0.16, 0.16].forEach(x => {
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.24, 8), legMat);
+            leg.position.set(x, -0.42, 0);
+            pGrp.add(leg);
+          });
+          // Bandage wrap
+          const bandageMat = new THREE.MeshPhongMaterial({ color: 0xF5DEB3, emissive: 0x8B7355, emissiveIntensity: 0.1 });
+          const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.055, 6, 16), bandageMat);
+          wrap.position.set(0.04, 0.35, 0); wrap.rotation.x = Math.PI / 2; wrap.rotation.z = 0.2;
+          pGrp.add(wrap);
+
+          // Headband visual if equipped
+          const headbandItem = equippedGear.headband;
+          if (headbandItem) {
+            const hbMat = new THREE.MeshPhongMaterial({ color: 0xC9A227, emissive: 0xC9A227, emissiveIntensity: 0.5 });
+            const hb = new THREE.Mesh(new THREE.TorusGeometry(0.30, 0.05, 8, 24), hbMat);
+            hb.position.y = 0.52; hb.rotation.x = Math.PI / 2;
+            pGrp.add(hb);
+          }
+          // Necklace/amulet visual if equipped
+          const neckItem = equippedGear.necklace || equippedGear.amulet;
+          if (neckItem) {
+            const nkMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.6 });
+            const nk = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 20), nkMat);
+            nk.position.y = 0.20; nk.rotation.x = Math.PI / 2;
+            pGrp.add(nk);
+          }
+          // Ring visual if equipped
+          const ringItem = equippedGear.ring;
+          if (ringItem) {
+            const rgMat = new THREE.MeshPhongMaterial({ color: 0xa335ee, emissive: 0xa335ee, emissiveIntensity: 0.7 });
+            const rg = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 16), rgMat);
+            rg.position.set(-0.44, -0.18, 0.04);
+            pGrp.add(rg);
+          }
+
+          pGrp.position.y = -0.2;
+          pScene.add(pGrp);
+
+          // Rotation animation
+          let prevTime = 0;
+          let pAnimId;
+          function pAnimate(ts) {
+            if (!document.getElementById('inventory-screen-modal')) {
+              pRenderer.dispose();
+              return;
+            }
+            pAnimId = requestAnimationFrame(pAnimate);
+            const dt = (ts - prevTime) / 1000;
+            prevTime = ts;
+            pGrp.rotation.y += dt * 0.6;
+            pRenderer.render(pScene, pCamera);
+          }
+          requestAnimationFrame(pAnimate);
+        }
+      } catch (e) {
+        // 3D preview unavailable — show placeholder icon
+        previewCanvas.style.display = 'none';
+        const placeholder = document.createElement('div');
+        placeholder.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:80px;opacity:0.3;';
+        placeholder.textContent = '💧';
+        visualArea.appendChild(placeholder);
+      }
     }
 
     // Equip item directly from inventory screen
@@ -2775,8 +3189,187 @@
     window.equipItemFromInventory = equipItemFromInventory;
 
     // ============================================================
-    // COMPANION HOUSE SCREEN
+    // ARTIFACT SHRINE UI
     // ============================================================
+
+    function showArtifactShrineUI() {
+      const campScreen = document.getElementById('camp-screen');
+      if (campScreen) campScreen.style.display = 'none';
+
+      const existingModal = document.getElementById('artifact-shrine-modal');
+      if (existingModal) existingModal.remove();
+
+      const shrineData  = saveData.campBuildings && saveData.campBuildings.shrine;
+      const shrineLevel = shrineData ? (shrineData.level || 0) : 0;
+      const unlockedSlots = shrineLevel; // 1 slot per upgrade level
+      const equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
+      const artifactInventory = saveData.artifacts || [];
+
+      // Artifact definitions (static catalogue of obtainable artifacts)
+      const ARTIFACT_DEFS = {
+        voidCrystal:    { name: 'Void Crystal',     icon: '🔮', rarity: 'legendary', desc: '+50% Crit Damage · Void Lifesteal 3%',      stats: { critDamage: 0.5, voidLifesteal: 0.03 } },
+        annunakiShard:  { name: 'Annunaki Shard',   icon: '👁️',  rarity: 'mythic',    desc: '+80% Boss Damage · +15% All Resistances',   stats: { bossDamage: 0.8, allResist: 0.15 } },
+        temporalCore:   { name: 'Temporal Core',    icon: '⏳', rarity: 'epic',      desc: '+25% Attack Speed · -15% Cooldowns',         stats: { attackSpeed: 0.25, cdReduction: 0.15 } },
+        bloodstoneRelic:{ name: 'Bloodstone Relic', icon: '💉', rarity: 'legendary', desc: 'On kill: restore 4% max HP',                  stats: { onKillHeal: 0.04 } },
+        etherealBlade:  { name: 'Ethereal Blade',   icon: '⚔️',  rarity: 'epic',      desc: '+40% Physical Damage · +10% Crit Chance',    stats: { physDamage: 0.4, critChance: 0.10 } },
+      };
+
+      const rarityColors = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff4444' };
+
+      // Build slot HTML
+      const slotHTML = [0, 1, 2].map(i => {
+        const isUnlocked = i < unlockedSlots;
+        const equippedId = equippedArtifacts[i];
+        const equipped   = equippedId ? (ARTIFACT_DEFS[equippedId] || artifactInventory.find(a => a.id === equippedId)) : null;
+        const rc = equipped ? (rarityColors[equipped.rarity] || '#aaa') : '#444';
+        if (!isUnlocked) {
+          return `<div class="shrine-slot shrine-slot-locked">
+            <div style="font-size:28px;opacity:0.3;">🔒</div>
+            <div class="shrine-slot-label" style="color:#555;">Slot ${i+1} — Locked</div>
+            <div style="color:#666;font-size:10px;margin-top:4px;">Upgrade Shrine to unlock</div>
+          </div>`;
+        }
+        return `<div class="shrine-slot" data-slot="${i}" style="border-color:${rc};" title="${equipped ? `${equipped.name} — double-click to remove` : 'Empty artifact slot'}">
+          <div style="font-size:32px;">${equipped ? (equipped.icon || '🔮') : '🏛️'}</div>
+          <div class="shrine-slot-label" style="color:${rc};">${equipped ? equipped.name : `Slot ${i+1} — Empty`}</div>
+          ${equipped ? `<div style="color:#aaa;font-size:10px;margin-top:3px;">${equipped.desc || ''}</div>
+            <button onclick="window._shrineUnequip(${i})" class="shrine-remove-btn">✕ Remove</button>`
+          : `<div style="color:#555;font-size:10px;margin-top:3px;">Select artifact below to equip</div>`}
+        </div>`;
+      }).join('');
+
+      // Build artifact inventory HTML
+      const artifactInventoryHTML = artifactInventory.length === 0
+        ? `<div style="color:#555;text-align:center;padding:30px;font-size:13px;">No Artifacts collected yet.<br><span style="color:#888;font-size:11px;">Artifacts only drop from Bosses or Void Expeditions.</span></div>`
+        : artifactInventory.map((art, idx) => {
+            const def = ARTIFACT_DEFS[art.id] || art;
+            const rc2 = rarityColors[def.rarity] || '#aaa';
+            const isEquipped = equippedArtifacts.some(a => a === art.id);
+            return `<div class="shrine-inv-item${isEquipped ? ' shrine-inv-equipped' : ''}" style="border-color:${rc2};"
+                        onclick="window._shrineEquipArtifact('${art.id}', ${idx})">
+              <span style="font-size:26px;">${def.icon || '🔮'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="color:${rc2};font-weight:bold;font-size:13px;">${def.name}</div>
+                <div style="color:#888;font-size:10px;">${(def.rarity||'epic').toUpperCase()}</div>
+                <div style="color:#aaa;font-size:11px;margin-top:2px;">${def.desc||''}</div>
+              </div>
+              <div>${isEquipped ? '<span style="color:#FFD700;font-size:11px;">✅ Slotted</span>' : '<span style="color:#00ffff;font-size:11px;">◈ Tap to Equip</span>'}</div>
+            </div>`;
+          }).join('');
+
+      // Upgrade section
+      const maxSlots = 3;
+      const canUpgrade = shrineLevel < maxSlots;
+      const builtCount = saveData.campBuildings ? Object.values(saveData.campBuildings).filter(b => b && b.unlocked && b.level > 0).length : 0;
+      const upgradeCost = Math.max(1, builtCount + 1);
+      const res = saveData.resources || {};
+      const canAfford = (res.wood || 0) >= upgradeCost && (res.stone || 0) >= upgradeCost;
+      const upgradeHTML = canUpgrade
+        ? `<div class="shrine-upgrade-box">
+            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;">UPGRADE ARTIFACT SHRINE</div>
+            <div style="color:#aaa;font-size:12px;margin:6px 0;">Unlock Slot ${shrineLevel+1} · Cost: ${upgradeCost} 🪵 Wood + ${upgradeCost} 🪨 Stone</div>
+            <div style="display:flex;gap:10px;margin:8px 0;justify-content:center;">
+              <span style="color:${(res.wood||0)>=upgradeCost?'#7fff7f':'#ff7f7f'};font-size:13px;">🪵 ${res.wood||0}/${upgradeCost}</span>
+              <span style="color:${(res.stone||0)>=upgradeCost?'#7fff7f':'#ff7f7f'};font-size:13px;">🪨 ${res.stone||0}/${upgradeCost}</span>
+            </div>
+            <button id="shrine-upgrade-btn" class="shrine-upgrade-btn" ${canAfford ? '' : 'disabled'}>
+              ${canAfford ? '🏛️ UPGRADE SHRINE' : '❌ Need Resources'}
+            </button>
+          </div>`
+        : `<div style="color:#00ffff;text-align:center;padding:12px;font-size:13px;font-family:Bangers,cursive;letter-spacing:2px;">◈ ALL 3 ARTIFACT SLOTS UNLOCKED ◈</div>`;
+
+      const modal = document.createElement('div');
+      modal.id = 'artifact-shrine-modal';
+      modal.style.cssText = [
+        'position:fixed','top:0','left:0','width:100%','height:100%',
+        'background:radial-gradient(ellipse at center,rgba(10,0,30,0.98) 0%,rgba(0,0,0,1) 100%)',
+        'z-index:200','overflow-y:auto','display:flex','flex-direction:column',
+        'align-items:center','padding:20px','box-sizing:border-box',
+        'font-family:Courier New,monospace'
+      ].join(';');
+
+      modal.innerHTML = `
+        <div style="max-width:680px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
+               border-bottom:1px solid rgba(0,255,255,0.3);padding-bottom:12px;">
+            <div>
+              <div style="color:#00ffff;font-family:Bangers,cursive;font-size:28px;letter-spacing:4px;
+                   text-shadow:0 0 20px rgba(0,255,255,0.8);">🏛️ THE ARTIFACT SHRINE</div>
+              <div style="color:#C9A227;font-size:12px;letter-spacing:2px;margin-top:4px;">
+                LEVEL ${shrineLevel} · ${unlockedSlots}/3 SLOTS ACTIVE</div>
+            </div>
+            <button id="shrine-back-btn" class="inv-back-btn">← Back</button>
+          </div>
+
+          <div style="color:#888;font-size:12px;margin-bottom:18px;line-height:1.6;
+               border:1px solid rgba(0,255,255,0.15);border-radius:8px;padding:12px;
+               background:rgba(0,255,255,0.03);">
+            <i>Artifacts provide massive passive stat boosts and only drop from Bosses or Void Expeditions.
+            Upgrade the Shrine to unlock additional slots.</i>
+          </div>
+
+          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;margin-bottom:12px;">
+            ◈ ARTIFACT SLOTS
+          </div>
+          <div class="shrine-slots-row">${slotHTML}</div>
+
+          ${upgradeHTML}
+
+          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;
+               margin-top:24px;margin-bottom:12px;">◈ ARTIFACT COLLECTION</div>
+          <div class="shrine-inv-list">${artifactInventoryHTML}</div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector('#shrine-back-btn').onclick = () => {
+        modal.remove();
+        if (campScreen) campScreen.style.display = 'flex';
+      };
+
+      const upgradeBtn = modal.querySelector('#shrine-upgrade-btn');
+      if (upgradeBtn) {
+        upgradeBtn.onclick = () => {
+          if (!canAfford) return;
+          // Deduct resources
+          saveData.resources.wood  -= upgradeCost;
+          saveData.resources.stone -= upgradeCost;
+          // Upgrade shrine level
+          if (!saveData.campBuildings.shrine) saveData.campBuildings.shrine = { level: 0, maxLevel: 3, unlocked: true };
+          saveData.campBuildings.shrine.level = Math.min(3, (saveData.campBuildings.shrine.level || 0) + 1);
+          saveSaveData();
+          if (typeof showStatChange === 'function') showStatChange(`🏛️ Artifact Shrine upgraded to Level ${saveData.campBuildings.shrine.level}!`);
+          modal.remove();
+          showArtifactShrineUI();
+        };
+      }
+
+      // Global helpers for inline handlers
+      window._shrineUnequip = (slotIdx) => {
+        if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        saveData.equippedArtifacts[slotIdx] = null;
+        saveSaveData();
+        modal.remove();
+        showArtifactShrineUI();
+      };
+
+      window._shrineEquipArtifact = (artifactId, invIdx) => {
+        if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        // Find first open unlocked slot
+        const firstOpen = equippedArtifacts.findIndex((v, i) => i < unlockedSlots && !v);
+        if (firstOpen === -1) {
+          if (typeof showStatChange === 'function') showStatChange('❌ All unlocked slots are full! Upgrade the Shrine or remove an artifact.');
+          return;
+        }
+        saveData.equippedArtifacts[firstOpen] = artifactId;
+        saveSaveData();
+        if (typeof showStatChange === 'function') showStatChange(`✅ Artifact equipped to Slot ${firstOpen + 1}!`);
+        modal.remove();
+        showArtifactShrineUI();
+      };
+    }
+    window.showArtifactShrineUI = showArtifactShrineUI;
 
     // Companion skill tree data
     const COMPANION_SKILLS = {
@@ -3939,6 +4532,7 @@
           },
           accountBuilding:     () => showAccountBuildingOverlay(),
           idleMenu:            () => showIdleSection(),
+          shrine:              () => showArtifactShrineUI(),
           codex:               () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest17_visitCodex') {
               progressTutorialQuest('quest17_visitCodex', true);
