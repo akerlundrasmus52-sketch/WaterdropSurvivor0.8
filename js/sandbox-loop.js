@@ -3431,10 +3431,6 @@
     }
   }
 
-  // ─── Enemy Death FX: water fountain + ground force wave ──────────────────────
-  function _spawnEnemyDeathFX(_x, _y, _z, _enemyType) { /* removed - enemy death FX was not intended */ }
-
-  function _updateDeathRings(_dt) { /* removed - enemy death rings were not intended */ }
     try {
       const pct = Math.min(100, (playerStats.exp / playerStats.expReq) * 100);
       const fill = document.getElementById('exp-fill');
@@ -6013,23 +6009,6 @@
       console.error('[SandboxLoop] XPStarSystem not loaded!');
     }
 
-    // Initialize enemy death force wave ring pool
-    if (!_deathRingPoolInited && scene) {
-      _deathRingPoolInited = true;
-      for (let _dri = 0; _dri < DEATH_RING_POOL_SIZE; _dri++) {
-        const _rGeo = new THREE.RingGeometry(0.05, 0.25, 36);
-        const _rMat = new THREE.MeshBasicMaterial({
-          color: 0x88DDFF, transparent: true, opacity: 0.0,
-          side: THREE.DoubleSide, depthWrite: false,
-        });
-        const _rMesh = new THREE.Mesh(_rGeo, _rMat);
-        _rMesh.rotation.x = -Math.PI / 2;
-        _rMesh.visible = false;
-        scene.add(_rMesh);
-        _deathRingPool.push(_rMesh);
-      }
-    }
-
     // Initialize gold coin pool
     _initGoldPool();
 
@@ -7109,9 +7088,6 @@
           _lvlUpRings.splice(_ri, 1);
         }
       }
-
-      // Enemy death ground force wave rings
-      _updateDeathRings(dt);
 
       // Persistent HUD: session timer and kill count
       _updatePersistentHUD(dt);
