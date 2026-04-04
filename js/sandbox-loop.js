@@ -5382,11 +5382,15 @@
 
     // Renderer - expose as window global for gem-classes.js and other systems
     window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // Mobile detection: high-DPI mobile screens (e.g. iPhone 16) can have pixel ratios
+    // of 3+ which causes the GPU to render post-processing at 4K resolution, tanking FPS.
+    // Cap pixel ratio at 1.5 on mobile to prevent post-processing overload.
+    const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
     // Apply saved or default graphics quality — this sets pixelRatio, shadowMap, toneMapping
     let _savedQuality = DEFAULT_QUALITY;
     try { _savedQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
     // Apply defaults first so properties exist before _applyGraphicsQuality runs
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, _isMobile ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
@@ -5633,7 +5637,8 @@
         break;
       case 'ultra':
       default:
-        renderer.setPixelRatio(window.devicePixelRatio);
+        // Cap at 1.5 on mobile even in ultra mode to prevent GPU overload from 4K post-processing
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, _isMobile ? 1.5 : 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;

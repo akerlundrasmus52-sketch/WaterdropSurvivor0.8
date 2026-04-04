@@ -356,6 +356,9 @@
       sideChallenges: {
         kill10Enemies: { completed: false, progress: 0, target: 10 }
       },
+      // Quest Hall challenge & achievement claim tracking
+      questHallChallenges: {},
+      questHallAchievements: {},
       // First-Run Tutorial System (speech bubble tutorial)
       firstRunTutorial: {
         step: 0,       // 0=not started, 1-16=active steps (see TUT_STEP constants), 17=complete
@@ -469,6 +472,9 @@
           saveData.tutorialQuests = { ...defaultSaveData.tutorialQuests, ...(saveData.tutorialQuests || {}) };
           saveData.tutorialQuests.landmarksFound = { ...defaultSaveData.tutorialQuests.landmarksFound, ...(saveData.tutorialQuests.landmarksFound || {}) };
           saveData.sideChallenges = { ...defaultSaveData.sideChallenges, ...(saveData.sideChallenges || {}) };
+          // Quest Hall challenges & achievements tracking (new fields — safe defaults)
+          saveData.questHallChallenges = saveData.questHallChallenges || {};
+          saveData.questHallAchievements = saveData.questHallAchievements || {};
           // Tutorial system (new fields)
           saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
           // First-run tutorial system

@@ -1292,6 +1292,297 @@ function showRecycleScreen() {
 // are identical to the original file — only the 3 bugs above were fixed.
 // ============================================================
 
+// ── Annunaki Forge Overlay (Camp mode) ──────────────────────────────────
+// Opened when player clicks the Forge building in the 3D camp hub.
+// Contains two tabs:
+//   1. Stat Upgrades  — permanent upgrades using PERMANENT_UPGRADES
+//   2. Weapon Merging — combine 3 identical weapons of same rarity → next rarity
+function _showProgressionShopOverlay() {
+  const existing = document.getElementById('progression-shop-overlay');
+  if (existing) existing.remove();
+
+  if (window.CampWorld) window.CampWorld.pauseInput();
+
+  // ── Rarity data ──────────────────────────────────────────────────────────
+  const FORGE_RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+  const FORGE_RARITY_COLORS = {
+    common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff',
+    epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444'
+  };
+  const FORGE_RARITY_NAMES = {
+    common: 'Common', uncommon: 'Uncommon', rare: 'Rare',
+    epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic'
+  };
+
+  // ── Overlay shell ────────────────────────────────────────────────────────
+  const overlay = document.createElement('div');
+  overlay.id = 'progression-shop-overlay';
+  overlay.className = 'camp-bld-overlay';
+  overlay.style.zIndex = '500';
+
+  const panel = document.createElement('div');
+  panel.className = 'camp-bld-panel';
+  panel.style.cssText = (panel.style.cssText || '') + 'max-width:600px;display:flex;flex-direction:column;padding:0;overflow:hidden;';
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'camp-bld-header';
+  header.innerHTML = '<span class="camp-bld-title">⚒️ ANNUNAKI FORGE</span>';
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'camp-bld-close-btn';
+  closeBtn.textContent = '✕';
+  closeBtn.title = 'Close';
+  closeBtn.onclick = () => {
+    panel.classList.add('closing');
+    setTimeout(() => { overlay.remove(); if (window.CampWorld) window.CampWorld.resumeInput(); }, 200);
+  };
+  header.appendChild(closeBtn);
+  panel.appendChild(header);
+
+  // Subtitle
+  const sub = document.createElement('div');
+  sub.className = 'camp-bld-subtitle';
+  sub.textContent = 'Forge stat upgrades · Merge 3 identical weapons into a higher rarity';
+  panel.appendChild(sub);
+
+  // Tab bar
+  const tabBar = document.createElement('div');
+  tabBar.style.cssText = 'display:flex;border-bottom:2px solid rgba(255,100,0,0.3);';
+  const FORGE_TABS = [
+    { id: 'upgrades', label: '⬆️ Stat Upgrades',  color: '#FFD700' },
+    { id: 'merge',    label: '🔥 Weapon Merging', color: '#ff6600' }
+  ];
+  let _forgeTab = 'upgrades';
+  const tabBody = document.createElement('div');
+  tabBody.style.cssText = 'flex:1;overflow-y:auto;padding:16px;max-height:55vh;';
+
+  function _renderForgeTab() {
+    tabBody.innerHTML = '';
+    FORGE_TABS.forEach(t => {
+      const btn = tabBar.querySelector('[data-ftab="' + t.id + '"]');
+      if (btn) {
+        btn.style.borderBottom = t.id === _forgeTab ? '3px solid ' + t.color : '3px solid transparent';
+        btn.style.color = t.id === _forgeTab ? t.color : '#666';
+      }
+    });
+    if (_forgeTab === 'upgrades') _renderForgeUpgradesTab(tabBody);
+    else _renderForgeMergeTab(tabBody);
+  }
+
+  FORGE_TABS.forEach(t => {
+    const btn = document.createElement('button');
+    btn.setAttribute('data-ftab', t.id);
+    btn.style.cssText = 'flex:1;background:none;border:none;border-bottom:3px solid transparent;color:#666;font-family:\'Bangers\',cursive;font-size:15px;letter-spacing:1px;padding:10px 4px;cursor:pointer;transition:color 0.2s,border-color 0.2s;';
+    btn.textContent = t.label;
+    btn.onclick = () => { _forgeTab = t.id; _renderForgeTab(); };
+    tabBar.appendChild(btn);
+  });
+  panel.appendChild(tabBar);
+  panel.appendChild(tabBody);
+  overlay.appendChild(panel);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeBtn.onclick(); });
+  document.body.appendChild(overlay);
+  _renderForgeTab();
+
+  // ── Tab 1: Stat Upgrades ─────────────────────────────────────────────────
+  function _renderForgeUpgradesTab(container) {
+    if (typeof PERMANENT_UPGRADES === 'undefined') {
+      container.innerHTML = '<div style="color:#888;text-align:center;padding:20px;">Upgrades not available in camp.</div>';
+      return;
+    }
+    let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#FFD700;letter-spacing:2px;margin-bottom:12px;">⬆️ PERMANENT STAT UPGRADES</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">';
+    Object.keys(PERMANENT_UPGRADES).forEach(key => {
+      const up = PERMANENT_UPGRADES[key];
+      const lvl = saveData.upgrades[key] || 0;
+      const maxed = lvl >= up.maxLevel;
+      const cost = getCost ? getCost(key) : 0;
+      const canBuy = !maxed && saveData.gold >= cost;
+      html += `<div style="background:rgba(255,215,0,0.06);border:1px solid ${maxed ? 'rgba(0,180,0,0.5)' : 'rgba(255,215,0,0.25)'};border-radius:6px;padding:10px;">
+        <div style="font-family:'Bangers',cursive;font-size:14px;color:${maxed ? '#27ae60' : '#FFD700'};margin-bottom:3px;">${up.name}</div>
+        <div style="font-size:10px;color:#888;margin-bottom:6px;">${up.description}</div>
+        <div style="font-size:10px;color:#aaa;margin-bottom:6px;">Level: ${lvl} / ${up.maxLevel}</div>
+        ${maxed ? '<div style="font-size:11px;color:#27ae60;font-weight:bold;">✅ MAX LEVEL</div>'
+          : `<button class="forge-buy-btn" data-key="${key}" ${canBuy ? '' : 'disabled'} style="font-size:12px;padding:5px 10px;background:${canBuy ? 'linear-gradient(to bottom,#C9A227,#8B6914)' : 'rgba(60,50,0,0.5)'};color:${canBuy ? '#000' : '#555'};border:1px solid ${canBuy ? '#8B6914' : '#333'};border-radius:4px;cursor:${canBuy ? 'pointer' : 'not-allowed'};font-weight:bold;letter-spacing:1px;">BUY — ${cost} 💰</button>`
+        }
+      </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    container.querySelectorAll('.forge-buy-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const key = this.getAttribute('data-key');
+        if (typeof buyUpgrade === 'function') buyUpgrade(key);
+        _renderForgeTab();
+      });
+    });
+  }
+
+  // ── Tab 2: Weapon Merging ─────────────────────────────────────────────────
+  // Mechanic: select 3 identical weapons (same name + rarity) → merge into 1 of next rarity
+  let _mergeSelection = []; // array of inventory indices
+
+  function _getWeapons() {
+    return (saveData.inventory || [])
+      .map((item, idx) => ({ ...item, _idx: idx }))
+      .filter(item => item && item.type === 'weapon');
+  }
+
+  function _renderForgeMergeTab(container) {
+    _mergeSelection = _mergeSelection.filter(idx => {
+      const item = (saveData.inventory || [])[idx];
+      return item && item.type === 'weapon';
+    });
+
+    const weapons = _getWeapons();
+    // Group by (name + rarity)
+    const groups = {};
+    weapons.forEach(w => {
+      const key = (w.name || 'Weapon') + '|' + (w.rarity || 'common');
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(w);
+    });
+
+    let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#ff6600;letter-spacing:2px;margin-bottom:4px;">🔥 WEAPON MERGING</div>';
+    html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Select <b style="color:#ff6600;">3 identical weapons</b> of the same rarity to forge them into a higher rarity weapon. <span style="color:#555;">Weapons must share the same name.</span></div>';
+
+    if (weapons.length === 0) {
+      html += '<div style="color:#555;text-align:center;padding:20px;font-size:13px;">No weapons in inventory. Equip or obtain weapons to merge them.</div>';
+      container.innerHTML = html;
+      return;
+    }
+
+    html += '<div id="forge-weapon-list">';
+    Object.keys(groups).forEach(groupKey => {
+      const grp = groups[groupKey];
+      const sample = grp[0];
+      const rarity = sample.rarity || 'common';
+      const col = FORGE_RARITY_COLORS[rarity] || '#aaa';
+      const rarityIdx = FORGE_RARITY_ORDER.indexOf(rarity);
+      const canMerge = grp.length >= 3 && rarityIdx >= 0 && rarityIdx < FORGE_RARITY_ORDER.length - 1;
+      const nextRarity = canMerge ? FORGE_RARITY_ORDER[rarityIdx + 1] : null;
+      const nextCol = nextRarity ? FORGE_RARITY_COLORS[nextRarity] : '#aaa';
+      html += `<div style="background:rgba(255,100,0,0.06);border:1px solid ${col}66;border-radius:6px;padding:12px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="font-size:20px;">⚔️</div>
+          <div style="flex:1;">
+            <div style="font-family:'Bangers',cursive;font-size:15px;color:${col};letter-spacing:1px;">${sample.name || 'Weapon'}</div>
+            <div style="font-size:10px;color:#888;">${FORGE_RARITY_NAMES[rarity] || rarity} · You have: <b style="color:${col};">${grp.length}</b></div>
+            ${sample.description ? `<div style="font-size:10px;color:#555;margin-top:2px;">${sample.description}</div>` : ''}
+          </div>
+          ${canMerge ? `<div style="text-align:right;font-size:10px;color:#aaa;">3 → 1<br><span style="color:${nextCol};font-family:'Bangers',cursive;font-size:12px;">${FORGE_RARITY_NAMES[nextRarity]}</span></div>` : ''}
+        </div>
+        ${canMerge
+          ? `<button class="forge-merge-btn" data-gkey="${CSS.escape ? CSS.escape(groupKey) : groupKey.replace(/[|]/g,'_')}" data-gkey-raw="${groupKey.replace(/"/g,'&quot;')}" style="width:100%;font-size:13px;padding:8px;background:linear-gradient(135deg,#3a0000,#7a2200);color:#ff6600;border:1px solid #ff6600;border-radius:4px;cursor:pointer;font-family:'Bangers',cursive;letter-spacing:2px;transition:all 0.2s;">🔥 MERGE 3 INTO ${(FORGE_RARITY_NAMES[nextRarity] || '').toUpperCase()}</button>`
+          : `<div style="font-size:10px;color:#444;text-align:center;">${grp.length < 3 ? `Need ${3 - grp.length} more to merge` : 'Max rarity reached'}</div>`
+        }
+      </div>`;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+    container.querySelectorAll('.forge-merge-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const rawKey = this.getAttribute('data-gkey-raw');
+        _executeWeaponMerge(rawKey, container);
+      });
+    });
+  }
+
+  function _executeWeaponMerge(groupKey, container) {
+    const inv = saveData.inventory || [];
+    const [targetName, targetRarity] = groupKey.split('|');
+    const rarityIdx = FORGE_RARITY_ORDER.indexOf(targetRarity);
+    if (rarityIdx < 0 || rarityIdx >= FORGE_RARITY_ORDER.length - 1) return;
+
+    // Find 3 matching weapons
+    const matches = inv.map((item, idx) => ({ item, idx }))
+      .filter(({ item }) => item && item.type === 'weapon' && item.name === targetName && item.rarity === targetRarity);
+    if (matches.length < 3) return;
+
+    // Remove 3 from inventory
+    const toRemove = [matches[0].idx, matches[1].idx, matches[2].idx].sort((a, b) => b - a);
+    toRemove.forEach(idx => inv.splice(idx, 1));
+
+    // Create merged weapon of next rarity
+    const nextRarity = FORGE_RARITY_ORDER[rarityIdx + 1];
+    const template = { ...matches[0].item };
+    template.rarity = nextRarity;
+    // Generate a unique id for the new item
+    template.id = 'forge_' + targetName.toLowerCase().replace(/\s+/g, '_') + '_' + nextRarity + '_' + Date.now();
+    // Boost stats by rarity multiplier
+    const multiplier = { common: 1.0, uncommon: 1.3, rare: 1.6, epic: 2.0, legendary: 2.5, mythic: 3.2 }[nextRarity] || 1.3;
+    if (template.stats) {
+      for (const k in template.stats) {
+        if (typeof template.stats[k] === 'number') {
+          template.stats[k] = Math.round(template.stats[k] * multiplier);
+        }
+      }
+    }
+    inv.push(template);
+    saveData.inventory = inv;
+
+    // Grant Account XP for merging
+    const xpReward = 20 * (rarityIdx + 1);
+    if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+      window.GameAccount.addXP(xpReward, 'Forge Merge: ' + targetName, saveData);
+    } else if (typeof addAccountXP === 'function') {
+      addAccountXP(xpReward);
+    }
+
+    if (typeof saveSaveData === 'function') saveSaveData();
+
+    // ── Merge Animation ──────────────────────────────────────────────────
+    _playForgeMergeAnimation(FORGE_RARITY_COLORS[nextRarity] || '#ff6600', FORGE_RARITY_NAMES[nextRarity] || nextRarity, targetName, () => {
+      _renderForgeTab();
+    });
+  }
+
+  // ── Merge success animation ──────────────────────────────────────────────
+  function _playForgeMergeAnimation(rarityColor, rarityName, weaponName, onDone) {
+    const anim = document.createElement('div');
+    anim.className = 'forge-merge-anim';
+    anim.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;pointer-events:none;overflow:hidden;';
+
+    // Screen shake via CSS class
+    document.body.classList.add('forge-screen-shake');
+    setTimeout(() => document.body.classList.remove('forge-screen-shake'), 600);
+
+    // Radial glow flash
+    const flash = document.createElement('div');
+    flash.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 50% 50%,${rarityColor}55 0%,transparent 70%);animation:forgeMergeFlash 0.8s ease-out forwards;`;
+    anim.appendChild(flash);
+
+    // Central reveal card
+    const card = document.createElement('div');
+    card.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#0a0000,#1a0500);border:3px solid ${rarityColor};border-radius:12px;padding:24px 36px;text-align:center;animation:forgeMergeReveal 0.7s 0.3s cubic-bezier(0.175,0.885,0.32,1.5) forwards;box-shadow:0 0 40px ${rarityColor},0 0 80px ${rarityColor}55;`;
+    card.innerHTML = `
+      <div style="font-size:42px;margin-bottom:8px;">⚔️</div>
+      <div style="font-family:'Bangers',cursive;font-size:28px;color:${rarityColor};letter-spacing:3px;text-shadow:0 0 20px ${rarityColor};">${weaponName}</div>
+      <div style="font-family:'Bangers',cursive;font-size:18px;color:${rarityColor};letter-spacing:4px;margin-top:6px;opacity:0.9;">✨ ${rarityName.toUpperCase()} ✨</div>
+      <div style="font-size:12px;color:#888;margin-top:8px;letter-spacing:1px;">FORGED BY THE ANNUNAKI</div>
+    `;
+    anim.appendChild(card);
+
+    // Sparks burst
+    for (let i = 0; i < 28; i++) {
+      const spark = document.createElement('div');
+      const angle = (i / 28) * 360;
+      const dist = 80 + Math.random() * 180;
+      const size = 3 + Math.random() * 5;
+      spark.style.cssText = `position:absolute;top:50%;left:50%;width:${size}px;height:${size}px;background:${rarityColor};border-radius:50%;transform-origin:0 0;animation:forgeSpark 0.9s ${Math.random() * 0.3}s ease-out forwards;--spark-angle:${angle}deg;--spark-dist:${dist}px;`;
+      anim.appendChild(spark);
+    }
+
+    document.body.appendChild(anim);
+    setTimeout(() => {
+      anim.style.transition = 'opacity 0.4s';
+      anim.style.opacity = '0';
+      setTimeout(() => { anim.remove(); if (onDone) onDone(); }, 400);
+    }, 1800);
+  }
+}
+
 function showProgressionShop() {
   const _fromCamp = window.CampWorld && window.CampWorld.isActive;
   if (_fromCamp) {
