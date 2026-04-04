@@ -4717,17 +4717,21 @@
     window.WORLD_QUESTS.push(
       {
         id: 'investigate_ufo_crash',
-        title: 'Investigate the UFO Crash Site',
-        description: 'Something crashed in the eastern fields. Investigate.',
-        objectives: [{ type: 'reach_location', locationId: 'ufo_crash', radius: 18 }],
+        title: '🛸 The UFO Crash Site',
+        description: 'A.I.D.A.: "Scavengers found a note about a crashed alien ship. They saw an alien pacing around it in distress… This might hold clues to Waterdrop\'s existence."',
+        aidaDialogue: 'Scavengers found a note about a crashed alien ship. They saw an alien pacing around it in distress… This might hold clues to Waterdrop\'s existence.',
+        objectives: [{ type: 'reach_location', locationId: 'ufo_crash', x: -50, z: 25, radius: 18 }],
         reward: { xp: 500 },
-        unlocks: 'retrieve_grey_egg'
+        unlocks: 'retrieve_grey_egg',
+        showArrow: true  // Enable directional arrow for this quest
       },
       {
         id: 'retrieve_grey_egg',
-        title: 'Retrieve the Grey Egg',
-        description: 'The alien had an egg. Take it.',
-        objectives: [{ type: 'pickup_item', itemId: 'grey_companion_egg' }],
-        reward: { xp: 800, items: ['grey_companion_egg'] }
+        title: '🥚 Retrieve the Alien Egg',
+        description: 'Defeat The Grey and claim the mysterious egg it guards.',
+        aidaDialogue: 'The alien creature is protecting something... An egg! This could be significant. Defeat it and retrieve the egg.',
+        objectives: [{ type: 'defeat_boss', bossId: 'grey_boss' }, { type: 'pickup_item', itemId: 'grey_companion_egg' }],
+        reward: { xp: 800, items: ['grey_companion_egg'] },
+        returnToCamp: true  // Quest completes when player returns to camp with egg
       }
     );
