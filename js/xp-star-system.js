@@ -56,9 +56,9 @@ const XP_CFG = {
   STAR_POINTS: 5,              // 5-pointed star
 
   // Magnetism
-  MAGNET_RANGE: 12.0,          // Pickup range (quadratic pull within 12 units) - increased from 8.0 for better early game experience
-  MAGNET_SPEED: 3.5,           // Base pull speed at edge of range - increased from 3.0 for faster collection
-  COLLECT_RANGE: 1.2,          // Collection distance - increased from 0.8 so players don't need to be "millimeters away"
+  MAGNET_RANGE: 3.5,           // Pickup range at level 0 (no upgrades). Previously 12.0 which was far too strong.
+  MAGNET_SPEED: 4.5,           // Base pull speed at edge of range
+  COLLECT_RANGE: 1.0,          // Collection distance
 
   // Pool size
   POOL_SIZE: 60,               // Pre-allocated stars (BUG C: increased from 50 to 60)

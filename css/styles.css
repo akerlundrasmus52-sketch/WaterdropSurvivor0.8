@@ -2756,6 +2756,44 @@
       border-color: #e0e0e0;
       transform: translateY(-12px) scale(1.06) rotateX(5deg);
     }
+
+    /* Uncommon = Green */
+    .upgrade-card.rarity-uncommon {
+      border-color: #44bb44;
+      background: linear-gradient(135deg, #091509 0%, #051005 100%);
+      animation: rarity-glow-uncommon 3.2s ease-in-out infinite;
+      --rarity-glow-color: rgba(68,187,68,0.60);
+    }
+    .upgrade-card.rarity-uncommon:hover {
+      box-shadow:
+        0 0 0 4px rgba(4,18,4,0.97),
+        0 14px 36px rgba(0,0,0,0.8),
+        0 0 16px rgba(68,187,68,0.38),
+        0 0 28px rgba(50,170,50,0.20),
+        inset 0 2px 0 rgba(150,255,150,0.14);
+      border-color: #66dd66;
+      transform: translateY(-12px) scale(1.06) rotateX(5deg);
+    }
+    @keyframes rarity-glow-uncommon {
+      0%, 100% {
+        box-shadow:
+          0 0 0 4px rgba(4,18,4,0.97),
+          0 8px 20px rgba(0,0,0,0.7),
+          0 4px 12px rgba(0,0,0,0.5),
+          0 0 8px rgba(68,187,68,0.18),
+          0 0 16px rgba(50,170,50,0.10),
+          inset 0 2px 0 rgba(150,255,150,0.08);
+      }
+      50% {
+        box-shadow:
+          0 0 0 5px rgba(3,16,3,0.98),
+          0 10px 26px rgba(0,0,0,0.75),
+          0 4px 12px rgba(0,0,0,0.5),
+          0 0 14px rgba(68,187,68,0.30),
+          0 0 26px rgba(50,170,50,0.16),
+          inset 0 2px 0 rgba(150,255,150,0.12);
+      }
+    }
     
     .upgrade-card.rarity-rare {
       border-color: #3498DB;
@@ -3012,6 +3050,7 @@
       to   { transform: rotate(360deg); }
     }
     .upgrade-card.rarity-common    { --spin-dur: 4s; }
+    .upgrade-card.rarity-uncommon  { --spin-dur: 3.5s; }
     .upgrade-card.rarity-rare      { --spin-dur: 3s; }
     .upgrade-card.rarity-epic      { --spin-dur: 2s; }
     .upgrade-card.rarity-legendary { --spin-dur: 1.4s; }
@@ -5506,37 +5545,14 @@
     #you-died-banner {
       display: none;
       position: fixed;
-      top: 30%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-family: 'Courier New', monospace;
-      font-size: 64px;
-      color: #00ffff;
-      text-shadow:
-        0 0 10px #00ffff,
-        0 0 20px #00ffff,
-        0 0 40px #8a2be2,
-        0 0 80px #8a2be2,
-        2px 2px 4px #000;
-      letter-spacing: 8px;
-      pointer-events: none;
-      z-index: 300;
-      animation: you-died-pop 0.5s ease-out, annunakiGlow 1.5s ease-in-out infinite;
-      text-align: center;
-      background: linear-gradient(135deg, rgba(10, 0, 21, 0.9) 0%, rgba(26, 0, 51, 0.9) 100%);
-      padding: 40px;
-      border: 3px solid #00ffff;
-      border-radius: 20px;
-      box-shadow:
-        0 0 30px rgba(0, 255, 255, 0.6),
-        0 0 60px rgba(138, 43, 226, 0.5),
-        inset 0 0 40px rgba(0, 255, 255, 0.1);
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      transform: none;
       pointer-events: none;
       z-index: 300;
+      background: linear-gradient(135deg, rgba(10, 0, 21, 0.92) 0%, rgba(26, 0, 51, 0.92) 100%);
       animation: death-vignette-pulse 2s ease-in-out infinite;
     }
     #you-died-text {

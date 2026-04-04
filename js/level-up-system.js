@@ -4,10 +4,11 @@
 
 // ── ARPG Deep Mechanics: LVL UP Rarities, Focus Path, Boss Chests ───────────
 
-// Rarity table: Common(White)=50%, Rare(Blue)=30%, Epic(Purple)=15%, Legendary(Gold)=4%, Mythic(Red)=1%
-// Thresholds: roll > 0.50 = Common, > 0.20 = Rare, > 0.05 = Epic, > 0.01 = Legendary, else = Mythic
+// Rarity table: Common(White)=45%, Uncommon(Green)=25%, Rare(Blue)=18%, Epic(Purple)=8%, Legendary(Gold)=3%, Mythic(Red)=1%
+// Thresholds: roll > 0.55 = Common, > 0.30 = Uncommon, > 0.12 = Rare, > 0.04 = Epic, > 0.01 = Legendary, else = Mythic
 const UPGRADE_RARITIES = [
   { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, color: '#ffffff' },
+  { name: 'uncommon',  label: 'UNCOMMON',  cssClass: 'rarity-uncommon',  scale: 1.3, color: '#55cc55' },
   { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, color: '#00aaff' },
   { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, color: '#aa00ff' },
   { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 3.0, color: '#ffd700' },
@@ -25,11 +26,12 @@ const BOSS_CHEST_GOLD_RANGE = 101; // 0–100 random bonus on top of minimum
 
 function rollUpgradeRarity() {
   const r = Math.random();
-  if (r > 0.50) return UPGRADE_RARITIES[0]; // Common   (50%)
-  if (r > 0.20) return UPGRADE_RARITIES[1]; // Rare     (30%)
-  if (r > 0.05) return UPGRADE_RARITIES[2]; // Epic     (15%)
-  if (r > 0.01) return UPGRADE_RARITIES[3]; // Legendary (4%)
-  return UPGRADE_RARITIES[4];               // Mythic    (1%)
+  if (r > 0.55) return UPGRADE_RARITIES[0]; // Common    (45%)
+  if (r > 0.30) return UPGRADE_RARITIES[1]; // Uncommon  (25%)
+  if (r > 0.12) return UPGRADE_RARITIES[2]; // Rare      (18%)
+  if (r > 0.04) return UPGRADE_RARITIES[3]; // Epic       (8%)
+  if (r > 0.01) return UPGRADE_RARITIES[4]; // Legendary  (3%)
+  return UPGRADE_RARITIES[5];               // Mythic      (1%)
 }
 
 // Returns a copy of a LVL UP with rarity applied — scaled stats and updated desc/apply
@@ -1619,6 +1621,7 @@ window.spawnBossChest = function(x, z) {
           try {
             const rarityFlashColors = {
               'rarity-common':    'rgba(255,255,255,0.25)',
+              'rarity-uncommon':  'rgba(85,204,85,0.30)',
               'rarity-rare':      'rgba(0,170,255,0.35)',
               'rarity-epic':      'rgba(170,0,255,0.40)',
               'rarity-legendary': 'rgba(255,215,0,0.45)',
@@ -1626,6 +1629,7 @@ window.spawnBossChest = function(x, z) {
             };
             const rarityMeshColors = {
               'rarity-common':    0xFFFFFF,
+              'rarity-uncommon':  0x55CC55,
               'rarity-rare':      0x00AAFF,
               'rarity-epic':      0xAA00FF,
               'rarity-legendary': 0xFFD700,
