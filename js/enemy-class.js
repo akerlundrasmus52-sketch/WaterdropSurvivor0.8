@@ -3282,6 +3282,11 @@
           clearTimeout(this._phaseClearTimer);
           this._phaseClearTimer = null;
         }
+        // Cancel pending damage-flush timer to prevent floating text on dead enemy.
+        if (this._damageFlushTimer) {
+          clearTimeout(this._damageFlushTimer);
+          this._damageFlushTimer = null;
+        }
         
         // Hide ground shadow for the duration of the death animation.
         // With pooling the shadow mesh is kept alive and restored on reuse;
