@@ -1656,7 +1656,7 @@ window.spawnBossChest = function(x, z) {
             if (window.GameDebug) window.GameDebug.onUpgradeApplied(u.id, playerStats);
           } catch (error) {
             console.error('Error applying LVL UP:', error);
-            if (window.GameDebug) window.GameDebug.oneshot('upgrade_err_' + (u.id || 'unk'), 'LVL UP apply error ' + (u.id || '') + ': ' + error.message, error.stack);
+            if (window.GameDebug) window.GameDebug.oshot('upgrade_err_' + (u.id || 'unk'), 'LVL UP apply error ' + (u.id || '') + ': ' + error.message, error.stack);
           }
 
           // Always close modal

@@ -6030,7 +6030,7 @@
       if (this._waveNumber === 10) {
         _showWaveNotification('👽 WAVE 10 — GREY ALIEN SCOUT DETECTED! 👽', '#00ffaa', 4000);
         if (typeof GreyBossSystem !== 'undefined' && GreyBossSystem.spawn) {
-          setTimeout(function() {
+          SeqWaveManager._setTimeout(function() {
             if (typeof GreyBossSystem.spawn === 'function') {
               GreyBossSystem.spawn();
             }
@@ -6043,7 +6043,7 @@
       if (this._waveNumber === 20) {
         _showWaveNotification('🤖 WAVE 20 — A.I.D.A. PROTOCOL INITIATED! 🤖', '#ff00ff', 4000);
         if (typeof AidaBoss !== 'undefined' && AidaBoss.spawn) {
-          setTimeout(function() {
+          SeqWaveManager._setTimeout(function() {
             AidaBoss.spawn();
           }, 1000);
         }
@@ -6054,7 +6054,7 @@
       if (this._waveNumber === 30) {
         _showWaveNotification('⚡ WAVE 30 — THE ANNUNAKI AWAKENS! ⚡', '#ffd700', 4000);
         if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.spawn) {
-          setTimeout(function() {
+          SeqWaveManager._setTimeout(function() {
             AnnunakiBoss.spawn();
           }, 1000);
         }

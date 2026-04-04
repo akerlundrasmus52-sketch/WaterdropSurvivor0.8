@@ -33,8 +33,8 @@
 ✅ **Zero GC Spikes**: No `new` allocations during gameplay
 
 ### CRITICAL RULES FOR ALL FUTURE AI AGENTS
-1. **ONLY modify Sandbox 2.0**: `sandbox.html`, `js/sandbox-loop.js`, `js/engine2.js`
-2. **NEVER touch old map**: `index.html`, `world-gen.js`, `game-loop.js` are DEPRECATED
+1. **Work only on the live Sandbox 2.0 game**: `sandbox.html` is the production entry point, and edits may include any scripts/systems it uses (for example `js/sandbox-loop.js`, `js/engine2.js`, quest/level-up/UI systems, boss systems, and other scripts loaded by `sandbox.html`)
+2. **NEVER touch deprecated old-map files**: `index.html`, `world-gen.js`, `game-loop.js` and other old-map-only files are DEPRECATED unless a task explicitly says otherwise
 3. **Maintain object pooling**: Pre-allocate all objects, reuse from pools
 4. **Preserve InstancedMesh**: All repeated geometry must use instanced rendering
 5. **Test performance**: Run performance audits, maintain 120 FPS

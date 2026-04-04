@@ -54,8 +54,8 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
 - **Frame Budget**: 8.33ms per frame maximum
 
 **IMPORTANT RULES FOR FUTURE AI AGENTS:**
-1. **ONLY modify Sandbox 2.0 files**: `sandbox.html`, `js/sandbox-loop.js`, `js/engine2.js`
-2. **DO NOT touch the old map** (`index.html`, `world-gen.js`, `game-loop.js`) unless explicitly instructed
+1. **Modify active Sandbox 2.0 production files and their loaded dependencies** — including `sandbox.html`, `js/sandbox-loop.js`, `js/engine2.js`, and production systems loaded by Sandbox 2.0 such as `js/quest-system.js`, `js/level-up-system.js`, `js/ui.js`, boss systems, and other scripts referenced in `sandbox.html`
+2. **DO NOT touch deprecated old-map files** (`index.html`, `world-gen.js`, `game-loop.js`) unless explicitly instructed
 3. **Maintain object pooling** — never allocate objects during gameplay
 4. **Preserve InstancedMesh rendering** — all repeated geometry must be instanced
 5. **Test performance** — ensure 120 FPS is maintained after changes
