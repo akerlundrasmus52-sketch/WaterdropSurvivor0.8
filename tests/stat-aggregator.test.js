@@ -15,8 +15,11 @@
 beforeAll(() => {
   // Suppress the registration log that the module emits on load.
   jest.spyOn(console, 'log').mockImplementation(() => {});
-  require('../js/stat-aggregator.js');
-  console.log.mockRestore();
+  try {
+    require('../js/stat-aggregator.js');
+  } finally {
+    console.log.mockRestore();
+  }
 });
 
 // Helper: reset globals to a clean state before each test.
@@ -743,72 +746,76 @@ describe('calculateTotalPlayerStats — clamping', () => {
 // Alias synchronization
 // ---------------------------------------------------------------------------
 describe('calculateTotalPlayerStats — alias sync', () => {
+  // baseline() returns early when saveData is absent, skipping the alias-sync
+  // block. Use an empty saveData object so the full function runs.
+  function synced() {
+    window.saveData = {};
+    return calc();
+  }
+
   test('fireRate and gunFireRate are equal after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.gunFireRate).toBe(s.fireRate);
   });
 
   test('reloadSpeed and gunReloadSpeed are equal after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.gunReloadSpeed).toBe(s.reloadSpeed);
   });
 
   test('aimSpeed and gunAimSpeed are equal after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.gunAimSpeed).toBe(s.aimSpeed);
   });
 
   test('projectileFireRate equals fireRate after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.projectileFireRate).toBe(s.fireRate);
   });
 
   test('meleeSwingSpeed equals meleeAttackSpeed after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.meleeSwingSpeed).toBe(s.meleeAttackSpeed);
   });
 
   test('meleeCleaveAngle equals cleaveAngle after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.meleeCleaveAngle).toBe(s.cleaveAngle);
   });
 
   test('hpRegenPerSecond equals hpRegen after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.hpRegenPerSecond).toBe(s.hpRegen);
   });
 
   test('critDamageMultiplier equals critDmg after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.critDamageMultiplier).toBe(s.critDmg);
   });
 
   test('xpCollectionRadius equals pickupRange after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.xpCollectionRadius).toBe(s.pickupRange);
   });
 
   test('dashIframes equals dashInvincibilityFrames after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.dashIframes).toBe(s.dashInvincibilityFrames);
   });
 
   test('chainCount equals lightningChainCount after sync', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.chainCount).toBe(s.lightningChainCount);
   });
 
   test('goldDropMultiplier is at least 1.0 and equals 1 + goldDropBonus', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.goldDropMultiplier).toBeGreaterThanOrEqual(1.0);
     expect(s.goldDropMultiplier).toBeCloseTo(1.0 + (s.goldDropBonus || 0));
   });
 
   test('frictionGrip and friction are consistent', () => {
-    // Use an empty saveData so calculateTotalPlayerStats runs all the way
-    // through the sync block (no-saveData path returns early before sync).
-    window.saveData = {};
-    const s = calc();
+    const s = synced();
     // frictionGrip > 0 → friction = frictionGrip * 500
     if (s.frictionGrip > 0) {
       expect(s.friction).toBeCloseTo(s.frictionGrip * 500);
@@ -819,12 +826,12 @@ describe('calculateTotalPlayerStats — alias sync', () => {
   });
 
   test('criticalHitChance equals critChance', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.criticalHitChance).toBe(s.critChance);
   });
 
   test('criticalHitDamageMulti equals critDmg', () => {
-    const s = baseline();
+    const s = synced();
     expect(s.criticalHitDamageMulti).toBe(s.critDmg);
   });
 });
