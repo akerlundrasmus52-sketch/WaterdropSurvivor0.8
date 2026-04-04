@@ -360,7 +360,10 @@
         return;
       }
 
-      const wasGameActive = typeof isGameActive !== 'undefined' && isGameActive && !isGameOver;
+      const wasGameActive =
+        typeof isGameActive !== 'undefined' &&
+        isGameActive &&
+        !(typeof isGameOver !== 'undefined' && isGameOver);
       if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(true);
 
       const overlay = document.createElement('div');
@@ -2884,8 +2887,7 @@
             const rc = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
             const rs  = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
             const typeIcon = { ring:'💍', amulet:'📿', helmet:'⛑️', headband:'🎀', boots:'👢', necklace:'📿', earrings:'💎' }[item.type] || '🛡️';
-            const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(g => g && g.id === item.id);
-            const isSlotEquipped = saveData.equippedGear && saveData.equippedGear[item.type] && saveData.equippedGear[item.type].id === item.id;
+            const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(equippedId => equippedId === item.id);
             return `<div class="inv-gear-item${isEquipped ? ' inv-equipped' : ''}"
                         draggable="true"
                         data-idx="${idx}"
@@ -2949,16 +2951,23 @@
 
       // Define equipment slot positions (around the canvas)
       const equippedGear = saveData.equippedGear || {};
+      const gearInventory = saveData.inventory || [];
+      // Helper: resolve an equipped ID to an item object
+      function resolveEquipped(id) {
+        if (!id) return null;
+        return gearInventory.find(g => g.id === id) || null;
+      }
       const slots = [
         { key:'headband', label:'Headband', icon:'🎀', top:'-22px',  left:'50%',  transform:'translateX(-50%)',  tipDir:'top'    },
         { key:'necklace', label:'Necklace', icon:'📿', top:'25%',   left:'-56px', transform:'',                  tipDir:'left'   },
         { key:'ring',     label:'Ring 1',  icon:'💍', top:'60%',   left:'-56px', transform:'',                  tipDir:'left'   },
         { key:'earrings', label:'Earrings',icon:'💎', top:'25%',   right:'-56px',transform:'',                  tipDir:'right'  },
-        { key:'amulet',   label:'Necklace',icon:'📿', top:'60%',   right:'-56px',transform:'',                  tipDir:'right'  },
+        { key:'amulet',   label:'Amulet',  icon:'📿', top:'60%',   right:'-56px',transform:'',                  tipDir:'right'  },
       ];
 
       slots.forEach(sl => {
-        const equippedItem = equippedGear[sl.key];
+        const equippedId   = equippedGear[sl.key];
+        const equippedItem = resolveEquipped(equippedId);
         const slot = document.createElement('div');
         slot.className = 'inv-vis-slot';
         slot.dataset.slotKey = sl.key;
@@ -2994,16 +3003,16 @@
             return;
           }
           const item = (saveData.inventory || [])[idx];
-          if (!item) return;
+          if (!item || !item.id) return;
           if (!saveData.equippedGear) saveData.equippedGear = {};
-          saveData.equippedGear[sl.key] = item;
+          saveData.equippedGear[sl.key] = item.id;
           saveSaveData();
           if (typeof showStatChange === 'function') showStatChange(`✅ ${item.name} equipped to ${sl.label}!`);
           modal.remove();
           showInventoryScreen();
           // Update 3D camp player model if possible
           if (window.CampWorld && typeof window.CampWorld.updatePlayerEquipment === 'function') {
-            window.CampWorld.updatePlayerEquipment(sl.key, item);
+            window.CampWorld.updatePlayerEquipment(sl.key, item.id);
           }
         });
 
@@ -3058,10 +3067,46 @@
       try {
         const THREE = window.THREE;
         if (THREE && previewCanvas) {
-          const pRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true, alpha: true });
+          // Clean up any previous preview renderer on this canvas
+          if (typeof previewCanvas.__threePreviewCleanup === 'function') {
+            previewCanvas.__threePreviewCleanup();
+          }
+
+          let previewDisposed = false;
+          let previewObserver = null;
+          let pRenderer = null;
+
+          const cleanupPreviewRenderer = () => {
+            if (previewDisposed) return;
+            previewDisposed = true;
+            if (previewObserver) { previewObserver.disconnect(); previewObserver = null; }
+            if (pRenderer) {
+              pRenderer.dispose();
+              if (typeof pRenderer.forceContextLoss === 'function') pRenderer.forceContextLoss();
+              if (pRenderer.domElement) {
+                pRenderer.domElement.width  = 0;
+                pRenderer.domElement.height = 0;
+              }
+              pRenderer = null;
+            }
+            if (previewCanvas.__threePreviewCleanup === cleanupPreviewRenderer) {
+              delete previewCanvas.__threePreviewCleanup;
+            }
+          };
+
+          pRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true, alpha: true });
+          previewCanvas.__threePreviewCleanup = cleanupPreviewRenderer;
           pRenderer.setSize(220, 320);
           pRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
           pRenderer.setClearColor(0x00000f, 0.9);
+
+          // Watch for canvas removal from DOM to automatically clean up
+          if (typeof MutationObserver !== 'undefined' && document.body) {
+            previewObserver = new MutationObserver(() => {
+              if (!document.body.contains(previewCanvas)) cleanupPreviewRenderer();
+            });
+            previewObserver.observe(document.body, { childList: true, subtree: true });
+          }
 
           const pScene  = new THREE.Scene();
           const pCamera = new THREE.PerspectiveCamera(45, 220 / 320, 0.1, 50);
@@ -3120,7 +3165,7 @@
           pGrp.add(wrap);
 
           // Headband visual if equipped
-          const headbandItem = equippedGear.headband;
+          const headbandItem = resolveEquipped(equippedGear.headband);
           if (headbandItem) {
             const hbMat = new THREE.MeshPhongMaterial({ color: 0xC9A227, emissive: 0xC9A227, emissiveIntensity: 0.5 });
             const hb = new THREE.Mesh(new THREE.TorusGeometry(0.30, 0.05, 8, 24), hbMat);
@@ -3128,7 +3173,7 @@
             pGrp.add(hb);
           }
           // Necklace/amulet visual if equipped
-          const neckItem = equippedGear.necklace || equippedGear.amulet;
+          const neckItem = resolveEquipped(equippedGear.necklace) || resolveEquipped(equippedGear.amulet);
           if (neckItem) {
             const nkMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.6 });
             const nk = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 20), nkMat);
@@ -3136,7 +3181,7 @@
             pGrp.add(nk);
           }
           // Ring visual if equipped
-          const ringItem = equippedGear.ring;
+          const ringItem = resolveEquipped(equippedGear.ring);
           if (ringItem) {
             const rgMat = new THREE.MeshPhongMaterial({ color: 0xa335ee, emissive: 0xa335ee, emissiveIntensity: 0.7 });
             const rg = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 16), rgMat);
@@ -3149,13 +3194,13 @@
 
           // Rotation animation
           let prevTime = 0;
-          let pAnimId;
           function pAnimate(ts) {
             if (!document.getElementById('inventory-screen-modal')) {
-              pRenderer.dispose();
+              cleanupPreviewRenderer();
               return;
             }
-            pAnimId = requestAnimationFrame(pAnimate);
+            if (previewDisposed) return;
+            requestAnimationFrame(pAnimate);
             const dt = (ts - prevTime) / 1000;
             prevTime = ts;
             pGrp.rotation.y += dt * 0.6;
@@ -3176,10 +3221,10 @@
     // Equip item directly from inventory screen
     function equipItemFromInventory(itemIdx) {
       const item = saveData.inventory[itemIdx];
-      if (!item) return;
+      if (!item || !item.id) return;
       const slot = item.type || 'ring';
       if (!saveData.equippedGear) saveData.equippedGear = {};
-      saveData.equippedGear[slot] = item;
+      saveData.equippedGear[slot] = item.id;
       saveSaveData();
       showStatChange(`🎯 ${item.name} Equipped!`);
       // Refresh inventory screen
@@ -3229,7 +3274,7 @@
             <div style="color:#666;font-size:10px;margin-top:4px;">Upgrade Shrine to unlock</div>
           </div>`;
         }
-        return `<div class="shrine-slot" data-slot="${i}" style="border-color:${rc};" title="${equipped ? `${equipped.name} — double-click to remove` : 'Empty artifact slot'}">
+        return `<div class="shrine-slot" data-slot="${i}" style="border-color:${rc};" title="${equipped ? `${equipped.name} — click Remove to unequip` : 'Empty artifact slot'}">
           <div style="font-size:32px;">${equipped ? (equipped.icon || '🔮') : '🏛️'}</div>
           <div class="shrine-slot-label" style="color:${rc};">${equipped ? equipped.name : `Slot ${i+1} — Empty`}</div>
           ${equipped ? `<div style="color:#aaa;font-size:10px;margin-top:3px;">${equipped.desc || ''}</div>
@@ -3356,8 +3401,13 @@
 
       window._shrineEquipArtifact = (artifactId, invIdx) => {
         if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        // Prevent equipping the same artifact in multiple slots
+        if (saveData.equippedArtifacts.includes(artifactId)) {
+          if (typeof showStatChange === 'function') showStatChange('❌ This Artifact is already equipped! Remove it first.');
+          return;
+        }
         // Find first open unlocked slot
-        const firstOpen = equippedArtifacts.findIndex((v, i) => i < unlockedSlots && !v);
+        const firstOpen = saveData.equippedArtifacts.findIndex((v, i) => i < unlockedSlots && !v);
         if (firstOpen === -1) {
           if (typeof showStatChange === 'function') showStatChange('❌ All unlocked slots are full! Upgrade the Shrine or remove an artifact.');
           return;

@@ -520,12 +520,16 @@
           // representation and don't use the BUILD/ENTER flow.
           if (!saveData._buildingMigrationV3) {
             var uiOnlyBuildings = ['accountBuilding', 'idleMenu'];
+            // Buildings that intentionally have maxLevel > 1 are exempted from the cap
+            var multiLevelBuildings = ['shrine'];
             Object.keys(saveData.campBuildings).forEach(function(bId) {
               var b = saveData.campBuildings[bId];
               if (!b) return;
-              b.maxLevel = 1;
+              if (multiLevelBuildings.indexOf(bId) === -1) {
+                b.maxLevel = 1;
+              }
               if (uiOnlyBuildings.indexOf(bId) !== -1) return;
-              if (typeof b.level === 'number' && b.level > 1) {
+              if (typeof b.level === 'number' && b.level > 1 && multiLevelBuildings.indexOf(bId) === -1) {
                 b.level = 1; // cap at 1 (built)
               }
             });
