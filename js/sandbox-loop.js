@@ -5099,17 +5099,22 @@
     }
     // Force shader recompile so shadow map type change takes effect
     renderer.shadowMap.needsUpdate = true;
-    // Toggle bloom and motion blur based on quality tier
+    // Toggle post-FX based on quality tier
+    var bloomOn = (quality !== 'ultralow' && quality !== 'low');
+    var mbOn = (quality === 'high' || quality === 'ultra');
     if (window._bloomPass) {
-      // Disable bloom entirely at ultralow/low for max performance
-      var bloomOn = (quality !== 'ultralow' && quality !== 'low');
+      // Disable bloom pass entirely at ultralow/low for max performance
+      window._bloomPass.enabled = bloomOn;
       window._bloomPass.strength = bloomOn ? 0.4 : 0.0;
     }
     if (window._afterImagePass) {
-      // Motion blur only at high / ultra; disable at lower tiers
-      var mbOn = (quality === 'high' || quality === 'ultra');
+      // Motion blur only at high / ultra; disable pass at lower tiers
+      window._afterImagePass.enabled = mbOn;
       window._afterImagePass.uniforms['damp'].value = mbOn ? MOTION_BLUR_DAMP : 0.0;
     }
+    // At ultralow/low the composer has no active passes beyond RenderPass, so bypass
+    // it entirely and use renderer.render() directly to avoid render target overhead.
+    window._composerActive = bloomOn;
     // Persist selection
     try { localStorage.setItem('sandboxGraphicsQuality', quality); } catch (_) {}
     // Update gameSettings global if present
@@ -6445,7 +6450,7 @@
       if (_hitStopRemaining > 0) {
         _hitStopRemaining -= rawDt * 1000;
         if (_hitStopRemaining < 0) _hitStopRemaining = 0;
-        if (window._bloomComposer) {
+        if (window._bloomComposer && window._composerActive) {
           window._bloomComposer.render();
         } else {
           renderer.render(scene, camera); // keep drawing; only physics is frozen
@@ -6459,7 +6464,7 @@
       _trackFPS(dt);
 
       if (window.isPaused) {
-        if (window._bloomComposer) {
+        if (window._bloomComposer && window._composerActive) {
           window._bloomComposer.render();
         } else {
           renderer.render(scene, camera);
@@ -6814,7 +6819,7 @@
       // Tick player status effects (StatusBar depletion)
       if (typeof window._tickPlayerStatus === 'function') window._tickPlayerStatus(dt);
 
-      if (window._bloomComposer) {
+      if (window._bloomComposer && window._composerActive) {
         window._bloomComposer.render();
       } else {
         renderer.render(scene, camera);

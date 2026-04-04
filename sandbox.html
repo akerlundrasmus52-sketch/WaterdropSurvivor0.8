@@ -1022,7 +1022,8 @@
           ppEnabled = false;
         }
       } catch (e) {
-        ppEnabled = false;
+        // Keep the default enabled if localStorage is unavailable or throws.
+        // Only explicit opt-out ('1') should disable post-processing.
       }
 
       if (!ppEnabled) return;
