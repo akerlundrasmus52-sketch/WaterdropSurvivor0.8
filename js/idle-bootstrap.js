@@ -13,6 +13,7 @@
     { id: 'fountain',     label: '💧 Fountain' },
     { id: 'clicker',      label: '💧 Runner' },
     { id: 'expeditions',  label: '🗺 Expeditions' },
+    { id: 'voidrifts',    label: '🌀 Void Rifts' },
     { id: 'prestige',     label: '⭐ Prestige' },
     { id: 'dailies',      label: '📅 Dailies' },
     { id: 'gems',         label: '💎 Gems' },
@@ -101,6 +102,7 @@
     else if (_activeTab === 'clicker' && window.WaterDropRunner) window.WaterDropRunner.renderPanel(sd, container);
     else if (_activeTab === 'clicker' && window.AdvancedClicker) window.AdvancedClicker.renderPanel(sd, container);
     else if (_activeTab === 'expeditions' && ui) ui.renderExpeditionPanel(sd, container);
+    else if (_activeTab === 'voidrifts' && ui) ui.renderVoidRiftPanel(sd, container);
     else if (_activeTab === 'prestige' && ui) ui.renderPrestigePanel(sd, container);
     else if (_activeTab === 'dailies' && ui) ui.renderDailyPanel(sd, container);
     else if (_activeTab === 'gems' && window.GameGems) window.GameGems.renderGemsPanel(sd, container);
@@ -195,6 +197,7 @@
       if (window.GameDailies.shouldResetDailies(saveData)) window.GameDailies.generateDailyQuests(saveData);
     }
     if (window.GameAchievements) window.GameAchievements.checkAchievements(saveData);
+    if (window.VoidRifts) window.VoidRifts.check(saveData);
     _refreshActivePanel();
   }
 
