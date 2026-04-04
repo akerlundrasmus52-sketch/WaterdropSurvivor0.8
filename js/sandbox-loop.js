@@ -279,6 +279,14 @@
         if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
         if (window.LeapingSlimePool && typeof window.LeapingSlimePool.reset === 'function') window.LeapingSlimePool.reset();
         SeqWaveManager.reset();
+        // Reset gold coins
+        if (_goldPoolInited) {
+          for (let _gi = 0; _gi < _goldPool.length; _gi++) {
+            _goldPool[_gi].active = false;
+            _goldPool[_gi].mesh.visible = false;
+            _goldPool[_gi].mesh.position.set(0, -1000, 0);
+          }
+        }
       }, 800); // brief delay so blood/gore stays visible for dramatic effect
 
       // Reload page after the full delay
@@ -484,6 +492,17 @@
   let _lvlUpRings = [];       // active expanding ring meshes (references into _lvlUpRingPool)
   const _lvlUpRingPool = [];  // pre-allocated ring meshes (pool size = _ringDefs.length, never disposed)
   let _lvlUpRingsInited = false;
+
+  // ─── Gold Coin Drop System ───────────────────────────────────────────────────
+  // Pooled gold coin meshes that drop from enemies and are collected by the player.
+  const GOLD_POOL_SIZE     = 40;
+  const GOLD_MAGNET_RANGE  = 4.0;   // World units; scales with pickupRange upgrades
+  const GOLD_COLLECT_RANGE = 0.9;
+  const GOLD_DROP_CHANCE   = 0.22;  // 22% chance per enemy kill to drop gold
+  const GOLD_AMOUNT_MIN    = 1;
+  const GOLD_AMOUNT_MAX    = 4;
+  let _goldPool = [];          // { mesh, active, vx, vy, vz, onGround, value, bounceCount }
+  let _goldPoolInited = false;
 
   // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
   let _sessionTimerSecs    = 0; // total elapsed seconds since boot
@@ -1919,6 +1938,12 @@
       }
     }
 
+    // ══════════ GOLD COIN DROP ══════════
+    if (Math.random() < GOLD_DROP_CHANCE) {
+      const goldValue = GOLD_AMOUNT_MIN + Math.floor(Math.random() * (GOLD_AMOUNT_MAX - GOLD_AMOUNT_MIN + 1));
+      _spawnGoldCoin(x, z, goldValue);
+    }
+
     _tmpV3.set(x, 1.8, z);
 
     playerStats.kills++;
@@ -2088,6 +2113,12 @@
       if (Math.random() < BONUS_XP_DROP_RATE * 1.5) {
         XPStarSystem.spawn(x, y, z, 'crawler', killDamage * 0.8, killVX || 0, killVZ || 0);
       }
+    }
+
+    // ══════════ GOLD COIN DROP ══════════
+    if (Math.random() < GOLD_DROP_CHANCE * 1.5) { // Crawlers drop more gold
+      const goldValue = GOLD_AMOUNT_MIN + Math.floor(Math.random() * (GOLD_AMOUNT_MAX - GOLD_AMOUNT_MIN + 1)) + 1;
+      _spawnGoldCoin(x, z, goldValue);
     }
 
     playerStats.kills++;
@@ -2336,6 +2367,12 @@
       if (Math.random() < BONUS_XP_DROP_RATE) {
         XPStarSystem.spawn(x, y, z, 'leaping_slime', killDamage * 0.7, killVX || 0, killVZ || 0);
       }
+    }
+
+    // ══════════ GOLD COIN DROP ══════════
+    if (Math.random() < GOLD_DROP_CHANCE) {
+      const goldValue = GOLD_AMOUNT_MIN + Math.floor(Math.random() * (GOLD_AMOUNT_MAX - GOLD_AMOUNT_MIN + 1));
+      _spawnGoldCoin(x, z, goldValue);
     }
 
     playerStats.kills++;
@@ -3248,19 +3285,19 @@
     // Respect pickup-range / XP collection-radius upgrades, if available
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
     // Use playerStats.pickupRange as a direct multiplier (default 1.0 = normal range)
-    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (12 units) by the radiusMultiplier.
+    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (3.5 units) by the radiusMultiplier.
     const _baseMultiplier = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
       ? _xpStats.pickupRange
       : 1.0;
-    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (12.0)
+    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (3.5)
     const _magnetStacks = (window._sandboxXpMagnetRunStacks || 0);
     // playerStats.magnetRange (set by Magnet Drop building) only overrides when it exceeds the
-    // current scaled base (12.0 * _baseMultiplier), so pickup upgrades are never downgraded.
-    const _currentBaseRange = 12.0 * _baseMultiplier;
+    // current scaled base (3.5 * _baseMultiplier), so pickup upgrades are never downgraded.
+    const _currentBaseRange = 3.5 * _baseMultiplier;
     const _playerMagnetRange = (_xpStats && typeof _xpStats.magnetRange === 'number' && _xpStats.magnetRange > _currentBaseRange)
-      ? _xpStats.magnetRange / 12.0
+      ? _xpStats.magnetRange / 3.5
       : _baseMultiplier;
-    const radiusMultiplier = _playerMagnetRange + (_magnetStacks * 2.5 / 12.0);
+    const radiusMultiplier = _playerMagnetRange + (_magnetStacks * 2.5 / 3.5);
 
     // Update XP stars and collect any that are ready
     const collected = XPStarSystem.update(dt, px, py, pz, radiusMultiplier);
@@ -3285,7 +3322,115 @@
     }
   }
 
-  function _refreshExpBar() {
+  // ─── Gold Coin System ─────────────────────────────────────────────────────────
+  function _initGoldPool() {
+    if (_goldPoolInited || !scene) return;
+    _goldPoolInited = true;
+    const geo = new THREE.CylinderGeometry(0.18, 0.18, 0.06, 12);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xFFD700, emissive: 0xFF9900, emissiveIntensity: 0.6,
+      metalness: 0.9, roughness: 0.2,
+    });
+    for (let i = 0; i < GOLD_POOL_SIZE; i++) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.frustumCulled = false;
+      mesh.visible = false;
+      mesh.position.set(0, -1000, 0);
+      scene.add(mesh);
+      _goldPool.push({ mesh, active: false, vx: 0, vy: 0, vz: 0, onGround: false, value: 1, bounceCount: 0 });
+    }
+  }
+
+  function _spawnGoldCoin(x, z, value) {
+    if (!_goldPoolInited) _initGoldPool();
+    let coin = null;
+    for (let i = 0; i < _goldPool.length; i++) {
+      if (!_goldPool[i].active) { coin = _goldPool[i]; break; }
+    }
+    if (!coin) return; // pool exhausted
+    coin.active = true;
+    coin.onGround = false;
+    coin.bounceCount = 0;
+    coin.value = value;
+    const angle = Math.random() * Math.PI * 2;
+    const spd = 1.0 + Math.random() * 1.5;
+    coin.vx = Math.cos(angle) * spd;
+    coin.vy = 3.0 + Math.random() * 2.0;
+    coin.vz = Math.sin(angle) * spd;
+    coin.mesh.position.set(x, 0.3, z);
+    coin.mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+    coin.mesh.visible = true;
+    coin.mesh.scale.set(1, 1, 1);
+  }
+
+  function _updateGoldCoins(dt) {
+    if (!_goldPoolInited || !player) return;
+    const px = player.mesh.position.x;
+    const py = player.mesh.position.y + 0.5;
+    const pz = player.mesh.position.z;
+    const rm = (playerStats && playerStats.pickupRange > 0) ? playerStats.pickupRange : 1.0;
+    const mRange = GOLD_MAGNET_RANGE * rm;
+    const cRange = GOLD_COLLECT_RANGE * rm;
+
+    for (let i = 0; i < _goldPool.length; i++) {
+      const c = _goldPool[i];
+      if (!c.active) continue;
+
+      // Physics
+      if (!c.onGround) {
+        c.vy += -16.0 * dt;
+        c.mesh.position.x += c.vx * dt;
+        c.mesh.position.y += c.vy * dt;
+        c.mesh.position.z += c.vz * dt;
+        c.mesh.rotation.y += 3.0 * dt;
+
+        if (c.mesh.position.y <= 0.12) {
+          c.mesh.position.y = 0.12;
+          c.vy = -c.vy * 0.35;
+          c.vx *= 0.7;
+          c.vz *= 0.7;
+          c.bounceCount++;
+          if (Math.abs(c.vy) < 0.3 || c.bounceCount > 4) {
+            c.vy = 0; c.vx = 0; c.vz = 0;
+            c.onGround = true;
+          }
+        }
+      } else {
+        c.mesh.rotation.y += 1.5 * dt; // gentle spin on ground
+      }
+
+      // Magnetism
+      const dx = px - c.mesh.position.x;
+      const dy = py - c.mesh.position.y;
+      const dz = pz - c.mesh.position.z;
+      const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+      if (dist < mRange && dist > 0.01) {
+        c.onGround = false;
+        const t = Math.max(0, (mRange - dist) / mRange);
+        const spd2 = 5.0 * (1 + t * t * 3);
+        c.mesh.position.x += (dx / dist) * spd2 * dt;
+        c.mesh.position.y += (dy / dist) * spd2 * dt;
+        c.mesh.position.z += (dz / dist) * spd2 * dt;
+        c.vx = 0; c.vy = 0; c.vz = 0;
+      }
+
+      // Collect
+      if (dist < cRange) {
+        // Give gold
+        if (playerStats) playerStats.gold = (playerStats.gold || 0) + c.value;
+        if (saveData) saveData.gold = (saveData.gold || 0) + c.value;
+        // Floating text
+        _tmpV3b.set(c.mesh.position.x, c.mesh.position.y, c.mesh.position.z);
+        createFloatingText('+' + c.value + ' 💰', _tmpV3b, '#FFD700');
+        // Deactivate
+        c.active = false;
+        c.mesh.visible = false;
+        c.mesh.position.set(0, -1000, 0);
+      }
+    }
+  }
+
     try {
       const pct = Math.min(100, (playerStats.exp / playerStats.expReq) * 100);
       const fill = document.getElementById('exp-fill');
@@ -3367,11 +3512,29 @@
           _lvlUpRings.push(_rMesh);
         }
 
-        // Ground impact burst at player feet (level-up is not a hot path so new alloc is fine)
+        // ── Character level-up water/energy fountain ──
+        // Multi-pulse upward fountain: primary blast → rising jet → dispersing crown
         if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
-          BloodV2.rawBurstUpward(px, py + 0.1, pz, 60, {
-            spdMin: 3, spdMax: 9, rMin: 0.012, rMax: 0.030, life: 2.5, visc: 0.45,
+          // Primary blast: wide, powerful upward burst from ground
+          BloodV2.rawBurstUpward(px, py + 0.1, pz, 90, {
+            color: 0x44CCFF, spdMin: 5, spdMax: 14, rMin: 0.014, rMax: 0.036, life: 2.8, visc: 0.40,
           });
+          // Rising jet: narrower core shooting higher (80ms later)
+          setTimeout(function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(px, py + 0.6, pz, 55, {
+                color: 0x88EEFF, spdMin: 7, spdMax: 18, rMin: 0.010, rMax: 0.025, life: 2.4, visc: 0.38,
+              });
+            }
+          }, 80);
+          // Crown dispersal: mist of bright droplets at peak (180ms later)
+          setTimeout(function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(px, py + 1.2, pz, 35, {
+                color: 0xCCFFFF, spdMin: 3, spdMax: 9, rMin: 0.007, rMax: 0.018, life: 1.8, visc: 0.50,
+              });
+            }
+          }, 180);
         }
 
         // ── Distance-based force wave damage ──
@@ -3379,9 +3542,9 @@
         const _gunDmg = (weapons && weapons.gun && weapons.gun.damage > 0)
           ? Math.round(weapons.gun.damage * ((playerStats && playerStats.strength) || 1.0))
           : 15;
-        const _killRSq  = 1.0 * 1.0;  // < 1m  → instant brutal kill, flesh flies 5-7m
-        const _nearRSq  = 2.0 * 2.0;  // < 2m  → HP=1 (one-shot-to-finish), heavy gore
-        const _outerRSq = 5.0 * 5.0;  // < 5m  → half HP, skin partially ripped
+        const _killRSq  = 3.0 * 3.0;   // < 3m  → instant brutal kill, flesh flies 5-7m
+        const _nearRSq  = 6.0 * 6.0;   // < 6m  → HP=1 (one-shot-to-finish), heavy gore
+        const _outerRSq = 12.0 * 12.0; // < 12m → half HP, skin partially ripped
 
         _allEnemiesScratch.length = 0;
         for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
@@ -3586,9 +3749,13 @@
       } catch(e) { console.warn('[EggHunt] egg spawn failed:', e); }
     }
 
+    // ── Small "LEVEL UP!" text that rises from character's head ──
+    // Appears first (small), grows upward, then the big fire animation plays.
+    _spawnSmallLevelUpText();
+
     // ── Fiery "LEVEL UP" text animation (Grind Survivors style) ──
     // Spawns a massive burning text above the player before showing the upgrade modal.
-    _spawnFireLevelUpText();
+    setTimeout(_spawnFireLevelUpText, 400); // slight delay after small text
 
     // Delay before upgrade modal appears so player can enjoy the fiery text animation
     window.isPaused = true;
@@ -3618,6 +3785,73 @@
       }
     }
     _checkSandboxAchievements();
+  }
+
+  // ── Small "LEVEL UP!" text that rises from the character's head ──
+  // Starts tiny, grows to 50% of the fire text size, then fades out.
+  var _smallLvlUpEl = null;
+  function _spawnSmallLevelUpText() {
+    if (!player || !player.mesh || !camera || !renderer) return;
+    // Project player position to screen space
+    var _sVec = new THREE.Vector3();
+    _sVec.copy(player.mesh.position);
+    _sVec.y += 1.8; // above character head
+    _sVec.project(camera);
+    var screenX = (_sVec.x * 0.5 + 0.5) * window.innerWidth;
+    var screenY = (-_sVec.y * 0.5 + 0.5) * window.innerHeight;
+
+    if (!_smallLvlUpEl) {
+      _smallLvlUpEl = document.createElement('div');
+      _smallLvlUpEl.style.cssText = [
+        'position:fixed',
+        'pointer-events:none',
+        'z-index:10002',
+        'font-family:"Cinzel Decorative","Bangers","Impact","Arial Black",sans-serif',
+        'font-weight:900',
+        'white-space:nowrap',
+        'letter-spacing:4px',
+        'text-align:center',
+        'will-change:transform,opacity',
+      ].join(';');
+      document.body.appendChild(_smallLvlUpEl);
+    }
+
+    // Target size: 50% of fire text's clamp(44px, 9vw, 88px) = clamp(22px, 4.5vw, 44px)
+    var targetSize = Math.min(44, Math.max(22, window.innerWidth * 0.045));
+    var startSize = targetSize * 0.2;
+    _smallLvlUpEl.textContent = 'LEVEL UP!';
+    _smallLvlUpEl.style.display = 'block';
+    _smallLvlUpEl.style.opacity = '0';
+    _smallLvlUpEl.style.fontSize = startSize + 'px';
+    _smallLvlUpEl.style.color = '#FFD700';
+    _smallLvlUpEl.style.textShadow = '0 0 8px #FF6600, 0 0 16px #FF4500, 2px 2px 0 #000, -2px -2px 0 #000';
+    _smallLvlUpEl.style.left = screenX + 'px';
+    _smallLvlUpEl.style.top = screenY + 'px';
+    _smallLvlUpEl.style.transform = 'translate(-50%, 0)';
+
+    var start = performance.now();
+    var duration = 900; // ms
+    var startY = screenY;
+
+    (function animate() {
+      var t = (performance.now() - start) / duration;
+      if (t > 1) {
+        _smallLvlUpEl.style.display = 'none';
+        return;
+      }
+      // Rise up 80px
+      var curY = startY - 80 * t;
+      // Size: start → target over first 60% then hold
+      var sizeT = Math.min(1, t / 0.6);
+      var eased = 1 - Math.pow(1 - sizeT, 3);
+      var curSize = startSize + (targetSize - startSize) * eased;
+      // Opacity: fade in first 20%, hold, fade out last 25%
+      var opacity = t < 0.2 ? t / 0.2 : t > 0.75 ? 1 - (t - 0.75) / 0.25 : 1;
+      _smallLvlUpEl.style.top = curY + 'px';
+      _smallLvlUpEl.style.fontSize = curSize + 'px';
+      _smallLvlUpEl.style.opacity = '' + Math.max(0, Math.min(1, opacity));
+      requestAnimationFrame(animate);
+    })();
   }
 
   // ── Fiery LEVEL UP text: Grind Survivors style with Eye of Horus ──
@@ -5775,6 +6009,9 @@
       console.error('[SandboxLoop] XPStarSystem not loaded!');
     }
 
+    // Initialize gold coin pool
+    _initGoldPool();
+
     // Build pooled PointLight flash pool (muzzle flashes, hit lights)
     _buildFlashPool();
     // Initialize spatial hash for O(1) projectile→enemy collision
@@ -5919,6 +6156,13 @@
       const killDamage = 120 * 1.5;
       XPStarSystem.spawn(x, y, z, 'skinwalker', killDamage, 0, 0);
       if (Math.random() < 0.35) XPStarSystem.spawn(x, y, z, 'skinwalker', killDamage * 0.7, 0, 0);
+    }
+
+    // ══════════ GOLD COIN DROP ══════════ (Skinwalkers always drop gold)
+    {
+      const goldValue = 2 + Math.floor(Math.random() * 4);
+      _spawnGoldCoin(x, z, goldValue);
+      if (Math.random() < 0.5) _spawnGoldCoin(x, z, 1); // 50% for bonus coin
     }
 
     playerStats.kills++;
@@ -6440,6 +6684,7 @@
     /** Tick all active EXP gems and check for player pickup.  Call once per frame. */
     update: function(dt) {
       _updateGems(dt);
+      _updateGoldCoins(dt);
     }
   };
 
