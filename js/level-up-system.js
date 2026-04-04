@@ -430,10 +430,11 @@ window.spawnBossChest = function(x, z) {
           const t = elapsed / _dur;
           if (t >= 1) { sEl.remove(); return; }
           const eased = 1 - t * t; // ease-out quad
-          curX += _vx * (1/60) * eased;
-          curY += _vy * (1/60) * eased;
-          curY += 200 * (1/60) * t; // gravity
-          curRot += _vr * (1/60);
+          // Use elapsed-based position for frame-rate independence
+          const tSec = elapsed / 1000;
+          curX = cx + _vx * tSec * eased;
+          curY = cy + _vy * tSec * eased + 100 * tSec * tSec; // gravity term
+          curRot = rot0 + _vr * tSec;
           opacity = Math.max(0, 1 - t * 1.2);
           sEl.style.left = curX + 'px';
           sEl.style.top = curY + 'px';
