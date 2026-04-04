@@ -5597,6 +5597,13 @@
    * when the player presses interact near the Incubator pod.
    */
   function _interactIncubator() {
+    // Use new incubator system if available
+    if (window.IncubatorSystem && window.IncubatorSystem.showIncubatorUI) {
+      window.IncubatorSystem.showIncubatorUI();
+      return;
+    }
+
+    // Fallback to old system
     const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (!sd) return;
     if (!sd.alienIncubatorHatched) {
