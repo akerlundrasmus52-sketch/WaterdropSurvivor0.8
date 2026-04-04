@@ -493,15 +493,6 @@
   const _lvlUpRingPool = [];  // pre-allocated ring meshes (pool size = _ringDefs.length, never disposed)
   let _lvlUpRingsInited = false;
 
-  // ─── Enemy Death Ground Force Wave Rings (pooled) ──────────────────────────
-  const DEATH_RING_POOL_SIZE = 20;
-  const _deathRingPool = [];
-  let _deathRingPoolInited = false;
-  let _activeDeathRings = []; // { mesh, t, maxT, expandRate, fadeRate }
-
-  // ─── Water Fountain pool for enemy deaths ──────────────────────────────────
-  // Each fountain fires upward particles then falls as drops — uses BloodV2.rawBurstUpward
-
   // ─── Gold Coin Drop System ───────────────────────────────────────────────────
   // Pooled gold coin meshes that drop from enemies and are collected by the player.
   const GOLD_POOL_SIZE     = 40;
@@ -1893,9 +1884,6 @@
       GoreSim.onKill(slot, 'pistol', null);
     }
 
-    // ── Enemy Death FX: water fountain + ground force wave ──
-    _spawnEnemyDeathFX(x, y, z, 'slime');
-
     // Hollywood-style overdone slime death burst
     window.BloodV2 && BloodV2.rawBurst(x, y, z, 80, {
       spdMin: 3, spdMax: 14, rMin: 0.010, rMax: 0.030, life: 3.5, visc: 0.55,
@@ -2086,9 +2074,6 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(crawler, 'pistol', null);
     }
-
-    // ── Enemy Death FX: water fountain + ground force wave ──
-    _spawnEnemyDeathFX(x, y, z, 'crawler');
 
     // Hollywood-style overdone crawler death burst
     window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'crawler' });
@@ -2343,9 +2328,6 @@
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
       GoreSim.onKill(enemy, 'pistol', null);
     }
-
-    // ── Enemy Death FX: water fountain + ground force wave ──
-    _spawnEnemyDeathFX(x, y, z, 'leaping_slime');
 
     // Hollywood-style overdone leaping slime death burst
     window.BloodV2 && BloodV2.rawBurst(x, y, z, 60, { enemyType: 'leaping_slime' });
@@ -3450,92 +3432,9 @@
   }
 
   // ─── Enemy Death FX: water fountain + ground force wave ──────────────────────
-  function _spawnEnemyDeathFX(x, y, z, enemyType) {
-    if (!scene) return;
+  function _spawnEnemyDeathFX(_x, _y, _z, _enemyType) { /* removed - enemy death FX was not intended */ }
 
-    // 1. Water fountain: shoot blue water particles upward then fall as drops
-    if (window.BloodV2) {
-      // Fountain burst upward (3 pulses at y, y+0.4, y+0.8)
-      const waterColor = 0x44AAFF;
-      if (typeof BloodV2.rawBurstUpward === 'function') {
-        BloodV2.rawBurstUpward(x, y + 0.2, z, 22, {
-          color: waterColor, spdMin: 2.5, spdMax: 7.0,
-          rMin: 0.008, rMax: 0.022, life: 1.8, visc: 0.50,
-        });
-        // Secondary smaller burst slightly later
-        setTimeout(function() {
-          if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
-            BloodV2.rawBurstUpward(x, y + 0.5, z, 14, {
-              color: 0x66CCFF, spdMin: 1.5, spdMax: 4.5,
-              rMin: 0.005, rMax: 0.015, life: 1.4, visc: 0.55,
-            });
-          }
-        }, 80);
-      } else if (typeof BloodV2.rawBurst === 'function') {
-        BloodV2.rawBurst(x, y + 0.5, z, 25, {
-          color: waterColor, spdMin: 2.0, spdMax: 9.0,
-          rMin: 0.008, rMax: 0.022, life: 2.0, visc: 0.5,
-        });
-      }
-    }
-
-    // 2. Ground force wave: expand ring on ground surface with glass-like appearance
-    if (_deathRingPoolInited) {
-      // Find free ring
-      let ringMesh = null;
-      for (let _rp = 0; _rp < _deathRingPool.length; _rp++) {
-        if (!_deathRingPool[_rp].visible) { ringMesh = _deathRingPool[_rp]; break; }
-      }
-      if (ringMesh) {
-        ringMesh.position.set(x, 0.06, z);
-        ringMesh.scale.set(1, 1, 1);
-        ringMesh.material.color.setHex(0xAAEEFF);
-        ringMesh.material.opacity = 0.75;
-        ringMesh.visible = true;
-        _activeDeathRings.push({ mesh: ringMesh, t: 0, maxT: 0.9, expandRate: 0.38, fadeRate: 0.055 });
-      }
-      // Second bigger, slower ring
-      let ringMesh2 = null;
-      for (let _rp2 = 0; _rp2 < _deathRingPool.length; _rp2++) {
-        if (!_deathRingPool[_rp2].visible) { ringMesh2 = _deathRingPool[_rp2]; break; }
-      }
-      if (ringMesh2) {
-        ringMesh2.position.set(x, 0.04, z);
-        ringMesh2.scale.set(0.8, 0.8, 0.8);
-        ringMesh2.material.color.setHex(0x88DDFF);
-        ringMesh2.material.opacity = 0.50;
-        ringMesh2.visible = true;
-        _activeDeathRings.push({ mesh: ringMesh2, t: 0, maxT: 1.4, expandRate: 0.22, fadeRate: 0.030 });
-      }
-    }
-  }
-
-  // Update active death rings (called from _animate)
-  function _updateDeathRings(dt) {
-    for (let _dri = _activeDeathRings.length - 1; _dri >= 0; _dri--) {
-      const dr = _activeDeathRings[_dri];
-      dr.t += dt;
-      if (dr.t >= dr.maxT) {
-        dr.mesh.visible = false;
-        dr.mesh.material.opacity = 0;
-        _activeDeathRings.splice(_dri, 1);
-        continue;
-      }
-      const progress = dr.t / dr.maxT;
-      // Rings expand and fade; the glass-like distortion effect is simulated by
-      // a slight color pulse between light blue and white as the ring moves outward
-      const s = 1.0 + progress * dr.expandRate * 80;
-      dr.mesh.scale.set(s, s, s);
-      const fade = Math.max(0, (1 - progress) * (1 - progress));
-      dr.mesh.material.opacity = fade * (dr.t < 0.08 ? dr.t / 0.08 : 1.0) * 0.75;
-      // Color pulse: white core → blue edge
-      const pulse = 0.5 + 0.5 * Math.sin(progress * Math.PI * 3);
-      const r = Math.round(0x88 + pulse * 0x77);
-      const g = Math.round(0xCC + pulse * 0x33);
-      const b = 0xFF;
-      dr.mesh.material.color.setRGB(r/255, g/255, b/255);
-    }
-  }
+  function _updateDeathRings(_dt) { /* removed - enemy death rings were not intended */ }
     try {
       const pct = Math.min(100, (playerStats.exp / playerStats.expReq) * 100);
       const fill = document.getElementById('exp-fill');
@@ -6273,9 +6172,6 @@
       GoreSim.onKill(sw, 'pistol', null);
     }
     _placeBloodStain(x, z);
-
-    // ── Enemy Death FX: water fountain + ground force wave (bigger for skinwalkers) ──
-    _spawnEnemyDeathFX(x, y, z, 'skinwalker');
 
     if (window.XPStarSystem) {
       const killDamage = 120 * 1.5;
