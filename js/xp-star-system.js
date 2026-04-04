@@ -65,13 +65,14 @@ const XP_CFG = {
 };
 
 // Enemy-specific rarity mapping
-// NOTE: Visual color is fully overridden by ENEMY_STAR_COLORS below.
-// This value determines only the XP tier multiplier (rarity xp value × GAME_CONFIG.expValue).
+// NOTE: Visual color is fully overridden by ENEMY_STAR_COLORS below for Common tier.
+// Uncommon and above show their actual rarity color for visual variety.
+// This value determines only the BASE XP tier; slimes have a 25% chance to drop Uncommon.
 const ENEMY_RARITIES = {
-  'slime':         0,  // Common   — 1× XP multiplier
-  'leaping_slime': 2,  // Rare     — 3× XP multiplier (tougher, visual override: sky-blue)
-  'crawler':       3,  // Epic     — 5× XP multiplier (worm, visual override: brown/amber)
-  'skinwalker':    3,  // Epic     — 5× XP multiplier (elite shapeshifter, visual override: dark crimson)
+  'slime':         0,  // Common (base)  — 1× XP multiplier; 25% uncommon chance in spawn()
+  'leaping_slime': 2,  // Rare     — 3× XP multiplier (tougher, visual override: sky-blue for common only)
+  'crawler':       3,  // Epic     — 5× XP multiplier (worm)
+  'skinwalker':    3,  // Epic     — 5× XP multiplier (elite shapeshifter)
   'boss':          5,  // Mythical — 40× XP multiplier
 };
 
@@ -186,7 +187,11 @@ class XPStar {
     this.growTimer = 0;
 
     // Determine rarity based on enemy type
+    // Slimes have a 25% chance to upgrade from Common → Uncommon (green) for visual variety.
     this.rarity = ENEMY_RARITIES[enemyType] || 0;
+    if (this.rarity === 0 && Math.random() < 0.25) {
+      this.rarity = 1; // Uncommon — bright green
+    }
     const rarityData = XP_CFG.RARITIES[this.rarity];
     // Multiply xp by GAME_CONFIG.expValue so balance matches the designed
     // "~2.25 kills for first level" when expValue=20 and baseExpReq=45.
@@ -198,8 +203,9 @@ class XPStar {
       this._createMesh();
     }
 
-    // Set color: use enemy-specific color if available, otherwise rarity default
-    const starColor = ENEMY_STAR_COLORS[enemyType];
+    // Set color: use enemy-specific color only for Common stars (rarity 0).
+    // Uncommon+ stars show their actual rarity color (e.g. green for Uncommon).
+    const starColor = (this.rarity === 0) ? ENEMY_STAR_COLORS[enemyType] : null;
     if (starColor) {
       this.mesh.material.color.setHex(starColor.color);
       this.mesh.material.emissive.setHex(starColor.emissive);
