@@ -439,8 +439,8 @@ function renderVoidRiftPanel(saveData, container) {
     return container;
   }
 
-  var vr = saveData.voidRifts || window.VoidRifts.getDefaults();
   var completed = window.VoidRifts.check(saveData);
+  var vr = saveData.voidRifts || window.VoidRifts.getDefaults();
   if (completed.length) {
     var banner = _el('div', 'idle-card');
     banner.appendChild(_el('p', null, null, 'Companions returned with rewards!'));

@@ -1644,13 +1644,29 @@
     ctx.fill();
   }
 
+  // Throttle tracker for super-skill cooldown UI (last displayed ceiling-seconds per key)
+  var _superUILastSecs = {};
+
   // Update UI
   function updateUI() {
     document.getElementById('nm1945-score').textContent = gameState.score;
     document.getElementById('nm1945-wave').textContent = gameState.wave;
     document.getElementById('nm1945-credits').textContent = gameState.credits;
-    updateMetaUI();
-    updateSuperUI();
+    // Meta UI is updated explicitly in grantMetaPoint / spendMetaPoint – skip here.
+    // Super-skill cooldown text only needs updating when the displayed second changes.
+    _updateSuperUIThrottled();
+  }
+
+  function _updateSuperUIThrottled() {
+    var changed = false;
+    for (const key of Object.keys(SUPER_SKILLS)) {
+      const secs = Math.ceil(getSuperCooldownRemaining(key) / 1000);
+      if (_superUILastSecs[key] !== secs) {
+        _superUILastSecs[key] = secs;
+        changed = true;
+      }
+    }
+    if (changed) updateSuperUI();
   }
 
   // Game over

@@ -100,7 +100,10 @@
       var slot = vr.active[i];
       if (now >= slot.endTime) {
         var rift = _findRift(slot.riftId);
-        if (!rift) continue;
+        if (!rift) {
+          remaining.push(slot);
+          continue;
+        }
         var companionLevel = 1;
         for (var j = 0; j < companions.length; j++) {
           if (companions[j].id === slot.companionId) {
