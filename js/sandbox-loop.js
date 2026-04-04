@@ -3617,11 +3617,29 @@
           _lvlUpRings.push(_rMesh);
         }
 
-        // Ground impact burst at player feet (level-up is not a hot path so new alloc is fine)
+        // ── Character level-up water/energy fountain ──
+        // Multi-pulse upward fountain: primary blast → rising jet → dispersing crown
         if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
-          BloodV2.rawBurstUpward(px, py + 0.1, pz, 60, {
-            spdMin: 3, spdMax: 9, rMin: 0.012, rMax: 0.030, life: 2.5, visc: 0.45,
+          // Primary blast: wide, powerful upward burst from ground
+          BloodV2.rawBurstUpward(px, py + 0.1, pz, 90, {
+            color: 0x44CCFF, spdMin: 5, spdMax: 14, rMin: 0.014, rMax: 0.036, life: 2.8, visc: 0.40,
           });
+          // Rising jet: narrower core shooting higher (80ms later)
+          setTimeout(function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(px, py + 0.6, pz, 55, {
+                color: 0x88EEFF, spdMin: 7, spdMax: 18, rMin: 0.010, rMax: 0.025, life: 2.4, visc: 0.38,
+              });
+            }
+          }, 80);
+          // Crown dispersal: mist of bright droplets at peak (180ms later)
+          setTimeout(function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(px, py + 1.2, pz, 35, {
+                color: 0xCCFFFF, spdMin: 3, spdMax: 9, rMin: 0.007, rMax: 0.018, life: 1.8, visc: 0.50,
+              });
+            }
+          }, 180);
         }
 
         // ── Distance-based force wave damage ──
@@ -3629,9 +3647,9 @@
         const _gunDmg = (weapons && weapons.gun && weapons.gun.damage > 0)
           ? Math.round(weapons.gun.damage * ((playerStats && playerStats.strength) || 1.0))
           : 15;
-        const _killRSq  = 1.0 * 1.0;  // < 1m  → instant brutal kill, flesh flies 5-7m
-        const _nearRSq  = 2.0 * 2.0;  // < 2m  → HP=1 (one-shot-to-finish), heavy gore
-        const _outerRSq = 5.0 * 5.0;  // < 5m  → half HP, skin partially ripped
+        const _killRSq  = 3.0 * 3.0;   // < 3m  → instant brutal kill, flesh flies 5-7m
+        const _nearRSq  = 6.0 * 6.0;   // < 6m  → HP=1 (one-shot-to-finish), heavy gore
+        const _outerRSq = 12.0 * 12.0; // < 12m → half HP, skin partially ripped
 
         _allEnemiesScratch.length = 0;
         for (let _si = 0; _si < _activeSlimes.length; _si++) _allEnemiesScratch.push(_activeSlimes[_si]);
