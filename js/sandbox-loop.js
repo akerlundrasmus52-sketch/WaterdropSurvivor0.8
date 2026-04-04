@@ -4760,8 +4760,8 @@
   let _inputInitialized = false;
 
   function _initInput() {
-    // Guard against double registration — once registered, listeners persist for
-    // the life of the page (game restarts always trigger a full page reload).
+    // Guard against double registration — listeners should only be attached once
+    // per page lifetime, even if initialization is accidentally re-entered.
     if (_inputInitialized) return;
     _inputInitialized = true;
 
@@ -4998,6 +4998,10 @@
 
   function _trackFPS(dt) {
     if (!_autoQualityEnabled) return;
+    // Skip sampling when the tab is backgrounded or gameplay is paused/frozen —
+    // throttled rAF in background tabs produces artificially low frame times that
+    // would wrongly trigger a quality drop.
+    if (document.hidden || window.isPaused || _hitStopRemaining > 0) return;
 
     const fps = dt > 0 ? 1.0 / dt : FPS_TARGET;
     _fpsBuf[_fpsBufIdx] = fps;
@@ -5015,10 +5019,11 @@
     for (var _fi = 0; _fi < _fpsLen; _fi++) _fpsSum += _fpsBuf[_fi];
     const avgFPS = _fpsSum / _fpsLen;
 
-    // Get current quality tier index
+    // Normalize current quality to a known tier; guard against unknown stored values
     let currentQuality = DEFAULT_QUALITY;
     try { currentQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
-    const tierIdx = _qualityTiers.indexOf(currentQuality);
+    let tierIdx = _qualityTiers.indexOf(currentQuality);
+    if (tierIdx < 0) tierIdx = _qualityTiers.indexOf(DEFAULT_QUALITY); // clamp unknown values
 
     // Auto-adjust: step down when FPS is too low, step up when FPS is comfortable
     if (avgFPS < FPS_VERY_LOW_THRESHOLD && tierIdx > 0) {
@@ -5034,11 +5039,15 @@
       _applyGraphicsQuality(newTier);
       _showPerformanceNotification(`Performance mode: ${newTier.toUpperCase()}`);
     } else if (avgFPS >= FPS_HIGH_THRESHOLD && tierIdx < _qualityTiers.length - 1) {
-      // Plenty of headroom — step up one tier (capped so we never exceed saved user preference)
-      const savedUserQuality = (function() {
-        try { return localStorage.getItem('sandboxGraphicsQualityUser') || null; } catch(_) { return null; }
-      })();
-      const userTierIdx = savedUserQuality ? _qualityTiers.indexOf(savedUserQuality) : _qualityTiers.length - 1;
+      // Plenty of headroom — step up one tier, capped at user's chosen ceiling
+      let userTierIdx = _qualityTiers.length - 1; // default: no ceiling
+      try {
+        const saved = localStorage.getItem('sandboxGraphicsQualityUser');
+        if (saved) {
+          const idx = _qualityTiers.indexOf(saved);
+          if (idx >= 0) userTierIdx = idx;
+        }
+      } catch (_) {}
       if (tierIdx < userTierIdx) {
         const newTier = _qualityTiers[tierIdx + 1];
         console.log(`[Auto-Quality] FPS ${avgFPS.toFixed(1)} >= ${FPS_HIGH_THRESHOLD} — stepping up to ${newTier}`);
@@ -5125,11 +5134,16 @@
    * Called when the player explicitly picks a quality setting.
    * Records the choice as the auto-quality ceiling so auto-adjust
    * never steps higher than the user's preference.
+   * Exposed on window so settings-ui.js (which calls window.applyGraphicsQuality)
+   * can delegate through this function.
    */
   function _setUserQualityPreference(quality) {
     try { localStorage.setItem('sandboxGraphicsQualityUser', quality); } catch (_) {}
     _applyGraphicsQuality(quality);
   }
+  // Override the global applyGraphicsQuality hook so the settings UI
+  // records the user's preference ceiling alongside applying the quality.
+  window.applyGraphicsQuality = _setUserQualityPreference;
 
   // ─── Settings modal + UI Calibration entry (sandbox) ─────────────────────────
   function _initSandboxSettings() {
