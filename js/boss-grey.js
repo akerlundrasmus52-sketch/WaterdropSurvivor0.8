@@ -956,6 +956,18 @@
       window._greyBossTakeDamage = _dealDamageToBoss;
     },
 
+    // Force-activate the boss, bypassing the quest gate (used by wave milestones)
+    spawn: function () {
+      if (!_initialized || _bossState === 'DEAD') return;
+      _bossVisible = true;
+      if (_bossGroup) _bossGroup.visible = true;
+      if (!_introTriggered) {
+        _introTriggered = true;
+        _startIntroCutscene();
+        _setState('INTRO_CUTSCENE');
+      }
+    },
+
     update: function (delta) {
       _update(delta);
     },

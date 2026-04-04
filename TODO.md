@@ -9,21 +9,36 @@
 - `js/main.js` was 1.09MB and has been split into modules (this PR)
 - The game uses global scope (no ES modules) — all functions/vars are on window
 
-## 🧪 SANDBOX 2.0 TESTING ENVIRONMENT
-**MANDATORY: All future development and testing MUST use `sandbox.html`, NOT the old map.**
+## 🧪 SANDBOX 2.0 — **MAIN PRODUCTION GAME**
+**MANDATORY: Sandbox 2.0 is NOW the official game. DO NOT modify the old map.**
 
 ### What is Sandbox 2.0?
-- **File**: `sandbox.html` — Clean, isolated testing environment
+- **File**: `sandbox.html` — The main production game environment
 - **Engine**: Engine 2.0 with PBR rendering (`js/engine2.js`)
+- **Core Loop**: `js/sandbox-loop.js` — The primary game animation loop
 - **Ground**: 200x200 arena with center spawn hole + mossy brick texture (WORKING ✅)
-- **Systems**: Full gore/blood systems, settings UI, level-up modal
-- **Purpose**: Fast iteration without loading the full game world
+- **Systems**: Full gore/blood systems, settings UI, level-up modal with LVL UP cards
+- **Purpose**: This is the LIVE GAME — all development happens here
 
 ### Why Sandbox 2.0?
-1. **Faster testing** — No world-gen.js (saves 2-3 seconds load time)
-2. **Cleaner environment** — Single enemy, no wave spawning complexity
-3. **Engine 2.0 features** — PBR ground, spawn animations, modern rendering
-4. **Isolated testing** — Changes don't affect main game until ready
+1. **Production-ready** — Fully optimized with 120 FPS target
+2. **Engine 2.0 features** — PBR ground, spawn animations, modern rendering
+3. **Complete game loop** — Wave spawning, boss encounters, quest integration
+4. **Strict performance** — Object pooling, InstancedMesh rendering, zero GC spikes
+
+### Performance Standards
+✅ **Object Pooling Enforced**: All entities use pre-allocated pools
+✅ **InstancedMesh Rendering**: Blood, particles, repeated geometry
+✅ **120 FPS Target**: 8.33ms frame budget maintained
+✅ **Zero GC Spikes**: No `new` allocations during gameplay
+
+### CRITICAL RULES FOR ALL FUTURE AI AGENTS
+1. **Work only on the live Sandbox 2.0 game**: `sandbox.html` is the production entry point, and edits may include any scripts/systems it uses (for example `js/sandbox-loop.js`, `js/engine2.js`, quest/level-up/UI systems, boss systems, and other scripts loaded by `sandbox.html`)
+2. **NEVER touch deprecated old-map files**: `index.html`, `world-gen.js`, `game-loop.js` and other old-map-only files are DEPRECATED unless a task explicitly says otherwise
+3. **Maintain object pooling**: Pre-allocate all objects, reuse from pools
+4. **Preserve InstancedMesh**: All repeated geometry must use instanced rendering
+5. **Test performance**: Run performance audits, maintain 120 FPS
+6. **Keep UI theme**: Annunaki/occult style (cyan/purple/gold)
 
 ### Ground Texture Status
 ✅ **CONFIRMED WORKING** as of 2026-03-23:
