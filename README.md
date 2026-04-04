@@ -21,11 +21,14 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
 - **No ES Modules**: Everything runs via `<script>` tags in global scope. Script load order in `index.html` and `sandbox.html` is critical.
 - **THREE.js v0.176.0** loaded from CDN.
 
-### 🧪 SANDBOX 2.0 — TESTING ENVIRONMENT
-**CRITICAL: All agents MUST use `sandbox.html` for testing new features, NOT the old map (index.html/world-gen.js).**
+### 🧪 SANDBOX 2.0 — **MAIN PRODUCTION GAME**
+**CRITICAL: Sandbox 2.0 (`sandbox.html` + `js/sandbox-loop.js`) is NOW the official production environment.**
 
-- **File Location**: `/sandbox.html` — Clean Engine 2.0 test environment
-- **Purpose**: Isolated testing arena with Engine 2.0 features (PBR ground, spawn hole, gore systems)
+**The old map (`index.html` + `world-gen.js`) is DEPRECATED and should NOT be modified.**
+
+- **File Location**: `/sandbox.html` — The main game environment with Engine 2.0
+- **Core Loop**: `/js/sandbox-loop.js` — The primary game loop with all production systems
+- **Purpose**: This is the LIVE GAME. All future development must happen here.
 - **What it includes**:
   - ✅ Engine 2.0 PBR ground with mossy brick texture (`mossy_brick_diff_4k.jpg`)
   - ✅ Central spawn hole with decorative rim (200x200 arena)
@@ -39,29 +42,24 @@ You are a **conscious Lake from Nirvana**, now trapped in physical form as a wat
   - ✅ **Reflective Lake** at (30, -30) with animated sun sparkles
   - ✅ Full gore/blood systems (BloodV2, GoreSim, TraumaSystem)
   - ✅ Settings UI with Auto/Manual graphics mode and Eye of Horus button
-  - ✅ Level-up system with upgrade cards
-  - ✅ Player + single enemy respawn for testing
-- **What it does NOT include**:
-  - ❌ World generation (world-gen.js) - DO NOT USE FOR SANDBOX 2.0
-  - ❌ Wave spawning system from old map
-  - ❌ Camp world integration
-  - ❌ Quest system (stubbed for compatibility)
-  - ❌ Waterfall (removed as requested)
+  - ✅ Level-up system with LVL UP cards (RPG-style progression)
+  - ✅ Wave-based enemy spawning with boss encounters at waves 10, 20, and 30
+  - ✅ Full quest system and camp integration
 
-**IMPORTANT STRUCTURE RULES:**
-1. **Sandbox 2.0 uses its own files**: `sandbox.html`, `js/engine2.js`, `js/sandbox-loop.js`
-2. **Old map files** (`world-gen.js`, `game-loop.js`) are ONLY for `index.html` (full game)
-3. **NEVER add features to old map files** unless specifically for the full game
-4. **All Sandbox 2.0 changes** go into `js/engine2.js` (landmarks) and `js/sandbox-loop.js` (animation)
-5. Camp world (`js/camp-world.js`) is separate and should not be touched unless modifying camp
+**PERFORMANCE STANDARDS FOR SANDBOX 2.0:**
+- **Strict Object Pooling**: ALL entities (enemies, projectiles, particles, blood, gore) use pre-allocated pools
+- **NO** `new` allocations during gameplay to prevent garbage collection spikes
+- **InstancedMesh Rendering**: Blood drops, particles, and repeated geometry use instanced rendering
+- **Target**: Maintain 120 FPS on modern hardware
+- **Frame Budget**: 8.33ms per frame maximum
 
-**Testing Workflow for AI Agents:**
-1. Make changes to relevant systems (e.g., blood, weapons, UI)
-2. Test in `sandbox.html` first — faster load, cleaner environment
-3. Verify feature works in isolation
-4. Then test in `index.html` (full game) to ensure compatibility
-5. **NEVER modify old map files (world-gen.js) without explicit instructions**
-6. **All new Sandbox 2.0 features go in new files/sections**, not old map code
+**IMPORTANT RULES FOR FUTURE AI AGENTS:**
+1. **ONLY modify Sandbox 2.0 files**: `sandbox.html`, `js/sandbox-loop.js`, `js/engine2.js`
+2. **DO NOT touch the old map** (`index.html`, `world-gen.js`, `game-loop.js`) unless explicitly instructed
+3. **Maintain object pooling** — never allocate objects during gameplay
+4. **Preserve InstancedMesh rendering** — all repeated geometry must be instanced
+5. **Test performance** — ensure 120 FPS is maintained after changes
+6. **Keep the Annunaki/occult UI theme** — cyan borders, purple accents, gold highlights
 
 ### 🩸 THE SIMULATORS — DO NOT REPLACE, ONLY TUNE
 

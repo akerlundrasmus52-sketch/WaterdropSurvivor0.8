@@ -642,7 +642,7 @@
       
       // Close button
       const _isSandboxMode = window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'));
-      const _startRunLabel = _isSandboxMode ? '▶ Restart Run' : '▶ Start New Run';
+      const _startRunLabel = '▶ Start Run'; // Always shows "Start Run" now since sandbox.html is the main game
       content += `
         <button class="btn start-run-btn" style="margin-top: 20px; font-size: 17px; padding: 12px 32px; background: linear-gradient(to bottom,#1a5c2a,#0d3316); color: #FFF; margin-right: 10px; border: 2px solid #C9A227; letter-spacing: 2px;">
           ${_startRunLabel}
@@ -698,11 +698,11 @@
         } else {
           startRunBtn.onclick = () => {
             document.body.removeChild(overlay);
-            // In sandbox 2.0 mode, reload the page to start a fresh run
+            // Sandbox 2.0 is now the main production game
             if (_isSandboxMode) {
-              window.location.reload();
+              window.location.reload(); // If already in sandbox, reload
             } else {
-              window.location.href = 'sandbox.html';
+              window.location.href = 'sandbox.html'; // Always route to sandbox.html
             }
           };
         }

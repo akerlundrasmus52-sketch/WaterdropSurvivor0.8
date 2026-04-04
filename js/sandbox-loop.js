@@ -6025,7 +6025,32 @@
       this._phaseKills = 0;
       this._waveNumber++; // Increment wave counter
 
-      // SECTION 2E: Check for wave 30 Annunaki boss spawn
+      // SECTION 2E: Boss encounters at milestone waves
+      // Wave 10: Grey Alien Boss
+      if (this._waveNumber === 10) {
+        _showWaveNotification('👽 WAVE 10 — GREY ALIEN SCOUT DETECTED! 👽', '#00ffaa', 4000);
+        if (typeof GreyBossSystem !== 'undefined' && GreyBossSystem.spawn) {
+          setTimeout(function() {
+            if (typeof GreyBossSystem.spawn === 'function') {
+              GreyBossSystem.spawn();
+            }
+          }, 1000);
+        }
+        // Continue spawning regular enemies alongside boss
+      }
+
+      // Wave 20: Aida Boss (mid-game challenge)
+      if (this._waveNumber === 20) {
+        _showWaveNotification('🤖 WAVE 20 — A.I.D.A. PROTOCOL INITIATED! 🤖', '#ff00ff', 4000);
+        if (typeof AidaBoss !== 'undefined' && AidaBoss.spawn) {
+          setTimeout(function() {
+            AidaBoss.spawn();
+          }, 1000);
+        }
+        // Continue spawning regular enemies alongside boss
+      }
+
+      // Wave 30: Annunaki Final Boss
       if (this._waveNumber === 30) {
         _showWaveNotification('⚡ WAVE 30 — THE ANNUNAKI AWAKENS! ⚡', '#ffd700', 4000);
         if (typeof AnnunakiBoss !== 'undefined' && AnnunakiBoss.spawn) {

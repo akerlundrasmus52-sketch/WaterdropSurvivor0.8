@@ -1,8 +1,8 @@
-// js/level-up-system.js — Level-up upgrade modal (showUpgradeModal), LightningBolt class,
-// floating level-up text, slow motion effect, upgrade card rendering.
+// js/level-up-system.js — Level-up LVL UP modal (showUpgradeModal), LightningBolt class,
+// floating level-up text, slow motion effect, LVL UP card rendering.
 // Depends on: all previously loaded game files
 
-// ── ARPG Deep Mechanics: Upgrade Rarities, Focus Path, Boss Chests ───────────
+// ── ARPG Deep Mechanics: LVL UP Rarities, Focus Path, Boss Chests ───────────
 
 // Rarity table: Common(White)=50%, Rare(Blue)=30%, Epic(Purple)=15%, Legendary(Gold)=4%, Mythic(Red)=1%
 // Thresholds: roll > 0.50 = Common, > 0.20 = Rare, > 0.05 = Epic, > 0.01 = Legendary, else = Mythic
@@ -32,7 +32,7 @@ function rollUpgradeRarity() {
   return UPGRADE_RARITIES[4];               // Mythic    (1%)
 }
 
-// Returns a copy of an upgrade with rarity applied — scaled stats and updated desc/apply
+// Returns a copy of a LVL UP with rarity applied — scaled stats and updated desc/apply
 function makeRarityScaledUpgrade(u) {
   const rarity = rollUpgradeRarity();
   const s = rarity.scale;
@@ -163,7 +163,7 @@ function showFocusPathPrompt(onWeapons, onPassives) {
 }
 
 // ── Dynamic Focus-Weapon Pool ─────────────────────────────────────────────────
-// Generates 3 upgrade cards per owned weapon: +Damage, -Cooldown, +Special.
+// Generates 3 LVL UP cards per owned weapon: +Damage, -Cooldown, +Special.
 // Rarity is rolled immediately so each card already carries _rarity/rarityName/
 // rarityColor and will be skipped by makeRarityScaledUpgrade (which checks _rarity).
 function buildFocusWeaponPool() {
@@ -231,7 +231,7 @@ function buildFocusWeaponPool() {
       }
     });
 
-    // 3) Special upgrade card (weapon-specific stat; e.g. +1 Projectile for gun)
+    // 3) Special LVL UP card (weapon-specific stat; e.g. +1 Projectile for gun)
     const rSp = rollUpgradeRarity();
     const sp   = meta.special(w, rSp.scale);
     pool.push({
@@ -378,14 +378,14 @@ window.spawnBossChest = function(x, z) {
       // Reset header for two-press system
       const h2 = modal.querySelector('h2');
       if (h2) {
-        h2.innerText = isBonusRound ? 'BONUS UPGRADE!' : 'LEVEL UP!';
+        h2.innerText = isBonusRound ? 'BONUS LVL UP!' : 'LEVEL UP!';
         h2.style.color = isBonusRound ? '#FFD700' : '';
         h2.style.fontSize = '24px';
         h2.style.animation = 'levelUpFly 1s ease-out forwards';
-      }      
+      }
       let choices = [];
 
-      // --- POOL OF UPGRADES ---
+      // --- POOL OF LVL UP OPTIONS ---
       const commonUpgrades = [
         { 
           id: 'str', 
@@ -594,15 +594,15 @@ window.spawnBossChest = function(x, z) {
             showStatChange('Double Cast! (' + pct + '% chance to fire twice)');
           } 
         },
-        { 
-          id: 'double_upgrade_chance', 
+        {
+          id: 'double_upgrade_chance',
           icon: '🎲',
-          title: 'DOUBLE UPGRADE CHANCE', 
-          desc: 'Chance to get one more upgrade box after the original one (+25% per stack, max 100% at 4 stacks)', 
-          apply: () => { 
+          title: 'DOUBLE LVL UP CHANCE',
+          desc: 'Chance to get one more LVL UP box after the original one (+25% per stack, max 100% at 4 stacks)',
+          apply: () => {
             playerStats.doubleUpgradeChance = (playerStats.doubleUpgradeChance || 0) + 0.25;
-            showStatChange('Double Upgrade Chance +25%! (Total: ' + Math.round(playerStats.doubleUpgradeChance * 100) + '%)');
-          } 
+            showStatChange('Double LVL UP Chance +25%! (Total: ' + Math.round(playerStats.doubleUpgradeChance * 100) + '%)');
+          }
         },
         {
           id: 'atkPassive',
@@ -795,9 +795,9 @@ window.spawnBossChest = function(x, z) {
         }
         choices.push(...commonUpgrades.sort(() => 0.5 - Math.random()).slice(0, 3));
       }
-      // Levels 5, 9, 17, 23: WEAPON UPGRADE LEVELS (first weapon upgrade at level 5)
+      // Levels 5, 9, 17, 23: WEAPON LVL UP LEVELS (first weapon upgrade at level 5)
       else if ([5, 9, 17, 23].includes(playerStats.lvl)) {
-        modal.querySelector('h2').innerText = 'WEAPON UPGRADE!';
+        modal.querySelector('h2').innerText = 'WEAPON LVL UP!';
         modal.querySelector('h2').style.fontSize = '36px';
         
         choices = [];
@@ -1002,7 +1002,7 @@ window.spawnBossChest = function(x, z) {
         const countActiveWeapons = () => Object.values(weapons).filter(w => w.active).length;
         const atWeaponCap = countActiveWeapons() >= 4; // Hard cap: max 4 active weapons
 
-        modal.querySelector('h2').innerText = atWeaponCap ? 'WEAPON UPGRADE!' : 'NEW WEAPON!';
+        modal.querySelector('h2').innerText = atWeaponCap ? 'WEAPON LVL UP!' : 'NEW WEAPON!';
         modal.querySelector('h2').style.fontSize = '36px';
 
         const questCheck = () => { if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest8_newWeapon') progressTutorialQuest('quest8_newWeapon', true); };
@@ -1096,7 +1096,7 @@ window.spawnBossChest = function(x, z) {
 
         // ── Weapon-upgrade entries (used both at cap and as padding) ─────────
         // Weapons at level 9 show an EVOLVE option that triggers their Mythic form.
-        // After evolution, the regular upgrade is always shown (no hard level cap).
+        // After evolution, the regular LVL UP is always shown (no hard level cap).
         function makeUpgradeEntry(key, icon, label, regularApply) {
           const w = weapons[key];
           if (!w || !w.active) return null;
@@ -1105,7 +1105,7 @@ window.spawnBossChest = function(x, z) {
             return { id: `${key}_evo`, icon: evo.icon, title: `✨ EVOLVE: ${evo.name}`, desc: evo.desc, apply: () => { applyWeaponEvolution(key); } };
           }
           // No hard level cap — allow endless scaling for late-game
-          return { id: `${key}_up`, icon, title: `${label} Lv.${w.level + 1}`, desc: `Upgrade ${label}`, apply: regularApply };
+          return { id: `${key}_up`, icon, title: `${label} Lv.${w.level + 1}`, desc: `LVL UP ${label}`, apply: regularApply };
         }
 
         const upgradeWeapons = [
@@ -1528,8 +1528,8 @@ window.spawnBossChest = function(x, z) {
         card.style.borderColor = cardColor;
         card.style.boxShadow   = `0 0 20px ${cardColor}40`;
         if (isMythic) card.style.overflow = 'visible';
-        
-        // Upgrade cards: rarity header + icon + title + desc (playing-card layout)
+
+        // LVL UP cards: rarity header + icon + title + desc (playing-card layout)
         const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
         card.innerHTML = `
           <div class="upgrade-rarity-header" style="color: ${cardColor}; text-shadow: 0 0 8px ${cardColor};">${cardRarityLabel}</div>
@@ -1613,9 +1613,9 @@ window.spawnBossChest = function(x, z) {
             c.classList.remove('holding');
           });
 
-          playSound('upgrade'); // "Wooooaaa" sound after picking upgrade
+          playSound('upgrade'); // "Wooooaaa" sound after picking LVL UP
 
-          // ── Visual Upgrade Cue: screen flash + player mesh pulse with rarity colour ──
+          // ── Visual LVL UP Cue: screen flash + player mesh pulse with rarity colour ──
           try {
             const rarityFlashColors = {
               'rarity-common':    'rgba(255,255,255,0.25)',
@@ -1652,11 +1652,11 @@ window.spawnBossChest = function(x, z) {
           // Phase 4: Wrap in try-catch to ensure modal always closes
           try {
             u.apply();
-            // Debug: log upgrade applied (class/perk upgrades logged verbosely)
+            // Debug: log LVL UP applied (class/perk upgrades logged verbosely)
             if (window.GameDebug) window.GameDebug.onUpgradeApplied(u.id, playerStats);
           } catch (error) {
-            console.error('Error applying upgrade:', error);
-            if (window.GameDebug) window.GameDebug.oshot('upgrade_err_' + (u.id || 'unk'), 'Upgrade apply error ' + (u.id || '') + ': ' + error.message, error.stack);
+            console.error('Error applying LVL UP:', error);
+            if (window.GameDebug) window.GameDebug.oneshot('upgrade_err_' + (u.id || 'unk'), 'LVL UP apply error ' + (u.id || '') + ': ' + error.message, error.stack);
           }
 
           // Always close modal
