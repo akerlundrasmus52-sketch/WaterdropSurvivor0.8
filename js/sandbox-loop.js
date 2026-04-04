@@ -504,6 +504,14 @@
   let _goldPool = [];          // { mesh, active, vx, vy, vz, onGround, value, bounceCount }
   let _goldPoolInited = false;
 
+  // ─── Blood Moon Event State ───────────────────────────────────────────────────
+  let _bloodMoonActive      = false;
+  let _bloodMoonTimer       = 0;     // seconds remaining
+  const BLOOD_MOON_DURATION = 60;    // 60 seconds of hell
+  const BLOOD_MOON_SPEED_MULT  = 2;  // enemies move 2× faster
+  const BLOOD_MOON_DAMAGE_MULT = 2;  // enemies deal 2× damage
+  const BLOOD_MOON_SPAWN_MULT  = 3;  // enemies spawn 3× more
+
   // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
   let _sessionTimerSecs    = 0; // total elapsed seconds since boot
   let _sessionTimerAccum   = 0; // accumulator for 1-second updates
@@ -2380,7 +2388,7 @@
   function _updateCrawlers(dt) {
     if (!window.CrawlerPool || !player || !player.mesh) return;
     const playerPos = player.mesh.position;
-    CrawlerPool.update(dt, playerPos);
+    CrawlerPool.update(_bloodMoonActive ? dt * BLOOD_MOON_SPEED_MULT : dt, playerPos);
 
     // Refresh active list and handle contact damage
     for (let i = _activeCrawlers.length - 1; i >= 0; i--) {
@@ -2699,7 +2707,7 @@
   function _updateLeapingSlimes(dt) {
     if (!window.LeapingSlimePool || !player || !player.mesh) return;
     const playerPos = player.mesh.position;
-    LeapingSlimePool.update(dt, playerPos);
+    LeapingSlimePool.update(_bloodMoonActive ? dt * BLOOD_MOON_SPEED_MULT : dt, playerPos);
 
     const LEAPING_CONTACT_RADIUS =
       window.LEAP_CFG && typeof LEAP_CFG.ATTACK_RANGE === 'number'
@@ -3483,7 +3491,7 @@
         s.mesh.position.z = _clamp(s.mesh.position.z + lungeMoveZ, -ARENA_RADIUS, ARENA_RADIUS);
       } else if (dist > 1.2 && Math.abs(s.knockbackVx) < 0.05 && Math.abs(s.knockbackVz) < 0.05) {
         // Apply individual speed variation for more natural movement
-        const speed = SLIME_SPEED * (s.speedMultiplier || 1.0);
+        const speed = SLIME_SPEED * (s.speedMultiplier || 1.0) * (_bloodMoonActive ? BLOOD_MOON_SPEED_MULT : 1);
         s.mesh.position.x += (ddx / dist) * speed * dt;
         s.mesh.position.z += (ddz / dist) * speed * dt;
         s.mesh.rotation.y = Math.atan2(ddx, ddz);
@@ -3591,6 +3599,61 @@
       _tmpV3b.set(star.position.x, star.position.y, star.position.z);
       createFloatingText('+' + star.xp + ' XP', _tmpV3b, '#5DADE2');
     }
+  }
+
+  // ─── Blood Moon Event Functions ───────────────────────────────────────────────
+  function _triggerBloodMoon() {
+    _bloodMoonActive = true;
+    _bloodMoonTimer  = BLOOD_MOON_DURATION;
+    localStorage.setItem('bloodMoonQueued', 'false');
+
+    _showWaveNotification('🌑 BLOOD MOON RISES — ENEMIES ARE RELENTLESS!', '#cc0000', 6000);
+
+    // Crimson lighting transition
+    if (window._sandboxLights) {
+      const THREE = window.THREE;
+      if (window._sandboxLights.ambient) {
+        window._sandboxLights.ambient.color.setHex(0x660000);
+        window._sandboxLights.ambient.intensity = 0.65;
+      }
+      if (window._sandboxLights.sun) {
+        window._sandboxLights.sun.color.setHex(0x990000);
+        window._sandboxLights.sun.intensity = 0.3;
+      }
+      if (window._sandboxLights.fill) {
+        window._sandboxLights.fill.color.setHex(0x440000);
+        window._sandboxLights.fill.intensity = 0.15;
+      }
+    }
+    if (window.scene) {
+      if (window.scene.fog)        window.scene.fog.color.setHex(0x3a0000);
+      if (window.scene.background) window.scene.background.set(new window.THREE.Color(0x1a0000));
+    }
+
+    // Blood Moon vignette overlay
+    let v = document.getElementById('blood-moon-vignette');
+    if (!v) {
+      v = document.createElement('div');
+      v.id = 'blood-moon-vignette';
+      document.body.appendChild(v);
+    }
+  }
+
+  function _endBloodMoon() {
+    _bloodMoonActive = false;
+    _bloodMoonTimer  = 0;
+    // Remove vignette
+    const v = document.getElementById('blood-moon-vignette');
+    if (v) v.remove();
+    // Restore lighting — the day/night cycle will naturally correct it on next update
+    if (window._sandboxLights) {
+      if (window._sandboxLights.ambient) window._sandboxLights.ambient.color.setHex(0xffffff);
+      if (window._sandboxLights.sun)     window._sandboxLights.sun.color.setHex(0xFFF5E0);
+      if (window._sandboxLights.fill)    window._sandboxLights.fill.color.setHex(0x8899ff);
+      if (window._sandboxLights.fill)    window._sandboxLights.fill.intensity = 0.35;
+    }
+    if (window.scene && window.scene.fog) window.scene.fog.color.setHex(0x1a1a2e);
+    _showWaveNotification('☀️ The Blood Moon fades… for now.', '#ff8800', 4000);
   }
 
   // ─── Gold Coin System ─────────────────────────────────────────────────────────
@@ -6626,6 +6689,10 @@
       // SECTION 2E: Boss encounters at milestone waves
       // Wave 10: Grey Alien Boss
       if (this._waveNumber === 10) {
+        // ── Blood Moon check ──────────────────────────────────────────────────
+        if (localStorage.getItem('bloodMoonQueued') === 'true') {
+          SeqWaveManager._setTimeout(function() { _triggerBloodMoon(); }, 1200);
+        }
         _showWaveNotification('👽 WAVE 10 — GREY ALIEN SCOUT DETECTED! 👽', '#00ffaa', 4000);
         if (typeof GreyBossSystem !== 'undefined' && GreyBossSystem.spawn) {
           SeqWaveManager._setTimeout(function() {

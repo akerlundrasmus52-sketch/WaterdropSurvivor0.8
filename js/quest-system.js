@@ -2653,111 +2653,299 @@
     // ============================================================
     // INVENTORY SCREEN
     // ============================================================
+    // ============================================================
+    // MASTER VAULT — full-screen "iPhone home screen" inventory
+    // ============================================================
     function showInventoryScreen() {
-      // Close camp screen
       const campScreen = document.getElementById('camp-screen');
       if (campScreen) campScreen.style.display = 'none';
 
-      // Remove any existing inventory modal
       const existingModal = document.getElementById('inventory-screen-modal');
       if (existingModal) existingModal.remove();
 
       const modal = document.createElement('div');
       modal.id = 'inventory-screen-modal';
-      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:200;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;';
+      modal.style.cssText = [
+        'position:fixed;top:0;left:0;width:100%;height:100%;z-index:200',
+        'background:#07060e',
+        'display:flex;flex-direction:column',
+        'font-family:Courier New,monospace'
+      ].join(';');
 
-      const currencies = [
-        { icon: '🪙', name: 'Gold', value: saveData.gold || 0 },
-        { icon: '💎', name: 'Gems', value: saveData.gems || 0 },
-        { icon: '✨', name: 'Essence', value: saveData.essence || 0 }
-      ];
+      // ── helpers ──────────────────────────────────────────────
+      const RARITY_COLOR  = { common:'#9e9e9e', uncommon:'#1aff1a', rare:'#0af', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff2a2a' };
+      const RARITY_SHADOW = { common:'#9e9e9e44', uncommon:'#1aff1a66', rare:'#0af6', epic:'#a335ee66', legendary:'#ff800066', mythic:'#ff2a2aaa' };
+      const RARITY_STARS  = { common:'✦', uncommon:'✦✦', rare:'✦✦✦', epic:'✦✦✦✦', legendary:'✦✦✦✦✦', mythic:'◈ MYTHIC' };
+      const TYPE_ICON = { weapon:'⚔️', armor:'🛡️', helmet:'⛑️', boots:'👢', ring:'💍', amulet:'📿', consumable:'⚗️', material:'📦', currency:'💰' };
 
-      const currencyHTML = currencies.map(c =>
-        `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,215,0,0.1);border:1px solid #FFD700;border-radius:8px;padding:8px 14px;margin:4px;">
-          <span style="font-size:20px;">${c.icon}</span>
-          <span style="color:#FFD700;font-size:16px;font-weight:bold;">${c.value.toLocaleString()}</span>
-          <span style="color:#aaa;font-size:12px;">${c.name}</span>
-        </div>`
-      ).join('');
-
-      // Special Items section
-      let specialItemsHTML = '';
-      if (saveData.hasCompanionEgg) {
-        const alreadyHatched = saveData.companionEggHatched;
-        specialItemsHTML += `
-          <div style="background:linear-gradient(135deg,rgba(0,255,180,0.15),rgba(0,100,80,0.3));border:2px solid #00FFB4;border-radius:12px;padding:16px;margin:8px 0;display:flex;align-items:center;gap:14px;">
-            <div style="font-size:48px;animation:pulse 1.5s ease-in-out infinite;">🥚</div>
-            <div style="flex:1;">
-              <div style="color:#00FFB4;font-size:18px;font-weight:bold;">Mysterious Companion Egg</div>
-              <div style="color:#aaa;font-size:13px;margin:4px 0;">Found at the UFO crash site in Area 51. Something stirs within...</div>
-              <div style="color:#FFD700;font-size:12px;">★★★ LEGENDARY ★★★</div>
-            </div>
-            <div>
-              ${alreadyHatched
-                ? '<span style="color:#00FF88;font-size:13px;">✅ Hatched</span>'
-                : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:8px;padding:10px 16px;color:#000;font-weight:bold;cursor:pointer;font-size:13px;">Place in Companion House →</button>`
-              }
-            </div>
-          </div>`;
+      // Collect all items by category
+      function buildAllItems() {
+        const list = [];
+        // Currencies
+        list.push({ id:'__gold__',    name:'Gold',    rarity:'legendary', icon:'🪙', qty: saveData.gold    || 0, cat:'materials', description:'The universal currency of the realm.', lore:'Gold — forged in the core of Nibiru and scattered across the Earth after the great descent.' });
+        list.push({ id:'__gems__',    name:'Gems',    rarity:'epic',      icon:'💎', qty: saveData.gems    || 0, cat:'materials', description:'Premium gemstones used for rare transactions.', lore:'"The Annunaki traded souls for gems in the old age." — Unknown inscription' });
+        list.push({ id:'__essence__', name:'Essence', rarity:'rare',      icon:'✨', qty: saveData.essence || 0, cat:'materials', description:'Distilled void energy, used in the Neural Matrix.', lore:'Pure consciousness rendered tangible through Annunaki alchemy.' });
+        // Resources
+        const res = saveData.resources || {};
+        const resNames = { wood:'Wood 🪵', stone:'Stone 🪨', coal:'Coal', iron:'Iron ⚙️', crystal:'Crystal 🔮', magicEssence:'Magic Essence', flesh:'Flesh', fur:'Fur', leather:'Leather', feather:'Feather', chitin:'Chitin', berry:'Berries 🍓', flower:'Flowers 🌸' };
+        for (const k in resNames) {
+          if ((res[k] || 0) > 0) list.push({ id:'__res_'+k, name:resNames[k], rarity:'common', icon:'📦', qty:res[k], cat:'materials', description:'Harvested material.', lore:'' });
+        }
+        // Companion Egg special
+        if (saveData.hasCompanionEgg) {
+          list.push({ id:'__egg__', name:'Companion Egg', rarity:'legendary', icon:'🥚', qty:1, cat:'materials',
+            description:'A mysterious egg from the UFO crash site. Something stirs within.', lore:'"Born of void static and alien biomatter — what emerges will serve, or consume." — Grey Field Report',
+            _isEgg: true });
+        }
+        // Gear (from saveData.inventory)
+        (saveData.inventory || []).forEach(function(item, idx) {
+          list.push(Object.assign({}, item, { _invIdx: idx, cat:'gear', icon: TYPE_ICON[item.type] || '⚔️', qty: null }));
+        });
+        // Consumables
+        (saveData.consumables || []).forEach(function(item) {
+          list.push(Object.assign({}, item, { cat:'consumable', icon: item.icon || '⚗️' }));
+        });
+        return list;
       }
 
-      // Gear inventory
-      const gear = saveData.inventory || [];
-      const gearHTML = gear.length === 0
-        ? '<div style="color:#666;text-align:center;padding:20px;">No gear collected yet. Complete runs to find gear!</div>'
-        : gear.map((item, idx) => {
-          const rarityColor = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
-          const rarityStars = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
-          const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(g => g && g.id === item.id);
-          return `
-            <div style="background:rgba(255,255,255,0.05);border:1px solid ${rarityColor};border-radius:8px;padding:12px;margin:6px 0;display:flex;align-items:center;gap:12px;">
-              <div style="font-size:32px;">${item.type === 'ring' ? '💍' : item.type === 'amulet' ? '📿' : item.type === 'helmet' ? '⛑️' : item.type === 'boots' ? '👢' : '🛡️'}</div>
-              <div style="flex:1;">
-                <div style="color:${rarityColor};font-size:15px;font-weight:bold;">${item.name}</div>
-                <div style="color:#aaa;font-size:12px;">${item.description || ''}</div>
-                <div style="color:${rarityColor};font-size:11px;">${rarityStars} ${(item.rarity || 'common').toUpperCase()}</div>
-              </div>
-              <div>
-                ${isEquipped
-                  ? '<span style="color:#FFD700;font-size:12px;">✅ Equipped</span>'
-                  : `<button onclick="equipItemFromInventory(${idx})" style="background:rgba(255,215,0,0.2);border:1px solid #FFD700;border-radius:6px;padding:6px 12px;color:#FFD700;cursor:pointer;font-size:12px;">Equip</button>`
-                }
-              </div>
-            </div>`;
-        }).join('');
+      let _allItems   = buildAllItems();
+      let _activeTab  = 'all';
+      let _selected   = null;
 
+      function filteredItems() {
+        if (_activeTab === 'all')         return _allItems;
+        if (_activeTab === 'gear')        return _allItems.filter(function(i) { return i.cat === 'gear'; });
+        if (_activeTab === 'materials')   return _allItems.filter(function(i) { return i.cat === 'materials'; });
+        if (_activeTab === 'consumables') return _allItems.filter(function(i) { return i.cat === 'consumable'; });
+        return _allItems;
+      }
+
+      // ── DOM structure ─────────────────────────────────────────
       modal.innerHTML = `
-        <div style="max-width:640px;width:100%;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="color:#FFD700;margin:0;font-size:22px;">📦 Inventory</h2>
-            <button id="inv-back-btn" style="background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:8px 16px;color:#fff;cursor:pointer;">← Back to Camp</button>
-          </div>
-
-          <div style="background:rgba(255,215,0,0.05);border:1px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="color:#FFD700;font-size:14px;font-weight:bold;margin-bottom:10px;">💰 Currencies</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">${currencyHTML}</div>
-          </div>
-
-          ${saveData.hasCompanionEgg ? `
-          <div style="background:rgba(0,255,180,0.05);border:1px solid #00FFB4;border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="color:#00FFB4;font-size:14px;font-weight:bold;margin-bottom:10px;">✨ Special Items</div>
-            ${specialItemsHTML}
-          </div>` : ''}
-
-          <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:12px;padding:16px;">
-            <div style="color:#fff;font-size:14px;font-weight:bold;margin-bottom:10px;">⚔️ Gear (${gear.length} items)</div>
-            ${gearHTML}
-          </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid #1a1a3a;flex-shrink:0;">
+          <div style="color:#00ffff;font-size:20px;font-weight:bold;letter-spacing:3px;text-shadow:0 0 12px #00ffff88;">◈ MASTER VAULT</div>
+          <button id="mv-back-btn" style="background:rgba(0,255,255,0.08);border:1px solid #00ffff44;border-radius:8px;padding:7px 16px;color:#00ffff;cursor:pointer;font-size:13px;letter-spacing:1px;">← CAMP</button>
+        </div>
+        <div id="mv-tabs" style="display:flex;gap:0;border-bottom:1px solid #1a1a3a;flex-shrink:0;">
+          ${['all','gear','materials','consumables'].map(function(t) {
+            return `<button class="mv-tab" data-tab="${t}" style="flex:1;background:${t==='all'?'rgba(0,255,255,0.12)':'transparent'};border:none;border-bottom:2px solid ${t==='all'?'#00ffff':'transparent'};color:${t==='all'?'#00ffff':'#888'};padding:10px 4px;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .2s;">${t}</button>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+          <div id="mv-grid-wrap" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:12px;align-content:start;"></div>
+          <div id="mv-side" style="width:0;min-width:0;overflow:hidden;background:#0c0b1a;border-left:1px solid #1a1a3a;transition:width .25s;flex-shrink:0;"></div>
         </div>
       `;
-
       document.body.appendChild(modal);
 
-      document.getElementById('inv-back-btn').onclick = () => {
+      // ── card renderer ──────────────────────────────────────────
+      function renderGrid() {
+        const grid = document.getElementById('mv-grid-wrap');
+        if (!grid) return;
+        const items = filteredItems();
+        if (items.length === 0) {
+          grid.style.display = 'block';
+          grid.innerHTML = '<div style="color:#444;text-align:center;padding:40px;grid-column:1/-1;">No items yet.</div>';
+          return;
+        }
+        grid.style.display = 'grid';
+        grid.innerHTML = '';
+        items.forEach(function(item) {
+          const rc = RARITY_COLOR[item.rarity]  || '#9e9e9e';
+          const rs = RARITY_SHADOW[item.rarity] || '#9e9e9e44';
+          const isSelected = _selected && _selected.id === item.id;
+          const card = document.createElement('div');
+          card.className = 'mv-squircle-card';
+          card.style.cssText = [
+            'border-radius:22px',
+            'background:linear-gradient(145deg,#12112a,#0d0c20)',
+            `border:2px solid ${isSelected ? rc : rc+'66'}`,
+            `box-shadow:0 0 ${isSelected?'18px':'8px'} ${rs}`,
+            'padding:12px 6px 8px',
+            'display:flex;flex-direction:column;align-items:center;gap:5px',
+            'cursor:pointer;user-select:none',
+            'transition:box-shadow .18s,border-color .18s',
+            'position:relative;overflow:hidden'
+          ].join(';');
+          const qtyBadge = (item.qty != null && item.qty > 0) ? `<div style="position:absolute;top:6px;right:8px;background:${rc};color:#000;font-size:9px;font-weight:bold;border-radius:6px;padding:1px 5px;min-width:14px;text-align:center;">${item.qty.toLocaleString()}</div>` : '';
+          const equippedBadge = (item._invIdx != null && saveData.equippedGear && Object.values(saveData.equippedGear).some(function(g){ return g && g.id === item.id; })) ? '<div style="position:absolute;bottom:5px;right:6px;font-size:10px;">✅</div>' : '';
+          card.innerHTML = `${qtyBadge}${equippedBadge}
+            <div style="font-size:30px;line-height:1;">${item.icon}</div>
+            <div style="color:${rc};font-size:10px;font-weight:bold;text-align:center;line-height:1.3;word-break:break-word;">${item.name}</div>
+            <div style="color:${rc}88;font-size:9px;">${RARITY_STARS[item.rarity] || ''}</div>`;
+          card.onclick = function() { selectItem(item); };
+          grid.appendChild(card);
+        });
+      }
+
+      // ── side panel ─────────────────────────────────────────────
+      function selectItem(item) {
+        _selected = item;
+        renderGrid();
+        const side = document.getElementById('mv-side');
+        if (!side) return;
+        side.style.width = '280px';
+        side.style.minWidth = '280px';
+        side.style.padding = '18px';
+        side.style.overflowY = 'auto';
+        const rc  = RARITY_COLOR[item.rarity]  || '#9e9e9e';
+        const rs  = RARITY_SHADOW[item.rarity] || '#9e9e9e33';
+        const isEquipped = item._invIdx != null && saveData.equippedGear && Object.values(saveData.equippedGear).some(function(g){ return g && g.id === item.id; });
+        const isCrimsonCore = item.id === 'crimsonEclipseCore';
+        const bloodQueued = localStorage.getItem('bloodMoonQueued') === 'true';
+
+        let actionBtn = '';
+        if (item.consumable && item.qty > 0) {
+          if (isCrimsonCore && bloodQueued) {
+            actionBtn = `<div style="color:#ff8800;font-size:12px;text-align:center;padding:10px;border:1px solid #ff880044;border-radius:10px;margin-top:10px;">⏳ Blood Moon already queued for next run.</div>`;
+          } else if (isCrimsonCore) {
+            actionBtn = `<button id="mv-consume-btn" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#600000,#cc0000);border:2px solid #ff2a2a;border-radius:12px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;letter-spacing:2px;box-shadow:0 0 18px #ff2a2a88;">🌑 CONSUME</button>`;
+          }
+        }
+        if (item._isEgg) {
+          actionBtn = saveData.companionEggHatched
+            ? '<div style="color:#00FF88;text-align:center;margin-top:10px;">✅ Already Hatched</div>'
+            : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:10px;color:#000;font-weight:bold;cursor:pointer;">Place in Companion House →</button>`;
+        }
+        if (item._invIdx != null) {
+          actionBtn = isEquipped
+            ? `<div style="color:#FFD700;text-align:center;margin-top:10px;font-size:13px;">✅ Equipped</div>`
+            : `<button onclick="equipItemFromInventory(${item._invIdx})" style="width:100%;margin-top:12px;padding:10px;background:rgba(255,215,0,0.15);border:1px solid #FFD700;border-radius:10px;color:#FFD700;cursor:pointer;font-size:13px;font-weight:bold;">⚔️ EQUIP</button>`;
+        }
+
+        let statsHTML = '';
+        if (item.stats && typeof item.stats === 'object') {
+          statsHTML = Object.entries(item.stats).map(function(kv) {
+            return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#ccc;padding:2px 0;"><span style="color:#888;">${kv[0]}</span><span style="color:${rc};">${kv[1]}</span></div>`;
+          }).join('');
+        }
+
+        side.innerHTML = `
+          <div style="text-align:center;margin-bottom:14px;">
+            <div style="font-size:52px;">${item.icon}</div>
+            <div style="color:${rc};font-size:17px;font-weight:bold;margin-top:6px;text-shadow:0 0 10px ${rs};">${item.name}</div>
+            <div style="color:${rc}88;font-size:11px;margin-top:2px;">${RARITY_STARS[item.rarity] || ''} ${(item.rarity||'common').toUpperCase()}</div>
+            ${item.qty != null ? `<div style="color:#fff;font-size:13px;margin-top:4px;">Qty: <span style="color:${rc};font-weight:bold;">${item.qty.toLocaleString()}</span></div>` : ''}
+          </div>
+          ${statsHTML ? `<div style="background:#ffffff0a;border:1px solid #ffffff11;border-radius:10px;padding:10px;margin-bottom:10px;">${statsHTML}</div>` : ''}
+          ${item.description ? `<div style="color:#aaa;font-size:12px;line-height:1.6;margin-bottom:10px;">${item.description}</div>` : ''}
+          ${item.lore ? `<div style="color:#555;font-size:11px;line-height:1.6;font-style:italic;border-top:1px solid #1a1a3a;padding-top:8px;margin-bottom:6px;">${item.lore}</div>` : ''}
+          ${actionBtn}
+        `;
+
+        // Consume button handler
+        const consumeBtn = document.getElementById('mv-consume-btn');
+        if (consumeBtn) {
+          consumeBtn.onclick = function() {
+            if (!isCrimsonCore) return;
+            // Pulse animation
+            modal.classList.add('mv-crimson-pulse');
+            setTimeout(function() { modal.classList.remove('mv-crimson-pulse'); }, 900);
+            // Deduct item
+            const existing = saveData.consumables.find(function(c) { return c.id === 'crimsonEclipseCore'; });
+            if (existing) {
+              existing.quantity--;
+              if (existing.quantity <= 0) saveData.consumables = saveData.consumables.filter(function(c) { return c.id !== 'crimsonEclipseCore'; });
+            }
+            localStorage.setItem('bloodMoonQueued', 'true');
+            saveSaveData();
+            _allItems = buildAllItems();
+            _selected = null;
+            side.style.width = '0';
+            side.style.minWidth = '0';
+            side.style.padding = '0';
+            renderGrid();
+            // Show confirmation
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(60,0,0,0.97);border:2px solid #ff2a2a;border-radius:16px;padding:24px 36px;color:#ff6666;font-size:16px;font-weight:bold;text-align:center;box-shadow:0 0 60px #ff2a2a;pointer-events:none;';
+            banner.innerHTML = '🌑 BLOOD MOON QUEUED<br><span style="font-size:12px;color:#aaa;">It will rise at Wave 10 of your next run</span>';
+            document.body.appendChild(banner);
+            setTimeout(function() { banner.remove(); }, 3000);
+          };
+        }
+      }
+
+      // ── tab switching ─────────────────────────────────────────
+      modal.querySelectorAll('.mv-tab').forEach(function(btn) {
+        btn.onclick = function() {
+          _activeTab = btn.dataset.tab;
+          _selected  = null;
+          const side = document.getElementById('mv-side');
+          if (side) { side.style.width='0'; side.style.minWidth='0'; side.style.padding='0'; }
+          modal.querySelectorAll('.mv-tab').forEach(function(b) {
+            const active = b.dataset.tab === _activeTab;
+            b.style.background     = active ? 'rgba(0,255,255,0.12)' : 'transparent';
+            b.style.borderBottom   = active ? '2px solid #00ffff'    : '2px solid transparent';
+            b.style.color          = active ? '#00ffff' : '#888';
+          });
+          renderGrid();
+        };
+      });
+
+      document.getElementById('mv-back-btn').onclick = function() {
         modal.remove();
         if (campScreen) campScreen.style.display = 'flex';
       };
+
+      // Initial render
+      renderGrid();
     }
+
+    // ── 1/3-screen A.I.D.A. cinematic dialogue for Crimson Eclipse Core ────────
+    window.showCrimsonCoreDialogue = function() {
+      const existing = document.getElementById('mv-cinematic-backdrop');
+      if (existing) existing.remove();
+
+      const bd = document.createElement('div');
+      bd.id = 'mv-cinematic-backdrop';
+      bd.style.cssText = [
+        'position:fixed;bottom:0;left:0;width:100%;height:33vh;z-index:5000',
+        'background:linear-gradient(to top,#000 60%,rgba(0,0,0,0.95))',
+        'display:flex;flex-direction:column;justify-content:center',
+        'padding:20px 32px;box-sizing:border-box',
+        'border-top:2px solid #ff2a2a44',
+        'animation:mv-cinematic-in 0.5s ease'
+      ].join(';');
+
+      bd.innerHTML = `
+        <div style="display:flex;gap:18px;align-items:flex-start;max-width:800px;">
+          <div style="flex-shrink:0;width:52px;height:52px;border-radius:50%;background:rgba(0,255,255,0.1);border:2px solid #00ffff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 18px #00ffff66;">🤖</div>
+          <div style="flex:1;">
+            <div style="color:#00ffff;font-size:13px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;text-shadow:0 0 8px #00ffff;">A.I.D.A.</div>
+            <div id="mv-cinema-text" style="color:#ddd;font-size:14px;line-height:1.7;min-height:3em;"></div>
+            <div style="margin-top:10px;color:#555;font-size:11px;">[tap to continue]</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(bd);
+
+      const lines = [
+        { text: 'Droplet… that core is radiating dangerous void energy.', pause: 2800 },
+        { text: 'If you consume it in your Inventory, it will trigger a Blood Moon during your next run at Wave 10.', pause: 3800 },
+        { text: 'The enemies will be relentless, but the artifact drops will be legendary. Prepare yourself.', pause: 3500 }
+      ];
+      let lineIdx = 0;
+      const textEl = document.getElementById('mv-cinema-text');
+
+      function typewriteLine(str, cb) {
+        textEl.textContent = '';
+        let i = 0;
+        function tick() {
+          if (i < str.length) { textEl.textContent += str[i++]; setTimeout(tick, 28); }
+          else { setTimeout(cb, 600); }
+        }
+        tick();
+      }
+
+      function nextLine() {
+        if (lineIdx >= lines.length) { setTimeout(function() { bd.remove(); }, 400); return; }
+        const l = lines[lineIdx++];
+        typewriteLine(l.text, function() { setTimeout(nextLine, l.pause - 600); });
+      }
+      nextLine();
+
+      bd.onclick = function() { bd.remove(); };
+    };
 
     // Equip item directly from inventory screen
     function equipItemFromInventory(itemIdx) {

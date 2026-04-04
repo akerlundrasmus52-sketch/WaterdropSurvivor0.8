@@ -79,6 +79,8 @@
         amulet: null         // Accessory amulet slot (Phase 1)
       },
       inventory: [],
+      consumables: [], // Single-use consumable items (e.g. Crimson Eclipse Core)
+      hasSeenCrimsonCoreDialogue: false, // AIDA dialogue flag for first CEC obtain
       // Phase 5: Companion System
       companions: {
         greyAlien: { unlocked: true, level: 1, xp: 0, skills: {} },
@@ -415,6 +417,8 @@
           saveData.unspentAttributePoints = saveData.unspentAttributePoints || 0;
           saveData.equippedGear = { ...defaultSaveData.equippedGear, ...(saveData.equippedGear || {}) };
           saveData.inventory = saveData.inventory || [];
+          saveData.consumables = saveData.consumables || [];
+          saveData.hasSeenCrimsonCoreDialogue = saveData.hasSeenCrimsonCoreDialogue || false;
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
@@ -2624,6 +2628,37 @@
     // Expose to global scope for onclick handlers
     window.equipGear = equipGear;
     window.unequipGear = unequipGear;
+
+    // ── Crimson Eclipse Core grant helper ──────────────────────────────────────
+    // Call window.grantCrimsonEclipseCore(qty) from minigame rewards or boss drops.
+    window.grantCrimsonEclipseCore = function(qty) {
+      qty = qty || 1;
+      if (!saveData.consumables) saveData.consumables = [];
+      const existing = saveData.consumables.find(function(c) { return c.id === 'crimsonEclipseCore'; });
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        saveData.consumables.push({
+          id:          'crimsonEclipseCore',
+          name:        'Crimson Eclipse Core',
+          rarity:      'mythic',
+          quantity:    qty,
+          icon:        '🔴',
+          description: 'A volatile orb torn from the dying heart of a void star. Pulsates with dangerous crimson energy.',
+          lore:        '"The Annunaki called it the Zar\'ul Stone — the eye of a slain god. Its consumption guarantees power, and promises ruin." — Fragment of the Ninth Codex',
+          stats:       { effect: 'Queues a Blood Moon at Wave 10 of your next run' },
+          consumable:  true
+        });
+        // First-time AIDA cinematic dialogue
+        if (!saveData.hasSeenCrimsonCoreDialogue) {
+          saveData.hasSeenCrimsonCoreDialogue = true;
+          setTimeout(function() {
+            if (window.showCrimsonCoreDialogue) window.showCrimsonCoreDialogue();
+          }, 800);
+        }
+      }
+      saveSaveData();
+    };
 
     // Upgrade definitions for the progression shop
     const PERMANENT_UPGRADES = {
