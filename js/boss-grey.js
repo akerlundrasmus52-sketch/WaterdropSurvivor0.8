@@ -907,7 +907,41 @@
         window.playerInventory.push('grey_companion_egg');
       }
 
-      _showHUDMessage('You found The Grey Egg 🥚', 2000);
+      // Mark quest complete in saveData for persistence
+      const sd = window.saveData;
+      if (sd) {
+        if (!sd.worldQuests) sd.worldQuests = {};
+        sd.worldQuests.investigate_ufo_crash = { completed: true, timestamp: Date.now() };
+        sd.worldQuests.retrieve_grey_egg = { completed: true, timestamp: Date.now() };
+        // Save egg to persistent inventory
+        if (!sd.companionEggs) sd.companionEggs = [];
+        if (!sd.companionEggs.includes('grey_companion_egg')) {
+          sd.companionEggs.push('grey_companion_egg');
+        }
+        // Save progress
+        if (typeof window.saveSaveData === 'function') {
+          window.saveSaveData();
+        }
+      }
+
+      // Progress quest to egg retrieval complete
+      if (window.gameState && window.gameState.activeQuests) {
+        const idx = window.gameState.activeQuests.findIndex(q =>
+          q === 'investigate_ufo_crash' || (q && q.id === 'investigate_ufo_crash')
+        );
+        if (idx !== -1) {
+          window.gameState.activeQuests.splice(idx, 1);
+        }
+        const idx2 = window.gameState.activeQuests.findIndex(q =>
+          q === 'retrieve_grey_egg' || (q && q.id === 'retrieve_grey_egg')
+        );
+        if (idx2 !== -1) {
+          window.gameState.activeQuests.splice(idx2, 1);
+        }
+      }
+
+      _showHUDMessage('You found The Grey Egg 🥚 - Return to Camp!', 3000);
+      console.log('[🥚 UFO Quest] Egg retrieved! Quest complete - return to camp to incubate it');
     }
   }
 

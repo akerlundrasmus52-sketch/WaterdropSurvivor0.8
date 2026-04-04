@@ -7144,6 +7144,56 @@
         window.GameAccount._initialized = true;
       }
 
+      // ── UFO Quest Activation (Dopamine Gacha Update) ──────────────────────────
+      // Auto-activate UFO quest in Sandbox 2.0 for testing
+      if (!window.gameState) window.gameState = {};
+      if (!window.gameState.activeQuests) window.gameState.activeQuests = [];
+
+      // Check if player has completed tutorial quests and hasn't done UFO quest yet
+      const shouldActivateUFOQuest = saveData && saveData.tutorialQuests &&
+        saveData.tutorialQuests.completedQuests &&
+        saveData.tutorialQuests.completedQuests.length > 0 &&
+        (!saveData.worldQuests || !saveData.worldQuests.investigate_ufo_crash);
+
+      if (shouldActivateUFOQuest) {
+        // Activate UFO quest
+        if (!window.gameState.activeQuests.some(q => q === 'investigate_ufo_crash' || (q && q.id === 'investigate_ufo_crash'))) {
+          window.gameState.activeQuests.push('investigate_ufo_crash');
+          console.log('[🛸 UFO Quest] Quest activated - investigate the crash site');
+        }
+      }
+
+      // Set up getCurrentQuest helper for game-hud.js arrow system
+      if (typeof window.getCurrentQuest !== 'function') {
+        window.getCurrentQuest = function() {
+          if (!window.gameState || !window.gameState.activeQuests || window.gameState.activeQuests.length === 0) {
+            return null;
+          }
+          const activeQuestId = window.gameState.activeQuests[0];
+          const questId = typeof activeQuestId === 'string' ? activeQuestId : (activeQuestId && activeQuestId.id);
+
+          // UFO quest points to UFO crash site
+          if (questId === 'investigate_ufo_crash') {
+            return {
+              id: 'investigate_ufo_crash',
+              name: '🛸 The UFO Crash Site',
+              description: 'A.I.D.A.: "Scavengers found a note about a crashed alien ship..."',
+              questObjectivePos: { x: -50, z: 25 }  // UFO location in Sandbox 2.0
+            };
+          }
+          // Egg retrieval quest
+          if (questId === 'retrieve_grey_egg') {
+            return {
+              id: 'retrieve_grey_egg',
+              name: '🥚 Retrieve the Alien Egg',
+              description: 'Defeat The Grey and claim the egg',
+              questObjectivePos: { x: -50, z: 25 }  // Same location, boss fight
+            };
+          }
+          return null;
+        };
+      }
+
       console.log('[🎮 SandboxLoop] ✓ Animation loop started');
       // Signal loading.js that the game module is ready so the loading screen
       // fades out and routes to the camp / main-menu screen.
