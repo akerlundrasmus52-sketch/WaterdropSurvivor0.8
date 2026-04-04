@@ -1712,6 +1712,13 @@
     if (k.indexOf('sword') !== -1 || k.indexOf('blade') !== -1 || k.indexOf('katana') !== -1) return 'sword';
     return k;
   }
+  // Map sandbox-normalized weapon types to the keys expected by GoreSim/BloodV2
+  function _goreSimWeaponKey(key) {
+    const norm = _normalizeWeaponKey(key);
+    if (norm === 'fire') return 'flame';
+    if (norm === 'gun')  return 'pistol';
+    return norm; // shotgun, sword, etc. match directly
+  }
   function _pickKillVariant() {
     return Math.floor(Math.random() * _KILL_VARIANT_COUNT);
   }
@@ -1724,20 +1731,18 @@
     ensureBulletHoleMaterials && ensureBulletHoleMaterials();
     const geo = (typeof bulletHoleGeo !== 'undefined' && bulletHoleGeo) ? bulletHoleGeo : new THREE.CircleGeometry(0.08, 8);
     const baseMat = (typeof bulletHoleMat !== 'undefined' && bulletHoleMat) ? bulletHoleMat : null;
-    const mat = baseMat ? baseMat.clone() : new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
     let hole = enemy._bulletHoles[idx];
     if (!hole) {
+      const mat = baseMat ? baseMat.clone() : new THREE.MeshBasicMaterial({ color: 0x3A0000, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide });
       hole = new THREE.Mesh(geo, mat);
       hole.frustumCulled = false;
       enemy._bulletHoles[idx] = hole;
-    } else if (hole.parent !== parent) {
-      hole.material = mat;
     }
     if (hole.parent !== parent) parent.add(hole);
     const ny = (yOffset !== undefined) ? yOffset : (0.12 + Math.random() * 0.25);
     const nx = dirX, nz = dirZ;
     hole.position.set(nx * radius, ny, nz * radius);
-    hole.lookAt(nx * 2, ny, nz * 2);
+    hole.lookAt(parent.localToWorld(new THREE.Vector3(nx * 2, ny, nz * 2)));
     hole.visible = true;
     enemy._bulletHoleIndex = idx + 1;
     return hole;
@@ -1906,7 +1911,7 @@
 
     // ── GORE SIMULATOR: Weapon-specific death reaction ──────────────────────
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(slot, weaponKey || 'pistol', null);
+      GoreSim.onKill(slot, _goreSimWeaponKey(weaponKey), null);
     }
 
     // Weapon-driven kill styling
@@ -2181,7 +2186,7 @@
 
     // Gore sim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(crawler, weaponKey || 'pistol', null);
+      GoreSim.onKill(crawler, _goreSimWeaponKey(weaponKey), null);
     }
 
     let burstCount = 60;
@@ -2268,7 +2273,7 @@
     const cidx = _activeCrawlers.indexOf(crawler);
     if (cidx !== -1) _activeCrawlers.splice(cidx, 1);
 
-    // Corpse stays 15 seconds
+    // Corpse linger duration is driven by corpseLinger
     const _cbSlot2 = _acquireCorpseBlood(x, 0.03, z, 0x442200, 0.7);
     _activeCorpses.push({ slot: crawler, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0, poolMesh: _cbSlot2?.mesh || null, poolMat: _cbSlot2?.mat || null, poolSlot: _cbSlot2 || null, x, z });
 
@@ -2565,7 +2570,7 @@
 
     // GoreSim kill
     if (window.GoreSim && typeof GoreSim.onKill === 'function') {
-      GoreSim.onKill(enemy, weaponKey || 'pistol', null);
+      GoreSim.onKill(enemy, _goreSimWeaponKey(weaponKey), null);
     }
 
     // Spawn blue slime flesh chunks
@@ -2582,9 +2587,9 @@
     enemy._deathSlideVX = (killVX || 0) * slideScale;
     enemy._deathSlideVZ = (killVZ || 0) * slideScale;
     _tmpV3.set(x, y, z);
-    enemy._die(weaponKey || 'pistol', _tmpV3);
+    enemy._die(_goreSimWeaponKey(weaponKey), _tmpV3);
 
-    // Linger corpse (8 seconds — shorter than slime's 15s or crawler's 45s)
+    // Linger corpse duration is driven by corpseLinger
     const _cbSlot3 = _acquireCorpseBlood(x, 0.03, z, 0x007799, 0.5);
     _activeCorpses.push({
       slot: enemy, timer: 0, lingerDuration: corpseLinger, bloodTimer: 0,
