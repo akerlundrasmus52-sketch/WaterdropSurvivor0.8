@@ -1545,7 +1545,8 @@
     }
     slot.mesh.position.set(x, 0.45, z);
     slot.mesh.material.color.setHex(0x55EE44);
-    slot.mesh.material.opacity = 0.92;
+    slot.mesh.material.transparent = false; // fully opaque during normal gameplay
+    slot.mesh.material.opacity = 1;
     slot.mesh.material.emissiveIntensity = 0.2;
     slot.mesh.scale.set(1, 1, 1);
     slot.mesh.visible = true;
@@ -1567,9 +1568,10 @@
       for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
     }
     slot.woundCount = 0;
-    // Reset material for reuse
+    // Reset material for reuse — ensure fully opaque, no transparency overhead
+    slot.mesh.material.transparent = false;
     slot.mesh.material.color.setHex(0x55EE44);
-    slot.mesh.material.opacity = 0.92;
+    slot.mesh.material.opacity = 1;
     slot.mesh.material.emissiveIntensity = 0.2;
     slot.mesh.scale.set(1, 1, 1);
     // Remove from active list
@@ -1649,14 +1651,17 @@
       if (c.timer >= c.lingerDuration) {
         // Fade out corpse mesh
         if (c.slot.mesh && c.slot.mesh.material) {
+          // Enable transparency only for the fade-out window (avoids overdraw during normal gameplay)
+          if (!c.slot.mesh.material.transparent) c.slot.mesh.material.transparent = true;
           c.slot.mesh.material.opacity -= dt * 2;
           if (c.slot.mesh.material.opacity <= 0) {
             // Fully faded — return slot to pool
             if (c.poolMesh) { c.poolMesh.visible = false; c.poolMesh.scale.set(0.2, 0.2, 0.2); }
             if (c.poolSlot) _corpseBloodFreeList.push(c.poolSlot);
-            // Restore slot mesh for reuse
+            // Restore slot mesh for reuse — reset to fully opaque (no transparent overhead)
             c.slot.mesh.visible = false;
-            c.slot.mesh.material.opacity = 0.92;
+            c.slot.mesh.material.transparent = false;
+            c.slot.mesh.material.opacity = 1;
             c.slot.mesh.material.color.setHex(0x55EE44);
             c.slot.mesh.material.emissiveIntensity = 0.2;
             c.slot.mesh.scale.set(1, 1, 1);
@@ -2850,6 +2855,7 @@
   // Stage 3: 35% HP - Body parts breaking off, heavy bleeding
   function _applyDamageStage3(slot) {
     slot.mesh.material.color.setHex(0x228811);
+    slot.mesh.material.transparent = true; // enable for partial opacity render
     slot.mesh.material.opacity = 0.85;
     slot.mesh.scale.set(0.92, 0.92, 0.92);
 
@@ -2900,6 +2906,7 @@
   // Stage 4: 20% HP - Near death, chunks flying everywhere
   function _applyDamageStage4(slot) {
     slot.mesh.material.color.setHex(0x116600);
+    slot.mesh.material.transparent = true; // enable for partial opacity render
     slot.mesh.material.opacity = 0.75;
     slot.mesh.material.emissiveIntensity = 0.05;
     slot.mesh.scale.set(0.85, 0.85, 0.85);
