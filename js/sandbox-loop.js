@@ -1412,17 +1412,13 @@
     const pupilMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
 
     for (let i = 0; i < MAX_SLIMES; i++) {
-      // MeshPhysicalMaterial: wet, slimy, glossy look with clearcoat
-      const mat = new THREE.MeshPhysicalMaterial({
+      // MeshPhongMaterial: glossy wet look without expensive physical rendering
+      const mat = new THREE.MeshPhongMaterial({
         color: 0x55EE44,
         emissive: 0x113300,
         emissiveIntensity: 0.2,
-        roughness: 0.12,        // very smooth/glossy
-        metalness: 0.0,
-        clearcoat: 1.0,         // wet-surface clearcoat layer
-        clearcoatRoughness: 0.08,
-        transparent: true,
-        opacity: 0.92,
+        shininess: 100,         // high shininess for wet/glossy appearance
+        specular: 0x55ff55,     // bright green specular to retain shiny Waterdrop aesthetic
       });
       const mesh = new THREE.Mesh(_slimeBaseGeo, mat);
       mesh.castShadow = true;
