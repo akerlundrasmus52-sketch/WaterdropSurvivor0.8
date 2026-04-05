@@ -1435,26 +1435,31 @@ function _showProgressionShopOverlay() {
     });
 
     const weapons = _getWeapons();
-    // Group by (name + rarity)
-    const groups = {};
+    // Group by (name + rarity); key is kept in a Map so it never touches the DOM
+    const groups = new Map(); // groupKey (string) → weapon[]
     weapons.forEach(w => {
       const key = (w.name || 'Weapon') + '|' + (w.rarity || 'common');
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(w);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(w);
     });
 
-    let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#ff6600;letter-spacing:2px;margin-bottom:4px;">🔥 WEAPON MERGING</div>';
-    html += '<div style="font-size:11px;color:#888;margin-bottom:12px;">Select <b style="color:#ff6600;">3 identical weapons</b> of the same rarity to forge them into a higher rarity weapon. <span style="color:#555;">Weapons must share the same name.</span></div>';
+    // ── Static header (safe constant strings only) ──────────────────────────
+    container.innerHTML =
+      '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#ff6600;letter-spacing:2px;margin-bottom:4px;">🔥 WEAPON MERGING</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:12px;">Select <b style="color:#ff6600;">3 identical weapons</b> of the same rarity to forge them into a higher rarity weapon. <span style="color:#555;">Weapons must share the same name.</span></div>';
 
     if (weapons.length === 0) {
-      html += '<div style="color:#555;text-align:center;padding:20px;font-size:13px;">No weapons in inventory. Equip or obtain weapons to merge them.</div>';
-      container.innerHTML = html;
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:#555;text-align:center;padding:20px;font-size:13px;';
+      empty.textContent = 'No weapons in inventory. Equip or obtain weapons to merge them.';
+      container.appendChild(empty);
       return;
     }
 
-    html += '<div id="forge-weapon-list">';
-    Object.keys(groups).forEach(groupKey => {
-      const grp = groups[groupKey];
+    const list = document.createElement('div');
+    list.id = 'forge-weapon-list';
+
+    groups.forEach((grp, groupKey) => {
       const sample = grp[0];
       const rarity = sample.rarity || 'common';
       const col = FORGE_RARITY_COLORS[rarity] || '#aaa';
@@ -1462,31 +1467,80 @@ function _showProgressionShopOverlay() {
       const canMerge = grp.length >= 3 && rarityIdx >= 0 && rarityIdx < FORGE_RARITY_ORDER.length - 1;
       const nextRarity = canMerge ? FORGE_RARITY_ORDER[rarityIdx + 1] : null;
       const nextCol = nextRarity ? FORGE_RARITY_COLORS[nextRarity] : '#aaa';
-      html += `<div style="background:rgba(255,100,0,0.06);border:1px solid ${col}66;border-radius:6px;padding:12px;margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-          <div style="font-size:20px;">⚔️</div>
-          <div style="flex:1;">
-            <div style="font-family:'Bangers',cursive;font-size:15px;color:${col};letter-spacing:1px;">${sample.name || 'Weapon'}</div>
-            <div style="font-size:10px;color:#888;">${FORGE_RARITY_NAMES[rarity] || rarity} · You have: <b style="color:${col};">${grp.length}</b></div>
-            ${sample.description ? `<div style="font-size:10px;color:#555;margin-top:2px;">${sample.description}</div>` : ''}
-          </div>
-          ${canMerge ? `<div style="text-align:right;font-size:10px;color:#aaa;">3 → 1<br><span style="color:${nextCol};font-family:'Bangers',cursive;font-size:12px;">${FORGE_RARITY_NAMES[nextRarity]}</span></div>` : ''}
-        </div>
-        ${canMerge
-          ? `<button class="forge-merge-btn" data-gkey="${CSS.escape ? CSS.escape(groupKey) : groupKey.replace(/[|]/g,'_')}" data-gkey-raw="${groupKey.replace(/"/g,'&quot;')}" style="width:100%;font-size:13px;padding:8px;background:linear-gradient(135deg,#3a0000,#7a2200);color:#ff6600;border:1px solid #ff6600;border-radius:4px;cursor:pointer;font-family:'Bangers',cursive;letter-spacing:2px;transition:all 0.2s;">🔥 MERGE 3 INTO ${(FORGE_RARITY_NAMES[nextRarity] || '').toUpperCase()}</button>`
-          : `<div style="font-size:10px;color:#444;text-align:center;">${grp.length < 3 ? `Need ${3 - grp.length} more to merge` : 'Max rarity reached'}</div>`
-        }
-      </div>`;
-    });
-    html += '</div>';
 
-    container.innerHTML = html;
-    container.querySelectorAll('.forge-merge-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const rawKey = this.getAttribute('data-gkey-raw');
-        _executeWeaponMerge(rawKey, container);
-      });
+      // Outer card — safe styles only (col/nextCol are known hex values from FORGE_RARITY_COLORS)
+      const card = document.createElement('div');
+      card.style.cssText = `background:rgba(255,100,0,0.06);border:1px solid ${col}66;border-radius:6px;padding:12px;margin-bottom:10px;`;
+
+      // Info row
+      const infoRow = document.createElement('div');
+      infoRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
+
+      const iconEl = document.createElement('div');
+      iconEl.style.cssText = 'font-size:20px;';
+      iconEl.textContent = '⚔️';
+      infoRow.appendChild(iconEl);
+
+      const textCol = document.createElement('div');
+      textCol.style.cssText = 'flex:1;';
+
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = `font-family:'Bangers',cursive;font-size:15px;color:${col};letter-spacing:1px;`;
+      nameEl.textContent = sample.name || 'Weapon'; // textContent prevents XSS
+      textCol.appendChild(nameEl);
+
+      const rarityCountEl = document.createElement('div');
+      rarityCountEl.style.cssText = 'font-size:10px;color:#888;';
+      rarityCountEl.textContent = `${FORGE_RARITY_NAMES[rarity] || rarity} · You have: `;
+      const countBold = document.createElement('b');
+      countBold.style.color = col;
+      countBold.textContent = String(grp.length);
+      rarityCountEl.appendChild(countBold);
+      textCol.appendChild(rarityCountEl);
+
+      if (sample.description) {
+        const descEl = document.createElement('div');
+        descEl.style.cssText = 'font-size:10px;color:#555;margin-top:2px;';
+        descEl.textContent = sample.description; // textContent prevents XSS
+        textCol.appendChild(descEl);
+      }
+      infoRow.appendChild(textCol);
+
+      if (canMerge && nextRarity) {
+        const mergeHint = document.createElement('div');
+        mergeHint.style.cssText = 'text-align:right;font-size:10px;color:#aaa;';
+        mergeHint.textContent = '3 → 1';
+        const nextSpan = document.createElement('span');
+        nextSpan.style.cssText = `color:${nextCol};font-family:'Bangers',cursive;font-size:12px;display:block;`;
+        nextSpan.textContent = FORGE_RARITY_NAMES[nextRarity] || nextRarity;
+        mergeHint.appendChild(nextSpan);
+        infoRow.appendChild(mergeHint);
+      }
+
+      card.appendChild(infoRow);
+
+      // Action row — merge button or status text
+      if (canMerge && nextRarity) {
+        const mergeBtn = document.createElement('button');
+        mergeBtn.className = 'forge-merge-btn';
+        mergeBtn.style.cssText = 'width:100%;font-size:13px;padding:8px;background:linear-gradient(135deg,#3a0000,#7a2200);color:#ff6600;border:1px solid #ff6600;border-radius:4px;cursor:pointer;font-family:\'Bangers\',cursive;letter-spacing:2px;transition:all 0.2s;';
+        mergeBtn.textContent = `🔥 MERGE 3 INTO ${(FORGE_RARITY_NAMES[nextRarity] || nextRarity).toUpperCase()}`;
+        // Store groupKey on the element via dataset (no HTML injection)
+        mergeBtn.addEventListener('click', () => _executeWeaponMerge(groupKey, container));
+        card.appendChild(mergeBtn);
+      } else {
+        const statusEl = document.createElement('div');
+        statusEl.style.cssText = 'font-size:10px;color:#444;text-align:center;';
+        statusEl.textContent = grp.length < 3
+          ? `Need ${3 - grp.length} more to merge`
+          : 'Max rarity reached';
+        card.appendChild(statusEl);
+      }
+
+      list.appendChild(card);
     });
+
+    container.appendChild(list);
   }
 
   function _executeWeaponMerge(groupKey, container) {
@@ -1553,24 +1607,42 @@ function _showProgressionShopOverlay() {
     flash.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 50% 50%,${rarityColor}55 0%,transparent 70%);animation:forgeMergeFlash 0.8s ease-out forwards;`;
     anim.appendChild(flash);
 
-    // Central reveal card
+    // Central reveal card — use DOM nodes for weapon name/rarity (XSS-safe)
     const card = document.createElement('div');
     card.style.cssText = `position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#0a0000,#1a0500);border:3px solid ${rarityColor};border-radius:12px;padding:24px 36px;text-align:center;animation:forgeMergeReveal 0.7s 0.3s cubic-bezier(0.175,0.885,0.32,1.5) forwards;box-shadow:0 0 40px ${rarityColor},0 0 80px ${rarityColor}55;`;
-    card.innerHTML = `
-      <div style="font-size:42px;margin-bottom:8px;">⚔️</div>
-      <div style="font-family:'Bangers',cursive;font-size:28px;color:${rarityColor};letter-spacing:3px;text-shadow:0 0 20px ${rarityColor};">${weaponName}</div>
-      <div style="font-family:'Bangers',cursive;font-size:18px;color:${rarityColor};letter-spacing:4px;margin-top:6px;opacity:0.9;">✨ ${rarityName.toUpperCase()} ✨</div>
-      <div style="font-size:12px;color:#888;margin-top:8px;letter-spacing:1px;">FORGED BY THE ANNUNAKI</div>
-    `;
+
+    const iconEl = document.createElement('div');
+    iconEl.style.cssText = 'font-size:42px;margin-bottom:8px;';
+    iconEl.textContent = '⚔️';
+
+    const weaponNameEl = document.createElement('div');
+    weaponNameEl.style.cssText = `font-family:'Bangers',cursive;font-size:28px;color:${rarityColor};letter-spacing:3px;text-shadow:0 0 20px ${rarityColor};`;
+    weaponNameEl.textContent = weaponName; // textContent prevents XSS
+
+    const rarityEl = document.createElement('div');
+    rarityEl.style.cssText = `font-family:'Bangers',cursive;font-size:18px;color:${rarityColor};letter-spacing:4px;margin-top:6px;opacity:0.9;`;
+    rarityEl.textContent = `✨ ${rarityName.toUpperCase()} ✨`;
+
+    const forgedByEl = document.createElement('div');
+    forgedByEl.style.cssText = 'font-size:12px;color:#888;margin-top:8px;letter-spacing:1px;';
+    forgedByEl.textContent = 'FORGED BY THE ANNUNAKI';
+
+    card.appendChild(iconEl);
+    card.appendChild(weaponNameEl);
+    card.appendChild(rarityEl);
+    card.appendChild(forgedByEl);
     anim.appendChild(card);
 
-    // Sparks burst
+    // Sparks burst — precompute --spark-x / --spark-y in JS to avoid CSS trig functions
+    // (cos()/sin() inside calc() have uneven support in older iOS Safari).
     for (let i = 0; i < 28; i++) {
       const spark = document.createElement('div');
-      const angle = (i / 28) * 360;
+      const angleRad = (i / 28) * Math.PI * 2;
       const dist = 80 + Math.random() * 180;
       const size = 3 + Math.random() * 5;
-      spark.style.cssText = `position:absolute;top:50%;left:50%;width:${size}px;height:${size}px;background:${rarityColor};border-radius:50%;transform-origin:0 0;animation:forgeSpark 0.9s ${Math.random() * 0.3}s ease-out forwards;--spark-angle:${angle}deg;--spark-dist:${dist}px;`;
+      const sparkX = Math.cos(angleRad) * dist;
+      const sparkY = Math.sin(angleRad) * dist;
+      spark.style.cssText = `position:absolute;top:50%;left:50%;width:${size}px;height:${size}px;background:${rarityColor};border-radius:50%;transform-origin:0 0;animation:forgeSpark 0.9s ${Math.random() * 0.3}s ease-out forwards;--spark-x:${sparkX.toFixed(1)}px;--spark-y:${sparkY.toFixed(1)}px;`;
       anim.appendChild(spark);
     }
 

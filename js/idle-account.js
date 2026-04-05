@@ -223,6 +223,26 @@ window.GameAccount = (function () {
     return { leveledUp: leveledUp, newLevel: newLevel, rewards: levelUpRewards };
   }
 
+  // Centralized Annunaki rank → hex color map.  Consumed by both the level-up curtain in
+  // quest-system.js and the Account XP bar in the Profile building overlay.
+  var RANK_COLORS = {
+    Initiate: '#88aacc', Neophyte: '#88aacc', Awakened: '#55cc55',
+    Seeker: '#55cc55', 'Acolyte of Enki': '#44aaff',
+    Watcher: '#44aaff', 'Shard Bearer': '#44aaff', Nephilim: '#6644cc',
+    Bloodguard: '#6644cc', 'Eye of Anu': '#aa44ff', Starcaller: '#aa44ff',
+    'Marduk\'s Blade': '#ffaa00', 'Celestial Vanguard': '#ffaa00',
+    'Annunaki Champion': '#ffaa00', 'Warden of Nibiru': '#ffd700',
+    'Keeper of Tablets': '#ffd700', 'Stargate Guardian': '#ffd700',
+    'Sovereign of Eridu': '#ffd700', 'Titan of the Abyss': '#ffd700',
+    'High Priest of Enlil': '#88eeff', 'Grandmaster Annunaki': '#88eeff',
+    'Anunnaki Archon': '#ff4444', 'Ascendant God-King': '#ff4444',
+    'Waterdrop Survivor': '#ff88ff', 'H2O — The Eternal': '#ff88ff'
+  };
+
+  function getRankColor(title) {
+    return RANK_COLORS[title] || '#FFD700';
+  }
+
   function getCurrentTitle(saveData) {
     var acc = saveData.account || getAccountDefaults();
     var title = '';
@@ -536,6 +556,7 @@ window.GameAccount = (function () {
     getCurrentTitle: getCurrentTitle,
     getCurrentBorder: getCurrentBorder,
     getMilestones: getMilestones,
+    getRankColor: getRankColor,
     setProfileName: setProfileName,
     setProfileIcon: setProfileIcon,
     renderAccountPanel: renderAccountPanel,

@@ -1160,21 +1160,11 @@
         _curtainDismissHandler = null;
       }
 
-      // Rank color
-      const _RANK_COLORS = {
-        Initiate: '#88aacc', Neophyte: '#88aacc', Awakened: '#55cc55',
-        Seeker: '#55cc55', 'Acolyte of Enki': '#44aaff',
-        Watcher: '#44aaff', 'Shard Bearer': '#44aaff', Nephilim: '#6644cc',
-        Bloodguard: '#6644cc', 'Eye of Anu': '#aa44ff', Starcaller: '#aa44ff',
-        'Marduk\'s Blade': '#ffaa00', 'Celestial Vanguard': '#ffaa00',
-        'Annunaki Champion': '#ffaa00', 'Warden of Nibiru': '#ffd700',
-        'Keeper of Tablets': '#ffd700', 'Stargate Guardian': '#ffd700',
-        'Sovereign of Eridu': '#ffd700', 'Titan of the Abyss': '#ffd700',
-        'High Priest of Enlil': '#88eeff', 'Grandmaster Annunaki': '#88eeff',
-        'Anunnaki Archon': '#ff4444', 'Ascendant God-King': '#ff4444',
-        'Waterdrop Survivor': '#ff88ff', 'H2O — The Eternal': '#ff88ff'
-      };
-      const rankColor = _RANK_COLORS[rankTitle] || '#FFD700';
+      // Rank color — sourced from the centralized GameAccount.getRankColor() so the
+      // mapping is maintained in a single place (idle-account.js RANK_COLORS).
+      const rankColor = (window.GameAccount && window.GameAccount.getRankColor)
+        ? window.GameAccount.getRankColor(rankTitle)
+        : '#FFD700';
 
       curtain.classList.remove('curtain-teaser', 'curtain-enter', 'curtain-enter-done',
                                'curtain-exit', 'curtain-milestone');
@@ -4463,19 +4453,10 @@
         if (window.GameAccount && window.GameAccount.getCurrentTitle) {
           rankTitle = window.GameAccount.getCurrentTitle(saveData) || '';
         }
-        const rankColors = {
-          Initiate:'#88aacc',Neophyte:'#88aacc',Awakened:'#55cc55',Seeker:'#55cc55',
-          'Acolyte of Enki':'#44aaff',Watcher:'#44aaff','Shard Bearer':'#44aaff',
-          Nephilim:'#6644cc',Bloodguard:'#6644cc','Eye of Anu':'#aa44ff',
-          Starcaller:'#aa44ff',"Marduk's Blade":'#ffaa00','Celestial Vanguard':'#ffaa00',
-          'Annunaki Champion':'#ffaa00','Warden of Nibiru':'#ffd700',
-          'Keeper of Tablets':'#ffd700','Stargate Guardian':'#ffd700',
-          'Sovereign of Eridu':'#ffd700','Titan of the Abyss':'#ffd700',
-          'High Priest of Enlil':'#88eeff','Grandmaster Annunaki':'#88eeff',
-          'Anunnaki Archon':'#ff4444','Ascendant God-King':'#ff4444',
-          'Waterdrop Survivor':'#ff88ff','H2O — The Eternal':'#ff88ff'
-        };
-        const rankColor = rankColors[rankTitle] || '#FFD700';
+        // Rank color from centralized GameAccount.getRankColor() — single source of truth
+        const rankColor = (window.GameAccount && window.GameAccount.getRankColor)
+          ? window.GameAccount.getRankColor(rankTitle)
+          : '#FFD700';
         xpBarHTML = `
           <div style="background:linear-gradient(135deg,rgba(0,0,20,0.9),rgba(10,0,40,0.95));border:2px solid ${rankColor};border-radius:12px;padding:14px 18px;margin-bottom:14px;box-shadow:0 0 18px ${rankColor}44;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">

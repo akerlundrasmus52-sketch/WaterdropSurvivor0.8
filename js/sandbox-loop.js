@@ -442,6 +442,13 @@
   let _homingMissileTimer = 0;
   let _poisonTimer        = 0;
   let _fireballTimer      = 0;
+  // Mobile detection: shared module-level flag so _applyGraphicsQuality() (called from
+  // settings UI as well as _initScene) can reference it without a ReferenceError.
+  // High-DPI mobile screens (e.g. iPhone 16) have devicePixelRatio ≥ 3, causing the GPU
+  // to render the post-processing chain at near-4K resolution and tanking frame rate.
+  const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
+
   // Pre-allocated scratch array for combining enemy lists without GC allocation
   const _allEnemiesScratch = [];
   // ─── Gore: Corpse Linger System ──────────────────────────────────────────────
@@ -5382,10 +5389,6 @@
 
     // Renderer - expose as window global for gem-classes.js and other systems
     window.renderer = renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    // Mobile detection: high-DPI mobile screens (e.g. iPhone 16) can have pixel ratios
-    // of 3+ which causes the GPU to render post-processing at 4K resolution, tanking FPS.
-    // Cap pixel ratio at 1.5 on mobile to prevent post-processing overload.
-    const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
     // Apply saved or default graphics quality — this sets pixelRatio, shadowMap, toneMapping
     let _savedQuality = DEFAULT_QUALITY;
     try { _savedQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
