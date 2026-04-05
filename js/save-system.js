@@ -2681,11 +2681,13 @@
     // ── Crimson Eclipse Core grant helper ──────────────────────────────────────
     // Call window.grantCrimsonEclipseCore(qty) from minigame rewards or boss drops.
     window.grantCrimsonEclipseCore = function(qty) {
-      qty = qty || 1;
+      qty = Math.floor(Number(qty));
+      if (!isFinite(qty) || qty <= 0) qty = 1;
       if (!saveData.consumables) saveData.consumables = [];
       const existing = saveData.consumables.find(function(c) { return c.id === 'crimsonEclipseCore'; });
       if (existing) {
-        existing.quantity += qty;
+        const currentQuantity = Math.floor(Number(existing.quantity));
+        existing.quantity = (isFinite(currentQuantity) && currentQuantity >= 0 ? currentQuantity : 0) + qty;
       } else {
         saveData.consumables.push({
           id:          'crimsonEclipseCore',

@@ -10998,12 +10998,6 @@
   50%     { opacity: 1.0; }
 }
 
-/* Blood Moon wave notification colour override */
-.blood-moon-notif {
-  color: #ff2a2a !important;
-  text-shadow: 0 0 16px #ff0000 !important;
-}
-
 /* Idle clicker drone visuals */
 .idle-drone-field {
   position: relative;

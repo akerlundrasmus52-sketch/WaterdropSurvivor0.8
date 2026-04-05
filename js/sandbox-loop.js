@@ -510,7 +510,6 @@
   const BLOOD_MOON_DURATION = 60;    // 60 seconds of hell
   const BLOOD_MOON_SPEED_MULT  = 2;  // enemies move 2× faster
   const BLOOD_MOON_DAMAGE_MULT = 2;  // enemies deal 2× damage
-  const BLOOD_MOON_SPAWN_MULT  = 3;  // enemies spawn 3× more
 
   // ─── Session Timer (CHANGE 12) ───────────────────────────────────────────────
   let _sessionTimerSecs    = 0; // total elapsed seconds since boot
@@ -3618,7 +3617,6 @@
 
     // Crimson lighting transition
     if (window._sandboxLights) {
-      const THREE = window.THREE;
       if (window._sandboxLights.ambient) {
         window._sandboxLights.ambient.color.setHex(0x660000);
         window._sandboxLights.ambient.intensity = 0.65;
