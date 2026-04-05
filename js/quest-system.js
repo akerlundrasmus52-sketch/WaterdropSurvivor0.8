@@ -2882,427 +2882,302 @@
     // ============================================================
     // INVENTORY SCREEN
     // ============================================================
+    // ============================================================
+    // MASTER VAULT — full-screen "iPhone home screen" inventory
+    // ============================================================
     function showInventoryScreen() {
-      // Close camp screen
       const campScreen = document.getElementById('camp-screen');
       if (campScreen) campScreen.style.display = 'none';
 
-      // Remove any existing inventory modal
       const existingModal = document.getElementById('inventory-screen-modal');
       if (existingModal) existingModal.remove();
 
       const modal = document.createElement('div');
       modal.id = 'inventory-screen-modal';
       modal.style.cssText = [
-        'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
-        'background:rgba(0,0,0,0.97)', 'z-index:200',
-        'display:flex', 'flex-direction:column', 'overflow:hidden'
+        'position:fixed;top:0;left:0;width:100%;height:100%;z-index:200',
+        'background:#07060e',
+        'display:flex;flex-direction:column',
+        'font-family:Courier New,monospace'
       ].join(';');
 
-      // ─── Header ──────────────────────────────────────────────────
-      const currencies = [
-        { icon: '🪙', name: 'Gold',    value: saveData.gold    || 0 },
-        { icon: '💎', name: 'Gems',    value: saveData.gems    || 0 },
-        { icon: '✨', name: 'Essence', value: saveData.essence || 0 },
-      ];
-      const currencyHTML = currencies.map(c =>
-        `<div class="inv-currency-chip">
-          <span style="font-size:18px;">${c.icon}</span>
-          <span style="color:#FFD700;font-weight:bold;">${c.value.toLocaleString()}</span>
-          <span style="color:#888;font-size:11px;">${c.name}</span>
-        </div>`
-      ).join('');
+      // ── helpers ──────────────────────────────────────────────
+      const RARITY_COLOR  = { common:'#9e9e9e', uncommon:'#1aff1a', rare:'#0af', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff2a2a' };
+      const RARITY_SHADOW = { common:'#9e9e9e44', uncommon:'#1aff1a66', rare:'#0af6', epic:'#a335ee66', legendary:'#ff800066', mythic:'#ff2a2aaa' };
+      const RARITY_STARS  = { common:'✦', uncommon:'✦✦', rare:'✦✦✦', epic:'✦✦✦✦', legendary:'✦✦✦✦✦', mythic:'◈ MYTHIC' };
+      const TYPE_ICON = { weapon:'⚔️', armor:'🛡️', helmet:'⛑️', boots:'👢', ring:'💍', amulet:'📿', consumable:'⚗️', material:'📦', currency:'💰' };
 
-      const headerEl = document.createElement('div');
-      headerEl.style.cssText = [
-        'display:flex', 'align-items:center', 'justify-content:space-between',
-        'padding:12px 18px', 'border-bottom:1px solid rgba(201,162,39,0.3)',
-        'background:linear-gradient(135deg,#0d0015 0%,#07000e 100%)',
-        'flex-shrink:0'
-      ].join(';');
-      headerEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:26px;">⚔️</span>
-          <div>
-            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:22px;letter-spacing:2px;">EQUIPMENT &amp; INVENTORY</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${currencyHTML}</div>
-          </div>
+      // Collect all items by category
+      function buildAllItems() {
+        const list = [];
+        // Currencies
+        list.push({ id:'__gold__',    name:'Gold',    rarity:'legendary', icon:'🪙', qty: saveData.gold    || 0, cat:'materials', description:'The universal currency of the realm.', lore:'Gold — forged in the core of Nibiru and scattered across the Earth after the great descent.' });
+        list.push({ id:'__gems__',    name:'Gems',    rarity:'epic',      icon:'💎', qty: saveData.gems    || 0, cat:'materials', description:'Premium gemstones used for rare transactions.', lore:'"The Annunaki traded souls for gems in the old age." — Unknown inscription' });
+        list.push({ id:'__essence__', name:'Essence', rarity:'rare',      icon:'✨', qty: saveData.essence || 0, cat:'materials', description:'Distilled void energy, used in the Neural Matrix.', lore:'Pure consciousness rendered tangible through Annunaki alchemy.' });
+        // Resources
+        const res = saveData.resources || {};
+        const resNames = { wood:'Wood 🪵', stone:'Stone 🪨', coal:'Coal', iron:'Iron ⚙️', crystal:'Crystal 🔮', magicEssence:'Magic Essence', flesh:'Flesh', fur:'Fur', leather:'Leather', feather:'Feather', chitin:'Chitin', berry:'Berries 🍓', flower:'Flowers 🌸' };
+        for (const k in resNames) {
+          if ((res[k] || 0) > 0) list.push({ id:'__res_'+k, name:resNames[k], rarity:'common', icon:'📦', qty:res[k], cat:'materials', description:'Harvested material.', lore:'' });
+        }
+        // Companion Egg special
+        if (saveData.hasCompanionEgg) {
+          list.push({ id:'__egg__', name:'Companion Egg', rarity:'legendary', icon:'🥚', qty:1, cat:'materials',
+            description:'A mysterious egg from the UFO crash site. Something stirs within.', lore:'"Born of void static and alien biomatter — what emerges will serve, or consume." — Grey Field Report',
+            _isEgg: true });
+        }
+        // Gear (from saveData.inventory)
+        (saveData.inventory || []).forEach(function(item, idx) {
+          list.push(Object.assign({}, item, { _invIdx: idx, cat:'gear', icon: TYPE_ICON[item.type] || '⚔️', qty: null }));
+        });
+        // Consumables
+        (saveData.consumables || []).forEach(function(item) {
+          list.push(Object.assign({}, item, {
+            cat:'consumable',
+            icon: item.icon || '⚗️',
+            qty: item.qty != null ? item.qty : (item.quantity || 0)
+          }));
+        });
+        return list;
+      }
+
+      let _allItems   = buildAllItems();
+      let _activeTab  = 'all';
+      let _selected   = null;
+
+      function filteredItems() {
+        if (_activeTab === 'all')         return _allItems;
+        if (_activeTab === 'gear')        return _allItems.filter(function(i) { return i.cat === 'gear'; });
+        if (_activeTab === 'materials')   return _allItems.filter(function(i) { return i.cat === 'materials'; });
+        if (_activeTab === 'consumables') return _allItems.filter(function(i) { return i.cat === 'consumable'; });
+        return _allItems;
+      }
+
+      // ── DOM structure ─────────────────────────────────────────
+      modal.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid #1a1a3a;flex-shrink:0;">
+          <div style="color:#00ffff;font-size:20px;font-weight:bold;letter-spacing:3px;text-shadow:0 0 12px #00ffff88;">◈ MASTER VAULT</div>
+          <button id="mv-back-btn" style="background:rgba(0,255,255,0.08);border:1px solid #00ffff44;border-radius:8px;padding:7px 16px;color:#00ffff;cursor:pointer;font-size:13px;letter-spacing:1px;">← CAMP</button>
         </div>
-        <button id="inv-back-btn" class="inv-back-btn">← Back</button>
+        <div id="mv-tabs" style="display:flex;gap:0;border-bottom:1px solid #1a1a3a;flex-shrink:0;">
+          ${['all','gear','materials','consumables'].map(function(t) {
+            return `<button class="mv-tab" data-tab="${t}" style="flex:1;background:${t==='all'?'rgba(0,255,255,0.12)':'transparent'};border:none;border-bottom:2px solid ${t==='all'?'#00ffff':'transparent'};color:${t==='all'?'#00ffff':'#888'};padding:10px 4px;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .2s;">${t}</button>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+          <div id="mv-grid-wrap" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:12px;align-content:start;"></div>
+          <div id="mv-side" style="width:0;min-width:0;overflow:hidden;background:#0c0b1a;border-left:1px solid #1a1a3a;transition:width .25s;flex-shrink:0;"></div>
+        </div>
       `;
-
-      // ─── Main body: left list + right visual panel ────────────────
-      const bodyEl = document.createElement('div');
-      bodyEl.style.cssText = [
-        'display:flex', 'flex:1', 'overflow:hidden', 'min-height:0'
-      ].join(';');
-
-      // ── LEFT: gear list ──────────────────────────────────────────
-      const leftPanel = document.createElement('div');
-      leftPanel.style.cssText = [
-        'width:320px', 'min-width:220px', 'flex-shrink:0',
-        'overflow-y:auto', 'padding:14px',
-        'border-right:1px solid rgba(201,162,39,0.2)',
-        'background:rgba(0,0,0,0.4)'
-      ].join(';');
-
-      // Special items
-      let specialHTML = '';
-      if (saveData.hasCompanionEgg) {
-        const alreadyHatched = saveData.companionEggHatched;
-        specialHTML = `<div class="inv-section-title">✨ Special Items</div>
-          <div class="inv-special-egg">
-            <span style="font-size:36px;">🥚</span>
-            <div style="flex:1;">
-              <div style="color:#00FFB4;font-weight:bold;font-size:14px;">Companion Egg</div>
-              <div style="color:#aaa;font-size:11px;">Found at UFO crash site</div>
-            </div>
-            ${alreadyHatched
-              ? '<span style="color:#00FF88;font-size:12px;">✅ Hatched</span>'
-              : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" class="inv-equip-btn">Place →</button>`
-            }
-          </div>`;
-      }
-
-      // Gear items (draggable)
-      const gear = saveData.inventory || [];
-      const gearListHTML = gear.length === 0
-        ? '<div style="color:#555;text-align:center;padding:24px;font-size:13px;">No gear yet. Complete runs to find equipment!</div>'
-        : gear.map((item, idx) => {
-            const rc = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
-            const rs  = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
-            const typeIcon = { ring:'💍', amulet:'📿', helmet:'⛑️', headband:'🎀', boots:'👢', necklace:'📿', earrings:'💎' }[item.type] || '🛡️';
-            const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(equippedId => equippedId === item.id);
-            return `<div class="inv-gear-item${isEquipped ? ' inv-equipped' : ''}"
-                        draggable="true"
-                        data-idx="${idx}"
-                        data-type="${item.type || 'ring'}"
-                        data-id="${item.id || idx}"
-                        style="border-color:${rc};">
-              <span style="font-size:26px;">${typeIcon}</span>
-              <div style="flex:1;min-width:0;">
-                <div style="color:${rc};font-weight:bold;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
-                <div style="color:#888;font-size:10px;">${rs} ${(item.rarity||'common').toUpperCase()} · ${item.type||'gear'}</div>
-                ${item.description ? `<div style="color:#999;font-size:10px;margin-top:2px;">${item.description}</div>` : ''}
-              </div>
-              <div style="flex-shrink:0;">
-                ${isEquipped
-                  ? `<span style="color:#FFD700;font-size:11px;display:block;text-align:center;">✅<br>Equipped</span>`
-                  : `<button onclick="equipItemFromInventory(${idx})" class="inv-equip-btn">Equip</button>`
-                }
-              </div>
-            </div>`;
-          }).join('');
-
-      leftPanel.innerHTML = `
-        <div class="inv-section-title">⚔️ Gear (${gear.length})</div>
-        ${specialHTML}
-        ${gearListHTML}
-      `;
-
-      // ── RIGHT: Visual equipment panel ───────────────────────────
-      const rightPanel = document.createElement('div');
-      rightPanel.style.cssText = [
-        'flex:1', 'display:flex', 'flex-direction:column',
-        'align-items:center', 'justify-content:center',
-        'padding:20px', 'overflow:hidden', 'position:relative',
-        'background:radial-gradient(ellipse at center,rgba(10,0,30,0.95) 0%,rgba(0,0,0,1) 100%)'
-      ].join(';');
-
-      // Section title
-      const rightTitle = document.createElement('div');
-      rightTitle.style.cssText = 'color:#C9A227;font-family:Bangers,cursive;font-size:18px;letter-spacing:3px;margin-bottom:16px;text-shadow:0 0 10px rgba(201,162,39,0.6);';
-      rightTitle.textContent = '◈ EQUIP YOUR DROPLET ◈';
-      rightPanel.appendChild(rightTitle);
-
-      // Visual centre: canvas + surrounding slots
-      const visualArea = document.createElement('div');
-      visualArea.style.cssText = 'position:relative;width:320px;height:360px;flex-shrink:0;';
-
-      // 3D player preview canvas
-      const previewCanvas = document.createElement('canvas');
-      previewCanvas.id = 'inv-player-preview-canvas';
-      previewCanvas.width  = 220;
-      previewCanvas.height = 320;
-      previewCanvas.style.cssText = [
-        'position:absolute', 'left:50%', 'top:50%',
-        'transform:translate(-50%,-50%)',
-        'border:1px solid rgba(0,255,255,0.2)',
-        'border-radius:12px',
-        'background:rgba(0,0,15,0.9)',
-        'box-shadow:0 0 20px rgba(0,255,255,0.15),inset 0 0 30px rgba(138,43,226,0.1)'
-      ].join(';');
-      visualArea.appendChild(previewCanvas);
-
-      // Define equipment slot positions (around the canvas)
-      const equippedGear = saveData.equippedGear || {};
-      const gearInventory = saveData.inventory || [];
-      // Helper: resolve an equipped ID to an item object
-      function resolveEquipped(id) {
-        if (!id) return null;
-        return gearInventory.find(g => g.id === id) || null;
-      }
-      const slots = [
-        { key:'headband', label:'Headband', icon:'🎀', top:'-22px',  left:'50%',  transform:'translateX(-50%)',  tipDir:'top'    },
-        { key:'necklace', label:'Necklace', icon:'📿', top:'25%',   left:'-56px', transform:'',                  tipDir:'left'   },
-        { key:'ring',     label:'Ring 1',  icon:'💍', top:'60%',   left:'-56px', transform:'',                  tipDir:'left'   },
-        { key:'earrings', label:'Earrings',icon:'💎', top:'25%',   right:'-56px',transform:'',                  tipDir:'right'  },
-        { key:'amulet',   label:'Amulet',  icon:'📿', top:'60%',   right:'-56px',transform:'',                  tipDir:'right'  },
-      ];
-
-      slots.forEach(sl => {
-        const equippedId   = equippedGear[sl.key];
-        const equippedItem = resolveEquipped(equippedId);
-        const slot = document.createElement('div');
-        slot.className = 'inv-vis-slot';
-        slot.dataset.slotKey = sl.key;
-        slot.title = `${sl.label} slot — drag gear here`;
-        // Positioning
-        const posStyles = ['position:absolute', 'width:48px', 'height:52px'];
-        if (sl.top    !== undefined) posStyles.push(`top:${sl.top}`);
-        if (sl.left   !== undefined) posStyles.push(`left:${sl.left}`);
-        if (sl.right  !== undefined) posStyles.push(`right:${sl.right}`);
-        if (sl.transform) posStyles.push(`transform:${sl.transform}`);
-        slot.style.cssText = posStyles.join(';');
-        slot.innerHTML = equippedItem
-          ? `<span style="font-size:24px;" title="${equippedItem.name}">${
-              { ring:'💍', amulet:'📿', helmet:'⛑️', headband:'🎀', boots:'👢', necklace:'📿', earrings:'💎' }[equippedItem.type] || '🛡️'
-            }</span><div class="inv-vis-slot-label">${equippedItem.name.substring(0,9)}</div>`
-          : `<span style="font-size:22px;opacity:0.45;">${sl.icon}</span><div class="inv-vis-slot-label" style="opacity:0.5;">${sl.label}</div>`;
-
-        // Drag-over highlight
-        slot.addEventListener('dragover', e => {
-          e.preventDefault();
-          slot.classList.add('inv-vis-slot-dragover');
-        });
-        slot.addEventListener('dragleave', () => slot.classList.remove('inv-vis-slot-dragover'));
-        slot.addEventListener('drop', e => {
-          e.preventDefault();
-          slot.classList.remove('inv-vis-slot-dragover');
-          const idx  = parseInt(e.dataTransfer.getData('text/inv-idx'), 10);
-          const type = e.dataTransfer.getData('text/inv-type');
-          if (isNaN(idx)) return;
-          // Only allow dropping matching type (or be lenient)
-          if (type && sl.key !== type && !(sl.key === 'ring' && type === 'ring') && !(sl.key === 'amulet' && type === 'amulet')) {
-            if (typeof showStatChange === 'function') showStatChange(`❌ Wrong slot type (${type} ≠ ${sl.key})`);
-            return;
-          }
-          const item = (saveData.inventory || [])[idx];
-          if (!item || !item.id) return;
-          if (!saveData.equippedGear) saveData.equippedGear = {};
-          saveData.equippedGear[sl.key] = item.id;
-          saveSaveData();
-          if (typeof showStatChange === 'function') showStatChange(`✅ ${item.name} equipped to ${sl.label}!`);
-          modal.remove();
-          showInventoryScreen();
-          // Update 3D camp player model if possible
-          if (window.CampWorld && typeof window.CampWorld.updatePlayerEquipment === 'function') {
-            window.CampWorld.updatePlayerEquipment(sl.key, item.id);
-          }
-        });
-
-        // Double-click to unequip
-        slot.addEventListener('dblclick', () => {
-          if (!equippedItem) return;
-          if (!saveData.equippedGear) return;
-          delete saveData.equippedGear[sl.key];
-          saveSaveData();
-          modal.remove();
-          showInventoryScreen();
-        });
-
-        visualArea.appendChild(slot);
-      });
-
-      rightPanel.appendChild(visualArea);
-
-      // Drag-source setup on list items (after DOM is appended)
-      // Done via event delegation on leftPanel after append
-
-      // Hint text
-      const hintEl = document.createElement('div');
-      hintEl.style.cssText = 'color:rgba(201,162,39,0.55);font-size:11px;margin-top:18px;font-family:Courier New,monospace;letter-spacing:1px;text-align:center;';
-      hintEl.innerHTML = 'DRAG ITEMS → SLOTS &nbsp;·&nbsp; DOUBLE-CLICK SLOT TO UNEQUIP';
-      rightPanel.appendChild(hintEl);
-
-      // Assemble
-      bodyEl.appendChild(leftPanel);
-      bodyEl.appendChild(rightPanel);
-      modal.appendChild(headerEl);
-      modal.appendChild(bodyEl);
       document.body.appendChild(modal);
 
-      // ── Back button ──────────────────────────────────────────────
-      modal.querySelector('#inv-back-btn').onclick = () => {
-        modal.remove();
+      // ── card renderer ──────────────────────────────────────────
+      function renderGrid() {
+        const grid = document.getElementById('mv-grid-wrap');
+        if (!grid) return;
+        const items = filteredItems();
+        if (items.length === 0) {
+          grid.style.display = 'block';
+          grid.innerHTML = '<div style="color:#444;text-align:center;padding:40px;grid-column:1/-1;">No items yet.</div>';
+          return;
+        }
+        grid.style.display = 'grid';
+        grid.innerHTML = '';
+        items.forEach(function(item) {
+          const rc = RARITY_COLOR[item.rarity]  || '#9e9e9e';
+          const rs = RARITY_SHADOW[item.rarity] || '#9e9e9e44';
+          const isSelected = _selected && _selected.id === item.id;
+          const card = document.createElement('div');
+          card.className = 'mv-squircle-card';
+          card.style.cssText = [
+            'border-radius:22px',
+            'background:linear-gradient(145deg,#12112a,#0d0c20)',
+            `border:2px solid ${isSelected ? rc : rc+'66'}`,
+            `box-shadow:0 0 ${isSelected?'18px':'8px'} ${rs}`,
+            'padding:12px 6px 8px',
+            'display:flex;flex-direction:column;align-items:center;gap:5px',
+            'cursor:pointer;user-select:none',
+            'transition:box-shadow .18s,border-color .18s',
+            'position:relative;overflow:hidden'
+          ].join(';');
+          card.dataset.rarity = item.rarity || 'common';
+          const qtyBadge = (item.qty != null && item.qty > 0) ? `<div style="position:absolute;top:6px;right:8px;background:${rc};color:#000;font-size:9px;font-weight:bold;border-radius:6px;padding:1px 5px;min-width:14px;text-align:center;">${item.qty.toLocaleString()}</div>` : '';
+          const equippedBadge = (item._invIdx != null && saveData.equippedGear && Object.values(saveData.equippedGear).some(function(g){ return g && g.id === item.id; })) ? '<div style="position:absolute;bottom:5px;right:6px;font-size:10px;">✅</div>' : '';
+          card.innerHTML = `${qtyBadge}${equippedBadge}
+            <div style="font-size:30px;line-height:1;">${item.icon}</div>
+            <div style="color:${rc};font-size:10px;font-weight:bold;text-align:center;line-height:1.3;word-break:break-word;">${item.name}</div>
+            <div style="color:${rc}88;font-size:9px;">${RARITY_STARS[item.rarity] || ''}</div>`;
+          card.onclick = function() { selectItem(item); };
+          grid.appendChild(card);
+        });
+      }
+
+      // ── side panel ─────────────────────────────────────────────
+      function selectItem(item) {
+        _selected = item;
+        renderGrid();
+        const side = document.getElementById('mv-side');
+        if (!side) return;
+        side.style.width = '280px';
+        side.style.minWidth = '280px';
+        side.style.padding = '18px';
+        side.style.overflowY = 'auto';
+        const rc  = RARITY_COLOR[item.rarity]  || '#9e9e9e';
+        const rs  = RARITY_SHADOW[item.rarity] || '#9e9e9e33';
+        const isEquipped = item._invIdx != null && saveData.equippedGear && Object.values(saveData.equippedGear).some(function(g){ return g && g.id === item.id; });
+        const isCrimsonCore = item.id === 'crimsonEclipseCore';
+        const bloodQueued = localStorage.getItem('bloodMoonQueued') === 'true';
+
+        let actionBtn = '';
+        if (item.consumable && item.qty > 0) {
+          if (isCrimsonCore && bloodQueued) {
+            actionBtn = `<div style="color:#ff8800;font-size:12px;text-align:center;padding:10px;border:1px solid #ff880044;border-radius:10px;margin-top:10px;">⏳ Blood Moon already queued for next run.</div>`;
+          } else if (isCrimsonCore) {
+            actionBtn = `<button id="mv-consume-btn" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#600000,#cc0000);border:2px solid #ff2a2a;border-radius:12px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;letter-spacing:2px;box-shadow:0 0 18px #ff2a2a88;">🌑 CONSUME</button>`;
+          }
+        }
+        if (item._isEgg) {
+          actionBtn = saveData.companionEggHatched
+            ? '<div style="color:#00FF88;text-align:center;margin-top:10px;">✅ Already Hatched</div>'
+            : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:10px;color:#000;font-weight:bold;cursor:pointer;">Place in Companion House →</button>`;
+        }
+        if (item._invIdx != null) {
+          actionBtn = isEquipped
+            ? `<div style="color:#FFD700;text-align:center;margin-top:10px;font-size:13px;">✅ Equipped</div>`
+            : `<button onclick="equipItemFromInventory(${item._invIdx})" style="width:100%;margin-top:12px;padding:10px;background:rgba(255,215,0,0.15);border:1px solid #FFD700;border-radius:10px;color:#FFD700;cursor:pointer;font-size:13px;font-weight:bold;">⚔️ EQUIP</button>`;
+        }
+
+        let statsHTML = '';
+        if (item.stats && typeof item.stats === 'object') {
+          statsHTML = Object.entries(item.stats).map(function(kv) {
+            return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#ccc;padding:2px 0;"><span style="color:#888;">${kv[0]}</span><span style="color:${rc};">${kv[1]}</span></div>`;
+          }).join('');
+        }
+
+        side.innerHTML = `
+          <div style="text-align:center;margin-bottom:14px;">
+            <div style="font-size:52px;">${item.icon}</div>
+            <div style="color:${rc};font-size:17px;font-weight:bold;margin-top:6px;text-shadow:0 0 10px ${rs};">${item.name}</div>
+            <div style="color:${rc}88;font-size:11px;margin-top:2px;">${RARITY_STARS[item.rarity] || ''} ${(item.rarity||'common').toUpperCase()}</div>
+            ${item.qty != null ? `<div style="color:#fff;font-size:13px;margin-top:4px;">Qty: <span style="color:${rc};font-weight:bold;">${item.qty.toLocaleString()}</span></div>` : ''}
+          </div>
+          ${statsHTML ? `<div style="background:#ffffff0a;border:1px solid #ffffff11;border-radius:10px;padding:10px;margin-bottom:10px;">${statsHTML}</div>` : ''}
+          ${item.description ? `<div style="color:#aaa;font-size:12px;line-height:1.6;margin-bottom:10px;">${item.description}</div>` : ''}
+          ${item.lore ? `<div style="color:#555;font-size:11px;line-height:1.6;font-style:italic;border-top:1px solid #1a1a3a;padding-top:8px;margin-bottom:6px;">${item.lore}</div>` : ''}
+          ${actionBtn}
+        `;
+
+        // Consume button handler
+        const consumeBtn = document.getElementById('mv-consume-btn');
+        if (consumeBtn) {
+          consumeBtn.onclick = function() {
+            if (!isCrimsonCore) return;
+            // Pulse animation
+            modal.classList.add('mv-crimson-pulse');
+            setTimeout(function() { modal.classList.remove('mv-crimson-pulse'); }, 900);
+            // Deduct item
+            const existing = saveData.consumables.find(function(c) { return c.id === 'crimsonEclipseCore'; });
+            if (existing) {
+              existing.quantity--;
+              if (existing.quantity <= 0) saveData.consumables = saveData.consumables.filter(function(c) { return c.id !== 'crimsonEclipseCore'; });
+            }
+            localStorage.setItem('bloodMoonQueued', 'true');
+            saveSaveData();
+            _allItems = buildAllItems();
+            _selected = null;
+            side.style.width = '0';
+            side.style.minWidth = '0';
+            side.style.padding = '0';
+            renderGrid();
+            // Show confirmation
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(60,0,0,0.97);border:2px solid #ff2a2a;border-radius:16px;padding:24px 36px;color:#ff6666;font-size:16px;font-weight:bold;text-align:center;box-shadow:0 0 60px #ff2a2a;pointer-events:none;';
+            banner.innerHTML = '🌑 BLOOD MOON QUEUED<br><span style="font-size:12px;color:#aaa;">It will rise at Wave 10 of your next run</span>';
+            document.body.appendChild(banner);
+            setTimeout(function() { banner.remove(); }, 3000);
+          };
+        }
+      }
+
+      // ── tab switching ─────────────────────────────────────────
+      modal.querySelectorAll('.mv-tab').forEach(function(btn) {
+        btn.onclick = function() {
+          _activeTab = btn.dataset.tab;
+          _selected  = null;
+          const side = document.getElementById('mv-side');
+          if (side) { side.style.width='0'; side.style.minWidth='0'; side.style.padding='0'; }
+          modal.querySelectorAll('.mv-tab').forEach(function(b) {
+            const active = b.dataset.tab === _activeTab;
+            b.style.background     = active ? 'rgba(0,255,255,0.12)' : 'transparent';
+            b.style.borderBottom   = active ? '2px solid #00ffff'    : '2px solid transparent';
+            b.style.color          = active ? '#00ffff' : '#888';
+          });
+          renderGrid();
+        };
+      });
+
+      document.getElementById('mv-back-btn').onclick = function() {        modal.remove();
         if (campScreen) campScreen.style.display = 'flex';
       };
 
-      // ── Drag-source events on gear list ─────────────────────────
-      leftPanel.querySelectorAll('.inv-gear-item[draggable]').forEach(el => {
-        el.addEventListener('dragstart', e => {
-          e.dataTransfer.setData('text/inv-idx',  el.dataset.idx);
-          e.dataTransfer.setData('text/inv-type', el.dataset.type);
-          el.style.opacity = '0.5';
-        });
-        el.addEventListener('dragend', () => { el.style.opacity = ''; });
-      });
+      // Initial render
+      renderGrid();    }
 
-      // ── 3D player preview (mini Three.js scene) ─────────────────
-      try {
-        const THREE = window.THREE;
-        if (THREE && previewCanvas) {
-          // Clean up any previous preview renderer on this canvas
-          if (typeof previewCanvas.__threePreviewCleanup === 'function') {
-            previewCanvas.__threePreviewCleanup();
-          }
+    // ── 1/3-screen A.I.D.A. cinematic dialogue for Crimson Eclipse Core ────────
+    window.showCrimsonCoreDialogue = function() {
+      const existing = document.getElementById('mv-cinematic-backdrop');
+      if (existing) existing.remove();
 
-          let previewDisposed = false;
-          let previewObserver = null;
-          let pRenderer = null;
+      const bd = document.createElement('div');
+      bd.id = 'mv-cinematic-backdrop';
+      bd.style.cssText = [
+        'position:fixed;bottom:0;left:0;width:100%;height:33vh;z-index:5000',
+        'background:linear-gradient(to top,#000 60%,rgba(0,0,0,0.95))',
+        'display:flex;flex-direction:column;justify-content:center',
+        'padding:20px 32px;box-sizing:border-box',
+        'border-top:2px solid #ff2a2a44',
+        'animation:mv-cinematic-in 0.5s ease'
+      ].join(';');
 
-          const cleanupPreviewRenderer = () => {
-            if (previewDisposed) return;
-            previewDisposed = true;
-            if (previewObserver) { previewObserver.disconnect(); previewObserver = null; }
-            if (pRenderer) {
-              pRenderer.dispose();
-              if (typeof pRenderer.forceContextLoss === 'function') pRenderer.forceContextLoss();
-              if (pRenderer.domElement) {
-                pRenderer.domElement.width  = 0;
-                pRenderer.domElement.height = 0;
-              }
-              pRenderer = null;
-            }
-            if (previewCanvas.__threePreviewCleanup === cleanupPreviewRenderer) {
-              delete previewCanvas.__threePreviewCleanup;
-            }
-          };
+      bd.innerHTML = `
+        <div style="display:flex;gap:18px;align-items:flex-start;max-width:800px;">
+          <div style="flex-shrink:0;width:52px;height:52px;border-radius:50%;background:rgba(0,255,255,0.1);border:2px solid #00ffff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 18px #00ffff66;">🤖</div>
+          <div style="flex:1;">
+            <div style="color:#00ffff;font-size:13px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;text-shadow:0 0 8px #00ffff;">A.I.D.A.</div>
+            <div id="mv-cinema-text" style="color:#ddd;font-size:14px;line-height:1.7;min-height:3em;"></div>
+            <div style="margin-top:10px;color:#555;font-size:11px;">[tap to continue]</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(bd);
 
-          pRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true, alpha: true });
-          previewCanvas.__threePreviewCleanup = cleanupPreviewRenderer;
-          pRenderer.setSize(220, 320);
-          pRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-          pRenderer.setClearColor(0x00000f, 0.9);
+      const lines = [
+        { text: 'Droplet… that core is radiating dangerous void energy.', pause: 2800 },
+        { text: 'If you consume it in your Inventory, it will trigger a Blood Moon during your next run at Wave 10.', pause: 3800 },
+        { text: 'The enemies will be relentless, but the artifact drops will be legendary. Prepare yourself.', pause: 3500 }
+      ];
+      let lineIdx = 0;
+      const textEl = document.getElementById('mv-cinema-text');
 
-          // Watch for canvas removal from DOM to automatically clean up
-          if (typeof MutationObserver !== 'undefined' && document.body) {
-            previewObserver = new MutationObserver(() => {
-              if (!document.body.contains(previewCanvas)) cleanupPreviewRenderer();
-            });
-            previewObserver.observe(document.body, { childList: true, subtree: true });
-          }
-
-          const pScene  = new THREE.Scene();
-          const pCamera = new THREE.PerspectiveCamera(45, 220 / 320, 0.1, 50);
-          pCamera.position.set(0, 0.5, 3.6);
-          pCamera.lookAt(0, 0.4, 0);
-
-          // Lights
-          pScene.add(new THREE.AmbientLight(0x8866aa, 1.2));
-          const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
-          keyLight.position.set(2, 4, 3);
-          pScene.add(keyLight);
-          const fillLight = new THREE.PointLight(0x00ffff, 1.2, 12);
-          fillLight.position.set(-2, 2, 2);
-          pScene.add(fillLight);
-          const rimLight = new THREE.PointLight(0xC9A227, 0.8, 10);
-          rimLight.position.set(0, -1, -2);
-          pScene.add(rimLight);
-
-          // ── Build player mesh (matches camp-world.js _buildPlayerMesh logic) ──
-          const pGrp = new THREE.Group();
-          const bodyMat = new THREE.MeshPhongMaterial({ color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.3, shininess: 80, transparent: true, opacity: 0.92 });
-          const limbMat = new THREE.MeshPhongMaterial({ color: 0x4FC3F7, emissive: 0x0d47a1, emissiveIntensity: 0.2, transparent: true, opacity: 0.86 });
-
-          // Body
-          const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 4), bodyMat);
-          pGrp.add(body);
-          // Head
-          const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 4), bodyMat);
-          head.position.y = 0.42;
-          pGrp.add(head);
-          // Eyes
-          const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00FFFF });
-          [-0.12, 0.12].forEach((x, i) => {
-            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), eyeMat);
-            eye.position.set(x, 0.48, 0.38);
-            pGrp.add(eye);
-          });
-          // Arms
-          const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8), limbMat);
-          leftArm.position.set(-0.38, -0.04, 0.05); leftArm.rotation.z = Math.PI / 5;
-          pGrp.add(leftArm);
-          const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.10, 0.24, 8), limbMat);
-          rightArm.position.set(0.38, -0.04, 0.05); rightArm.rotation.z = -Math.PI / 5;
-          pGrp.add(rightArm);
-          // Legs
-          const legMat = limbMat.clone();
-          [-0.16, 0.16].forEach(x => {
-            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.24, 8), legMat);
-            leg.position.set(x, -0.42, 0);
-            pGrp.add(leg);
-          });
-          // Bandage wrap
-          const bandageMat = new THREE.MeshPhongMaterial({ color: 0xF5DEB3, emissive: 0x8B7355, emissiveIntensity: 0.1 });
-          const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.055, 6, 16), bandageMat);
-          wrap.position.set(0.04, 0.35, 0); wrap.rotation.x = Math.PI / 2; wrap.rotation.z = 0.2;
-          pGrp.add(wrap);
-
-          // Headband visual if equipped
-          const headbandItem = resolveEquipped(equippedGear.headband);
-          if (headbandItem) {
-            const hbMat = new THREE.MeshPhongMaterial({ color: 0xC9A227, emissive: 0xC9A227, emissiveIntensity: 0.5 });
-            const hb = new THREE.Mesh(new THREE.TorusGeometry(0.30, 0.05, 8, 24), hbMat);
-            hb.position.y = 0.52; hb.rotation.x = Math.PI / 2;
-            pGrp.add(hb);
-          }
-          // Necklace/amulet visual if equipped
-          const neckItem = resolveEquipped(equippedGear.necklace) || resolveEquipped(equippedGear.amulet);
-          if (neckItem) {
-            const nkMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.6 });
-            const nk = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 20), nkMat);
-            nk.position.y = 0.20; nk.rotation.x = Math.PI / 2;
-            pGrp.add(nk);
-          }
-          // Ring visual if equipped
-          const ringItem = resolveEquipped(equippedGear.ring);
-          if (ringItem) {
-            const rgMat = new THREE.MeshPhongMaterial({ color: 0xa335ee, emissive: 0xa335ee, emissiveIntensity: 0.7 });
-            const rg = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.018, 6, 16), rgMat);
-            rg.position.set(-0.44, -0.18, 0.04);
-            pGrp.add(rg);
-          }
-
-          pGrp.position.y = -0.2;
-          pScene.add(pGrp);
-
-          // Rotation animation
-          let prevTime = 0;
-          function pAnimate(ts) {
-            if (!document.getElementById('inventory-screen-modal')) {
-              cleanupPreviewRenderer();
-              return;
-            }
-            if (previewDisposed) return;
-            requestAnimationFrame(pAnimate);
-            const dt = (ts - prevTime) / 1000;
-            prevTime = ts;
-            pGrp.rotation.y += dt * 0.6;
-            pRenderer.render(pScene, pCamera);
-          }
-          requestAnimationFrame(pAnimate);
+      function typewriteLine(str, cb) {
+        textEl.textContent = '';
+        let i = 0;
+        function tick() {
+          if (i < str.length) { textEl.textContent += str[i++]; setTimeout(tick, 28); }
+          else { setTimeout(cb, 600); }
         }
-      } catch (e) {
-        // 3D preview unavailable — show placeholder icon
-        previewCanvas.style.display = 'none';
-        const placeholder = document.createElement('div');
-        placeholder.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:80px;opacity:0.3;';
-        placeholder.textContent = '💧';
-        visualArea.appendChild(placeholder);
+        tick();
       }
-    }
 
+      function nextLine() {
+        if (lineIdx >= lines.length) { setTimeout(function() { bd.remove(); }, 400); return; }
+        const l = lines[lineIdx++];
+        typewriteLine(l.text, function() { setTimeout(nextLine, l.pause - 600); });
+      }
+      nextLine();
+
+      bd.onclick = function() { bd.remove(); };
+    };
     // Equip item directly from inventory screen
     function equipItemFromInventory(itemIdx) {
       const item = saveData.inventory[itemIdx];

@@ -10950,6 +10950,54 @@
   box-shadow: 0 0 25px rgba(0, 255, 255, 0.9), 0 0 50px rgba(138, 43, 226, 0.7) !important;
 }
 
+
+/* ============================================================
+   MASTER VAULT — squircle cards, rarity glows, side panel
+   ============================================================ */
+.mv-squircle-card:hover {
+  filter: brightness(1.15);
+  transform: scale(1.04);
+  transition: transform .15s, filter .15s, box-shadow .18s, border-color .18s;
+}
+
+@keyframes mv-rarity-glow-mythic {
+  0%,100% { box-shadow: 0 0 10px #ff2a2aaa, 0 0 24px #ff2a2a66; }
+  50%      { box-shadow: 0 0 22px #ff2a2a, 0 0 48px #ff2a2aaa;  }
+}
+.mv-squircle-card[data-rarity="mythic"] {
+  animation: mv-rarity-glow-mythic 2s ease-in-out infinite;
+}
+
+@keyframes mv-crimson-pulse {
+  0%   { box-shadow: inset 0 0 0px #ff0000; background: #07060e; }
+  30%  { box-shadow: inset 0 0 80px #cc000088; background: #1a0000; }
+  60%  { box-shadow: inset 0 0 120px #ff000099; background: #200000; }
+  100% { box-shadow: inset 0 0 0px #ff0000; background: #07060e; }
+}
+.mv-crimson-pulse {
+  animation: mv-crimson-pulse 0.9s ease forwards !important;
+}
+
+/* 1/3-screen cinematic AIDA dialogue */
+@keyframes mv-cinematic-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Blood Moon vignette overlay */
+#blood-moon-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(140,0,0,0.55) 80%, rgba(80,0,0,0.85) 100%);
+  animation: blood-moon-vignette-pulse 3s ease-in-out infinite;
+}
+@keyframes blood-moon-vignette-pulse {
+  0%,100% { opacity: 0.7; }
+  50%     { opacity: 1.0; }
+}
+
 /* Idle clicker drone visuals */
 .idle-drone-field {
   position: relative;
