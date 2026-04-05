@@ -61,7 +61,7 @@ const XP_CFG = {
   // at the edge, then snaps rapidly into the player (gravity/slingshot feel).
   MAGNET_RANGE: 1.5,           // Tiny pickup radius at level 0 — player must touch the star.
   MAGNET_SPEED: 15,            // Pull speed in world-units/sec at the closest point (proper dt scaling).
-  COLLECT_RANGE: 1.0,          // Collection distance (must be < MAGNET_RANGE)
+  COLLECT_RANGE: 1.2,          // Collection distance (must be < MAGNET_RANGE)
 
   // Pool size
   POOL_SIZE: 60,               // Pre-allocated stars (BUG C: increased from 50 to 60)
