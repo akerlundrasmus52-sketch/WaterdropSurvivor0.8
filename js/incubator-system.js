@@ -54,6 +54,9 @@
    * Display the incubator panel UI
    */
   function _displayIncubatorPanel(incState) {
+    const existing = document.getElementById('incubator-overlay');
+    if (existing) existing.remove();
+
     const overlay = document.createElement('div');
     overlay.id = 'incubator-overlay';
     overlay.style.cssText = [
@@ -239,7 +242,7 @@
           if (!sd.companions) sd.companions = {};
           if (!sd.companions.greyAlien) sd.companions.greyAlien = {};
           sd.companions.greyAlien.unlocked = true;
-          sd.companions.greyAlien.skills = {};
+          if (!sd.companions.greyAlien.skills) sd.companions.greyAlien.skills = {};
 
           if (typeof saveSaveData === 'function') saveSaveData();
 

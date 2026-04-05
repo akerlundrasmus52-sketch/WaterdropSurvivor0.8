@@ -5597,14 +5597,21 @@
    * when the player presses interact near the Incubator pod.
    */
   function _interactIncubator() {
-    // Use new incubator system if available
+    const sd = (typeof saveData !== 'undefined') ? saveData : null;
+
+    // Preserve the legacy post-hatch upgrade flow for existing saves.
+    if (sd && sd.alienIncubatorHatched) {
+      _showIncubatorSkillUI();
+      return;
+    }
+
+    // Use the new incubator system for pre-hatch interactions when available.
     if (window.IncubatorSystem && window.IncubatorSystem.showIncubatorUI) {
       window.IncubatorSystem.showIncubatorUI();
       return;
     }
 
     // Fallback to old system
-    const sd = (typeof saveData !== 'undefined') ? saveData : null;
     if (!sd) return;
     if (!sd.alienIncubatorHatched) {
       // Pre-hatch: deposit biomatter

@@ -298,7 +298,6 @@
       lifetime: 3
     });
 
-    console.log('[GreyCompanion] Plasma bolt fired');
   }
 
   // ─── Update plasma bolts ─────────────────────────────────────────────────────
@@ -438,8 +437,20 @@
     for (let i = 0; i < _plasmaBolts.length; i++) {
       const bolt = _plasmaBolts[i];
       _scene.remove(bolt.mesh);
-      bolt.mesh.geometry.dispose();
-      bolt.mesh.material.dispose();
+      bolt.mesh.traverse((child) => {
+        if (child.geometry) {
+          child.geometry.dispose();
+        }
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            for (let j = 0; j < child.material.length; j++) {
+              child.material[j].dispose();
+            }
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
     }
     _plasmaBolts = [];
 
