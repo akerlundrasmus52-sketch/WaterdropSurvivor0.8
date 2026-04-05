@@ -160,6 +160,7 @@ function renderClickerFountain(saveData, container) {
     if (result.isCrit) {
       comboDisplay.textContent += '  💥 CRIT x' + result.critMult;
     }
+    critDisplay.textContent = '🎯 Crit streak: ' + (result.critStreak || 0);
   });
   fountainWrap.appendChild(fountain);
   container.appendChild(fountainWrap);
@@ -167,9 +168,11 @@ function renderClickerFountain(saveData, container) {
   var goldDisplay    = _el('p', 'idle-gold-text',  null, '💰 Gold: ' + (saveData.gold || 0));
   var essenceDisplay = _el('p', 'idle-blue-text',  null, '✨ Essence: ' + (clicker.essence || 0).toFixed(1));
   var comboDisplay   = _el('p', 'idle-combo-text', null, '');
+  var critDisplay    = _el('p', 'idle-muted',      'font-size:12px;', '🎯 Crit streak: ' + (clicker.critStreak || 0));
   container.appendChild(goldDisplay);
   container.appendChild(essenceDisplay);
   container.appendChild(comboDisplay);
+  container.appendChild(critDisplay);
 
   // Upgrades
   if (window.GameClicker) {
@@ -205,6 +208,16 @@ function renderClickerFountain(saveData, container) {
     );
     if (acLevel >= 10) acBtn.disabled = true;
     container.appendChild(acBtn);
+
+    var droneField = _el('div', 'idle-drone-field', null, '');
+    fountainWrap.appendChild(droneField);
+    var drones = Math.min(window.GameClicker.CLICKER_CONFIG.DRONE_VISUALS.maxDrones, Math.max(0, Math.ceil(acLevel / 2)));
+    for (var d = 0; d < drones; d++) {
+      var drone = _el('div', 'idle-drone', null, '🤖');
+      drone.style.animationDelay = (d * 0.3) + 's';
+      drone.style.setProperty('--orbit-radius', window.GameClicker.CLICKER_CONFIG.DRONE_VISUALS.orbitRadius + 'px');
+      droneField.appendChild(drone);
+    }
   }
 
   return container;
@@ -416,11 +429,115 @@ function renderExpeditionPanel(saveData, container) {
   return container;
 }
 
+// ── Void Rift Panel ─────────────────────────────────────────────────────────
+function renderVoidRiftPanel(saveData, container) {
+  container.innerHTML = '';
+  container.appendChild(_el('h3', 'idle-section-title', null, '🌀 Void Rift Expeditions'));
+
+  if (!window.VoidRifts) {
+    container.appendChild(_el('p', 'idle-muted', null, 'Void Rifts not available.'));
+    return container;
+  }
+
+  var completed = window.VoidRifts.check(saveData);
+  var vr = saveData.voidRifts || window.VoidRifts.getDefaults();
+  if (completed.length) {
+    var banner = _el('div', 'idle-card');
+    banner.appendChild(_el('p', null, null, 'Companions returned with rewards!'));
+    banner.appendChild(_btn('Claim', '', function () {
+      window.VoidRifts.claimPending(saveData);
+      renderVoidRiftPanel(saveData, container);
+    }));
+    container.appendChild(banner);
+  }
+
+  var active = vr.active || [];
+  var pending = vr.pendingRewards || [];
+  var artifacts = vr.artifacts || [];
+
+  var activeCard = _el('div', 'idle-card');
+  activeCard.appendChild(_el('h4', 'idle-card-title', null, 'Active (' + active.length + '/' + window.VoidRifts.MAX_ACTIVE + ')'));
+  if (!active.length) {
+    activeCard.appendChild(_el('p', 'idle-muted', null, 'No active rifts.'));
+  } else {
+    active.forEach(function (slot) {
+      var remaining = Math.max(0, slot.endTime - Date.now());
+      var minutes = Math.ceil(remaining / 60000);
+      var row = _el('div', 'idle-row');
+      row.appendChild(_el('span', null, null, slot.companionId + ' → ' + slot.riftId));
+      row.appendChild(_el('span', 'idle-muted', null, minutes + 'm left'));
+      activeCard.appendChild(row);
+    });
+  }
+  container.appendChild(activeCard);
+
+  var sendCard = _el('div', 'idle-card');
+  sendCard.appendChild(_el('h4', 'idle-card-title', null, 'Send Companion'));
+  var comps = window.VoidRifts.getAvailableCompanions(saveData).filter(function (c) {
+    return !active.some(function (a) { return a.companionId === c.id; });
+  });
+  if (!comps.length) {
+    sendCard.appendChild(_el('p', 'idle-muted', null, 'No available companions.'));
+  } else {
+    var select = document.createElement('select');
+    select.className = 'idle-select';
+    comps.forEach(function (c) {
+      var opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = (c.name || c.id) + ' (Lv' + (c.level || 1) + ')';
+      select.appendChild(opt);
+    });
+    sendCard.appendChild(select);
+    window.VoidRifts.RIFTS.forEach(function (rift) {
+      var minutes = Math.round(rift.duration / 60000);
+      var btn = _btn(rift.name + ' (' + minutes + 'm)', 'margin:4px 0;', function () {
+        var res = window.VoidRifts.start(select.value, rift.id, saveData);
+        if (!res.success) alert(res.reason);
+        renderVoidRiftPanel(saveData, container);
+      });
+      if (active.length >= window.VoidRifts.MAX_ACTIVE) btn.disabled = true;
+      sendCard.appendChild(btn);
+    });
+  }
+  container.appendChild(sendCard);
+
+  var pendingCard = _el('div', 'idle-card');
+  pendingCard.appendChild(_el('h4', 'idle-card-title', null, 'Pending Rewards'));
+  if (!pending.length) {
+    pendingCard.appendChild(_el('p', 'idle-muted', null, 'No pending rewards.'));
+  } else {
+    pending.forEach(function (pr) {
+      var line = pr.companionId + ': ' + (pr.rewards.materials || 0) + ' Void Essence';
+      if (pr.rewards.artifacts && pr.rewards.artifacts.length) line += ' + ' + pr.rewards.artifacts.length + ' artifact(s)';
+      pendingCard.appendChild(_el('p', null, null, line));
+    });
+    pendingCard.appendChild(_btn('Claim All', '', function () {
+      window.VoidRifts.claimPending(saveData);
+      renderVoidRiftPanel(saveData, container);
+    }));
+  }
+  container.appendChild(pendingCard);
+
+  var artifactCard = _el('div', 'idle-card');
+  artifactCard.appendChild(_el('h4', 'idle-card-title', null, 'Recovered Artifacts'));
+  if (!artifacts.length) {
+    artifactCard.appendChild(_el('p', 'idle-muted', null, 'No artifacts yet.'));
+  } else {
+    artifacts.forEach(function (a) {
+      artifactCard.appendChild(_el('p', 'idle-gold-text', null, a.name || 'Artifact'));
+    });
+  }
+  container.appendChild(artifactCard);
+
+  return container;
+}
+
 window.GameIdleUI = {
   showWelcomeBack: showWelcomeBack,
   renderIdleDashboard: renderIdleDashboard,
   renderClickerFountain: renderClickerFountain,
   renderPrestigePanel: renderPrestigePanel,
   renderDailyPanel: renderDailyPanel,
-  renderExpeditionPanel: renderExpeditionPanel
+  renderExpeditionPanel: renderExpeditionPanel,
+  renderVoidRiftPanel: renderVoidRiftPanel
 };

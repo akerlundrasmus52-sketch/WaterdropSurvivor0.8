@@ -84,6 +84,19 @@
     }
   };
 
+  // Meta-progression skill tree
+  const META_TREE = {
+    engineTuning: { name: 'Engine Tuning', maxLevel: 5, speedBonus: 0.08, desc: '+8% ship speed per level' },
+    cannonLink: { name: 'Linked Cannons', maxLevel: 5, fireRateBonus: 0.08, desc: '-8% fire interval per level' },
+    fluxCapacitor: { name: 'Flux Capacitor', maxLevel: 3, superCooldown: 0.1, desc: '-10% super cooldown per level' }
+  };
+
+  // Super skills (in-run power plays)
+  const SUPER_SKILLS = {
+    nova: { id: 'nova', name: 'Void Nova', cooldown: 20000, icon: '💣' },
+    overdrive: { id: 'overdrive', name: 'Overdrive', cooldown: 30000, duration: 6000, icon: '⚡' }
+  };
+
   // Enemy types
   const ENEMY_TYPES = {
     basic: {
@@ -192,6 +205,14 @@
       missile: 0,
       shield: 0
     },
+    meta: {
+      skillPoints: 0,
+      nodes: { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 }
+    },
+    superState: {
+      nova: { lastUsed: -Infinity },
+      overdrive: { lastUsed: -Infinity, activeUntil: 0 }
+    },
 
     bullets: [],
     missiles: [],
@@ -224,6 +245,13 @@
       };
       gameState.mapLevel = window.saveData.neural1945.mapLevel || 1;
       gameState.selectedShip = window.saveData.neural1945.selectedShip || 0;
+      gameState.meta = window.saveData.neural1945.meta || { skillPoints: 0, nodes: { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 } };
+      if (!gameState.meta.nodes) gameState.meta.nodes = { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 };
+      if (gameState.meta.skillPoints === undefined) gameState.meta.skillPoints = 0;
+      gameState.superState = {
+        nova: { lastUsed: -Infinity },
+        overdrive: { lastUsed: -Infinity, activeUntil: 0 }
+      };
 
       // Initialize ships with cooldowns if not exists
       if (!window.saveData.neural1945.ships) {
@@ -270,6 +298,148 @@
     if (!window.saveData || !window.saveData.neural1945 || !window.saveData.neural1945.ships) return;
     window.saveData.neural1945.ships[shipIndex].lastUsed = Date.now();
     saveSaveData();
+  }
+
+  // Meta-progression helpers
+  function getMetaState() {
+    if (!gameState.meta) {
+      gameState.meta = { skillPoints: 0, nodes: { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 } };
+    }
+    if (!gameState.meta.nodes) gameState.meta.nodes = { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 };
+    return gameState.meta;
+  }
+
+  function getMetaMultiplier(type) {
+    const meta = getMetaState();
+    const nodes = meta.nodes || {};
+    if (type === 'speed') {
+      return 1 + (nodes.engineTuning || 0) * META_TREE.engineTuning.speedBonus;
+    }
+    if (type === 'fireRate') {
+      const mult = 1 - (nodes.cannonLink || 0) * META_TREE.cannonLink.fireRateBonus;
+      return Math.max(0.5, mult);
+    }
+    if (type === 'superCooldown') {
+      const mult = 1 - (nodes.fluxCapacitor || 0) * META_TREE.fluxCapacitor.superCooldown;
+      return Math.max(0.4, mult);
+    }
+    return 1;
+  }
+
+  function grantMetaPoint(reason) {
+    const meta = getMetaState();
+    meta.skillPoints = (meta.skillPoints || 0) + 1;
+    if (window.saveData && window.saveData.neural1945) {
+      window.saveData.neural1945.meta = meta;
+      if (reason) window.saveData.neural1945.meta.lastEarnedReason = reason;
+    }
+    updateMetaUI();
+  }
+
+  function spendMetaPoint(nodeKey) {
+    const meta = getMetaState();
+    const node = META_TREE[nodeKey];
+    if (!node) return { success: false, reason: 'Unknown node' };
+    const current = meta.nodes[nodeKey] || 0;
+    if (meta.skillPoints <= 0) return { success: false, reason: 'No skill points' };
+    if (current >= node.maxLevel) return { success: false, reason: 'Node maxed' };
+    meta.nodes[nodeKey] = current + 1;
+    meta.skillPoints -= 1;
+    saveProgress();
+    updateMetaUI();
+    return { success: true, level: meta.nodes[nodeKey] };
+  }
+
+  function updateMetaUI() {
+    const meta = getMetaState();
+    const metaEl = document.getElementById('nm1945-meta-points');
+    if (metaEl) {
+      metaEl.textContent = `Skill Points: ${meta.skillPoints || 0}`;
+    }
+    const modalMeta = document.getElementById('nm1945-upgrade-meta-points');
+    if (modalMeta) modalMeta.textContent = `Skill Points: ${meta.skillPoints || 0}`;
+    const buttons = document.querySelectorAll('.nm1945-meta-btn');
+    buttons.forEach(btn => {
+      const key = btn.getAttribute('data-meta');
+      const node = META_TREE[key];
+      const current = meta.nodes[key] || 0;
+      btn.disabled = current >= node.maxLevel || meta.skillPoints <= 0;
+      btn.querySelector('.nm1945-meta-level').textContent = `Lv ${current}/${node.maxLevel}`;
+    });
+  }
+
+  // Super skill helpers
+  function isOverdriveActive(now) {
+    const t = now || Date.now();
+    return gameState.superState.overdrive.activeUntil > t;
+  }
+
+  function getSuperCooldownRemaining(key) {
+    const def = SUPER_SKILLS[key];
+    const state = gameState.superState[key];
+    if (!def || !state) return 0;
+    const cd = def.cooldown * getMetaMultiplier('superCooldown');
+    const remaining = (state.lastUsed + cd) - Date.now();
+    return Math.max(0, remaining);
+  }
+
+  function useSuper(key) {
+    const def = SUPER_SKILLS[key];
+    const state = gameState.superState[key];
+    if (!def || !state) return;
+    if (getSuperCooldownRemaining(key) > 0) return;
+
+    const now = Date.now();
+    state.lastUsed = now;
+
+    if (key === 'nova') {
+      // Clear enemy bullets and vaporize weak enemies
+      gameState.enemyBullets = [];
+      const survivors = [];
+      for (let i = 0; i < gameState.enemies.length; i++) {
+        const enemy = gameState.enemies[i];
+        enemy.hp -= enemy.maxHp * 0.9;
+        createExplosion(enemy.x, enemy.y, enemy.type.color);
+        if (enemy.hp <= 0) {
+          gameState.score += enemy.type.score;
+          gameState.credits += Math.floor(enemy.type.score / 4);
+        } else {
+          survivors.push(enemy);
+        }
+      }
+      gameState.enemies = survivors;
+
+      if (gameState.bossActive && gameState.boss) {
+        gameState.boss.hp -= gameState.boss.maxHp * 0.25;
+        createExplosion(gameState.boss.x, gameState.boss.y, gameState.boss.color);
+        if (gameState.boss.hp <= 0) {
+          gameState.score += gameState.boss.score;
+          gameState.credits += Math.floor(gameState.boss.score / 3);
+          gameState.bossActive = false;
+          gameState.boss = null;
+        }
+      }
+    } else if (key === 'overdrive') {
+      state.activeUntil = now + def.duration;
+      gameState.player.invulnerable = Math.max(gameState.player.invulnerable, 90);
+    }
+    updateSuperUI();
+  }
+
+  function updateSuperUI() {
+    Object.keys(SUPER_SKILLS).forEach(key => {
+      const btn = document.getElementById(`nm1945-super-${key}`);
+      if (!btn) return;
+      const remaining = getSuperCooldownRemaining(key);
+      if (remaining > 0) {
+        btn.disabled = true;
+        const secs = Math.ceil(remaining / 1000);
+        btn.textContent = `${SUPER_SKILLS[key].icon} ${SUPER_SKILLS[key].name} (${secs}s)`;
+      } else {
+        btn.disabled = false;
+        btn.textContent = `${SUPER_SKILLS[key].icon} ${SUPER_SKILLS[key].name}`;
+      }
+    });
   }
 
   // Helper: Calculate map difficulty multiplier
@@ -404,7 +574,45 @@
     gameContainer.appendChild(canvas);
     gameContainer.appendChild(hpBar);
 
+    // Meta + super bar
+    const metaBar = document.createElement('div');
+    metaBar.id = 'nm1945-meta-bar';
+    metaBar.style.cssText = `
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: rgba(0, 8, 20, 0.7);
+      border-bottom: 2px solid #233f66;
+    `;
+    const metaInfo = document.createElement('div');
+    metaInfo.id = 'nm1945-meta-points';
+    metaInfo.style.cssText = 'color:#ffd700;font-weight:bold;';
+    metaInfo.textContent = `Skill Points: ${getMetaState().skillPoints || 0}`;
+    metaBar.appendChild(metaInfo);
+
+    const superWrap = document.createElement('div');
+    superWrap.style.cssText = 'display:flex;gap:8px;';
+    const novaBtn = document.createElement('button');
+    novaBtn.id = 'nm1945-super-nova';
+    novaBtn.className = 'nm1945-super-btn';
+    novaBtn.textContent = `${SUPER_SKILLS.nova.icon} ${SUPER_SKILLS.nova.name}`;
+    novaBtn.addEventListener('click', () => useSuper('nova'));
+    const overdriveBtn = document.createElement('button');
+    overdriveBtn.id = 'nm1945-super-overdrive';
+    overdriveBtn.className = 'nm1945-super-btn';
+    overdriveBtn.textContent = `${SUPER_SKILLS.overdrive.icon} ${SUPER_SKILLS.overdrive.name}`;
+    overdriveBtn.addEventListener('click', () => useSuper('overdrive'));
+    [novaBtn, overdriveBtn].forEach(btn => {
+      btn.style.cssText = 'background:#1f3b5c;color:#fff;border:1px solid #335b8c;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:bold;';
+      superWrap.appendChild(btn);
+    });
+    metaBar.appendChild(superWrap);
+
     overlay.appendChild(header);
+    overlay.appendChild(metaBar);
     overlay.appendChild(gameContainer);
 
     document.body.appendChild(overlay);
@@ -440,12 +648,20 @@
       if (e.key === 'u' || e.key === 'U') {
         showUpgrades();
       }
+      if (e.key === 'q' || e.key === 'Q') {
+        useSuper('nova');
+      }
+      if (e.key === 'e' || e.key === 'E') {
+        useSuper('overdrive');
+      }
     });
 
     window.addEventListener('keyup', (e) => {
       gameState.keys[e.key] = false;
     });
 
+    updateMetaUI();
+    updateSuperUI();
     updateHPBar();
   }
 
@@ -534,6 +750,36 @@
       `;
     }
 
+    const meta = getMetaState();
+    html += `
+      </div>
+      <div style="margin-top:18px;padding:14px;border:2px solid #335b8c;border-radius:12px;background:rgba(10,20,40,0.6);">
+        <div style="display:flex;justify-content:space-between;align-items:center; margin-bottom:10px;">
+          <h3 style="color:#66ccff;margin:0;">🧠 Meta Skill Tree</h3>
+          <div id="nm1945-upgrade-meta-points" style="color:#ffd700;font-weight:bold;">Skill Points: ${meta.skillPoints || 0}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+    `;
+    Object.keys(META_TREE).forEach(key => {
+      const node = META_TREE[key];
+      const level = meta.nodes[key] || 0;
+      html += `
+        <div style="padding:10px;border:1px solid #1d3761;border-radius:8px;background:rgba(0,0,0,0.35);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="color:#fff;font-weight:bold;">${node.name}</div>
+              <div style="color:#aaa;font-size:13px;">${node.desc}</div>
+            </div>
+            <button class="nm1945-meta-btn" data-meta="${key}"
+              style="background:#235c9c;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;"
+            >
+              <span class="nm1945-meta-level">Lv ${level}/${node.maxLevel}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
     html += `
       </div>
       <div style="text-align: center; margin-top: 20px;">
@@ -549,6 +795,18 @@
       btn.addEventListener('click', () => {
         const upgradeKey = btn.getAttribute('data-upgrade');
         purchaseUpgrade(upgradeKey);
+      });
+    });
+    document.querySelectorAll('.nm1945-meta-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-meta');
+        const result = spendMetaPoint(key);
+        if (!result.success) {
+          alert(result.reason || 'Unable to upgrade');
+        } else {
+          document.getElementById('nm1945-upgrades-menu').remove();
+          showUpgrades();
+        }
       });
     });
 
@@ -610,19 +868,22 @@
 
     // Player movement
     const player = gameState.player;
+    const shipBonuses = applyShipBonuses();
+    const baseSpeed = PLAYER_SPEED * shipBonuses.speed * getMetaMultiplier('speed');
+    const moveSpeed = isOverdriveActive(now) ? baseSpeed * 1.25 : baseSpeed;
 
     // Keyboard movement
     if (gameState.keys['ArrowLeft'] || gameState.keys['a']) {
-      player.x = Math.max(player.width / 2, player.x - PLAYER_SPEED);
+      player.x = Math.max(player.width / 2, player.x - moveSpeed);
     }
     if (gameState.keys['ArrowRight'] || gameState.keys['d']) {
-      player.x = Math.min(CANVAS_WIDTH - player.width / 2, player.x + PLAYER_SPEED);
+      player.x = Math.min(CANVAS_WIDTH - player.width / 2, player.x + moveSpeed);
     }
     if (gameState.keys['ArrowUp'] || gameState.keys['w']) {
-      player.y = Math.max(player.height / 2, player.y - PLAYER_SPEED);
+      player.y = Math.max(player.height / 2, player.y - moveSpeed);
     }
     if (gameState.keys['ArrowDown'] || gameState.keys['s']) {
-      player.y = Math.min(CANVAS_HEIGHT - player.height / 2, player.y + PLAYER_SPEED);
+      player.y = Math.min(CANVAS_HEIGHT - player.height / 2, player.y + moveSpeed);
     }
 
     // Mouse following (alternative control)
@@ -638,7 +899,8 @@
 
     // Auto-fire
     const fireRateLevel = SHIP_UPGRADES.fireRate.levels[gameState.upgrades.fireRate];
-    if (now - gameState.lastShot > fireRateLevel.value) {
+    const fireInterval = Math.max(50, fireRateLevel.value * getMetaMultiplier('fireRate') * (isOverdriveActive(now) ? 0.5 : 1));
+    if (now - gameState.lastShot > fireInterval) {
       shootBullets();
       gameState.lastShot = now;
     }
@@ -743,6 +1005,7 @@
       gameState._waveSpawned = 0;
       gameState._waveEnemyCount = 3 + Math.floor(gameState.wave * 1.5);
       gameState._bossTriggeredThisWave = false;
+      grantMetaPoint('wave_clear');
       updateUI();
     }
 
@@ -1381,11 +1644,29 @@
     ctx.fill();
   }
 
+  // Throttle tracker for super-skill cooldown UI (last displayed ceiling-seconds per key)
+  var _superUILastSecs = {};
+
   // Update UI
   function updateUI() {
     document.getElementById('nm1945-score').textContent = gameState.score;
     document.getElementById('nm1945-wave').textContent = gameState.wave;
     document.getElementById('nm1945-credits').textContent = gameState.credits;
+    // Meta UI is updated explicitly in grantMetaPoint / spendMetaPoint – skip here.
+    // Super-skill cooldown text only needs updating when the displayed second changes.
+    _updateSuperUIThrottled();
+  }
+
+  function _updateSuperUIThrottled() {
+    var changed = false;
+    for (const key of Object.keys(SUPER_SKILLS)) {
+      const secs = Math.ceil(getSuperCooldownRemaining(key) / 1000);
+      if (_superUILastSecs[key] !== secs) {
+        _superUILastSecs[key] = secs;
+        changed = true;
+      }
+    }
+    if (changed) updateSuperUI();
   }
 
   // Game over
@@ -1411,6 +1692,9 @@
     gameState.bossActive = false;
     gameState.boss = null;
     gameState.mode = 'playing';
+    gameState.superState.nova.lastUsed = -Infinity;
+    gameState.superState.overdrive.lastUsed = -Infinity;
+    gameState.superState.overdrive.activeUntil = 0;
 
     gameState.player.x = CANVAS_WIDTH / 2;
     gameState.player.y = CANVAS_HEIGHT - 80;
@@ -1435,6 +1719,8 @@
     window.saveData.neural1945.highScore = gameState.highScore;
     window.saveData.neural1945.credits   = gameState.credits;
     window.saveData.neural1945.upgrades  = gameState.upgrades;
+    window.saveData.neural1945.mapLevel  = gameState.mapLevel;
+    window.saveData.neural1945.meta      = getMetaState();
     // Use saveSaveData (main game save function) or saveGame fallback
     if (typeof saveSaveData === 'function') {
       try { saveSaveData(); } catch (e) {}

@@ -11003,3 +11003,281 @@
   color: #ff2a2a !important;
   text-shadow: 0 0 16px #ff0000 !important;
 }
+
+/* Idle clicker drone visuals */
+.idle-drone-field {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 8px auto 0 auto;
+  pointer-events: none;
+}
+.idle-drone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: idleDroneOrbit 6s linear infinite;
+  font-size: 18px;
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
+  opacity: 0.9;
+}
+@keyframes idleDroneOrbit {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(var(--orbit-radius, 38px)) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(var(--orbit-radius, 38px)) rotate(-360deg);
+  }
+
+/* ============================================================
+   ARTIFACT SHRINE & VISUAL GEAR UI — Annunaki Aesthetic
+   ============================================================ */
+
+/* ── Cinematic Dialogue Overlay ─────────────────────────── */
+@keyframes cinematicFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes cinematicFadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes cinematicTapPulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1.0; }
+}
+
+/* ── Inventory Screen Reusable Components ───────────────── */
+.inv-currency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(201,162,39,0.4);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.inv-section-title {
+  color: #C9A227;
+  font-family: Bangers, cursive;
+  font-size: 15px;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(201,162,39,0.5);
+}
+
+.inv-special-egg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(0,255,180,0.12), rgba(0,100,80,0.2));
+  border: 1px solid rgba(0,255,180,0.35);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.inv-gear-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: grab;
+  transition: background 0.15s, border-color 0.15s;
+}
+.inv-gear-item:hover {
+  background: rgba(255,255,255,0.08);
+}
+.inv-gear-item.inv-equipped {
+  background: rgba(255,215,0,0.08);
+}
+.inv-gear-item:active { cursor: grabbing; }
+
+.inv-equip-btn {
+  background: rgba(0,255,255,0.12);
+  border: 1px solid rgba(0,255,255,0.4);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: #00ffff;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: Courier New, monospace;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.inv-equip-btn:hover {
+  background: rgba(0,255,255,0.22);
+}
+
+.inv-back-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+.inv-back-btn:hover {
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+}
+
+/* ── Visual Equipment Slots ─────────────────────────────── */
+.inv-vis-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 58px;
+  background: linear-gradient(135deg, #0d0015 0%, #07000e 100%);
+  border: 2px solid rgba(0,255,255,0.3);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 8px rgba(0,255,255,0.1), inset 0 0 10px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.inv-vis-slot:hover {
+  border-color: rgba(0,255,255,0.7);
+  box-shadow: 0 0 16px rgba(0,255,255,0.35), inset 0 0 12px rgba(0,0,0,0.5);
+}
+.inv-vis-slot.inv-vis-slot-dragover {
+  border-color: #C9A227;
+  box-shadow: 0 0 20px rgba(201,162,39,0.6), inset 0 0 12px rgba(201,162,39,0.1);
+  background: linear-gradient(135deg, rgba(201,162,39,0.15), rgba(0,0,0,0.9));
+}
+.inv-vis-slot-label {
+  font-size: 9px;
+  color: #888;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 50px;
+}
+
+/* ── Artifact Shrine Modal ──────────────────────────────── */
+.shrine-slots-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.shrine-slot {
+  flex: 1;
+  min-width: 160px;
+  max-width: 200px;
+  background: linear-gradient(135deg, #0d0015 0%, #1a0033 60%, #0d0015 100%);
+  border: 2px solid rgba(0,255,255,0.25);
+  border-radius: 14px;
+  padding: 18px 14px;
+  text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 12px rgba(0,255,255,0.08), inset 0 0 20px rgba(0,0,0,0.5);
+}
+.shrine-slot:hover {
+  border-color: rgba(0,255,255,0.55);
+  box-shadow: 0 0 20px rgba(0,255,255,0.2), inset 0 0 20px rgba(0,0,0,0.5);
+}
+.shrine-slot-locked {
+  border-color: rgba(255,255,255,0.1) !important;
+  box-shadow: none !important;
+  opacity: 0.7;
+}
+.shrine-slot-label {
+  font-size: 12px;
+  font-family: Courier New, monospace;
+  letter-spacing: 1px;
+  margin-top: 6px;
+  font-weight: bold;
+}
+
+.shrine-remove-btn {
+  margin-top: 8px;
+  background: rgba(255,0,0,0.15);
+  border: 1px solid rgba(255,80,80,0.4);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: #ff8888;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: Courier New, monospace;
+  transition: background 0.15s;
+}
+.shrine-remove-btn:hover {
+  background: rgba(255,0,0,0.28);
+}
+
+.shrine-inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shrine-inv-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.shrine-inv-item:hover {
+  background: rgba(0,255,255,0.06);
+  border-color: rgba(0,255,255,0.4);
+}
+.shrine-inv-item.shrine-inv-equipped {
+  background: rgba(0,255,255,0.08);
+  border-color: rgba(0,255,255,0.35);
+}
+
+.shrine-upgrade-box {
+  background: linear-gradient(135deg, rgba(201,162,39,0.08), rgba(0,0,0,0.6));
+  border: 1px solid rgba(201,162,39,0.35);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.shrine-upgrade-btn {
+  background: linear-gradient(135deg, #1a3a6a, #2a5a9a);
+  border: 2px solid #5DADE2;
+  border-radius: 10px;
+  padding: 10px 28px;
+  color: #fff;
+  font-family: Bangers, cursive;
+  font-size: 16px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: box-shadow 0.2s;
+}
+.shrine-upgrade-btn:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(93,173,226,0.5);
+}
+.shrine-upgrade-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #222;
+  border-color: #555;
+}

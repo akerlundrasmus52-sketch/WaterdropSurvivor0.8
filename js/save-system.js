@@ -81,6 +81,9 @@
       inventory: [],
       consumables: [], // Single-use consumable items (e.g. Crimson Eclipse Core)
       hasSeenCrimsonCoreDialogue: false, // AIDA dialogue flag for first CEC obtain
+      // Artifact System
+      artifacts: [],
+      equippedArtifacts: [null, null, null],
       // Phase 5: Companion System
       companions: {
         greyAlien: { unlocked: true, level: 1, xp: 0, skills: {} },
@@ -119,7 +122,7 @@
         trainingGrounds: { level: 0, maxLevel: 1, unlocked: false },
         library: { level: 0, maxLevel: 1, unlocked: false },
         workshop: { level: 0, maxLevel: 1, unlocked: false },
-        shrine: { level: 0, maxLevel: 1, unlocked: false },
+        shrine: { level: 0, maxLevel: 3, unlocked: false },
         specialAttacks: { level: 0, maxLevel: 1, unlocked: false },
         warehouse: { level: 0, maxLevel: 1, unlocked: false },
         tavern:    { level: 0, maxLevel: 1, unlocked: false },
@@ -365,7 +368,8 @@
         wood: 0, stone: 0, coal: 0, iron: 0,
         crystal: 0, magicEssence: 0, gem: 0, flesh: 0,
         fur: 0, leather: 0, feather: 0, chitin: 0, venom: 0,
-        berry: 0, flower: 0, vegetable: 0
+        berry: 0, flower: 0, vegetable: 0,
+        voidEssence: 0
       },
       harvestingTools: {
         axe: false, sledgehammer: false, pickaxe: false, magicTool: false,
@@ -393,7 +397,24 @@
       astralEssence: 0,  // Collected inside Astral Dive — used in Neural Matrix
       neuralCores:   0,  // Rare drops from Firewall bosses inside the Dive
       // ── 1945 Striker minigame ─────────────────────────────
-      neural1945: { highScore: 0, credits: 0, upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 } },
+      neural1945: {
+        highScore: 0,
+        credits: 0,
+        mapLevel: 1,
+        upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 },
+        meta: {
+          skillPoints: 0,
+          nodes: { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 }
+        },
+        supers: { fluxCharges: 0 }
+      },
+      // ── Void Rift Expeditions ───────────────────────────────
+      voidRifts: {
+        active: [],
+        pendingRewards: [],
+        artifacts: [],
+        history: []
+      },
       // ── Advanced Idle Clicker (Idle House) ────────────────
       advancedClicker: null,  // Initialised lazily by AdvancedClicker.getDefaults()
       // ── AIDA Dark Pacts ──────────────────────────────────────
@@ -419,6 +440,9 @@
           saveData.inventory = saveData.inventory || [];
           saveData.consumables = saveData.consumables || [];
           saveData.hasSeenCrimsonCoreDialogue = saveData.hasSeenCrimsonCoreDialogue || false;
+          saveData.resources = { ...defaultSaveData.resources, ...(saveData.resources || {}) };
+          saveData.artifacts = saveData.artifacts || [];
+          saveData.equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
           saveData.campBuildings = { ...defaultSaveData.campBuildings, ...(saveData.campBuildings || {}) };
           saveData.skillTree = { ...defaultSaveData.skillTree, ...(saveData.skillTree || {}) };
           saveData.companions = { ...defaultSaveData.companions, ...(saveData.companions || {}) };
@@ -519,12 +543,16 @@
           // representation and don't use the BUILD/ENTER flow.
           if (!saveData._buildingMigrationV3) {
             var uiOnlyBuildings = ['accountBuilding', 'idleMenu'];
+            // Buildings that intentionally have maxLevel > 1 are exempted from the cap
+            var multiLevelBuildings = ['shrine'];
             Object.keys(saveData.campBuildings).forEach(function(bId) {
               var b = saveData.campBuildings[bId];
               if (!b) return;
-              b.maxLevel = 1;
+              if (multiLevelBuildings.indexOf(bId) === -1) {
+                b.maxLevel = 1;
+              }
               if (uiOnlyBuildings.indexOf(bId) !== -1) return;
-              if (typeof b.level === 'number' && b.level > 1) {
+              if (typeof b.level === 'number' && b.level > 1 && multiLevelBuildings.indexOf(bId) === -1) {
                 b.level = 1; // cap at 1 (built)
               }
             });
@@ -651,11 +679,23 @@
           saveData.neuralCores   = saveData.neuralCores   || 0;
           // ── 1945 Striker save migration ──
           if (!saveData.neural1945) {
-            saveData.neural1945 = { highScore: 0, credits: 0, upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 } };
+            saveData.neural1945 = {
+              highScore: 0,
+              credits: 0,
+              mapLevel: 1,
+              upgrades: { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 },
+              meta: { skillPoints: 0, nodes: { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 } },
+              supers: { fluxCharges: 0 }
+            };
           }
           saveData.neural1945.credits   = saveData.neural1945.credits   || 0;
           saveData.neural1945.highScore = saveData.neural1945.highScore || 0;
           saveData.neural1945.upgrades  = saveData.neural1945.upgrades  || { fireRate: 0, spread: 0, damage: 0, missile: 0, shield: 0 };
+          saveData.neural1945.meta      = saveData.neural1945.meta      || { skillPoints: 0, nodes: { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 } };
+          if (!saveData.neural1945.meta.nodes) saveData.neural1945.meta.nodes = { engineTuning: 0, cannonLink: 0, fluxCapacitor: 0 };
+          if (saveData.neural1945.meta.skillPoints === undefined) saveData.neural1945.meta.skillPoints = 0;
+          saveData.neural1945.supers    = saveData.neural1945.supers    || { fluxCharges: 0 };
+          if (saveData.neural1945.supers.fluxCharges === undefined) saveData.neural1945.supers.fluxCharges = 0;
           // ── Neural Matrix migration ──
           saveData.neuralMatrix = saveData.neuralMatrix || {};
           // Ensure parasiteSeenThisSession starts as false (re-rolls once per session)
@@ -671,6 +711,15 @@
           }
           if (!saveData.campBuildings.astralGateway) {
             saveData.campBuildings.astralGateway = { level: 0, maxLevel: 1, unlocked: false };
+          }
+          // ── Void Rift migration ──
+          if (!saveData.voidRifts) {
+            saveData.voidRifts = { active: [], pendingRewards: [], artifacts: [], history: [] };
+          } else {
+            saveData.voidRifts.active = saveData.voidRifts.active || [];
+            saveData.voidRifts.pendingRewards = saveData.voidRifts.pendingRewards || [];
+            saveData.voidRifts.artifacts = saveData.voidRifts.artifacts || [];
+            saveData.voidRifts.history = saveData.voidRifts.history || [];
           }
           // ── AIDA Dark Pacts migration ──
           if (!saveData.aidaDarkPacts) saveData.aidaDarkPacts = {};

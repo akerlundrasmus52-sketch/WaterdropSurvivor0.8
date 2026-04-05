@@ -348,7 +348,151 @@
       setTimeout(comicCloseHandler, 15000);
     }
 
-    // NEW: Show Quest Hall UI for claiming completed quests
+    /**
+     * showCinematicDialogue(speakerName, text, onClose)
+     * Film-style letterboxed AIDA dialogue: black bars top/bottom (≈28% each),
+     * typewriter text in the middle third, with the Annunaki cyan/purple aesthetic.
+     */
+    function showCinematicDialogue(speakerName, text, onClose) {
+      // Suppress in sandbox
+      if (window._engine2SandboxMode === true || window.location.pathname.includes('sandbox.html')) {
+        if (onClose) onClose();
+        return;
+      }
+
+      const wasGameActive =
+        typeof isGameActive !== 'undefined' &&
+        isGameActive &&
+        !(typeof isGameOver !== 'undefined' && isGameOver);
+      if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(true);
+
+      const overlay = document.createElement('div');
+      overlay.id = 'cinematic-dialogue-overlay';
+      overlay.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'z-index:10000', 'pointer-events:all', 'cursor:pointer',
+        'animation:cinematicFadeIn 0.6s ease-out forwards'
+      ].join(';');
+
+      // Top black bar (≈28% of screen)
+      const topBar = document.createElement('div');
+      topBar.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:28%',
+        'background:#000'
+      ].join(';');
+
+      // Bottom black bar (≈28% of screen)
+      const bottomBar = document.createElement('div');
+      bottomBar.style.cssText = [
+        'position:absolute', 'bottom:0', 'left:0', 'width:100%', 'height:28%',
+        'background:#000'
+      ].join(';');
+
+      // Centre area (44% of screen) — translucent for cinematic feel
+      const centreArea = document.createElement('div');
+      centreArea.style.cssText = [
+        'position:absolute', 'top:28%', 'left:0', 'width:100%', 'height:44%',
+        'background:rgba(0,0,0,0.82)',
+        'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
+        'gap:14px', 'padding:0 8%', 'box-sizing:border-box'
+      ].join(';');
+
+      // Speaker name badge
+      const speakerEl = document.createElement('div');
+      speakerEl.style.cssText = [
+        'color:#00ffff', 'font-family:Bangers,cursive', 'font-size:clamp(13px,2.5vw,20px)',
+        'letter-spacing:4px', 'text-transform:uppercase',
+        'text-shadow:0 0 12px rgba(0,255,255,0.9),0 0 24px rgba(0,255,255,0.5)',
+        'border-bottom:1px solid rgba(0,255,255,0.35)', 'padding-bottom:6px',
+        'width:100%', 'text-align:left'
+      ].join(';');
+      speakerEl.textContent = `◈ ${speakerName}`;
+
+      // Dialogue text container with typewriter effect
+      const textEl = document.createElement('div');
+      textEl.style.cssText = [
+        'color:#E8D5A3', 'font-family:Courier New,monospace',
+        'font-size:clamp(13px,2.2vw,19px)', 'line-height:1.7',
+        'width:100%', 'text-align:left',
+        'text-shadow:0 0 6px rgba(0,255,255,0.15)'
+      ].join(';');
+      textEl.textContent = '';
+
+      // "Tap to continue" hint at bottom of centre area
+      const tapHint = document.createElement('div');
+      tapHint.style.cssText = [
+        'color:rgba(201,162,39,0.7)', 'font-family:Courier New,monospace',
+        'font-size:clamp(10px,1.6vw,13px)', 'letter-spacing:2px',
+        'position:absolute', 'bottom:8%', 'right:5%',
+        'animation:cinematicTapPulse 1.4s ease-in-out infinite'
+      ].join(';');
+      tapHint.textContent = '▶  TAP TO CONTINUE';
+      tapHint.style.opacity = '0';
+
+      centreArea.appendChild(speakerEl);
+      centreArea.appendChild(textEl);
+      centreArea.appendChild(tapHint);
+
+      // Scanline overlay for CRT feel
+      const scanline = document.createElement('div');
+      scanline.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)',
+        'pointer-events:none', 'z-index:1'
+      ].join(';');
+
+      overlay.appendChild(topBar);
+      overlay.appendChild(centreArea);
+      overlay.appendChild(bottomBar);
+      overlay.appendChild(scanline);
+      document.body.appendChild(overlay);
+
+      // Typewriter effect
+      let charIdx = 0;
+      let typewriterDone = false;
+      const typeSpeed = 32; // ms per char
+      const typeTimer = setInterval(() => {
+        if (charIdx < text.length) {
+          textEl.textContent += text[charIdx];
+          charIdx++;
+        } else {
+          clearInterval(typeTimer);
+          typewriterDone = true;
+          tapHint.style.opacity = '1';
+          tapHint.style.transition = 'opacity 0.5s';
+        }
+      }, typeSpeed);
+
+      let closed = false;
+      function closeCinematic() {
+        if (closed) return;
+        closed = true;
+        clearInterval(typeTimer);
+        overlay.style.animation = 'cinematicFadeOut 0.4s ease-in forwards';
+        setTimeout(() => {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(false);
+          if (onClose) onClose();
+        }, 380);
+      }
+
+      // Clicking/tapping: if typewriter still running — skip to end; else close
+      overlay.addEventListener('click', () => {
+        if (!typewriterDone) {
+          clearInterval(typeTimer);
+          textEl.textContent = text;
+          typewriterDone = true;
+          tapHint.style.opacity = '1';
+          tapHint.style.transition = 'opacity 0.5s';
+        } else {
+          closeCinematic();
+        }
+      });
+
+      // Safety: auto-close after 18 s
+      setTimeout(closeCinematic, 18000);
+    }
+    window.showCinematicDialogue = showCinematicDialogue;
     function showQuestHall() {
       // Guard: Quest Hall must be built (level > 0) before it can be entered
       var _qmData = saveData.campBuildings && saveData.campBuildings.questMission;
@@ -2882,14 +3026,12 @@
         };
       });
 
-      document.getElementById('mv-back-btn').onclick = function() {
-        modal.remove();
+      document.getElementById('mv-back-btn').onclick = function() {        modal.remove();
         if (campScreen) campScreen.style.display = 'flex';
       };
 
       // Initial render
-      renderGrid();
-    }
+      renderGrid();    }
 
     // ── 1/3-screen A.I.D.A. cinematic dialogue for Crimson Eclipse Core ────────
     window.showCrimsonCoreDialogue = function() {
@@ -2950,10 +3092,10 @@
     // Equip item directly from inventory screen
     function equipItemFromInventory(itemIdx) {
       const item = saveData.inventory[itemIdx];
-      if (!item) return;
+      if (!item || !item.id) return;
       const slot = item.type || 'ring';
       if (!saveData.equippedGear) saveData.equippedGear = {};
-      saveData.equippedGear[slot] = item;
+      saveData.equippedGear[slot] = item.id;
       saveSaveData();
       showStatChange(`🎯 ${item.name} Equipped!`);
       // Refresh inventory screen
@@ -2963,8 +3105,192 @@
     window.equipItemFromInventory = equipItemFromInventory;
 
     // ============================================================
-    // COMPANION HOUSE SCREEN
+    // ARTIFACT SHRINE UI
     // ============================================================
+
+    function showArtifactShrineUI() {
+      const campScreen = document.getElementById('camp-screen');
+      if (campScreen) campScreen.style.display = 'none';
+
+      const existingModal = document.getElementById('artifact-shrine-modal');
+      if (existingModal) existingModal.remove();
+
+      const shrineData  = saveData.campBuildings && saveData.campBuildings.shrine;
+      const shrineLevel = shrineData ? (shrineData.level || 0) : 0;
+      const unlockedSlots = shrineLevel; // 1 slot per upgrade level
+      const equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
+      const artifactInventory = saveData.artifacts || [];
+
+      // Artifact definitions (static catalogue of obtainable artifacts)
+      const ARTIFACT_DEFS = {
+        voidCrystal:    { name: 'Void Crystal',     icon: '🔮', rarity: 'legendary', desc: '+50% Crit Damage · Void Lifesteal 3%',      stats: { critDamage: 0.5, voidLifesteal: 0.03 } },
+        annunakiShard:  { name: 'Annunaki Shard',   icon: '👁️',  rarity: 'mythic',    desc: '+80% Boss Damage · +15% All Resistances',   stats: { bossDamage: 0.8, allResist: 0.15 } },
+        temporalCore:   { name: 'Temporal Core',    icon: '⏳', rarity: 'epic',      desc: '+25% Attack Speed · -15% Cooldowns',         stats: { attackSpeed: 0.25, cdReduction: 0.15 } },
+        bloodstoneRelic:{ name: 'Bloodstone Relic', icon: '💉', rarity: 'legendary', desc: 'On kill: restore 4% max HP',                  stats: { onKillHeal: 0.04 } },
+        etherealBlade:  { name: 'Ethereal Blade',   icon: '⚔️',  rarity: 'epic',      desc: '+40% Physical Damage · +10% Crit Chance',    stats: { physDamage: 0.4, critChance: 0.10 } },
+      };
+
+      const rarityColors = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff4444' };
+
+      // Build slot HTML
+      const slotHTML = [0, 1, 2].map(i => {
+        const isUnlocked = i < unlockedSlots;
+        const equippedId = equippedArtifacts[i];
+        const equipped   = equippedId ? (ARTIFACT_DEFS[equippedId] || artifactInventory.find(a => a.id === equippedId)) : null;
+        const rc = equipped ? (rarityColors[equipped.rarity] || '#aaa') : '#444';
+        if (!isUnlocked) {
+          return `<div class="shrine-slot shrine-slot-locked">
+            <div style="font-size:28px;opacity:0.3;">🔒</div>
+            <div class="shrine-slot-label" style="color:#555;">Slot ${i+1} — Locked</div>
+            <div style="color:#666;font-size:10px;margin-top:4px;">Upgrade Shrine to unlock</div>
+          </div>`;
+        }
+        return `<div class="shrine-slot" data-slot="${i}" style="border-color:${rc};" title="${equipped ? `${equipped.name} — click Remove to unequip` : 'Empty artifact slot'}">
+          <div style="font-size:32px;">${equipped ? (equipped.icon || '🔮') : '🏛️'}</div>
+          <div class="shrine-slot-label" style="color:${rc};">${equipped ? equipped.name : `Slot ${i+1} — Empty`}</div>
+          ${equipped ? `<div style="color:#aaa;font-size:10px;margin-top:3px;">${equipped.desc || ''}</div>
+            <button onclick="window._shrineUnequip(${i})" class="shrine-remove-btn">✕ Remove</button>`
+          : `<div style="color:#555;font-size:10px;margin-top:3px;">Select artifact below to equip</div>`}
+        </div>`;
+      }).join('');
+
+      // Build artifact inventory HTML
+      const artifactInventoryHTML = artifactInventory.length === 0
+        ? `<div style="color:#555;text-align:center;padding:30px;font-size:13px;">No Artifacts collected yet.<br><span style="color:#888;font-size:11px;">Artifacts only drop from Bosses or Void Expeditions.</span></div>`
+        : artifactInventory.map((art, idx) => {
+            const def = ARTIFACT_DEFS[art.id] || art;
+            const rc2 = rarityColors[def.rarity] || '#aaa';
+            const isEquipped = equippedArtifacts.some(a => a === art.id);
+            return `<div class="shrine-inv-item${isEquipped ? ' shrine-inv-equipped' : ''}" style="border-color:${rc2};"
+                        onclick="window._shrineEquipArtifact('${art.id}', ${idx})">
+              <span style="font-size:26px;">${def.icon || '🔮'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="color:${rc2};font-weight:bold;font-size:13px;">${def.name}</div>
+                <div style="color:#888;font-size:10px;">${(def.rarity||'epic').toUpperCase()}</div>
+                <div style="color:#aaa;font-size:11px;margin-top:2px;">${def.desc||''}</div>
+              </div>
+              <div>${isEquipped ? '<span style="color:#FFD700;font-size:11px;">✅ Slotted</span>' : '<span style="color:#00ffff;font-size:11px;">◈ Tap to Equip</span>'}</div>
+            </div>`;
+          }).join('');
+
+      // Upgrade section
+      const maxSlots = 3;
+      const canUpgrade = shrineLevel < maxSlots;
+      const builtCount = saveData.campBuildings ? Object.values(saveData.campBuildings).filter(b => b && b.unlocked && b.level > 0).length : 0;
+      const upgradeCost = Math.max(1, builtCount + 1);
+      const res = saveData.resources || {};
+      const canAfford = (res.wood || 0) >= upgradeCost && (res.stone || 0) >= upgradeCost;
+      const upgradeHTML = canUpgrade
+        ? `<div class="shrine-upgrade-box">
+            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;">UPGRADE ARTIFACT SHRINE</div>
+            <div style="color:#aaa;font-size:12px;margin:6px 0;">Unlock Slot ${shrineLevel+1} · Cost: ${upgradeCost} 🪵 Wood + ${upgradeCost} 🪨 Stone</div>
+            <div style="display:flex;gap:10px;margin:8px 0;justify-content:center;">
+              <span style="color:${(res.wood||0)>=upgradeCost?'#7fff7f':'#ff7f7f'};font-size:13px;">🪵 ${res.wood||0}/${upgradeCost}</span>
+              <span style="color:${(res.stone||0)>=upgradeCost?'#7fff7f':'#ff7f7f'};font-size:13px;">🪨 ${res.stone||0}/${upgradeCost}</span>
+            </div>
+            <button id="shrine-upgrade-btn" class="shrine-upgrade-btn" ${canAfford ? '' : 'disabled'}>
+              ${canAfford ? '🏛️ UPGRADE SHRINE' : '❌ Need Resources'}
+            </button>
+          </div>`
+        : `<div style="color:#00ffff;text-align:center;padding:12px;font-size:13px;font-family:Bangers,cursive;letter-spacing:2px;">◈ ALL 3 ARTIFACT SLOTS UNLOCKED ◈</div>`;
+
+      const modal = document.createElement('div');
+      modal.id = 'artifact-shrine-modal';
+      modal.style.cssText = [
+        'position:fixed','top:0','left:0','width:100%','height:100%',
+        'background:radial-gradient(ellipse at center,rgba(10,0,30,0.98) 0%,rgba(0,0,0,1) 100%)',
+        'z-index:200','overflow-y:auto','display:flex','flex-direction:column',
+        'align-items:center','padding:20px','box-sizing:border-box',
+        'font-family:Courier New,monospace'
+      ].join(';');
+
+      modal.innerHTML = `
+        <div style="max-width:680px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
+               border-bottom:1px solid rgba(0,255,255,0.3);padding-bottom:12px;">
+            <div>
+              <div style="color:#00ffff;font-family:Bangers,cursive;font-size:28px;letter-spacing:4px;
+                   text-shadow:0 0 20px rgba(0,255,255,0.8);">🏛️ THE ARTIFACT SHRINE</div>
+              <div style="color:#C9A227;font-size:12px;letter-spacing:2px;margin-top:4px;">
+                LEVEL ${shrineLevel} · ${unlockedSlots}/3 SLOTS ACTIVE</div>
+            </div>
+            <button id="shrine-back-btn" class="inv-back-btn">← Back</button>
+          </div>
+
+          <div style="color:#888;font-size:12px;margin-bottom:18px;line-height:1.6;
+               border:1px solid rgba(0,255,255,0.15);border-radius:8px;padding:12px;
+               background:rgba(0,255,255,0.03);">
+            <i>Artifacts provide massive passive stat boosts and only drop from Bosses or Void Expeditions.
+            Upgrade the Shrine to unlock additional slots.</i>
+          </div>
+
+          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;margin-bottom:12px;">
+            ◈ ARTIFACT SLOTS
+          </div>
+          <div class="shrine-slots-row">${slotHTML}</div>
+
+          ${upgradeHTML}
+
+          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;
+               margin-top:24px;margin-bottom:12px;">◈ ARTIFACT COLLECTION</div>
+          <div class="shrine-inv-list">${artifactInventoryHTML}</div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector('#shrine-back-btn').onclick = () => {
+        modal.remove();
+        if (campScreen) campScreen.style.display = 'flex';
+      };
+
+      const upgradeBtn = modal.querySelector('#shrine-upgrade-btn');
+      if (upgradeBtn) {
+        upgradeBtn.onclick = () => {
+          if (!canAfford) return;
+          // Deduct resources
+          saveData.resources.wood  -= upgradeCost;
+          saveData.resources.stone -= upgradeCost;
+          // Upgrade shrine level
+          if (!saveData.campBuildings.shrine) saveData.campBuildings.shrine = { level: 0, maxLevel: 3, unlocked: true };
+          saveData.campBuildings.shrine.level = Math.min(3, (saveData.campBuildings.shrine.level || 0) + 1);
+          saveSaveData();
+          if (typeof showStatChange === 'function') showStatChange(`🏛️ Artifact Shrine upgraded to Level ${saveData.campBuildings.shrine.level}!`);
+          modal.remove();
+          showArtifactShrineUI();
+        };
+      }
+
+      // Global helpers for inline handlers
+      window._shrineUnequip = (slotIdx) => {
+        if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        saveData.equippedArtifacts[slotIdx] = null;
+        saveSaveData();
+        modal.remove();
+        showArtifactShrineUI();
+      };
+
+      window._shrineEquipArtifact = (artifactId, invIdx) => {
+        if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        // Prevent equipping the same artifact in multiple slots
+        if (saveData.equippedArtifacts.includes(artifactId)) {
+          if (typeof showStatChange === 'function') showStatChange('❌ This Artifact is already equipped! Remove it first.');
+          return;
+        }
+        // Find first open unlocked slot
+        const firstOpen = saveData.equippedArtifacts.findIndex((v, i) => i < unlockedSlots && !v);
+        if (firstOpen === -1) {
+          if (typeof showStatChange === 'function') showStatChange('❌ All unlocked slots are full! Upgrade the Shrine or remove an artifact.');
+          return;
+        }
+        saveData.equippedArtifacts[firstOpen] = artifactId;
+        saveSaveData();
+        if (typeof showStatChange === 'function') showStatChange(`✅ Artifact equipped to Slot ${firstOpen + 1}!`);
+        modal.remove();
+        showArtifactShrineUI();
+      };
+    }
+    window.showArtifactShrineUI = showArtifactShrineUI;
 
     // Companion skill tree data
     const COMPANION_SKILLS = {
@@ -4127,6 +4453,7 @@
           },
           accountBuilding:     () => showAccountBuildingOverlay(),
           idleMenu:            () => showIdleSection(),
+          shrine:              () => showArtifactShrineUI(),
           codex:               () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest17_visitCodex') {
               progressTutorialQuest('quest17_visitCodex', true);
