@@ -3864,8 +3864,9 @@
         </div>` : '';
 
       modal.innerHTML = `
-        <div style="max-width:640px;width:100%;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="max-width:680px;width:100%;">
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div>
               <h2 style="color:#FFD700;margin:0;font-size:22px;">🏡 Companion House</h2>
               <div style="color:#aaa;font-size:12px;">A cozy sanctuary for your loyal companions</div>
@@ -3873,14 +3874,51 @@
             <button id="ch-back-btn" style="background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:8px 16px;color:#fff;cursor:pointer;">← Back to Camp</button>
           </div>
 
-          ${eggSectionHTML}
-          ${companionSection}
-          ${breedingSectionHTML}
-          ${skillTreeHTML}
+          <!-- Tab bar (Quest Hall style) -->
+          <div id="ch-tab-bar" style="display:flex;gap:0;border-bottom:2px solid rgba(255,215,0,0.25);margin-bottom:16px;">
+            <button data-ch-tab="companion"
+              style="flex:1;background:none;border:none;border-bottom:3px solid #FFD700;color:#FFD700;
+              font-family:'Courier New',monospace;font-size:13px;letter-spacing:1px;padding:8px 4px;cursor:pointer;transition:color 0.2s,border-color 0.2s;">
+              👽 Companion
+            </button>
+            <button data-ch-tab="exploration"
+              style="flex:1;background:none;border:none;border-bottom:3px solid transparent;color:#666;
+              font-family:'Courier New',monospace;font-size:13px;letter-spacing:1px;padding:8px 4px;cursor:pointer;transition:color 0.2s,border-color 0.2s;">
+              🗺 Exploration
+            </button>
+          </div>
+
+          <!-- Companion tab content -->
+          <div id="ch-tab-companion" style="display:block;">
+            ${eggSectionHTML}
+            ${companionSection}
+            ${breedingSectionHTML}
+            ${skillTreeHTML}
+          </div>
+
+          <!-- Exploration tab content (rendered by companion-exploration.js) -->
+          <div id="ch-tab-exploration" style="display:none;"></div>
         </div>
       `;
 
       document.body.appendChild(modal);
+
+      // Tab switching
+      const tabBtns = modal.querySelectorAll('[data-ch-tab]');
+      function _switchCHTab(tabId) {
+        tabBtns.forEach(btn => {
+          const isActive = btn.getAttribute('data-ch-tab') === tabId;
+          btn.style.borderBottom = isActive ? '3px solid ' + (tabId === 'exploration' ? '#aa44ff' : '#FFD700') : '3px solid transparent';
+          btn.style.color = isActive ? (tabId === 'exploration' ? '#aa44ff' : '#FFD700') : '#666';
+        });
+        modal.querySelector('#ch-tab-companion').style.display   = tabId === 'companion'   ? 'block' : 'none';
+        const exploDiv = modal.querySelector('#ch-tab-exploration');
+        exploDiv.style.display = tabId === 'exploration' ? 'block' : 'none';
+        if (tabId === 'exploration' && typeof renderExplorationTab === 'function') {
+          renderExplorationTab(exploDiv);
+        }
+      }
+      tabBtns.forEach(btn => btn.onclick = () => _switchCHTab(btn.getAttribute('data-ch-tab')));
 
       // Back button
       document.getElementById('ch-back-btn').onclick = () => {

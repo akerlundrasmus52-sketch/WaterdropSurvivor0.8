@@ -100,6 +100,13 @@
       companionGrowthStage: 'egg', // Growth stages: egg, newborn, juvenile, adult
       alienBiomatter: 0, // Alien Biomatter collected — deposit 50 at the Incubator to hatch companion
       alienIncubatorHatched: false, // Grey Alien companion hatched from Incubator pod
+      // Companion Exploration System
+      exploration: {
+        level: 1,
+        xp: 0,
+        activeExpedition: null,
+        history: []
+      },
       // Camp System - Quest-Driven Building Unlock System
       campBuildings: {
         questMission: { level: 1, maxLevel: 1, unlocked: true },
@@ -480,6 +487,13 @@
               }
             });
           }
+          // Companion Exploration System migration
+          if (!saveData.exploration) {
+            saveData.exploration = { level: 1, xp: 0, activeExpedition: null, history: [] };
+          }
+          if (!saveData.exploration.history)               saveData.exploration.history = [];
+          if (saveData.exploration.level == null)          saveData.exploration.level = 1;
+          if (saveData.exploration.xp == null)             saveData.exploration.xp = 0;
           // Account level system
           saveData.accountLevel = saveData.accountLevel || 1;
           saveData.accountXP = saveData.accountXP || 0;
