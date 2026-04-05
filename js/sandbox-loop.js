@@ -242,9 +242,10 @@
   if (typeof spawnWaterDroplet === 'undefined') {
     window.spawnWaterDroplet = function (pos) {
       if (!pos) return;
-      if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === 'function') {
-        BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3, spreadY: 0.2 });
-      }
+      // REMOVED: legacy BloodSystem — routed to BloodV2 shim
+      // if (window.BloodSystem && typeof BloodSystem.emitWaterBurst === 'function') {
+      //   BloodSystem.emitWaterBurst({ x: pos.x, y: pos.y, z: pos.z }, 1, { spreadXZ: 0.3, spreadY: 0.2 });
+      // }
     };
   }
   // gameOver — called by player-class.js when the player dies.  In the sandbox
@@ -1451,7 +1452,7 @@
       ];
       for (let w = 0; w < MAX_WOUNDS_PER_SLIME; w++) {
         const wGeo  = woundGeos[Math.min(Math.floor(w / 3), 3)]; // get geo by wound index
-        const wMat  = new THREE.MeshBasicMaterial({ color: 0x660000 });
+        const wMat  = new THREE.MeshBasicMaterial({ color: 0x660000, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
         const wound = new THREE.Mesh(wGeo, wMat);
         wound.visible = false;
         mesh.add(wound);
@@ -1534,6 +1535,10 @@
     slot.lungeDirX = 0;
     slot.lungeDirZ = 0;
     slot.speedMultiplier = 0.85 + Math.random() * 0.3; // Individual speed variation (0.85-1.15x)
+    slot.bodyColor = 0x55EE44; // will be overwritten by enemy-type color
+    slot._pulsingWound = null;
+    slot._spinKillActive = false;
+    slot._spinKillTimer = 0;
     // Hide all pre-allocated wounds
     if (slot.woundPool) {
       for (let i = 0; i < slot.woundPool.length; i++) slot.woundPool[i].visible = false;
@@ -1603,6 +1608,8 @@
 
       // Death slide: apply kill velocity to corpse mesh for the first 0.3 seconds
       if (c.timer < 0.3 && c.slot && c.slot.mesh && (c.slot._deathSlideVX || c.slot._deathSlideVZ)) {
+        const _oldX = c.slot.mesh.position.x;
+        const _oldZ = c.slot.mesh.position.z;
         c.slot.mesh.position.x += (c.slot._deathSlideVX || 0) * dt;
         c.slot.mesh.position.z += (c.slot._deathSlideVZ || 0) * dt;
         const deathSlideDecay = Math.exp(DEATH_SLIDE_DECAY_RATE * dt);
@@ -1614,6 +1621,13 @@
         if (c.poolMesh) {
           c.poolMesh.position.x = c.x;
           c.poolMesh.position.z = c.z;
+        }
+        // Leave blood smear stains as corpse slides
+        const _slideDx = c.slot.mesh.position.x - _oldX;
+        const _slideDz = c.slot.mesh.position.z - _oldZ;
+        const _slideDist = Math.sqrt(_slideDx*_slideDx + _slideDz*_slideDz);
+        if (_slideDist > 0.01) {
+          _placeBloodStain(c.slot.mesh.position.x, c.slot.mesh.position.z, 0.06 + Math.random() * 0.08);
         }
       }
 
@@ -1632,20 +1646,10 @@
         c.poolMat.opacity = 0.85 * (1 - lifeRatio * 0.2);
       }
 
-      // Heartbeat blood pumping: sin-wave drives burst rate
-      if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-        const heartRate = 3.0 * (1 - lifeRatio * 0.8); // slows from 3 Hz to 0.6 Hz
-        c.bloodTimer += dt;
-        const heartbeat = Math.sin(c.bloodTimer * heartRate * Math.PI * 2);
-        if (heartbeat > 0.85 && lifeRatio < 0.85) {
-          const pressure = (1 - lifeRatio) * 0.15; // weakening pressure (reduced from 0.5 - 70% reduction)
-          BloodSystem.emitBurst(
-            { x: c.x, y: 0.3, z: c.z },
-            Math.floor(2 + pressure * 4), // Reduced from 6 + pressure * 12 (~70% reduction)
-            { spreadXZ: 0.4 * pressure, spreadY: 0.25 * pressure, minLife: 15, maxLife: 40 }
-          );
-        }
-      }
+      // REMOVED: legacy BloodSystem heartbeat — now handled by pulsing wounds via BloodV2
+      // if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
+      //   ... BloodSystem.emitBurst(...) ...
+      // }
 
       // After linger duration: fade out, clean up, return to pool
       if (c.timer >= c.lingerDuration) {
@@ -1742,9 +1746,81 @@
   }
 
   // ── Shared kill/bullet-hole helpers ─────────────────────────────────────────
-  const _KILL_VARIANT_COUNT = 3;
+  const _KILL_VARIANT_COUNT = 5;
+
+  function _createBodyColorVariants(baseColor) {
+    const r = (baseColor >> 16) & 0xFF;
+    const g = (baseColor >> 8) & 0xFF;
+    const b = baseColor & 0xFF;
+    const mid  = ((Math.floor(r * 0.75) << 16) | (Math.floor(g * 0.75) << 8) | Math.floor(b * 0.75));
+    const dark = ((Math.floor(r * 0.45) << 16) | (Math.floor(g * 0.45) << 8) | Math.floor(b * 0.45));
+    return [baseColor, mid, dark];
+  }
+
+  const SPIN_KILL_ROTATION_SPEED = 10.0;
+  function _doSpinKill(enemy, spinDuration, bloodColor) {
+    if (!enemy || !enemy.mesh) return;
+    const dur = spinDuration || 0.8;
+    const col = bloodColor || 0x55EE44;
+    enemy._spinKillActive = true;
+    enemy._spinKillTimer = dur;
+    const _spiralHandle = (window.BloodV2 && typeof BloodV2.sprayRadialSpiral === 'function')
+      ? BloodV2.sprayRadialSpiral(
+          { x: enemy.mesh.position.x, y: enemy.mesh.position.y + 0.4, z: enemy.mesh.position.z },
+          dur * 1000, { color: col, spdMin: 3, spdMax: 8, perFrame: 5 }
+        )
+      : null;
+    setTimeout(function() {
+      if (!enemy || !enemy.mesh) return;
+      enemy._spinKillActive = false;
+      enemy.mesh.rotation.y = 0;
+      enemy.mesh.scale.set(1.4, 0.25, 1.4);
+      enemy.mesh.position.y = 0.08;
+      if (_spiralHandle && _spiralHandle.stop) _spiralHandle.stop();
+    }, dur * 1000);
+  }
+
+  function _spawnVisceraChunks(slot, count, color) {
+    const pos = slot.mesh ? slot.mesh.position : slot;
+    const col = color || 0x882211;
+    for (let i = 0; i < count; i++) {
+      const chunk = _acquireFleshChunk();
+      if (!chunk) break;
+      chunk.mesh.material.color.setHex(col);
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = 0.1 + Math.random() * 0.3;
+      chunk.mesh.position.set(pos.x + Math.cos(angle)*dist, pos.y + 0.15 + Math.random()*0.2, pos.z + Math.sin(angle)*dist);
+      chunk.mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
+      chunk.vx = Math.cos(angle) * (0.06 + Math.random()*0.10);
+      chunk.vy = 0.04 + Math.random()*0.06;
+      chunk.vz = Math.sin(angle) * (0.06 + Math.random()*0.10);
+      chunk.rotSpeedX = (Math.random()-0.5)*0.15;
+      chunk.rotSpeedY = (Math.random()-0.5)*0.15;
+      chunk.rotSpeedZ = (Math.random()-0.5)*0.15;
+      chunk.life = 3.5 + Math.random()*2.0;
+      chunk.onGround = false; chunk.active = true; chunk.isViscera = true;
+      chunk.mesh.material.transparent = false; chunk.mesh.material.opacity = 1;
+      chunk.mesh.visible = true;
+      _allFleshChunks.push(chunk);
+    }
+  }
+
+  function _placeSmearTrail(x, z, dirX, dirZ, length, color) {
+    if (window.BloodV2 && typeof BloodV2.createSmearTrail === 'function') {
+      BloodV2.createSmearTrail(
+        { x, y: 0.06, z },
+        { x: x + dirX * length, y: 0.06, z: z + dirZ * length },
+        { color: color || 0x550000, opacity: 0.65, elongation: 4.0, life: 18.0 }
+      );
+    } else {
+      const steps = Math.max(2, Math.floor(length / 0.5));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        _placeBloodStain(x + dirX*length*t, z + dirZ*length*t, 0.08 + Math.random()*0.14);
+      }
+    }
+  }
   function _normalizeWeaponKey(key) {
-    if (!key) return 'gun';
     const k = String(key).toLowerCase();
     if (k.indexOf('shotgun') !== -1) return 'shotgun';
     if (k.indexOf('fire') !== -1 || k.indexOf('flame') !== -1) return 'fire';
@@ -1913,6 +1989,52 @@
 
     _placeBloodStain(slot.mesh.position.x, slot.mesh.position.z, 0.15 + Math.random() * 0.25);
 
+    // Weapon-specific hit reactions
+    const _wkNorm = _normalizeWeaponKey(weaponKey);
+    const _hx = slot.mesh.position.x, _hy = slot.mesh.position.y + 0.4, _hz = slot.mesh.position.z;
+    let _hitDirX = 0, _hitDirZ = 1;
+    if (projectile && projectile.vx !== undefined) {
+      const _hvl = Math.sqrt(projectile.vx * projectile.vx + projectile.vz * projectile.vz) || 1;
+      _hitDirX = projectile.vx / _hvl; _hitDirZ = projectile.vz / _hvl;
+    }
+    if (window.BloodV2 && typeof BloodV2.sprayConeFan === 'function') {
+      if (_wkNorm === 'shotgun') {
+        BloodV2.sprayConeFan(
+          { x: _hx, y: _hy, z: _hz }, { x: _hitDirX, y: 0, z: _hitDirZ },
+          60, isCrit ? 30 : 18, { enemyType: slot.enemyType || 'slime', spdMin: 5, spdMax: 14, life: 2.8 }
+        );
+      } else if (_wkNorm === 'sword' || _wkNorm === 'blade') {
+        const _perpX = -_hitDirZ, _perpZ = _hitDirX;
+        BloodV2.sprayConeFan(
+          { x: _hx, y: _hy + 0.1, z: _hz }, { x: _perpX, y: 0.2, z: _perpZ },
+          80, isCrit ? 40 : 22, { enemyType: slot.enemyType || 'slime', spdMin: 2, spdMax: 8, life: 3.2 }
+        );
+        if (isCrit && slot.woundPool && slot.woundCount < slot.woundPool.length) {
+          const slashWound = slot.woundPool[slot.woundCount++];
+          slashWound.material.color.setHex(0x1A0000);
+          slashWound.visible = true;
+          slashWound.scale.set(2.5, 0.3, 0.3);
+          slashWound.position.set(_hitDirX * 0.55, 0.1 + Math.random() * 0.3, _hitDirZ * 0.55);
+          slashWound.renderOrder = 6;
+        }
+        if (hpPercent < 0.4 && !slot._pulsingWound && window.BloodV2 && typeof BloodV2.createPulsingWound === 'function') {
+          slot._pulsingWound = BloodV2.createPulsingWound(
+            { x: 0, y: 0.4, z: 0 }, slot, { color: 0x22cc44, baseBpm: 80, duration: 3.5 }
+          );
+        }
+      } else {
+        // Gun / default: tight forward cone
+        BloodV2.sprayConeFan(
+          { x: _hx, y: _hy, z: _hz }, { x: _hitDirX, y: 0.05, z: _hitDirZ },
+          isCrit ? 15 : 25, isCrit ? 20 : 10, { enemyType: slot.enemyType || 'slime', spdMin: 3, spdMax: 10, life: 2.4 }
+        );
+        if (isCrit) {
+          slot.mesh.rotation.x = -0.25;
+          setTimeout(function() { if (slot.mesh) slot.mesh.rotation.x = 0; }, 200);
+        }
+      }
+    }
+
     if (hpPercent <= 0.75 && slot.damageStage === 0) {
       slot.damageStage = 1;
       _applyDamageStage1(slot);
@@ -1963,6 +2085,8 @@
     let slideScale = 0.5;
     let corpseLinger = 15;
     let extraFx = null;
+    let doSpinKill = false;
+    let spawnViscera = false;
 
     switch (weaponType) {
       case 'shotgun':
@@ -1972,20 +2096,35 @@
         chunkCount = 18 + Math.floor(Math.random() * 8);
         stainScale = 1.4;
         slideScale = 0.9;
-        if (killVariant === 1) {
-          burstCount = 160;
-          burstOpts.spdMax = 22;
+        if (killVariant === 0) {
+          // Ragdoll explosion
+          burstCount = 150; chunkCount = 24; spawnViscera = true;
           extraFx = function() {
-            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
-              BloodV2.rawBurstUpward(x, y + 0.1, z, 50, {
-                enemyType: 'slime', spdMin: 6, spdMax: 14, rMin: 0.009, rMax: 0.024, life: 3.2, visc: 0.50
-              });
+            if (window.BloodV2 && typeof BloodV2.sprayConeFan === 'function') {
+              BloodV2.sprayConeFan({ x, y: y+0.1, z }, { x: killVX||0, y: 0.15, z: killVZ||1 }, 90, 35, { enemyType: 'slime', spdMin: 6, spdMax: 18, life: 3.0 });
             }
           };
+        } else if (killVariant === 1) {
+          // Knockback + smear
+          burstCount = 160; burstOpts.spdMax = 22; slideScale = 1.4;
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.1, z, 50, { enemyType: 'slime', spdMin: 6, spdMax: 14, rMin: 0.009, rMax: 0.024, life: 3.2, visc: 0.50 });
+            }
+            _placeSmearTrail(x, z, killVX || 0, killVZ || 1, 2.5, 0x1a4a1a);
+          };
         } else if (killVariant === 2) {
-          chunkCount = 22;
-          slideScale = 1.1;
+          // Disintegration
+          chunkCount = 22; slideScale = 1.1;
           chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.65, spread: 0.55 };
+        } else if (killVariant === 3) {
+          // Devastation
+          burstCount = 180; chunkCount = 28; spawnViscera = true;
+          chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.70, spread: 0.60 };
+        } else {
+          // Explosive knockback
+          burstCount = 140; chunkCount = 20;
+          chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.60, spread: 0.50 };
         }
         break;
       case 'sword':
@@ -1995,18 +2134,41 @@
         chunkCount = 14;
         slideScale = 0.65;
         if (killVariant === 0) {
+          // Clean bisect
           chunkForce = { dirX: (killVX || 0.8), dirZ: (killVZ || 0), power: 0.55, spread: 0.40 };
-        } else if (killVariant === 1) {
           extraFx = function() {
-            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
-              BloodV2.rawBurstUpward(x, y + 0.15, z, 35, {
-                enemyType: 'slime', spdMin: 3, spdMax: 9, rMin: 0.007, rMax: 0.022, life: 2.4
-              });
+            if (window.BloodV2 && typeof BloodV2.sprayConeFan === 'function') {
+              BloodV2.sprayConeFan({ x, y: y+0.1, z }, { x: killVX||0, y: 0.1, z: killVZ||1 }, 60, 20, { enemyType: 'slime', spdMin: 3, spdMax: 10, life: 2.8 });
+              BloodV2.sprayConeFan({ x, y: y+0.1, z }, { x: -(killVX||0), y: 0.1, z: -(killVZ||1) }, 60, 20, { enemyType: 'slime', spdMin: 3, spdMax: 10, life: 2.8 });
             }
           };
-        } else {
+        } else if (killVariant === 1) {
+          // Decapitation — head snaps, upward spray
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
+              BloodV2.rawBurstUpward(x, y + 0.15, z, 35, { enemyType: 'slime', spdMin: 3, spdMax: 9, rMin: 0.007, rMax: 0.022, life: 2.4 });
+            }
+            if (window.BloodV2 && typeof BloodV2.sprayConeFan === 'function') {
+              BloodV2.sprayConeFan({ x, y: y+0.3, z }, { x: 0, y: 1, z: 0 }, 35, 15, { enemyType: 'slime', spdMin: 2, spdMax: 8, life: 2.2 });
+            }
+          };
+        } else if (killVariant === 2) {
+          // Deep slash + pulsing wound style — wide arc
           slideScale = 0.85;
           if (slot.mesh) slot.mesh.rotation.y += (Math.random() < 0.5 ? -1 : 1) * Math.PI * 0.4;
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.sprayConeFan === 'function') {
+              const perpX = -(killVZ || 0), perpZ = (killVX || 1);
+              BloodV2.sprayConeFan({ x, y: y+0.05, z }, { x: perpX, y: 0.2, z: perpZ }, 80, 25, { enemyType: 'slime', spdMin: 2, spdMax: 8, life: 3.2 });
+            }
+          };
+        } else if (killVariant === 3) {
+          // Spin kill
+          doSpinKill = true;
+        } else {
+          // Viscera burst
+          spawnViscera = true;
+          chunkCount = 18;
         }
         break;
       case 'fire':
@@ -2024,14 +2186,42 @@
         } else if (killVariant === 2) {
           extraFx = function() {
             if (window.BloodV2 && typeof BloodV2.rawBurstUpward === 'function') {
-              BloodV2.rawBurstUpward(x, y + 0.05, z, 30, {
-                color: 0xff5500, spdMin: 4, spdMax: 10, rMin: 0.008, rMax: 0.022, life: 2.8
-              });
+              BloodV2.rawBurstUpward(x, y + 0.05, z, 30, { color: 0xff5500, spdMin: 4, spdMax: 10, rMin: 0.008, rMax: 0.022, life: 2.8 });
             }
           };
         }
         break;
+      default:
+        // Gun / default: 5 variants
+        if (killVariant === 0) {
+          // Crumple — slow sink
+          slideScale = 0.2;
+        } else if (killVariant === 1) {
+          // Spin-fall
+          if (slot.mesh) slot.mesh.rotation.y += (Math.random() < 0.5 ? -1 : 1) * Math.PI * 0.6;
+          slideScale = 0.4;
+        } else if (killVariant === 2) {
+          // Launch + slide + smear trail
+          slideScale = 0.8;
+          extraFx = function() { _placeSmearTrail(x, z, killVX || 0, killVZ || 1, 2.0, 0x1a4a1a); };
+        } else if (killVariant === 3) {
+          // Headshot collapse + cone spray upward
+          extraFx = function() {
+            if (window.BloodV2 && typeof BloodV2.sprayConeFan === 'function') {
+              BloodV2.sprayConeFan({ x, y: y+0.3, z }, { x: 0, y: 1, z: 0 }, 30, 18, { enemyType: 'slime', spdMin: 2, spdMax: 8, life: 2.4 });
+            }
+          };
+        } else {
+          // Disintegration
+          chunkCount = 20; chunkForce = { dirX: killVX || 0, dirZ: killVZ || 0, power: 0.50, spread: 0.60 };
+        }
+        break;
     }
+
+    // Post-switch: stop pulsing wound, trigger spin kill, spawn viscera
+    if (slot._pulsingWound) { slot._pulsingWound.stop(); slot._pulsingWound = null; }
+    if (doSpinKill) _doSpinKill(slot, 0.8, slot.bodyColor || 0x55EE44);
+    if (spawnViscera) _spawnVisceraChunks(slot, 5, 0x882211);
 
     // Hollywood-style overdone slime death burst
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
@@ -2503,7 +2693,8 @@
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(bx, by, bz, 6, { enemyType: 'leaping_slime' });
     } else if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-      BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
+      // REMOVED: legacy BloodSystem — BloodV2 is preferred
+      // BloodSystem.emitBurst({ x: bx, y: by, z: bz }, 5, { spreadXZ: 1.0, spreadY: 0.4 });
     }
 
     // GoreSim hit reaction
@@ -2610,12 +2801,9 @@
     if (window.BloodV2 && typeof BloodV2.rawBurst === 'function') {
       BloodV2.rawBurst(x, y, z, burstCount, burstOpts);
     } else if (window.BloodSystem) {
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst({ x, y, z }, burstCount, { spreadXZ: 2.5, spreadY: 1.0, minLife: 40, maxLife: 100 });
-      }
-      if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts({ x, y, z }, 6);
-      }
+      // REMOVED: legacy BloodSystem — BloodV2 is preferred
+      // if (typeof BloodSystem.emitBurst === 'function') { BloodSystem.emitBurst(...) }
+      // if (typeof BloodSystem.emitGuts === 'function') { BloodSystem.emitGuts(...) }
     }
     if (extraFx) extraFx();
 
@@ -2792,27 +2980,8 @@
 
     const _bPos1 = _reusableBloodPos;
     _bPos1.x = slot.mesh.position.x; _bPos1.y = slot.mesh.position.y + 0.4; _bPos1.z = slot.mesh.position.z;
-    if (window.BloodSystem) {
-      // Increased from 8 to 10 to match old map realism
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos1, 10, { spreadXZ: 0.8, spreadY: 0.4, minLife: 50, maxLife: 100 });
-      }
-      // Start pulsing heartbeat bleed (arterial spurts from wound)
-      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos1, { pulses: 4, perPulse: 80, interval: 400, woundHeight: 0.6 });
-      }
-      // ADD: Arterial spurt effect like old map (narrow jet, high pressure)
-      if (typeof BloodSystem.emitArterialSpurt === 'function') {
-        const facingDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
-        BloodSystem.emitArterialSpurt(_bPos1, facingDir, {
-          pulses: 5,
-          perPulse: 50,
-          interval: 180,
-          intensity: 0.7,
-          coneAngle: 0.3
-        });
-      }
-    }
+    // REMOVED: legacy BloodSystem stage-1 effects — now routed through BloodV2
+    // if (window.BloodSystem) { ... }
     _tmpV3.set(slot.mesh.position.x, 1.6, slot.mesh.position.z);
     // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
@@ -2836,18 +3005,8 @@
 
     const _bPos2 = _reusableBloodPos;
     _bPos2.x = slot.mesh.position.x; _bPos2.y = slot.mesh.position.y + 0.4; _bPos2.z = slot.mesh.position.z;
-    if (window.BloodSystem) {
-      // Tuned burst count to 18 to match old map impact
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos2, 18, { spreadXZ: 1.5, spreadY: 0.6, minLife: 50, maxLife: 100 });
-      }
-      if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts(_bPos2, 6);
-      }
-      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos2, { pulses: 3, perPulse: 25, interval: 200, woundHeight: 0.8 });
-      }
-    }
+    // REMOVED: legacy BloodSystem stage-2 effects — now routed through BloodV2
+    // if (window.BloodSystem) { ... }
     _tmpV3.set(slot.mesh.position.x, 1.7, slot.mesh.position.z);
     // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
@@ -2874,31 +3033,8 @@
 
     const _bPos3 = _reusableBloodPos;
     _bPos3.x = slot.mesh.position.x; _bPos3.y = slot.mesh.position.y + 0.4; _bPos3.z = slot.mesh.position.z;
-    if (window.BloodSystem) {
-      // Burst count tuned to 25 to approximate old map's sniper hit intensity
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos3, 25, { spreadXZ: 2.0, spreadY: 0.8, minLife: 50, maxLife: 100 });
-      }
-      if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts(_bPos3, 12);
-      }
-      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos3, { pulses: 4, perPulse: 30, interval: 180, woundHeight: 1.0 });
-      }
-      if (typeof BloodSystem.emitExitWound === 'function') {
-        const a = Math.random() * Math.PI * 2;
-        BloodSystem.emitExitWound(_bPos3, { x: Math.cos(a) * 0.3, y: 0.1, z: Math.sin(a) * 0.3 });
-      }
-      // ADD: Throat spray effect (fan spray like old map)
-      if (typeof BloodSystem.emitThroatSpray === 'function') {
-        const facingDir = { x: Math.cos(Math.random() * Math.PI * 2), z: Math.sin(Math.random() * Math.PI * 2) };
-        BloodSystem.emitThroatSpray(_bPos3, facingDir, {
-          pulses: 6,
-          perPulse: 50,
-          interval: 180
-        });
-      }
-    }
+    // REMOVED: legacy BloodSystem stage-3 effects — now routed through BloodV2
+    // if (window.BloodSystem) { ... }
     _tmpV3.set(slot.mesh.position.x, 1.8, slot.mesh.position.z);
     // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
@@ -2926,23 +3062,8 @@
 
     const _bPos4 = _reusableBloodPos;
     _bPos4.x = slot.mesh.position.x; _bPos4.y = slot.mesh.position.y + 0.4; _bPos4.z = slot.mesh.position.z;
-    if (window.BloodSystem) {
-      if (typeof BloodSystem.emitBurst === 'function') {
-        BloodSystem.emitBurst(_bPos4, 15, { spreadXZ: 2.5, spreadY: 1.0 });
-      }
-      if (typeof BloodSystem.emitGuts === 'function') {
-        BloodSystem.emitGuts(_bPos4, 18);
-      }
-      if (typeof BloodSystem.emitHeartbeatWound === 'function') {
-        BloodSystem.emitHeartbeatWound(_bPos4, { pulses: 4, perPulse: 35, interval: 200, woundHeight: 1.2, pressure: 1.3 });
-      }
-      if (typeof BloodSystem.emitExitWound === 'function') {
-        for (let i = 0; i < 2; i++) {
-          const a = Math.random() * Math.PI * 2;
-          BloodSystem.emitExitWound(_bPos4, { x: Math.cos(a) * 0.4, y: 0.15, z: Math.sin(a) * 0.4 });
-        }
-      }
-    }
+    // REMOVED: legacy BloodSystem stage-4 effects — now routed through BloodV2
+    // if (window.BloodSystem) { ... }
     _tmpV3.set(slot.mesh.position.x, 1.9, slot.mesh.position.z);
     // Damage stage text removed — keep screen clean (only damage numbers + Critical)
   }
@@ -3166,8 +3287,9 @@
   //   horizontal power 0.28-0.38 gives ~5.6-12 m travel before ground-friction stops them.
   function _spawnFleshChunks(slot, count, large, color, forceOpts) {
     const pos = slot.mesh.position;
-    // Default to green slime colors if no color provided
-    const defaultColors = [0x33AA22, 0x228811, 0x116600, 0x55CC33];
+    // Use the enemy's body color for chunks if no explicit color provided
+    const baseBodyColor = slot.bodyColor || 0x55EE44;
+    const defaultColors = _createBodyColorVariants ? _createBodyColorVariants(baseBodyColor) : [baseBodyColor];
     const chunkColors = Array.isArray(color) ? color : (color ? [color] : defaultColors);
 
     for (let i = 0; i < count; i++) {
@@ -4581,12 +4703,8 @@
             s.squishTime = 0.25;
             _tmpV3.set(s.mesh.position.x, 1.4, s.mesh.position.z);
             createFloatingText(dmg, _tmpV3, '#FF8800', dmg);
-            if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') {
-              _reusableBloodPos.x = s.mesh.position.x;
-              _reusableBloodPos.y = s.mesh.position.y + 0.5;
-              _reusableBloodPos.z = s.mesh.position.z;
-              BloodSystem.emitBurst(_reusableBloodPos, 20, { spreadXZ: 1.0, spreadY: 0.4 });
-            }
+            // REMOVED: legacy BloodSystem aura damage — BloodV2 handles effects
+            // if (window.BloodSystem && typeof BloodSystem.emitBurst === 'function') { ... }
             if (s.hp <= 0) {
               _killSlime(s, 1.2, 0, 0); // _deactivateSlime splices from _activeSlimes (safe: iterating backward)
             } else {
@@ -6265,9 +6383,10 @@
 
   // ─── Blood system init ────────────────────────────────────────────────────────
   function _initBloodSystem() {
-    if (window.BloodSystem && typeof BloodSystem.init === 'function') {
-      BloodSystem.init(scene);
-    }
+    // REMOVED: legacy BloodSystem init — BloodV2 is the sole blood system
+    // if (window.BloodSystem && typeof BloodSystem.init === 'function') {
+    //   BloodSystem.init(scene);
+    // }
     // New v2 systems — guarded so missing scripts are harmless
     if (window.BloodV2 && typeof window.BloodV2.init === 'function') {
       window.BloodV2.init(scene);
@@ -7164,10 +7283,11 @@
         player.update(dt, _allEnemiesScratch, _activeProjList, expGems);
       }
 
-      // Blood system tick (BloodSystem shim internally calls BloodV2.update — do NOT call BloodV2.update again)
-      if (window.BloodSystem && typeof BloodSystem.update === 'function') {
-        BloodSystem.update();
-      }
+      // REMOVED: legacy BloodSystem update tick — the BloodSystem shim in blood-system-v2.js
+      // routes all BloodSystem.* calls to BloodV2 internally; BloodV2.update is called separately.
+      // if (window.BloodSystem && typeof BloodSystem.update === 'function') {
+      //   BloodSystem.update();
+      // }
       if (window.GoreSim && typeof window.GoreSim.update === 'function') {
         window.GoreSim.update(dt);
       }

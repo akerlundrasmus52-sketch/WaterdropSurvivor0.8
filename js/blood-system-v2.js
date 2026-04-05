@@ -527,6 +527,10 @@ var _streams  = [];
 // ── Per-enemy gore state ─────────────────────────────────────────
 var _goreMap  = new Map();   // enemyId → EnemyGoreState
 
+// Pulsing wounds (heartbeat-driven active bleeders)
+var _pulsingWounds = [];
+var DEFAULT_HEARTBEAT_BPM = 80;
+
 // ══════════════════════════════════════════
 //  DATA STRUCTURES (plain objects, no classes
 //  to avoid GC from constructor calls)
@@ -998,6 +1002,9 @@ dd.mesh.material.opacity = (dd.life / 4.0) * 0.80;
 }
 }
 
+// ── Update pulsing wounds ─────────────────
+_updatePulsingWounds(dt);
+
 }
 
 /**
@@ -1012,6 +1019,7 @@ dd.mesh.material.opacity = (dd.life / 4.0) * 0.80;
   for (var i = 0; i < _decals.length;  i++) { _decals[i].alive = false; _decals[i].mesh.visible = false; }
   _goreMap.clear();
   _streams = [];
+  _pulsingWounds.length = 0;
   if (_dropIM) _dropIM.instanceMatrix.needsUpdate = true;
   if (_mistIM) _mistIM.instanceMatrix.needsUpdate = true;
   console.log('[BloodV2] Reset complete.');
@@ -2024,9 +2032,167 @@ c.alive = false;
 if (c.mesh) c.mesh.visible = false;
 }
 
-// ══════════════════════════════════════════
-//  PUBLIC OBJECT
-// ══════════════════════════════════════════
+// ══ PULSING WOUND UPDATE ══════════════════
+function _updatePulsingWounds(dt) {
+  for (var i = _pulsingWounds.length - 1; i >= 0; i--) {
+    var pw = _pulsingWounds[i];
+    if (!pw.alive) { _pulsingWounds.splice(i, 1); continue; }
+    pw.elapsed += dt;
+    if (pw.elapsed >= pw.duration) { pw.alive = false; _pulsingWounds.splice(i, 1); continue; }
+    var progress = pw.elapsed / pw.duration;
+    var bpm = pw.baseBpm * (1.0 - progress);
+    if (bpm < 1.0) { pw.alive = false; _pulsingWounds.splice(i, 1); continue; }
+    var interval = 60.0 / bpm;
+    pw.pulseTimer += dt;
+    if (pw.pulseTimer >= interval) {
+      pw.pulseTimer = 0;
+      var ox = pw.px, oy = pw.py, oz = pw.pz;
+      if (pw.enemyRef && pw.enemyRef.mesh) {
+        ox += pw.enemyRef.mesh.position.x;
+        oy += pw.enemyRef.mesh.position.y;
+        oz += pw.enemyRef.mesh.position.z;
+      }
+      var pressure = 1.0 - progress;
+      var cnt = Math.max(2, Math.floor(8 * pressure));
+      var color = pw.color || 0xcc0000;
+      _burstUpward(ox, oy + 0.05, oz, cnt, color, 0.5 * pressure, 3.0 * pressure, 0.006, 0.014, 1.2, 0.72);
+      var mCnt = Math.max(1, Math.floor(4 * pressure));
+      for (var mi = 0; mi < mCnt; mi++) {
+        var md = _getFreeDrop(_mistData);
+        if (!md) break;
+        md.alive = true;
+        md.px = ox + (Math.random()-0.5)*0.08; md.py = oy + 0.05; md.pz = oz + (Math.random()-0.5)*0.08;
+        md.vx = (Math.random()-0.5)*0.5; md.vy = 0.2 + Math.random()*0.4; md.vz = (Math.random()-0.5)*0.5;
+        md.r = 0.004 + Math.random()*0.005; md.maxLife = 0.5 + Math.random()*0.3; md.life = md.maxLife;
+        md.viscosity = 0.20; md.bounces = 0; md.maxBounces = 0; md.onGround = false;
+        md.color = color; md.frozen = false; md.charred = false;
+      }
+    }
+  }
+}
+
+// ══ CONE/FAN BLOOD SPRAY ════════════════════
+// dirX,dirY,dirZ = normalized forward; spreadDeg = half-angle; count = drops
+function _fxConeFan(ox, oy, oz, dirX, dirY, dirZ, spreadDeg, count, opts) {
+  var o = opts || {};
+  var col = o.bloodColor || (o.enemyType && ENEMY_BLOOD[o.enemyType] ? ENEMY_BLOOD[o.enemyType].base : (o.color || 0xcc1100));
+  var sMin = o.spdMin !== undefined ? o.spdMin : 3.0;
+  var sMax = o.spdMax !== undefined ? o.spdMax : 10.0;
+  var rMin = o.rMin !== undefined ? o.rMin : 0.006;
+  var rMax = o.rMax !== undefined ? o.rMax : 0.014;
+  var life = o.life !== undefined ? o.life : 2.5;
+  var visc = o.visc !== undefined ? o.visc : 0.60;
+  var spreadRad = spreadDeg * (Math.PI / 180);
+  var fwdLen = Math.sqrt(dirX*dirX + dirY*dirY + dirZ*dirZ) + 0.0001;
+  var fx = dirX/fwdLen, fy = dirY/fwdLen, fz = dirZ/fwdLen;
+  var ux = 0, uy = 1, uz = 0;
+  if (Math.abs(fy) > 0.9) { ux = 1; uy = 0; uz = 0; }
+  var rx = fy*uz - fz*uy, ry = fz*ux - fx*uz, rz = fx*uy - fy*ux;
+  var rLen = Math.sqrt(rx*rx + ry*ry + rz*rz) + 0.0001;
+  rx/=rLen; ry/=rLen; rz/=rLen;
+  for (var i = 0; i < count; i++) {
+    var d = _getFreeDrop(_dropData);
+    if (!d) break;
+    var t = (i / Math.max(1, count - 1)) - 0.5;
+    var angle = t * spreadRad * 2.0 + (Math.random() - 0.5) * spreadRad * 0.4;
+    var spd = sMin + Math.random() * (sMax - sMin);
+    var cosA = Math.cos(angle), sinA = Math.sin(angle);
+    d.alive = true;
+    d.px = ox; d.py = oy; d.pz = oz;
+    d.vx = (fx * cosA + rx * sinA) * spd;
+    d.vy = (fy * cosA + ry * sinA) * spd + Math.random() * 0.5;
+    d.vz = (fz * cosA + rz * sinA) * spd;
+    d.r = rMin + Math.random() * (rMax - rMin);
+    d.maxLife = life + Math.random() * 1.0; d.life = d.maxLife;
+    d.viscosity = visc; d.bounces = 0; d.maxBounces = 3; d.onGround = false;
+    d.color = col; d.frozen = false; d.charred = false;
+  }
+  if (o.mist !== false) {
+    var mCount = Math.ceil(count * 0.25);
+    var mCol = (o.enemyType && ENEMY_BLOOD[o.enemyType]) ? ENEMY_BLOOD[o.enemyType].mist : (o.color || 0xff5555);
+    for (var ii = 0; ii < mCount; ii++) {
+      var md = _getFreeDrop(_mistData);
+      if (!md) break;
+      var mspd = sMin * 0.3 + Math.random() * (sMax * 0.3);
+      md.alive = true;
+      md.px = ox; md.py = oy; md.pz = oz;
+      md.vx = fx*mspd + (Math.random()-0.5)*2.0; md.vy = fy*mspd*0.5 + Math.random()*0.5; md.vz = fz*mspd + (Math.random()-0.5)*2.0;
+      md.r = 0.004 + Math.random()*0.007; md.maxLife = 0.6 + Math.random()*0.4; md.life = md.maxLife;
+      md.viscosity = 0.15; md.bounces = 0; md.maxBounces = 0; md.onGround = false;
+      md.color = mCol; md.frozen = false; md.charred = false;
+    }
+  }
+}
+
+// ══ RADIAL SPIRAL SPRAY ═════════════════════
+function _startRadialSpiral(ox, oy, oz, durationMs, opts) {
+  var o = opts || {};
+  var col = (o.enemyType && ENEMY_BLOOD[o.enemyType]) ? ENEMY_BLOOD[o.enemyType].base : (o.color || 0xcc0000);
+  var totalSec = (typeof durationMs === 'number' ? durationMs : 800) / 1000;
+  var startTime = Date.now();
+  var spdMin = o.spdMin !== undefined ? o.spdMin : 3.0;
+  var spdMax = o.spdMax !== undefined ? o.spdMax : 8.0;
+  var alive = true;
+  var handle = { alive: true, stop: function() { alive = false; handle.alive = false; } };
+  function _tick() {
+    if (!alive || !_ready) return;
+    var elapsed = (Date.now() - startTime) / 1000;
+    if (elapsed >= totalSec) { handle.alive = false; return; }
+    var progress = elapsed / totalSec;
+    var angle = progress * Math.PI * 8;
+    var radius = 0.1 + progress * 1.5;
+    var count = o.perFrame || 4;
+    for (var i = 0; i < count; i++) {
+      var a = angle + (i / count) * Math.PI * 2;
+      var d = _getFreeDrop(_dropData);
+      if (!d) break;
+      var spd = spdMin + Math.random() * (spdMax - spdMin);
+      d.alive = true;
+      d.px = ox + Math.cos(a) * radius * 0.1;
+      d.py = oy;
+      d.pz = oz + Math.sin(a) * radius * 0.1;
+      d.vx = Math.cos(a) * spd; d.vy = 0.3 + Math.random() * 1.5; d.vz = Math.sin(a) * spd;
+      d.r = 0.008 + Math.random() * 0.012; d.maxLife = 2.0 + Math.random() * 1.0; d.life = d.maxLife;
+      d.viscosity = 0.55; d.bounces = 0; d.maxBounces = 2; d.onGround = false;
+      d.color = col; d.frozen = false; d.charred = false;
+    }
+    requestAnimationFrame(_tick);
+  }
+  requestAnimationFrame(_tick);
+  return handle;
+}
+
+// ══ SMEAR TRAIL ══════════════════════════════
+function _createSmearTrail(startPos, endPos, opts) {
+  if (!_ready) return;
+  var o = opts || {};
+  var sx = startPos.x, sz = startPos.z;
+  var endX = endPos.x, endZ = endPos.z;
+  var dx = endX - sx, dz = endZ - sz;
+  var dist = Math.sqrt(dx*dx + dz*dz) + 0.0001;
+  var steps = Math.max(3, Math.floor(dist / 0.35));
+  var col = o.color || 0x6B0000;
+  var opacity = o.opacity !== undefined ? o.opacity : 0.75;
+  var elongation = o.elongation !== undefined ? o.elongation : 3.5;
+  for (var i = 0; i <= steps; i++) {
+    var t = i / steps;
+    var trailX = sx + dx * t;
+    var trailZ = sz + dz * t;
+    var dd = _decals[_decalIdx % CFG.DECAL_COUNT];
+    _decalIdx++;
+    if (!dd) continue;
+    dd.alive = true;
+    dd.life = (o.life !== undefined ? o.life : CFG.DECAL_FADE * 0.6) * (0.7 + Math.random() * 0.6);
+    dd.maxLife = dd.life;
+    dd.mesh.position.set(trailX, CFG.GROUND_Y, trailZ);
+    var width = (0.06 + Math.random() * 0.06) * (o.width || 1.0);
+    dd.mesh.scale.set(width * elongation * (0.8 + Math.random() * 0.4), width * (0.8 + Math.random() * 0.4), 1);
+    dd.mesh.rotation.z = Math.atan2(dx, dz) + (Math.random() - 0.5) * 0.2;
+    dd.mesh.material.color.setHex(col);
+    dd.mesh.material.opacity = opacity * (0.5 + Math.random() * 0.5);
+    dd.mesh.visible = true;
+  }
+}
 global.BloodV2 = {
 // Core API
 init:    init,
@@ -2123,6 +2289,35 @@ _burstUpward(ox, oy, oz,
   o.life   !== undefined ? o.life   : 2.5,
   o.visc   !== undefined ? o.visc   : 0.60
 );
+},
+
+sprayConeFan: function(origin, direction, spreadDeg, count, opts) {
+  if (!_ready) return;
+  _fxConeFan(origin.x, origin.y, origin.z, direction.x, direction.y || 0, direction.z, spreadDeg, count, opts);
+},
+sprayRadialSpiral: function(origin, durationMs, opts) {
+  if (!_ready) return null;
+  return _startRadialSpiral(origin.x, origin.y, origin.z, durationMs, opts);
+},
+createPulsingWound: function(localPos, enemyRef, opts) {
+  var o = opts || {};
+  var pw = {
+    alive: true, px: localPos.x || 0, py: localPos.y || 0.4, pz: localPos.z || 0,
+    enemyRef: enemyRef, baseBpm: o.baseBpm || DEFAULT_HEARTBEAT_BPM,
+    duration: o.duration || 4.0, elapsed: 0, pulseTimer: 0,
+    color: o.color || 0xcc0000
+  };
+  _pulsingWounds.push(pw);
+  return { stop: function() { pw.alive = false; } };
+},
+createSmearTrail: function(startPos, endPos, opts) {
+  _createSmearTrail(startPos, endPos, opts);
+},
+spawnGoreChunks: function(ox, oy, oz, count, opts) {
+  if (!_ready) return;
+  var o = opts || {};
+  var col = o.chunkColor || (o.enemyType && ENEMY_BLOOD[o.enemyType] ? ENEMY_BLOOD[o.enemyType].base : 0x884400);
+  _burstUpward(ox, oy, oz, count, col, o.spdMin || 2, o.spdMax || 8, o.rMin || 0.01, o.rMax || 0.025, o.life || 2.5, o.visc || 0.65);
 },
 
 };
