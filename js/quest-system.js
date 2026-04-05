@@ -348,7 +348,151 @@
       setTimeout(comicCloseHandler, 15000);
     }
 
-    // NEW: Show Quest Hall UI for claiming completed quests
+    /**
+     * showCinematicDialogue(speakerName, text, onClose)
+     * Film-style letterboxed AIDA dialogue: black bars top/bottom (≈28% each),
+     * typewriter text in the middle third, with the Annunaki cyan/purple aesthetic.
+     */
+    function showCinematicDialogue(speakerName, text, onClose) {
+      // Suppress in sandbox
+      if (window._engine2SandboxMode === true || window.location.pathname.includes('sandbox.html')) {
+        if (onClose) onClose();
+        return;
+      }
+
+      const wasGameActive =
+        typeof isGameActive !== 'undefined' &&
+        isGameActive &&
+        !(typeof isGameOver !== 'undefined' && isGameOver);
+      if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(true);
+
+      const overlay = document.createElement('div');
+      overlay.id = 'cinematic-dialogue-overlay';
+      overlay.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'z-index:10000', 'pointer-events:all', 'cursor:pointer',
+        'animation:cinematicFadeIn 0.6s ease-out forwards'
+      ].join(';');
+
+      // Top black bar (≈28% of screen)
+      const topBar = document.createElement('div');
+      topBar.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:28%',
+        'background:#000'
+      ].join(';');
+
+      // Bottom black bar (≈28% of screen)
+      const bottomBar = document.createElement('div');
+      bottomBar.style.cssText = [
+        'position:absolute', 'bottom:0', 'left:0', 'width:100%', 'height:28%',
+        'background:#000'
+      ].join(';');
+
+      // Centre area (44% of screen) — translucent for cinematic feel
+      const centreArea = document.createElement('div');
+      centreArea.style.cssText = [
+        'position:absolute', 'top:28%', 'left:0', 'width:100%', 'height:44%',
+        'background:rgba(0,0,0,0.82)',
+        'display:flex', 'flex-direction:column', 'align-items:center', 'justify-content:center',
+        'gap:14px', 'padding:0 8%', 'box-sizing:border-box'
+      ].join(';');
+
+      // Speaker name badge
+      const speakerEl = document.createElement('div');
+      speakerEl.style.cssText = [
+        'color:#00ffff', 'font-family:Bangers,cursive', 'font-size:clamp(13px,2.5vw,20px)',
+        'letter-spacing:4px', 'text-transform:uppercase',
+        'text-shadow:0 0 12px rgba(0,255,255,0.9),0 0 24px rgba(0,255,255,0.5)',
+        'border-bottom:1px solid rgba(0,255,255,0.35)', 'padding-bottom:6px',
+        'width:100%', 'text-align:left'
+      ].join(';');
+      speakerEl.textContent = `◈ ${speakerName}`;
+
+      // Dialogue text container with typewriter effect
+      const textEl = document.createElement('div');
+      textEl.style.cssText = [
+        'color:#E8D5A3', 'font-family:Courier New,monospace',
+        'font-size:clamp(13px,2.2vw,19px)', 'line-height:1.7',
+        'width:100%', 'text-align:left',
+        'text-shadow:0 0 6px rgba(0,255,255,0.15)'
+      ].join(';');
+      textEl.textContent = '';
+
+      // "Tap to continue" hint at bottom of centre area
+      const tapHint = document.createElement('div');
+      tapHint.style.cssText = [
+        'color:rgba(201,162,39,0.7)', 'font-family:Courier New,monospace',
+        'font-size:clamp(10px,1.6vw,13px)', 'letter-spacing:2px',
+        'position:absolute', 'bottom:8%', 'right:5%',
+        'animation:cinematicTapPulse 1.4s ease-in-out infinite'
+      ].join(';');
+      tapHint.textContent = '▶  TAP TO CONTINUE';
+      tapHint.style.opacity = '0';
+
+      centreArea.appendChild(speakerEl);
+      centreArea.appendChild(textEl);
+      centreArea.appendChild(tapHint);
+
+      // Scanline overlay for CRT feel
+      const scanline = document.createElement('div');
+      scanline.style.cssText = [
+        'position:absolute', 'top:0', 'left:0', 'width:100%', 'height:100%',
+        'background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)',
+        'pointer-events:none', 'z-index:1'
+      ].join(';');
+
+      overlay.appendChild(topBar);
+      overlay.appendChild(centreArea);
+      overlay.appendChild(bottomBar);
+      overlay.appendChild(scanline);
+      document.body.appendChild(overlay);
+
+      // Typewriter effect
+      let charIdx = 0;
+      let typewriterDone = false;
+      const typeSpeed = 32; // ms per char
+      const typeTimer = setInterval(() => {
+        if (charIdx < text.length) {
+          textEl.textContent += text[charIdx];
+          charIdx++;
+        } else {
+          clearInterval(typeTimer);
+          typewriterDone = true;
+          tapHint.style.opacity = '1';
+          tapHint.style.transition = 'opacity 0.5s';
+        }
+      }, typeSpeed);
+
+      let closed = false;
+      function closeCinematic() {
+        if (closed) return;
+        closed = true;
+        clearInterval(typeTimer);
+        overlay.style.animation = 'cinematicFadeOut 0.4s ease-in forwards';
+        setTimeout(() => {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          if (wasGameActive && typeof setGamePaused === 'function') setGamePaused(false);
+          if (onClose) onClose();
+        }, 380);
+      }
+
+      // Clicking/tapping: if typewriter still running — skip to end; else close
+      overlay.addEventListener('click', () => {
+        if (!typewriterDone) {
+          clearInterval(typeTimer);
+          textEl.textContent = text;
+          typewriterDone = true;
+          tapHint.style.opacity = '1';
+          tapHint.style.transition = 'opacity 0.5s';
+        } else {
+          closeCinematic();
+        }
+      });
+
+      // Safety: auto-close after 18 s
+      setTimeout(closeCinematic, 18000);
+    }
+    window.showCinematicDialogue = showCinematicDialogue;
     function showQuestHall() {
       // Guard: Quest Hall must be built (level > 0) before it can be entered
       var _qmData = saveData.campBuildings && saveData.campBuildings.questMission;
@@ -524,212 +668,300 @@
         'upgradeAnyBuildingTo3': 'Quest 10: Upgrade Building to Level 3'
       };
       
+      // ── 3-Tab Quest Hall UI ────────────────────────────────────────────────
       const overlay = document.createElement('div');
       overlay.id = 'quest-hall-overlay';
-      overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.95);
-        z-index: 150;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: fadeIn 0.3s ease-out;
-        overflow-y: auto;
-      `;
-      
-      const panel = document.createElement('div');
-      panel.style.cssText = `
-        background: linear-gradient(160deg, #0d0015 0%, #07000e 50%, #0a0510 100%);
-        border: 3px solid #C9A227;
-        border-radius: 4px;
-        padding: 20px;
-        max-width: 90vw;
-        width: 90%;
-        max-height: 85vh;
-        overflow-y: auto;
-        box-sizing: border-box;
-        text-align: center;
-        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1);
-        box-shadow: 0 0 30px rgba(201,162,39,0.5), 0 0 60px rgba(0,255,100,0.1);
-        outline: 1px solid rgba(201,162,39,0.2);
-        outline-offset: 3px;
-        font-family: 'Bangers', cursive;
-      `;
-      
-      let content = `
-        <div style="font-size: 30px; color: #C9A227; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 15px rgba(201,162,39,0.8), 2px 2px 0 #000; letter-spacing: 3px;">📜 MAIN BUILDING</div>
-        <div style="font-size: 15px; color: #888; margin-bottom: 25px; font-family: Arial, sans-serif; letter-spacing: 1px;">Claim completed quests to unlock rewards and progress!</div>
-      `;
-      
-      // Initialize tutorial quest arrays if they don't exist
-      if (!saveData.tutorialQuests.readyToClaim) {
-        saveData.tutorialQuests.readyToClaim = [];
-      }
-      if (!saveData.tutorialQuests.completedQuests) {
-        saveData.tutorialQuests.completedQuests = [];
-      }
-      
-      // Show ready-to-claim quests
-      if (saveData.tutorialQuests.readyToClaim.length > 0) {
-        content += `<div style="text-align: left; margin-bottom: 20px;">`;
-        content += `<div style="font-size: 20px; color: #C9A227; margin-bottom: 15px; letter-spacing: 2px;">✨ Ready to Claim:</div>`;
-        
-        saveData.tutorialQuests.readyToClaim.forEach(questId => {
-          const quest = TUTORIAL_QUESTS[questId];
-          if (!quest) return;
-          
-          content += `
-            <div style="background: rgba(201,162,39,0.08); border: 1px solid #C9A227; border-radius: 2px; padding: 14px; margin-bottom: 10px;">
-              <div style="font-size: 17px; color: #C9A227; margin-bottom: 5px;">${quest.name}</div>
-              <div style="font-size: 13px; color: #AAA; margin-bottom: 10px;">${quest.description}</div>
-              <button class="btn claim-quest-btn" data-quest-id="${questId}" 
-                      aria-label="Claim quest reward"
-                      style="font-size: 15px; padding: 9px 20px; background: linear-gradient(to bottom,#C9A227,#8B6914); color: #000; cursor: pointer; font-weight: bold; border: 2px solid #000; letter-spacing: 1px;">
-                🎁 Claim Reward
-              </button>
-            </div>
-          `;
-        });
-        content += `</div>`;
-      } else if (saveData.tutorialQuests.pendingBuildQuest && saveData.tutorialQuests.pendingBuildBuilding) {
-        // Building needs to be built before next quest can start
-        const _pbBld = saveData.tutorialQuests.pendingBuildBuilding;
-        const _pbDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[_pbBld] : null;
-        const _pbName = _pbDef ? _pbDef.name : 'the unlocked building';
-        content += `<div style="font-size: 15px; color: #00FF66; margin-bottom: 20px; letter-spacing: 1px;">🔨 Build the <b>${_pbName}</b> before your next quest can start!</div>`;
-      } else {
-        content += `<div style="font-size: 15px; color: #666; margin-bottom: 20px; letter-spacing: 1px;">No quests ready to claim. Complete your active quest!</div>`;
-      }
-      
-      // Show active quest or pending build task
-      const currentQuest = getCurrentQuest();
-      if (currentQuest) {
-        content += `
-          <div style="text-align: left; margin-bottom: 20px;">
-            <div style="font-size: 19px; color: #00FF66; margin-bottom: 15px; letter-spacing: 2px;">📍 Active Quest:</div>
-            <div style="background: rgba(0,255,100,0.06); border: 1px solid rgba(0,255,100,0.4); border-radius: 2px; padding: 14px;">
-              <div style="font-size: 17px; color: #00FF66; margin-bottom: 5px;">${currentQuest.name}</div>
-              <div style="font-size: 13px; color: #AAA;">${currentQuest.description}</div>
-              <div style="font-size: 12px; color: #666; margin-top: 5px; letter-spacing: 1px;">Objective: ${currentQuest.objectives}</div>
-            </div>
-          </div>
-        `;
-      } else if (saveData.tutorialQuests.pendingBuildQuest && saveData.tutorialQuests.pendingBuildBuilding) {
-        const _abBld = saveData.tutorialQuests.pendingBuildBuilding;
-        const _abDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[_abBld] : null;
-        const _abName = _abDef ? _abDef.name : 'Building';
-        content += `
-          <div style="text-align: left; margin-bottom: 20px;">
-            <div style="font-size: 19px; color: #FF9933; margin-bottom: 15px; letter-spacing: 2px;">🔨 Build Required:</div>
-            <div style="background: rgba(255,153,51,0.08); border: 1px solid rgba(255,153,51,0.5); border-radius: 2px; padding: 14px;">
-              <div style="font-size: 17px; color: #FF9933; margin-bottom: 5px;">Build the ${_abName}</div>
-              <div style="font-size: 13px; color: #AAA;">Walk to the ${_abName} in camp and build it to continue your quest line!</div>
-            </div>
-          </div>
-        `;
-      }
-      
-      // Show completed quests count
-      content += `
-        <div style="font-size: 13px; color: #555; margin-top: 20px; letter-spacing: 2px;">
-          Completed Quests: ${saveData.tutorialQuests.completedQuests.length} / ${Object.keys(TUTORIAL_QUESTS).length}
-        </div>
-      `;
-      
-      // Close button
-      const _isSandboxMode = window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'));
-      const _startRunLabel = '▶ Start Run'; // Always shows "Start Run" now since sandbox.html is the main game
-      content += `
-        <button class="btn start-run-btn" style="margin-top: 20px; font-size: 17px; padding: 12px 32px; background: linear-gradient(to bottom,#1a5c2a,#0d3316); color: #FFF; margin-right: 10px; border: 2px solid #C9A227; letter-spacing: 2px;">
-          ${_startRunLabel}
-        </button>
-        <button class="btn quest-hall-close-btn" style="margin-top: 20px; font-size: 15px; padding: 10px 28px; background: linear-gradient(to bottom,#2a2a2a,#111); color: #999; border: 1px solid rgba(201,162,39,0.4); letter-spacing: 1px;">
-          Close
-        </button>
-      `;
-      
-      panel.innerHTML = content;
       overlay.setAttribute('data-quest-hall-overlay', 'true');
-      
-      // Add event listeners for claim buttons
-      panel.querySelectorAll('.claim-quest-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-          const questId = this.getAttribute('data-quest-id');
-          console.log('[Quest] Claiming quest:', questId);
-          
-          // Safety check: quests with deductResources must verify sufficient resources
-          const questDef = TUTORIAL_QUESTS[questId];
-          if (questDef && questDef.deductResources) {
-            const r = saveData.resources || {};
-            for (const [res, amt] of Object.entries(questDef.deductResources)) {
-              if ((r[res] || 0) < amt) {
-                if (typeof showStatusMessage === 'function') {
-                  showStatusMessage(`❌ Not enough ${res}! Need ${amt}, have ${r[res] || 0}.`, 3000);
-                }
-                return; // Don't claim — insufficient resources
-              }
-            }
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:150;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.3s ease-out;overflow-y:auto;';
+
+      const panel = document.createElement('div');
+      panel.style.cssText = 'background:linear-gradient(160deg,#0d0015 0%,#07000e 50%,#0a0510 100%);border:3px solid #C9A227;border-radius:8px;padding:0;max-width:92vw;width:620px;max-height:88vh;display:flex;flex-direction:column;box-sizing:border-box;animation:popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.1);box-shadow:0 0 40px rgba(201,162,39,0.5),0 0 80px rgba(0,200,100,0.08);position:relative;';
+
+      // Header
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'padding:16px 20px 0;border-bottom:2px solid rgba(201,162,39,0.3);';
+      hdr.innerHTML = '<div style="font-family:\'Bangers\',cursive;font-size:26px;color:#C9A227;text-shadow:0 0 15px rgba(201,162,39,0.8);letter-spacing:3px;text-align:center;margin-bottom:12px;">📜 QUEST HALL</div>';
+
+      // Tab bar
+      const tabBar = document.createElement('div');
+      tabBar.style.cssText = 'display:flex;gap:0;';
+      const tabDefs = [
+        { id: 'story',    label: '📖 Story Quests',  color: '#C9A227' },
+        { id: 'challenges', label: '⚔️ Challenges',  color: '#00ccff' },
+        { id: 'achievements', label: '🏆 Achievements', color: '#aa44ff' }
+      ];
+      let _activeTab = 'story';
+
+      function _renderTabContent() {
+        tabBody.innerHTML = '';
+        tabDefs.forEach(t => {
+          const btn = tabBar.querySelector('[data-tab="' + t.id + '"]');
+          if (btn) {
+            btn.style.borderBottom = t.id === _activeTab ? '3px solid ' + t.color : '3px solid transparent';
+            btn.style.color = t.id === _activeTab ? t.color : '#666';
           }
-          
-          // Remove Quest Hall overlay immediately so the reward popup is clearly visible
-          const overlayElement = document.body.querySelector('[data-quest-hall-overlay]');
-          if (overlayElement) {
-            document.body.removeChild(overlayElement);
-          }
-          
-          // Claim the quest (shows reward popup + triggers next quest)
-          claimTutorialQuest(questId);
         });
-      });
-      
-      // Start New Run button handler
-      const startRunBtn = panel.querySelector('.start-run-btn');
-      if (startRunBtn) {
-        // Quest Notification Lock: disable Start Run if quests are still ready to claim
-        if (saveData.tutorialQuests && saveData.tutorialQuests.readyToClaim && saveData.tutorialQuests.readyToClaim.length > 0) {
-          startRunBtn.disabled = true;
-          startRunBtn.textContent = '📜 Claim Quest First';
-          startRunBtn.style.background = '#555';
-          startRunBtn.style.cursor = 'not-allowed';
-        } else {
-          startRunBtn.onclick = () => {
-            document.body.removeChild(overlay);
-            // Sandbox 2.0 is now the main production game
-            if (_isSandboxMode) {
-              window.location.reload(); // If already in sandbox, reload
-            } else {
-              window.location.href = 'sandbox.html'; // Always route to sandbox.html
-            }
-          };
-        }
+        if (_activeTab === 'story')        _renderStoryTab(tabBody);
+        else if (_activeTab === 'challenges') _renderChallengesTab(tabBody);
+        else if (_activeTab === 'achievements') _renderAchievementsTab(tabBody);
       }
 
-      // Shared close handler for quest hall
+      tabDefs.forEach(t => {
+        const btn = document.createElement('button');
+        btn.setAttribute('data-tab', t.id);
+        btn.style.cssText = 'flex:1;background:none;border:none;border-bottom:3px solid transparent;color:#666;font-family:\'Bangers\',cursive;font-size:14px;letter-spacing:1px;padding:8px 4px;cursor:pointer;transition:color 0.2s,border-color 0.2s;';
+        btn.textContent = t.label;
+        btn.onclick = () => { _activeTab = t.id; _renderTabContent(); };
+        tabBar.appendChild(btn);
+      });
+      hdr.appendChild(tabBar);
+      panel.appendChild(hdr);
+
+      const tabBody = document.createElement('div');
+      tabBody.style.cssText = 'flex:1;overflow-y:auto;padding:16px 20px;';
+      panel.appendChild(tabBody);
+
+      // ── Story Quests Tab ──────────────────────────────────────────────────
+      function _renderStoryTab(container) {
+        if (!saveData.tutorialQuests.readyToClaim) saveData.tutorialQuests.readyToClaim = [];
+        if (!saveData.tutorialQuests.completedQuests) saveData.tutorialQuests.completedQuests = [];
+
+        let html = '';
+        // Ready to claim
+        if (saveData.tutorialQuests.readyToClaim.length > 0) {
+          html += '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#C9A227;letter-spacing:2px;margin-bottom:10px;">✨ READY TO CLAIM</div>';
+          saveData.tutorialQuests.readyToClaim.forEach(questId => {
+            const quest = TUTORIAL_QUESTS[questId];
+            if (!quest) return;
+            html += `<div style="background:rgba(201,162,39,0.08);border:1px solid #C9A227;border-radius:6px;padding:12px;margin-bottom:10px;">
+              <div style="font-family:'Bangers',cursive;font-size:16px;color:#C9A227;margin-bottom:4px;">${quest.name}</div>
+              <div style="font-size:12px;color:#aaa;margin-bottom:10px;">${quest.description}</div>
+              <button class="btn quest-claim-btn" data-qid="${questId}" style="font-size:14px;padding:7px 18px;background:linear-gradient(to bottom,#C9A227,#8B6914);color:#000;border:2px solid #000;letter-spacing:1px;cursor:pointer;font-weight:bold;border-radius:4px;">🎁 Claim Reward</button>
+            </div>`;
+          });
+        } else if (saveData.tutorialQuests.pendingBuildQuest && saveData.tutorialQuests.pendingBuildBuilding) {
+          const _pbDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[saveData.tutorialQuests.pendingBuildBuilding] : null;
+          html += `<div style="font-size:14px;color:#00FF66;margin-bottom:16px;">🔨 Build the <b>${_pbDef ? _pbDef.name : 'unlocked building'}</b> to continue!</div>`;
+        } else {
+          html += '<div style="font-size:13px;color:#555;margin-bottom:16px;letter-spacing:1px;">No quests ready to claim. Complete your active quest!</div>';
+        }
+
+        // Active quest
+        const currentQuest = getCurrentQuest();
+        if (currentQuest) {
+          html += `<div style="font-family:'Bangers',cursive;font-size:17px;color:#00FF66;letter-spacing:2px;margin-bottom:10px;">📍 ACTIVE QUEST</div>
+            <div style="background:rgba(0,255,100,0.06);border:1px solid rgba(0,255,100,0.4);border-radius:6px;padding:12px;margin-bottom:16px;">
+              <div style="font-family:'Bangers',cursive;font-size:15px;color:#00FF66;margin-bottom:4px;">${currentQuest.name}</div>
+              <div style="font-size:12px;color:#aaa;margin-bottom:4px;">${currentQuest.description}</div>
+              <div style="font-size:11px;color:#666;letter-spacing:1px;">🎯 ${currentQuest.objectives}</div>
+            </div>`;
+        } else if (saveData.tutorialQuests.pendingBuildQuest && saveData.tutorialQuests.pendingBuildBuilding) {
+          const _bDef = typeof CAMP_BUILDINGS !== 'undefined' ? CAMP_BUILDINGS[saveData.tutorialQuests.pendingBuildBuilding] : null;
+          html += `<div style="font-family:'Bangers',cursive;font-size:17px;color:#FF9933;letter-spacing:2px;margin-bottom:10px;">🔨 BUILD REQUIRED</div>
+            <div style="background:rgba(255,153,51,0.08);border:1px solid rgba(255,153,51,0.5);border-radius:6px;padding:12px;margin-bottom:16px;">
+              <div style="font-size:13px;color:#aaa;">Walk to the <b>${_bDef ? _bDef.name : 'building'}</b> in camp and build it.</div>
+            </div>`;
+        }
+
+        html += `<div style="font-size:11px;color:#444;text-align:center;letter-spacing:2px;margin-top:8px;">Completed: ${saveData.tutorialQuests.completedQuests.length} / ${Object.keys(TUTORIAL_QUESTS).length}</div>`;
+
+        // Start run / close buttons
+        const _isSandboxMode = window._engine2SandboxMode || (window.location.pathname && window.location.pathname.includes('sandbox'));
+        const hasClaimable = saveData.tutorialQuests.readyToClaim.length > 0;
+        html += `<div style="display:flex;gap:10px;margin-top:18px;justify-content:center;">
+          <button class="btn start-run-btn" ${hasClaimable ? 'disabled' : ''} style="font-size:15px;padding:10px 28px;background:${hasClaimable ? '#333' : 'linear-gradient(to bottom,#1a5c2a,#0d3316)'};color:${hasClaimable ? '#555' : '#FFF'};border:2px solid #C9A227;letter-spacing:2px;cursor:${hasClaimable ? 'not-allowed' : 'pointer'};border-radius:4px;">
+            ${hasClaimable ? '📜 Claim Quest First' : '▶ Start Run'}
+          </button>
+          <button class="btn quest-hall-close-btn" style="font-size:13px;padding:10px 22px;background:rgba(30,30,30,0.9);color:#888;border:1px solid rgba(201,162,39,0.3);letter-spacing:1px;cursor:pointer;border-radius:4px;">Close</button>
+        </div>`;
+
+        container.innerHTML = html;
+
+        // Claim button listeners
+        container.querySelectorAll('.quest-claim-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const questId = this.getAttribute('data-qid');
+            const questDef = TUTORIAL_QUESTS[questId];
+            if (questDef && questDef.deductResources) {
+              const r = saveData.resources || {};
+              for (const [res, amt] of Object.entries(questDef.deductResources)) {
+                if ((r[res] || 0) < amt) {
+                  if (typeof showStatusMessage === 'function') showStatusMessage(`❌ Not enough ${res}! Need ${amt}.`, 3000);
+                  return;
+                }
+              }
+            }
+            const overlayEl = document.body.querySelector('[data-quest-hall-overlay]');
+            if (overlayEl) document.body.removeChild(overlayEl);
+            claimTutorialQuest(questId);
+          });
+        });
+
+        // Start run button
+        const srBtn = container.querySelector('.start-run-btn');
+        if (srBtn && !hasClaimable) {
+          srBtn.onclick = () => {
+            document.body.removeChild(overlay);
+            if (_isSandboxMode) window.location.reload();
+            else window.location.href = 'sandbox.html';
+          };
+        }
+        const cBtn = container.querySelector('.quest-hall-close-btn');
+        if (cBtn) cBtn.onclick = questHallClose;
+      }
+
+      // ── Challenges Tab ────────────────────────────────────────────────────
+      // Recurring milestones tracked against persistent saveData fields
+      const QUEST_HALL_CHALLENGES = [
+        { id: 'ch_kills_100',  icon: '⚔️',  label: 'Slayer\'s Oath',       desc: 'Kill 100 enemies across all runs.',              progress: () => Math.min(saveData.totalKills || 0, 100),  target: 100,  reward: { xp: 50,  gold: 150 } },
+        { id: 'ch_kills_500',  icon: '💀',  label: 'Mass Annihilation',     desc: 'Kill 500 enemies across all runs.',              progress: () => Math.min(saveData.totalKills || 0, 500),  target: 500,  reward: { xp: 120, gold: 400 } },
+        { id: 'ch_kills_1000', icon: '🔥',  label: 'Legion\'s Bane',        desc: 'Kill 1,000 enemies across all runs.',            progress: () => Math.min(saveData.totalKills || 0, 1000), target: 1000, reward: { xp: 250, gold: 800 } },
+        { id: 'ch_survive_3',  icon: '⏱️', label: 'Survivor\'s Trial',     desc: 'Survive 3 minutes in a single run.',            progress: () => Math.min(Math.floor((saveData.bestTime || 0) / 60), 3), target: 3, reward: { xp: 60,  gold: 200 } },
+        { id: 'ch_survive_5',  icon: '⌛',  label: 'Iron Will',             desc: 'Survive 5 minutes in a single run.',            progress: () => Math.min(Math.floor((saveData.bestTime || 0) / 60), 5), target: 5, reward: { xp: 130, gold: 450 } },
+        { id: 'ch_runs_5',     icon: '🏃',  label: 'Persistent Wanderer',   desc: 'Complete 5 runs.',                              progress: () => Math.min(saveData.totalRuns || 0, 5),     target: 5,    reward: { xp: 75,  gold: 250 } },
+        { id: 'ch_runs_10',    icon: '🗺️', label: 'World Traveller',       desc: 'Complete 10 runs.',                             progress: () => Math.min(saveData.totalRuns || 0, 10),    target: 10,   reward: { xp: 150, gold: 500 } },
+        { id: 'ch_quests_5',   icon: '📜',  label: 'Quest Addict',          desc: 'Complete 5 story quests.',                      progress: () => Math.min((saveData.tutorialQuests && saveData.tutorialQuests.completedQuests ? saveData.tutorialQuests.completedQuests.length : 0), 5), target: 5, reward: { xp: 80, gold: 300 } }
+      ];
+
+      function _renderChallengesTab(container) {
+        if (!saveData.questHallChallenges) saveData.questHallChallenges = {};
+        let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#00ccff;letter-spacing:2px;margin-bottom:4px;">⚔️ RECURRING MILESTONES</div>';
+        html += '<div style="font-size:11px;color:#555;margin-bottom:14px;letter-spacing:1px;">Complete milestones to earn Account XP and Gold.</div>';
+
+        QUEST_HALL_CHALLENGES.forEach(ch => {
+          const prog = ch.progress();
+          const done = prog >= ch.target;
+          const claimed = !!saveData.questHallChallenges[ch.id];
+          const pct = Math.min(100, Math.floor((prog / ch.target) * 100));
+          const borderCol = claimed ? '#33aa33' : done ? '#00ccff' : 'rgba(0,204,255,0.3)';
+          const bgCol = claimed ? 'rgba(0,100,0,0.12)' : done ? 'rgba(0,204,255,0.1)' : 'rgba(0,20,40,0.5)';
+          html += `<div style="background:${bgCol};border:1px solid ${borderCol};border-radius:6px;padding:12px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-family:'Bangers',cursive;font-size:15px;color:${claimed ? '#33aa33' : done ? '#00ccff' : '#88aacc'};letter-spacing:1px;">${ch.icon} ${ch.label}</div>
+              <div style="font-size:10px;color:#555;">+${ch.reward.xp} XP · +${ch.reward.gold} 💰</div>
+            </div>
+            <div style="font-size:11px;color:#888;margin-bottom:7px;">${ch.desc}</div>
+            <div style="background:rgba(0,0,0,0.5);border-radius:4px;height:8px;overflow:hidden;margin-bottom:7px;">
+              <div style="width:${pct}%;height:100%;background:${claimed ? '#33aa33' : done ? '#00ccff' : 'rgba(0,204,255,0.4)'};transition:width 0.5s;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:10px;color:#666;">${prog.toLocaleString()} / ${ch.target.toLocaleString()}</div>
+              ${claimed ? '<div style="font-size:11px;color:#33aa33;font-weight:bold;">✅ CLAIMED</div>'
+                : done ? `<button class="ch-claim-btn" data-chid="${ch.id}" style="font-size:11px;padding:5px 12px;background:linear-gradient(to bottom,#006688,#003344);color:#00ccff;border:1px solid #00ccff;border-radius:4px;cursor:pointer;letter-spacing:1px;">🏅 Claim</button>`
+                : '<div style="font-size:10px;color:#444;">In Progress</div>'}
+            </div>
+          </div>`;
+        });
+
+        container.innerHTML = html;
+        container.querySelectorAll('.ch-claim-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const chId = this.getAttribute('data-chid');
+            const ch = QUEST_HALL_CHALLENGES.find(c => c.id === chId);
+            if (!ch || saveData.questHallChallenges[chId]) return;
+            saveData.questHallChallenges[chId] = true;
+            // Grant rewards
+            saveData.gold = (saveData.gold || 0) + ch.reward.gold;
+            if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+              window.GameAccount.addXP(ch.reward.xp, 'Challenge: ' + ch.label, saveData);
+            } else if (typeof addAccountXP === 'function') {
+              addAccountXP(ch.reward.xp);
+            }
+            if (typeof saveSaveData === 'function') saveSaveData();
+            if (typeof updateGoldDisplays === 'function') updateGoldDisplays();
+            if (typeof showStatusMessage === 'function') showStatusMessage(`🏅 ${ch.label} complete! +${ch.reward.xp} XP, +${ch.reward.gold} 💰`, 3000);
+            _renderTabContent();
+          });
+        });
+      }
+
+      // ── Achievements Tab ──────────────────────────────────────────────────
+      const QUEST_HALL_ACHIEVEMENTS = [
+        { id: 'ach_first_blood',  icon: '🩸', tier: 'common',    label: 'First Blood',         desc: 'Kill your first enemy.',                   check: () => (saveData.totalKills || 0) >= 1,    xp: 25,  freeSpins: 1 },
+        { id: 'ach_10_kills',     icon: '⚔️', tier: 'uncommon',  label: 'Blade Initiate',      desc: 'Kill 10 enemies.',                          check: () => (saveData.totalKills || 0) >= 10,   xp: 50,  freeSpins: 1 },
+        { id: 'ach_100_kills',    icon: '💀', tier: 'rare',      label: 'Century of Blood',    desc: 'Kill 100 enemies.',                         check: () => (saveData.totalKills || 0) >= 100,  xp: 150, freeSpins: 2 },
+        { id: 'ach_500_kills',    icon: '🔥', tier: 'epic',      label: 'Annihilator',         desc: 'Kill 500 enemies.',                         check: () => (saveData.totalKills || 0) >= 500,  xp: 300, freeSpins: 3 },
+        { id: 'ach_1000_kills',   icon: '⚡', tier: 'legendary', label: '1000 Kills',          desc: 'Kill 1,000 enemies total.',                 check: () => (saveData.totalKills || 0) >= 1000, xp: 600, freeSpins: 5 },
+        { id: 'ach_first_run',    icon: '🏃', tier: 'common',    label: 'Into the Unknown',    desc: 'Complete your first run.',                  check: () => (saveData.totalRuns || 0) >= 1,     xp: 30,  freeSpins: 1 },
+        { id: 'ach_5_runs',       icon: '🗺️', tier: 'uncommon', label: 'Seasoned Wanderer',   desc: 'Survive 5 runs.',                           check: () => (saveData.totalRuns || 0) >= 5,     xp: 80,  freeSpins: 2 },
+        { id: 'ach_10_runs',      icon: '🌍', tier: 'rare',      label: 'Played 10 Times',     desc: 'Complete 10 runs.',                         check: () => (saveData.totalRuns || 0) >= 10,    xp: 180, freeSpins: 3 },
+        { id: 'ach_2min_run',     icon: '⏱️', tier: 'common',   label: 'Survivor\'s Minute',  desc: 'Survive at least 2 minutes in one run.',    check: () => (saveData.bestTime || 0) >= 120,    xp: 40,  freeSpins: 1 },
+        { id: 'ach_5min_run',     icon: '⌛', tier: 'uncommon',  label: 'Time Lord',           desc: 'Survive 5 minutes in a single run.',        check: () => (saveData.bestTime || 0) >= 300,    xp: 120, freeSpins: 2 },
+        { id: 'ach_quest_5',      icon: '📜', tier: 'uncommon',  label: 'Quest Master',        desc: 'Complete 5 story quests.',                  check: () => (saveData.tutorialQuests && saveData.tutorialQuests.completedQuests ? saveData.tutorialQuests.completedQuests.length : 0) >= 5, xp: 100, freeSpins: 2 }
+      ];
+
+      const TIER_COLORS = { common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff', epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444' };
+
+      function _renderAchievementsTab(container) {
+        if (!saveData.questHallAchievements) saveData.questHallAchievements = {};
+        let html = '<div style="font-family:\'Bangers\',cursive;font-size:17px;color:#aa44ff;letter-spacing:2px;margin-bottom:4px;">🏆 TIERED ACHIEVEMENTS</div>';
+        html += '<div style="font-size:11px;color:#555;margin-bottom:14px;letter-spacing:1px;">Unlock achievements to earn Account XP and 🎰 Slot Tokens.</div>';
+
+        QUEST_HALL_ACHIEVEMENTS.forEach(ach => {
+          const met = ach.check();
+          const claimed = !!saveData.questHallAchievements[ach.id];
+          const col = TIER_COLORS[ach.tier] || '#aaaaaa';
+          const bgCol = claimed ? 'rgba(0,80,0,0.15)' : met ? 'rgba(170,68,255,0.1)' : 'rgba(10,0,25,0.5)';
+          html += `<div style="background:${bgCol};border:1px solid ${claimed ? '#33aa33' : met ? col : 'rgba(80,60,120,0.4)'};border-radius:6px;padding:11px 14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;">
+            <div style="font-size:26px;flex-shrink:0;">${ach.icon}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-family:'Bangers',cursive;font-size:15px;color:${claimed ? '#33aa33' : met ? col : '#555'};letter-spacing:1px;margin-bottom:2px;">${ach.label} <span style="font-size:10px;opacity:0.7;">[${ach.tier.toUpperCase()}]</span></div>
+              <div style="font-size:11px;color:#777;margin-bottom:4px;">${ach.desc}</div>
+              <div style="font-size:10px;color:#555;">+${ach.xp} Account XP · ${ach.freeSpins}🎰 Slot Token${ach.freeSpins > 1 ? 's' : ''}</div>
+            </div>
+            <div style="flex-shrink:0;">
+              ${claimed ? '<div style="font-size:13px;color:#33aa33;font-weight:bold;">✅</div>'
+                : met ? `<button class="ach-claim-btn" data-achid="${ach.id}" style="font-size:11px;padding:6px 12px;background:linear-gradient(to bottom,#6600cc,#3d0080);color:#cc88ff;border:1px solid ${col};border-radius:4px;cursor:pointer;letter-spacing:1px;white-space:nowrap;">🏆 Claim</button>`
+                : '<div style="font-size:11px;color:#333;">Locked</div>'}
+            </div>
+          </div>`;
+        });
+
+        container.innerHTML = html;
+        container.querySelectorAll('.ach-claim-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const achId = this.getAttribute('data-achid');
+            const ach = QUEST_HALL_ACHIEVEMENTS.find(a => a.id === achId);
+            if (!ach || saveData.questHallAchievements[achId] || !ach.check()) return;
+            saveData.questHallAchievements[achId] = true;
+            // Grant Account XP
+            if (window.GameAccount && typeof window.GameAccount.addXP === 'function') {
+              window.GameAccount.addXP(ach.xp, 'Achievement: ' + ach.label, saveData);
+            } else if (typeof addAccountXP === 'function') {
+              addAccountXP(ach.xp);
+            }
+            // Grant Slot Tokens (freeSpins)
+            saveData.freeSpins = (saveData.freeSpins || 0) + ach.freeSpins;
+            if (typeof saveSaveData === 'function') saveSaveData();
+            if (typeof showStatusMessage === 'function') showStatusMessage(`🏆 ${ach.label}! +${ach.xp} XP · +${ach.freeSpins} 🎰`, 3500);
+            // Rarity reveal effect
+            if (window.spawnRarityEffects) window.spawnRarityEffects(this, ach.tier);
+            _renderTabContent();
+          });
+        });
+      }
+
+      // ── Close handler ─────────────────────────────────────────────────────
       const questHallClose = () => {
-        document.body.removeChild(overlay);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (wasGameActive) setGamePaused(false);
-        updateCampScreen(); // Refresh camp to remove ! notification
+        updateCampScreen();
       };
-      
-      // Close button handler
-      const closeBtn = panel.querySelector('.quest-hall-close-btn');
-      closeBtn.onclick = questHallClose;
-      
-      // Add X close button to quest hall panel
-      const questHallXBtn = document.createElement('button');
-      questHallXBtn.className = 'overlay-close-x';
-      questHallXBtn.innerHTML = '✕';
-      questHallXBtn.title = 'Close';
-      panel.style.position = 'relative';
-      panel.appendChild(questHallXBtn);
-      questHallXBtn.onclick = questHallClose;
-      
+
+      // X close button
+      const xBtn = document.createElement('button');
+      xBtn.className = 'overlay-close-x';
+      xBtn.innerHTML = '✕';
+      xBtn.title = 'Close';
+      xBtn.onclick = questHallClose;
+      panel.appendChild(xBtn);
+
       overlay.appendChild(panel);
+      overlay.addEventListener('click', e => { if (e.target === overlay) questHallClose(); });
       document.body.appendChild(overlay);
+
+      // Initial render
+      _renderTabContent();
     }
 
     // --- ACCOUNT LEVEL SYSTEM ---
@@ -928,14 +1160,11 @@
         _curtainDismissHandler = null;
       }
 
-      // Rank color
-      const _RANK_COLORS = { Adventurer: '#55cc55', Wanderer: '#55cc55', Explorer: '#44aaff',
-        Survivor: '#44aaff', Pathfinder: '#44aaff', Warrior: '#6644cc', Skilled: '#6644cc',
-        Slayer: '#6644cc', Champion: '#aa44ff', Veteran: '#ffaa00', Elite: '#ffaa00',
-        Guardian: '#ffaa00', Warden: '#ffd700', Expert: '#ffd700', Conqueror: '#ffd700',
-        Hero: '#ffd700', Titan: '#ffd700', Master: '#88eeff', Grandmaster: '#88eeff',
-        Mythic: '#ff4444', Ascendant: '#ff4444', 'Waterdrop Survivor': '#ff88ff', H2O: '#ff88ff' };
-      const rankColor = _RANK_COLORS[rankTitle] || '#FFD700';
+      // Rank color — sourced from the centralized GameAccount.getRankColor() so the
+      // mapping is maintained in a single place (idle-account.js RANK_COLORS).
+      const rankColor = (window.GameAccount && window.GameAccount.getRankColor)
+        ? window.GameAccount.getRankColor(rankTitle)
+        : '#FFD700';
 
       curtain.classList.remove('curtain-teaser', 'curtain-enter', 'curtain-enter-done',
                                'curtain-exit', 'curtain-milestone');
@@ -2653,119 +2882,309 @@
     // ============================================================
     // INVENTORY SCREEN
     // ============================================================
+    // ============================================================
+    // MASTER VAULT — full-screen "iPhone home screen" inventory
+    // ============================================================
     function showInventoryScreen() {
-      // Close camp screen
       const campScreen = document.getElementById('camp-screen');
       if (campScreen) campScreen.style.display = 'none';
 
-      // Remove any existing inventory modal
       const existingModal = document.getElementById('inventory-screen-modal');
       if (existingModal) existingModal.remove();
 
       const modal = document.createElement('div');
       modal.id = 'inventory-screen-modal';
-      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:200;overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:20px;box-sizing:border-box;';
+      modal.style.cssText = [
+        'position:fixed;top:0;left:0;width:100%;height:100%;z-index:200',
+        'background:#07060e',
+        'display:flex;flex-direction:column',
+        'font-family:Courier New,monospace'
+      ].join(';');
 
-      const currencies = [
-        { icon: '🪙', name: 'Gold', value: saveData.gold || 0 },
-        { icon: '💎', name: 'Gems', value: saveData.gems || 0 },
-        { icon: '✨', name: 'Essence', value: saveData.essence || 0 }
-      ];
+      // ── helpers ──────────────────────────────────────────────
+      const RARITY_COLOR  = { common:'#9e9e9e', uncommon:'#1aff1a', rare:'#0af', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff2a2a' };
+      const RARITY_SHADOW = { common:'#9e9e9e44', uncommon:'#1aff1a66', rare:'#0af6', epic:'#a335ee66', legendary:'#ff800066', mythic:'#ff2a2aaa' };
+      const RARITY_STARS  = { common:'✦', uncommon:'✦✦', rare:'✦✦✦', epic:'✦✦✦✦', legendary:'✦✦✦✦✦', mythic:'◈ MYTHIC' };
+      const TYPE_ICON = { weapon:'⚔️', armor:'🛡️', helmet:'⛑️', boots:'👢', ring:'💍', amulet:'📿', consumable:'⚗️', material:'📦', currency:'💰' };
 
-      const currencyHTML = currencies.map(c =>
-        `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,215,0,0.1);border:1px solid #FFD700;border-radius:8px;padding:8px 14px;margin:4px;">
-          <span style="font-size:20px;">${c.icon}</span>
-          <span style="color:#FFD700;font-size:16px;font-weight:bold;">${c.value.toLocaleString()}</span>
-          <span style="color:#aaa;font-size:12px;">${c.name}</span>
-        </div>`
-      ).join('');
-
-      // Special Items section
-      let specialItemsHTML = '';
-      if (saveData.hasCompanionEgg) {
-        const alreadyHatched = saveData.companionEggHatched;
-        specialItemsHTML += `
-          <div style="background:linear-gradient(135deg,rgba(0,255,180,0.15),rgba(0,100,80,0.3));border:2px solid #00FFB4;border-radius:12px;padding:16px;margin:8px 0;display:flex;align-items:center;gap:14px;">
-            <div style="font-size:48px;animation:pulse 1.5s ease-in-out infinite;">🥚</div>
-            <div style="flex:1;">
-              <div style="color:#00FFB4;font-size:18px;font-weight:bold;">Mysterious Companion Egg</div>
-              <div style="color:#aaa;font-size:13px;margin:4px 0;">Found at the UFO crash site in Area 51. Something stirs within...</div>
-              <div style="color:#FFD700;font-size:12px;">★★★ LEGENDARY ★★★</div>
-            </div>
-            <div>
-              ${alreadyHatched
-                ? '<span style="color:#00FF88;font-size:13px;">✅ Hatched</span>'
-                : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:8px;padding:10px 16px;color:#000;font-weight:bold;cursor:pointer;font-size:13px;">Place in Companion House →</button>`
-              }
-            </div>
-          </div>`;
+      // Collect all items by category
+      function buildAllItems() {
+        const list = [];
+        // Currencies
+        list.push({ id:'__gold__',    name:'Gold',    rarity:'legendary', icon:'🪙', qty: saveData.gold    || 0, cat:'materials', description:'The universal currency of the realm.', lore:'Gold — forged in the core of Nibiru and scattered across the Earth after the great descent.' });
+        list.push({ id:'__gems__',    name:'Gems',    rarity:'epic',      icon:'💎', qty: saveData.gems    || 0, cat:'materials', description:'Premium gemstones used for rare transactions.', lore:'"The Annunaki traded souls for gems in the old age." — Unknown inscription' });
+        list.push({ id:'__essence__', name:'Essence', rarity:'rare',      icon:'✨', qty: saveData.essence || 0, cat:'materials', description:'Distilled void energy, used in the Neural Matrix.', lore:'Pure consciousness rendered tangible through Annunaki alchemy.' });
+        // Resources
+        const res = saveData.resources || {};
+        const resNames = { wood:'Wood 🪵', stone:'Stone 🪨', coal:'Coal', iron:'Iron ⚙️', crystal:'Crystal 🔮', magicEssence:'Magic Essence', flesh:'Flesh', fur:'Fur', leather:'Leather', feather:'Feather', chitin:'Chitin', berry:'Berries 🍓', flower:'Flowers 🌸' };
+        for (const k in resNames) {
+          if ((res[k] || 0) > 0) list.push({ id:'__res_'+k, name:resNames[k], rarity:'common', icon:'📦', qty:res[k], cat:'materials', description:'Harvested material.', lore:'' });
+        }
+        // Companion Egg special
+        if (saveData.hasCompanionEgg) {
+          list.push({ id:'__egg__', name:'Companion Egg', rarity:'legendary', icon:'🥚', qty:1, cat:'materials',
+            description:'A mysterious egg from the UFO crash site. Something stirs within.', lore:'"Born of void static and alien biomatter — what emerges will serve, or consume." — Grey Field Report',
+            _isEgg: true });
+        }
+        // Gear (from saveData.inventory)
+        (saveData.inventory || []).forEach(function(item, idx) {
+          list.push(Object.assign({}, item, { _invIdx: idx, cat:'gear', icon: TYPE_ICON[item.type] || '⚔️', qty: null }));
+        });
+        // Consumables
+        (saveData.consumables || []).forEach(function(item) {
+          list.push(Object.assign({}, item, {
+            cat:'consumable',
+            icon: item.icon || '⚗️',
+            qty: item.qty != null ? item.qty : (item.quantity || 0)
+          }));
+        });
+        return list;
       }
 
-      // Gear inventory
-      const gear = saveData.inventory || [];
-      const gearHTML = gear.length === 0
-        ? '<div style="color:#666;text-align:center;padding:20px;">No gear collected yet. Complete runs to find gear!</div>'
-        : gear.map((item, idx) => {
-          const rarityColor = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000' }[item.rarity] || '#aaa';
-          const rarityStars = { common:'★', uncommon:'★★', rare:'★★★', epic:'★★★★', legendary:'★★★★★' }[item.rarity] || '★';
-          const isEquipped = saveData.equippedGear && Object.values(saveData.equippedGear).some(g => g && g.id === item.id);
-          return `
-            <div style="background:rgba(255,255,255,0.05);border:1px solid ${rarityColor};border-radius:8px;padding:12px;margin:6px 0;display:flex;align-items:center;gap:12px;">
-              <div style="font-size:32px;">${item.type === 'ring' ? '💍' : item.type === 'amulet' ? '📿' : item.type === 'helmet' ? '⛑️' : item.type === 'boots' ? '👢' : '🛡️'}</div>
-              <div style="flex:1;">
-                <div style="color:${rarityColor};font-size:15px;font-weight:bold;">${item.name}</div>
-                <div style="color:#aaa;font-size:12px;">${item.description || ''}</div>
-                <div style="color:${rarityColor};font-size:11px;">${rarityStars} ${(item.rarity || 'common').toUpperCase()}</div>
-              </div>
-              <div>
-                ${isEquipped
-                  ? '<span style="color:#FFD700;font-size:12px;">✅ Equipped</span>'
-                  : `<button onclick="equipItemFromInventory(${idx})" style="background:rgba(255,215,0,0.2);border:1px solid #FFD700;border-radius:6px;padding:6px 12px;color:#FFD700;cursor:pointer;font-size:12px;">Equip</button>`
-                }
-              </div>
-            </div>`;
-        }).join('');
+      let _allItems   = buildAllItems();
+      let _activeTab  = 'all';
+      let _selected   = null;
 
+      function filteredItems() {
+        if (_activeTab === 'all')         return _allItems;
+        if (_activeTab === 'gear')        return _allItems.filter(function(i) { return i.cat === 'gear'; });
+        if (_activeTab === 'materials')   return _allItems.filter(function(i) { return i.cat === 'materials'; });
+        if (_activeTab === 'consumables') return _allItems.filter(function(i) { return i.cat === 'consumable'; });
+        return _allItems;
+      }
+
+      // ── DOM structure ─────────────────────────────────────────
       modal.innerHTML = `
-        <div style="max-width:640px;width:100%;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h2 style="color:#FFD700;margin:0;font-size:22px;">📦 Inventory</h2>
-            <button id="inv-back-btn" style="background:rgba(255,255,255,0.1);border:1px solid #666;border-radius:8px;padding:8px 16px;color:#fff;cursor:pointer;">← Back to Camp</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid #1a1a3a;flex-shrink:0;">
+          <div style="color:#00ffff;font-size:20px;font-weight:bold;letter-spacing:3px;text-shadow:0 0 12px #00ffff88;">◈ MASTER VAULT</div>
+          <button id="mv-back-btn" style="background:rgba(0,255,255,0.08);border:1px solid #00ffff44;border-radius:8px;padding:7px 16px;color:#00ffff;cursor:pointer;font-size:13px;letter-spacing:1px;">← CAMP</button>
+        </div>
+        <div id="mv-tabs" style="display:flex;gap:0;border-bottom:1px solid #1a1a3a;flex-shrink:0;">
+          ${['all','gear','materials','consumables'].map(function(t) {
+            return `<button class="mv-tab" data-tab="${t}" style="flex:1;background:${t==='all'?'rgba(0,255,255,0.12)':'transparent'};border:none;border-bottom:2px solid ${t==='all'?'#00ffff':'transparent'};color:${t==='all'?'#00ffff':'#888'};padding:10px 4px;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;transition:all .2s;">${t}</button>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+          <div id="mv-grid-wrap" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:12px;align-content:start;"></div>
+          <div id="mv-side" style="width:0;min-width:0;overflow:hidden;background:#0c0b1a;border-left:1px solid #1a1a3a;transition:width .25s;flex-shrink:0;"></div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      // ── card renderer ──────────────────────────────────────────
+      function renderGrid() {
+        const grid = document.getElementById('mv-grid-wrap');
+        if (!grid) return;
+        const items = filteredItems();
+        if (items.length === 0) {
+          grid.style.display = 'block';
+          grid.innerHTML = '<div style="color:#444;text-align:center;padding:40px;grid-column:1/-1;">No items yet.</div>';
+          return;
+        }
+        grid.style.display = 'grid';
+        grid.innerHTML = '';
+        items.forEach(function(item) {
+          const rc = RARITY_COLOR[item.rarity]  || '#9e9e9e';
+          const rs = RARITY_SHADOW[item.rarity] || '#9e9e9e44';
+          const isSelected = _selected && _selected.id === item.id;
+          const card = document.createElement('div');
+          card.className = 'mv-squircle-card';
+          card.style.cssText = [
+            'border-radius:22px',
+            'background:linear-gradient(145deg,#12112a,#0d0c20)',
+            `border:2px solid ${isSelected ? rc : rc+'66'}`,
+            `box-shadow:0 0 ${isSelected?'18px':'8px'} ${rs}`,
+            'padding:12px 6px 8px',
+            'display:flex;flex-direction:column;align-items:center;gap:5px',
+            'cursor:pointer;user-select:none',
+            'transition:box-shadow .18s,border-color .18s',
+            'position:relative;overflow:hidden'
+          ].join(';');
+          card.dataset.rarity = item.rarity || 'common';
+          const qtyBadge = (item.qty != null && item.qty > 0) ? `<div style="position:absolute;top:6px;right:8px;background:${rc};color:#000;font-size:9px;font-weight:bold;border-radius:6px;padding:1px 5px;min-width:14px;text-align:center;">${item.qty.toLocaleString()}</div>` : '';
+          const equippedBadge = (item._invIdx != null && saveData.equippedGear && Object.values(saveData.equippedGear).some(function(g){ return g && g.id === item.id; })) ? '<div style="position:absolute;bottom:5px;right:6px;font-size:10px;">✅</div>' : '';
+          card.innerHTML = `${qtyBadge}${equippedBadge}
+            <div style="font-size:30px;line-height:1;">${item.icon}</div>
+            <div style="color:${rc};font-size:10px;font-weight:bold;text-align:center;line-height:1.3;word-break:break-word;">${item.name}</div>
+            <div style="color:${rc}88;font-size:9px;">${RARITY_STARS[item.rarity] || ''}</div>`;
+          card.onclick = function() { selectItem(item); };
+          grid.appendChild(card);
+        });
+      }
+
+      // ── side panel ─────────────────────────────────────────────
+      function selectItem(item) {
+        _selected = item;
+        renderGrid();
+        const side = document.getElementById('mv-side');
+        if (!side) return;
+        side.style.width = '280px';
+        side.style.minWidth = '280px';
+        side.style.padding = '18px';
+        side.style.overflowY = 'auto';
+        const rc  = RARITY_COLOR[item.rarity]  || '#9e9e9e';
+        const rs  = RARITY_SHADOW[item.rarity] || '#9e9e9e33';
+        const isEquipped = item._invIdx != null && saveData.equippedGear && Object.values(saveData.equippedGear).some(function(g){ return g && g.id === item.id; });
+        const isCrimsonCore = item.id === 'crimsonEclipseCore';
+        const bloodQueued = localStorage.getItem('bloodMoonQueued') === 'true';
+
+        let actionBtn = '';
+        if (item.consumable && item.qty > 0) {
+          if (isCrimsonCore && bloodQueued) {
+            actionBtn = `<div style="color:#ff8800;font-size:12px;text-align:center;padding:10px;border:1px solid #ff880044;border-radius:10px;margin-top:10px;">⏳ Blood Moon already queued for next run.</div>`;
+          } else if (isCrimsonCore) {
+            actionBtn = `<button id="mv-consume-btn" style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#600000,#cc0000);border:2px solid #ff2a2a;border-radius:12px;color:#fff;font-size:14px;font-weight:bold;cursor:pointer;letter-spacing:2px;box-shadow:0 0 18px #ff2a2a88;">🌑 CONSUME</button>`;
+          }
+        }
+        if (item._isEgg) {
+          actionBtn = saveData.companionEggHatched
+            ? '<div style="color:#00FF88;text-align:center;margin-top:10px;">✅ Already Hatched</div>'
+            : `<button onclick="document.getElementById('inventory-screen-modal').remove();document.getElementById('camp-screen').style.display='flex';showCompanionHouse();" style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#00FFB4,#0080FF);border:none;border-radius:10px;color:#000;font-weight:bold;cursor:pointer;">Place in Companion House →</button>`;
+        }
+        if (item._invIdx != null) {
+          actionBtn = isEquipped
+            ? `<div style="color:#FFD700;text-align:center;margin-top:10px;font-size:13px;">✅ Equipped</div>`
+            : `<button onclick="equipItemFromInventory(${item._invIdx})" style="width:100%;margin-top:12px;padding:10px;background:rgba(255,215,0,0.15);border:1px solid #FFD700;border-radius:10px;color:#FFD700;cursor:pointer;font-size:13px;font-weight:bold;">⚔️ EQUIP</button>`;
+        }
+
+        let statsHTML = '';
+        if (item.stats && typeof item.stats === 'object') {
+          statsHTML = Object.entries(item.stats).map(function(kv) {
+            return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#ccc;padding:2px 0;"><span style="color:#888;">${kv[0]}</span><span style="color:${rc};">${kv[1]}</span></div>`;
+          }).join('');
+        }
+
+        side.innerHTML = `
+          <div style="text-align:center;margin-bottom:14px;">
+            <div style="font-size:52px;">${item.icon}</div>
+            <div style="color:${rc};font-size:17px;font-weight:bold;margin-top:6px;text-shadow:0 0 10px ${rs};">${item.name}</div>
+            <div style="color:${rc}88;font-size:11px;margin-top:2px;">${RARITY_STARS[item.rarity] || ''} ${(item.rarity||'common').toUpperCase()}</div>
+            ${item.qty != null ? `<div style="color:#fff;font-size:13px;margin-top:4px;">Qty: <span style="color:${rc};font-weight:bold;">${item.qty.toLocaleString()}</span></div>` : ''}
           </div>
+          ${statsHTML ? `<div style="background:#ffffff0a;border:1px solid #ffffff11;border-radius:10px;padding:10px;margin-bottom:10px;">${statsHTML}</div>` : ''}
+          ${item.description ? `<div style="color:#aaa;font-size:12px;line-height:1.6;margin-bottom:10px;">${item.description}</div>` : ''}
+          ${item.lore ? `<div style="color:#555;font-size:11px;line-height:1.6;font-style:italic;border-top:1px solid #1a1a3a;padding-top:8px;margin-bottom:6px;">${item.lore}</div>` : ''}
+          ${actionBtn}
+        `;
 
-          <div style="background:rgba(255,215,0,0.05);border:1px solid #FFD700;border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="color:#FFD700;font-size:14px;font-weight:bold;margin-bottom:10px;">💰 Currencies</div>
-            <div style="display:flex;flex-wrap:wrap;gap:4px;">${currencyHTML}</div>
-          </div>
+        // Consume button handler
+        const consumeBtn = document.getElementById('mv-consume-btn');
+        if (consumeBtn) {
+          consumeBtn.onclick = function() {
+            if (!isCrimsonCore) return;
+            // Pulse animation
+            modal.classList.add('mv-crimson-pulse');
+            setTimeout(function() { modal.classList.remove('mv-crimson-pulse'); }, 900);
+            // Deduct item
+            const existing = saveData.consumables.find(function(c) { return c.id === 'crimsonEclipseCore'; });
+            if (existing) {
+              existing.quantity--;
+              if (existing.quantity <= 0) saveData.consumables = saveData.consumables.filter(function(c) { return c.id !== 'crimsonEclipseCore'; });
+            }
+            localStorage.setItem('bloodMoonQueued', 'true');
+            saveSaveData();
+            _allItems = buildAllItems();
+            _selected = null;
+            side.style.width = '0';
+            side.style.minWidth = '0';
+            side.style.padding = '0';
+            renderGrid();
+            // Show confirmation
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(60,0,0,0.97);border:2px solid #ff2a2a;border-radius:16px;padding:24px 36px;color:#ff6666;font-size:16px;font-weight:bold;text-align:center;box-shadow:0 0 60px #ff2a2a;pointer-events:none;';
+            banner.innerHTML = '🌑 BLOOD MOON QUEUED<br><span style="font-size:12px;color:#aaa;">It will rise at Wave 10 of your next run</span>';
+            document.body.appendChild(banner);
+            setTimeout(function() { banner.remove(); }, 3000);
+          };
+        }
+      }
 
-          ${saveData.hasCompanionEgg ? `
-          <div style="background:rgba(0,255,180,0.05);border:1px solid #00FFB4;border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="color:#00FFB4;font-size:14px;font-weight:bold;margin-bottom:10px;">✨ Special Items</div>
-            ${specialItemsHTML}
-          </div>` : ''}
+      // ── tab switching ─────────────────────────────────────────
+      modal.querySelectorAll('.mv-tab').forEach(function(btn) {
+        btn.onclick = function() {
+          _activeTab = btn.dataset.tab;
+          _selected  = null;
+          const side = document.getElementById('mv-side');
+          if (side) { side.style.width='0'; side.style.minWidth='0'; side.style.padding='0'; }
+          modal.querySelectorAll('.mv-tab').forEach(function(b) {
+            const active = b.dataset.tab === _activeTab;
+            b.style.background     = active ? 'rgba(0,255,255,0.12)' : 'transparent';
+            b.style.borderBottom   = active ? '2px solid #00ffff'    : '2px solid transparent';
+            b.style.color          = active ? '#00ffff' : '#888';
+          });
+          renderGrid();
+        };
+      });
 
-          <div style="background:rgba(255,255,255,0.03);border:1px solid #444;border-radius:12px;padding:16px;">
-            <div style="color:#fff;font-size:14px;font-weight:bold;margin-bottom:10px;">⚔️ Gear (${gear.length} items)</div>
-            ${gearHTML}
+      document.getElementById('mv-back-btn').onclick = function() {        modal.remove();
+        if (campScreen) campScreen.style.display = 'flex';
+      };
+
+      // Initial render
+      renderGrid();    }
+
+    // ── 1/3-screen A.I.D.A. cinematic dialogue for Crimson Eclipse Core ────────
+    window.showCrimsonCoreDialogue = function() {
+      const existing = document.getElementById('mv-cinematic-backdrop');
+      if (existing) existing.remove();
+
+      const bd = document.createElement('div');
+      bd.id = 'mv-cinematic-backdrop';
+      bd.style.cssText = [
+        'position:fixed;bottom:0;left:0;width:100%;height:33vh;z-index:5000',
+        'background:linear-gradient(to top,#000 60%,rgba(0,0,0,0.95))',
+        'display:flex;flex-direction:column;justify-content:center',
+        'padding:20px 32px;box-sizing:border-box',
+        'border-top:2px solid #ff2a2a44',
+        'animation:mv-cinematic-in 0.5s ease'
+      ].join(';');
+
+      bd.innerHTML = `
+        <div style="display:flex;gap:18px;align-items:flex-start;max-width:800px;">
+          <div style="flex-shrink:0;width:52px;height:52px;border-radius:50%;background:rgba(0,255,255,0.1);border:2px solid #00ffff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 18px #00ffff66;">🤖</div>
+          <div style="flex:1;">
+            <div style="color:#00ffff;font-size:13px;font-weight:bold;letter-spacing:2px;margin-bottom:8px;text-shadow:0 0 8px #00ffff;">A.I.D.A.</div>
+            <div id="mv-cinema-text" style="color:#ddd;font-size:14px;line-height:1.7;min-height:3em;"></div>
+            <div style="margin-top:10px;color:#555;font-size:11px;">[tap to continue]</div>
           </div>
         </div>
       `;
+      document.body.appendChild(bd);
 
-      document.body.appendChild(modal);
+      const lines = [
+        { text: 'Droplet… that core is radiating dangerous void energy.', pause: 2800 },
+        { text: 'If you consume it in your Inventory, it will trigger a Blood Moon during your next run at Wave 10.', pause: 3800 },
+        { text: 'The enemies will be relentless, but the artifact drops will be legendary. Prepare yourself.', pause: 3500 }
+      ];
+      let lineIdx = 0;
+      const textEl = document.getElementById('mv-cinema-text');
 
-      document.getElementById('inv-back-btn').onclick = () => {
-        modal.remove();
-        if (campScreen) campScreen.style.display = 'flex';
-      };
-    }
+      function typewriteLine(str, cb) {
+        textEl.textContent = '';
+        let i = 0;
+        function tick() {
+          if (i < str.length) { textEl.textContent += str[i++]; setTimeout(tick, 28); }
+          else { setTimeout(cb, 600); }
+        }
+        tick();
+      }
 
+      function nextLine() {
+        if (lineIdx >= lines.length) { setTimeout(function() { bd.remove(); }, 400); return; }
+        const l = lines[lineIdx++];
+        typewriteLine(l.text, function() { setTimeout(nextLine, l.pause - 600); });
+      }
+      nextLine();
+
+      bd.onclick = function() { bd.remove(); };
+    };
     // Equip item directly from inventory screen
     function equipItemFromInventory(itemIdx) {
       const item = saveData.inventory[itemIdx];
-      if (!item) return;
+      if (!item || !item.id) return;
       const slot = item.type || 'ring';
       if (!saveData.equippedGear) saveData.equippedGear = {};
-      saveData.equippedGear[slot] = item;
+      saveData.equippedGear[slot] = item.id;
       saveSaveData();
       showStatChange(`🎯 ${item.name} Equipped!`);
       // Refresh inventory screen
@@ -2775,8 +3194,192 @@
     window.equipItemFromInventory = equipItemFromInventory;
 
     // ============================================================
-    // COMPANION HOUSE SCREEN
+    // ARTIFACT SHRINE UI
     // ============================================================
+
+    function showArtifactShrineUI() {
+      const campScreen = document.getElementById('camp-screen');
+      if (campScreen) campScreen.style.display = 'none';
+
+      const existingModal = document.getElementById('artifact-shrine-modal');
+      if (existingModal) existingModal.remove();
+
+      const shrineData  = saveData.campBuildings && saveData.campBuildings.shrine;
+      const shrineLevel = shrineData ? (shrineData.level || 0) : 0;
+      const unlockedSlots = shrineLevel; // 1 slot per upgrade level
+      const equippedArtifacts = saveData.equippedArtifacts || [null, null, null];
+      const artifactInventory = saveData.artifacts || [];
+
+      // Artifact definitions (static catalogue of obtainable artifacts)
+      const ARTIFACT_DEFS = {
+        voidCrystal:    { name: 'Void Crystal',     icon: '🔮', rarity: 'legendary', desc: '+50% Crit Damage · Void Lifesteal 3%',      stats: { critDamage: 0.5, voidLifesteal: 0.03 } },
+        annunakiShard:  { name: 'Annunaki Shard',   icon: '👁️',  rarity: 'mythic',    desc: '+80% Boss Damage · +15% All Resistances',   stats: { bossDamage: 0.8, allResist: 0.15 } },
+        temporalCore:   { name: 'Temporal Core',    icon: '⏳', rarity: 'epic',      desc: '+25% Attack Speed · -15% Cooldowns',         stats: { attackSpeed: 0.25, cdReduction: 0.15 } },
+        bloodstoneRelic:{ name: 'Bloodstone Relic', icon: '💉', rarity: 'legendary', desc: 'On kill: restore 4% max HP',                  stats: { onKillHeal: 0.04 } },
+        etherealBlade:  { name: 'Ethereal Blade',   icon: '⚔️',  rarity: 'epic',      desc: '+40% Physical Damage · +10% Crit Chance',    stats: { physDamage: 0.4, critChance: 0.10 } },
+      };
+
+      const rarityColors = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff4444' };
+
+      // Build slot HTML
+      const slotHTML = [0, 1, 2].map(i => {
+        const isUnlocked = i < unlockedSlots;
+        const equippedId = equippedArtifacts[i];
+        const equipped   = equippedId ? (ARTIFACT_DEFS[equippedId] || artifactInventory.find(a => a.id === equippedId)) : null;
+        const rc = equipped ? (rarityColors[equipped.rarity] || '#aaa') : '#444';
+        if (!isUnlocked) {
+          return `<div class="shrine-slot shrine-slot-locked">
+            <div style="font-size:28px;opacity:0.3;">🔒</div>
+            <div class="shrine-slot-label" style="color:#555;">Slot ${i+1} — Locked</div>
+            <div style="color:#666;font-size:10px;margin-top:4px;">Upgrade Shrine to unlock</div>
+          </div>`;
+        }
+        return `<div class="shrine-slot" data-slot="${i}" style="border-color:${rc};" title="${equipped ? `${equipped.name} — click Remove to unequip` : 'Empty artifact slot'}">
+          <div style="font-size:32px;">${equipped ? (equipped.icon || '🔮') : '🏛️'}</div>
+          <div class="shrine-slot-label" style="color:${rc};">${equipped ? equipped.name : `Slot ${i+1} — Empty`}</div>
+          ${equipped ? `<div style="color:#aaa;font-size:10px;margin-top:3px;">${equipped.desc || ''}</div>
+            <button onclick="window._shrineUnequip(${i})" class="shrine-remove-btn">✕ Remove</button>`
+          : `<div style="color:#555;font-size:10px;margin-top:3px;">Select artifact below to equip</div>`}
+        </div>`;
+      }).join('');
+
+      // Build artifact inventory HTML
+      const artifactInventoryHTML = artifactInventory.length === 0
+        ? `<div style="color:#555;text-align:center;padding:30px;font-size:13px;">No Artifacts collected yet.<br><span style="color:#888;font-size:11px;">Artifacts only drop from Bosses or Void Expeditions.</span></div>`
+        : artifactInventory.map((art, idx) => {
+            const def = ARTIFACT_DEFS[art.id] || art;
+            const rc2 = rarityColors[def.rarity] || '#aaa';
+            const isEquipped = equippedArtifacts.some(a => a === art.id);
+            return `<div class="shrine-inv-item${isEquipped ? ' shrine-inv-equipped' : ''}" style="border-color:${rc2};"
+                        onclick="window._shrineEquipArtifact('${art.id}', ${idx})">
+              <span style="font-size:26px;">${def.icon || '🔮'}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="color:${rc2};font-weight:bold;font-size:13px;">${def.name}</div>
+                <div style="color:#888;font-size:10px;">${(def.rarity||'epic').toUpperCase()}</div>
+                <div style="color:#aaa;font-size:11px;margin-top:2px;">${def.desc||''}</div>
+              </div>
+              <div>${isEquipped ? '<span style="color:#FFD700;font-size:11px;">✅ Slotted</span>' : '<span style="color:#00ffff;font-size:11px;">◈ Tap to Equip</span>'}</div>
+            </div>`;
+          }).join('');
+
+      // Upgrade section
+      const maxSlots = 3;
+      const canUpgrade = shrineLevel < maxSlots;
+      const builtCount = saveData.campBuildings ? Object.values(saveData.campBuildings).filter(b => b && b.unlocked && b.level > 0).length : 0;
+      const upgradeCost = Math.max(1, builtCount + 1);
+      const res = saveData.resources || {};
+      const canAfford = (res.wood || 0) >= upgradeCost && (res.stone || 0) >= upgradeCost;
+      const upgradeHTML = canUpgrade
+        ? `<div class="shrine-upgrade-box">
+            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;">UPGRADE ARTIFACT SHRINE</div>
+            <div style="color:#aaa;font-size:12px;margin:6px 0;">Unlock Slot ${shrineLevel+1} · Cost: ${upgradeCost} 🪵 Wood + ${upgradeCost} 🪨 Stone</div>
+            <div style="display:flex;gap:10px;margin:8px 0;justify-content:center;">
+              <span style="color:${(res.wood||0)>=upgradeCost?'#7fff7f':'#ff7f7f'};font-size:13px;">🪵 ${res.wood||0}/${upgradeCost}</span>
+              <span style="color:${(res.stone||0)>=upgradeCost?'#7fff7f':'#ff7f7f'};font-size:13px;">🪨 ${res.stone||0}/${upgradeCost}</span>
+            </div>
+            <button id="shrine-upgrade-btn" class="shrine-upgrade-btn" ${canAfford ? '' : 'disabled'}>
+              ${canAfford ? '🏛️ UPGRADE SHRINE' : '❌ Need Resources'}
+            </button>
+          </div>`
+        : `<div style="color:#00ffff;text-align:center;padding:12px;font-size:13px;font-family:Bangers,cursive;letter-spacing:2px;">◈ ALL 3 ARTIFACT SLOTS UNLOCKED ◈</div>`;
+
+      const modal = document.createElement('div');
+      modal.id = 'artifact-shrine-modal';
+      modal.style.cssText = [
+        'position:fixed','top:0','left:0','width:100%','height:100%',
+        'background:radial-gradient(ellipse at center,rgba(10,0,30,0.98) 0%,rgba(0,0,0,1) 100%)',
+        'z-index:200','overflow-y:auto','display:flex','flex-direction:column',
+        'align-items:center','padding:20px','box-sizing:border-box',
+        'font-family:Courier New,monospace'
+      ].join(';');
+
+      modal.innerHTML = `
+        <div style="max-width:680px;width:100%;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
+               border-bottom:1px solid rgba(0,255,255,0.3);padding-bottom:12px;">
+            <div>
+              <div style="color:#00ffff;font-family:Bangers,cursive;font-size:28px;letter-spacing:4px;
+                   text-shadow:0 0 20px rgba(0,255,255,0.8);">🏛️ THE ARTIFACT SHRINE</div>
+              <div style="color:#C9A227;font-size:12px;letter-spacing:2px;margin-top:4px;">
+                LEVEL ${shrineLevel} · ${unlockedSlots}/3 SLOTS ACTIVE</div>
+            </div>
+            <button id="shrine-back-btn" class="inv-back-btn">← Back</button>
+          </div>
+
+          <div style="color:#888;font-size:12px;margin-bottom:18px;line-height:1.6;
+               border:1px solid rgba(0,255,255,0.15);border-radius:8px;padding:12px;
+               background:rgba(0,255,255,0.03);">
+            <i>Artifacts provide massive passive stat boosts and only drop from Bosses or Void Expeditions.
+            Upgrade the Shrine to unlock additional slots.</i>
+          </div>
+
+          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;margin-bottom:12px;">
+            ◈ ARTIFACT SLOTS
+          </div>
+          <div class="shrine-slots-row">${slotHTML}</div>
+
+          ${upgradeHTML}
+
+          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;
+               margin-top:24px;margin-bottom:12px;">◈ ARTIFACT COLLECTION</div>
+          <div class="shrine-inv-list">${artifactInventoryHTML}</div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelector('#shrine-back-btn').onclick = () => {
+        modal.remove();
+        if (campScreen) campScreen.style.display = 'flex';
+      };
+
+      const upgradeBtn = modal.querySelector('#shrine-upgrade-btn');
+      if (upgradeBtn) {
+        upgradeBtn.onclick = () => {
+          if (!canAfford) return;
+          // Deduct resources
+          saveData.resources.wood  -= upgradeCost;
+          saveData.resources.stone -= upgradeCost;
+          // Upgrade shrine level
+          if (!saveData.campBuildings.shrine) saveData.campBuildings.shrine = { level: 0, maxLevel: 3, unlocked: true };
+          saveData.campBuildings.shrine.level = Math.min(3, (saveData.campBuildings.shrine.level || 0) + 1);
+          saveSaveData();
+          if (typeof showStatChange === 'function') showStatChange(`🏛️ Artifact Shrine upgraded to Level ${saveData.campBuildings.shrine.level}!`);
+          modal.remove();
+          showArtifactShrineUI();
+        };
+      }
+
+      // Global helpers for inline handlers
+      window._shrineUnequip = (slotIdx) => {
+        if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        saveData.equippedArtifacts[slotIdx] = null;
+        saveSaveData();
+        modal.remove();
+        showArtifactShrineUI();
+      };
+
+      window._shrineEquipArtifact = (artifactId, invIdx) => {
+        if (!saveData.equippedArtifacts) saveData.equippedArtifacts = [null, null, null];
+        // Prevent equipping the same artifact in multiple slots
+        if (saveData.equippedArtifacts.includes(artifactId)) {
+          if (typeof showStatChange === 'function') showStatChange('❌ This Artifact is already equipped! Remove it first.');
+          return;
+        }
+        // Find first open unlocked slot
+        const firstOpen = saveData.equippedArtifacts.findIndex((v, i) => i < unlockedSlots && !v);
+        if (firstOpen === -1) {
+          if (typeof showStatChange === 'function') showStatChange('❌ All unlocked slots are full! Upgrade the Shrine or remove an artifact.');
+          return;
+        }
+        saveData.equippedArtifacts[firstOpen] = artifactId;
+        saveSaveData();
+        if (typeof showStatChange === 'function') showStatChange(`✅ Artifact equipped to Slot ${firstOpen + 1}!`);
+        modal.remove();
+        showArtifactShrineUI();
+      };
+    }
+    window.showArtifactShrineUI = showArtifactShrineUI;
 
     // Companion skill tree data
     const COMPANION_SKILLS = {
@@ -3712,11 +4315,44 @@
         ? saveData.tutorialQuests.completedQuests.length : 0;
       const totalGold = saveData.totalGoldEarned || 0;
       const sp = saveData.skillPoints || 0;
+
+      // Account XP bar (uses GameAccount for rich data if available)
+      let xpBarHTML = '';
+      const acc = saveData.account;
+      if (acc && typeof acc.xp === 'number') {
+        const accLvl = acc.level || 1;
+        const MAX_LEVEL = 100;
+        const xpNeeded = accLvl * 80 + accLvl * accLvl * 8;
+        const xpPct = accLvl >= MAX_LEVEL ? 100 : Math.min(100, Math.floor((acc.xp / xpNeeded) * 100));
+        let rankTitle = '';
+        if (window.GameAccount && window.GameAccount.getCurrentTitle) {
+          rankTitle = window.GameAccount.getCurrentTitle(saveData) || '';
+        }
+        // Rank color from centralized GameAccount.getRankColor() — single source of truth
+        const rankColor = (window.GameAccount && window.GameAccount.getRankColor)
+          ? window.GameAccount.getRankColor(rankTitle)
+          : '#FFD700';
+        xpBarHTML = `
+          <div style="background:linear-gradient(135deg,rgba(0,0,20,0.9),rgba(10,0,40,0.95));border:2px solid ${rankColor};border-radius:12px;padding:14px 18px;margin-bottom:14px;box-shadow:0 0 18px ${rankColor}44;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-family:'Bangers',cursive;font-size:22px;color:${rankColor};letter-spacing:2px;text-shadow:0 0 10px ${rankColor}88;">⭐ LVL ${accLvl}</div>
+              ${rankTitle ? `<div style="font-family:'Bangers',cursive;font-size:14px;color:${rankColor};letter-spacing:1px;opacity:0.9;">${rankTitle}</div>` : ''}
+            </div>
+            <div style="background:rgba(0,0,0,0.5);border-radius:6px;height:14px;overflow:hidden;margin-bottom:5px;border:1px solid rgba(255,255,255,0.1);">
+              <div style="width:${xpPct}%;height:100%;background:linear-gradient(90deg,${rankColor}88,${rankColor});transition:width 0.6s ease;border-radius:6px;box-shadow:0 0 8px ${rankColor};"></div>
+            </div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.5);text-align:right;letter-spacing:1px;">
+              ${accLvl >= MAX_LEVEL ? 'MAX LEVEL' : acc.xp.toLocaleString() + ' / ' + xpNeeded.toLocaleString() + ' XP'}
+            </div>
+          </div>`;
+      }
+
       // Use live in-run playerStats when available, otherwise use defaults
       const ps = (window.GamePlayer && typeof window.GamePlayer.getDefaultPlayerStats === 'function')
         ? window.GamePlayer.getDefaultPlayerStats(20) : {};
       const live = (typeof playerStats !== 'undefined' && playerStats) ? playerStats : ps;
       container.innerHTML = `
+        ${xpBarHTML}
         <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px;">
           <div style="background:rgba(255,215,0,0.08);border:2px solid #FFD700;border-radius:10px;padding:8px 14px;text-align:center;min-width:80px;">
             <div style="font-family:'Bangers',cursive;font-size:26px;color:#FFD700;">${level}</div>
@@ -3939,6 +4575,7 @@
           },
           accountBuilding:     () => showAccountBuildingOverlay(),
           idleMenu:            () => showIdleSection(),
+          shrine:              () => showArtifactShrineUI(),
           codex:               () => {
             if (saveData.tutorialQuests && saveData.tutorialQuests.currentQuest === 'quest17_visitCodex') {
               progressTutorialQuest('quest17_visitCodex', true);

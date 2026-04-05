@@ -190,6 +190,15 @@ LeapingSlimeEnemy.prototype.spawn = function(x, z, waveLevel) {
   this._bobPhase     = Math.random() * Math.PI * 2;
   this._deathSlideVX = 0;
   this._deathSlideVZ = 0;
+  this._bulletHoleIndex = 0;
+  if (this._bulletHoles && this._bulletHoles.length) {
+    for (var bh = 0; bh < this._bulletHoles.length; bh++) {
+      if (this._bulletHoles[bh]) {
+        this._bulletHoles[bh].visible = false;
+        this._bulletHoles[bh].position.set(0, -10, 0);
+      }
+    }
+  }
 
   // Place mesh
   this.mesh.position.set(x, 0, z);

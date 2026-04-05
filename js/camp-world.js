@@ -47,6 +47,7 @@
     { id: 'prismReliquary',      x: -7,  z:-18,  label: 'Prism Reliquary',     icon: '💎' },
     { id: 'astralGateway',       x:  7,  z:-18,  label: 'Astral Gateway',      icon: '🌀' },
     { id: 'accountBuilding',     x:  4,  z:-15,  label: 'Profile & Records',   icon: '👤' },
+    { id: 'shrine',              x:  0,  z: -6,  label: 'The Artifact Shrine', icon: '🏛️' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -2057,6 +2058,7 @@
       case 'prestige':           return _buildPrestigeAltar(def);
       case 'prismReliquary':     return _buildPrismReliquary(def);
       case 'astralGateway':      return _buildAstralGateway(def);
+      case 'shrine':             return _buildArtifactShrine(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -3431,7 +3433,130 @@
     return grp;
   }
 
-  // ── Prestige Altar ─ glowing stone ring altar ────────────
+  // ── The Artifact Shrine ─ ancient stone temple with cyan/gold aura ──────────
+  function _buildArtifactShrine(def) {
+    const THREE = T();
+    const grp = new THREE.Group();
+    grp.position.set(def.x, 0, def.z);
+
+    // Stone base platform (dark obsidian-like)
+    const basePlatGeo = new THREE.CylinderGeometry(4.2, 4.5, 0.5, 16);
+    const baseMat = new THREE.MeshPhongMaterial({ color: 0x1a0a2e, emissive: 0x0a0015, shininess: 60 });
+    grp.add(_mesh(basePlatGeo, baseMat));
+
+    // Raised inner platform
+    const innerPlatGeo = new THREE.CylinderGeometry(3.0, 3.2, 0.7, 16);
+    grp.add(_mesh(innerPlatGeo, new THREE.MeshPhongMaterial({ color: 0x0d0824, emissive: 0x0a0020, shininess: 80 })));
+
+    // Four stone pillars at cardinal directions
+    const pillarMat = new THREE.MeshPhongMaterial({ color: 0x2a1545, emissive: 0x00ffff, emissiveIntensity: 0.08, shininess: 40 });
+    const pillarCapMat = new THREE.MeshPhongMaterial({ color: 0xC9A227, emissive: 0xC9A227, emissiveIntensity: 0.4, shininess: 120 });
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const r = 2.6;
+      const px = Math.cos(a) * r;
+      const pz = Math.sin(a) * r;
+      // Pillar shaft
+      const pillarGeo = new THREE.CylinderGeometry(0.22, 0.26, 3.5, 8);
+      const pillar = _mesh(pillarGeo, pillarMat);
+      pillar.position.set(px, 1.75 + 0.35, pz);
+      grp.add(pillar);
+      // Gold capital on top
+      const capGeo = new THREE.BoxGeometry(0.55, 0.3, 0.55);
+      const cap = _mesh(capGeo, pillarCapMat);
+      cap.position.set(px, 3.65, pz);
+      grp.add(cap);
+    }
+
+    // Central shrine pedestal
+    const pedestalGeo = new THREE.CylinderGeometry(0.55, 0.7, 2.2, 12);
+    const pedestalMat = new THREE.MeshPhongMaterial({ color: 0x1a0a2e, emissive: 0x6600cc, emissiveIntensity: 0.25, shininess: 80 });
+    grp.add(_mesh(pedestalGeo, pedestalMat));
+
+    // Artifact crystal orb on pedestal (the focal point)
+    const orbGeo = new THREE.IcosahedronGeometry(0.5, 2);
+    const orbMat = new THREE.MeshPhongMaterial({
+      color: 0x00ffff, emissive: 0x00ffff, emissiveIntensity: 0.8,
+      transparent: true, opacity: 0.75, shininess: 200
+    });
+    const orb = _mesh(orbGeo, orbMat);
+    orb.position.set(0, 2.5, 0);
+    grp.add(orb);
+
+    // Gold ring around orb
+    const orbRingGeo = new THREE.TorusGeometry(0.62, 0.06, 8, 32);
+    const orbRingMat = new THREE.MeshPhongMaterial({ color: 0xC9A227, emissive: 0xC9A227, emissiveIntensity: 0.6 });
+    const orbRing = _mesh(orbRingGeo, orbRingMat);
+    orbRing.position.set(0, 2.5, 0);
+    grp.add(orbRing);
+
+    // Outer decorative stone ring
+    const archRingGeo = new THREE.TorusGeometry(3.2, 0.18, 8, 48);
+    const archRingMat = new THREE.MeshPhongMaterial({ color: 0x3a1f5a, emissive: 0x8a2be2, emissiveIntensity: 0.3 });
+    const archRing = _mesh(archRingGeo, archRingMat);
+    archRing.position.set(0, 0.6, 0);
+    archRing.rotation.x = Math.PI / 2;
+    grp.add(archRing);
+
+    // Three artifact slot stones around the pedestal
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 - Math.PI / 2;
+      const r = 1.6;
+      const sx = Math.cos(a) * r;
+      const sz = Math.sin(a) * r;
+      const slotStoneGeo = new THREE.BoxGeometry(0.4, 0.6, 0.4);
+      const slotStoneMat = new THREE.MeshPhongMaterial({ color: 0x2a1545, emissive: 0xC9A227, emissiveIntensity: 0.2, shininess: 60 });
+      const slotStone = _mesh(slotStoneGeo, slotStoneMat);
+      slotStone.position.set(sx, 0.65, sz);
+      grp.add(slotStone);
+    }
+
+    // Cyan glow sprite above orb
+    const _glowC = document.createElement('canvas');
+    _glowC.width = 64; _glowC.height = 64;
+    const _gc = _glowC.getContext('2d');
+    const _rg = _gc.createRadialGradient(32, 32, 2, 32, 32, 32);
+    _rg.addColorStop(0, 'rgba(0,255,255,0.9)');
+    _rg.addColorStop(1, 'rgba(0,255,255,0)');
+    _gc.fillStyle = _rg;
+    _gc.fillRect(0, 0, 64, 64);
+    const shrineGlowTex = new THREE.CanvasTexture(_glowC);
+    const shrineGlowMat = new THREE.SpriteMaterial({
+      map: shrineGlowTex, color: 0x00ffff, transparent: true,
+      blending: THREE.AdditiveBlending, opacity: 0.7, depthWrite: false
+    });
+    const shrineGlow = new THREE.Sprite(shrineGlowMat);
+    shrineGlow.position.set(0, 2.5, 0);
+    shrineGlow.scale.set(5, 5, 1);
+    grp.add(shrineGlow);
+
+    // Gold accent glow
+    const goldGlowMat = new THREE.SpriteMaterial({
+      map: shrineGlowTex, color: 0xC9A227, transparent: true,
+      blending: THREE.AdditiveBlending, opacity: 0.4, depthWrite: false
+    });
+    const goldGlow = new THREE.Sprite(goldGlowMat);
+    goldGlow.position.set(0, 1.0, 0);
+    goldGlow.scale.set(10, 10, 1);
+    grp.add(goldGlow);
+
+    // Pulsing cyan/purple point lights
+    const shrineLight1 = new THREE.PointLight(0x00ffff, 3.5, 14, 2);
+    shrineLight1.position.set(0, 3.0, 0);
+    grp.add(shrineLight1);
+    const shrineLight2 = new THREE.PointLight(0xC9A227, 1.5, 8, 2);
+    shrineLight2.position.set(0, 1.0, 0);
+    grp.add(shrineLight2);
+    const shrineLight3 = new THREE.PointLight(0x8a2be2, 2.0, 10, 2);
+    shrineLight3.position.set(0, 0.5, 0);
+    grp.add(shrineLight3);
+    _alienLights.push({ light: shrineLight1, base: 3.5, phase: 0.5 });
+    _alienLights.push({ light: shrineLight2, base: 1.5, phase: 1.8 });
+    _alienLights.push({ light: shrineLight3, base: 2.0, phase: 3.1 });
+
+    _addNameSign(grp, def.label, 0, 5.2, 0);
+    return grp;
+  }
   function _buildPrestigeAltar(def) {
     const THREE = T();
     const grp = new THREE.Group();
@@ -5758,6 +5883,7 @@
         'quest_craftAllTools': 'forge',
         'quest_firstBlood': 'questMission',
         'firstRunDeath': null,
+        'quest_shrineCalibrate': 'questMission',
       };
       const targetId = cq ? questToBuilding[cq] : null;
       if (targetId) {

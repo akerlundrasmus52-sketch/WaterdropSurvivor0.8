@@ -4,10 +4,11 @@
 
 // ── ARPG Deep Mechanics: LVL UP Rarities, Focus Path, Boss Chests ───────────
 
-// Rarity table: Common(White)=50%, Rare(Blue)=30%, Epic(Purple)=15%, Legendary(Gold)=4%, Mythic(Red)=1%
-// Thresholds: roll > 0.50 = Common, > 0.20 = Rare, > 0.05 = Epic, > 0.01 = Legendary, else = Mythic
+// Rarity table: Common(White)=45%, Uncommon(Green)=25%, Rare(Blue)=18%, Epic(Purple)=8%, Legendary(Gold)=3%, Mythic(Red)=1%
+// Thresholds: roll > 0.55 = Common, > 0.30 = Uncommon, > 0.12 = Rare, > 0.04 = Epic, > 0.01 = Legendary, else = Mythic
 const UPGRADE_RARITIES = [
   { name: 'common',    label: 'COMMON',    cssClass: 'rarity-common',    scale: 1.0, color: '#ffffff' },
+  { name: 'uncommon',  label: 'UNCOMMON',  cssClass: 'rarity-uncommon',  scale: 1.3, color: '#55cc55' },
   { name: 'rare',      label: 'RARE',      cssClass: 'rarity-rare',      scale: 1.5, color: '#00aaff' },
   { name: 'epic',      label: 'EPIC',      cssClass: 'rarity-epic',      scale: 2.0, color: '#aa00ff' },
   { name: 'legendary', label: 'LEGENDARY', cssClass: 'rarity-legendary', scale: 3.0, color: '#ffd700' },
@@ -25,11 +26,12 @@ const BOSS_CHEST_GOLD_RANGE = 101; // 0–100 random bonus on top of minimum
 
 function rollUpgradeRarity() {
   const r = Math.random();
-  if (r > 0.50) return UPGRADE_RARITIES[0]; // Common   (50%)
-  if (r > 0.20) return UPGRADE_RARITIES[1]; // Rare     (30%)
-  if (r > 0.05) return UPGRADE_RARITIES[2]; // Epic     (15%)
-  if (r > 0.01) return UPGRADE_RARITIES[3]; // Legendary (4%)
-  return UPGRADE_RARITIES[4];               // Mythic    (1%)
+  if (r > 0.55) return UPGRADE_RARITIES[0]; // Common    (45%)
+  if (r > 0.30) return UPGRADE_RARITIES[1]; // Uncommon  (25%)
+  if (r > 0.12) return UPGRADE_RARITIES[2]; // Rare      (18%)
+  if (r > 0.04) return UPGRADE_RARITIES[3]; // Epic       (8%)
+  if (r > 0.01) return UPGRADE_RARITIES[4]; // Legendary  (3%)
+  return UPGRADE_RARITIES[5];               // Mythic      (1%)
 }
 
 // Returns a copy of a LVL UP with rarity applied — scaled stats and updated desc/apply
@@ -365,6 +367,82 @@ window.spawnBossChest = function(x, z) {
 };
 
 // ── End ARPG Deep Mechanics preamble ─────────────────────────────────────────
+
+    // ─── Card Shard Explosion ─────────────────────────────────────────────────
+    // Shatters a card element into many flying pieces that blast out in all directions.
+    function _explodeCardShards(cardEl) {
+      if (!cardEl) return;
+      const rect = cardEl.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const SHARD_COUNT = 28;
+
+      // Get the card's rarity color for shard tinting
+      const rarityClass = Array.from(cardEl.classList).find(c => c.startsWith('rarity-')) || '';
+      const rarityColors = {
+        'rarity-common':    '#cccccc',
+        'rarity-uncommon':  '#44cc44',
+        'rarity-rare':      '#44aaff',
+        'rarity-epic':      '#aa44ff',
+        'rarity-legendary': '#ffd700',
+        'rarity-mythical':  '#ff3300',
+      };
+      const shardColor = rarityColors[rarityClass] || '#cccccc';
+
+      for (let i = 0; i < SHARD_COUNT; i++) {
+        const shard = document.createElement('div');
+        const angle = (i / SHARD_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+        const speed = 250 + Math.random() * 550;
+        const size = 6 + Math.random() * 20;
+        const aspectW = 0.4 + Math.random() * 2.2;
+        const rot0 = Math.random() * 360;
+        const rotSpeed = (Math.random() - 0.5) * 900;
+
+        shard.style.cssText = [
+          'position:fixed',
+          `left:${cx}px`,
+          `top:${cy}px`,
+          `width:${size * aspectW}px`,
+          `height:${size}px`,
+          `background:${shardColor}`,
+          `opacity:1`,
+          'pointer-events:none',
+          `z-index:10500`,
+          `transform:translate(-50%,-50%) rotate(${rot0}deg)`,
+          `border-radius:${Math.random() < 0.4 ? '2px' : '0px'}`,
+          `box-shadow:0 0 6px ${shardColor}`,
+          'will-change:transform,opacity',
+        ].join(';');
+        document.body.appendChild(shard);
+
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        let curX = cx;
+        let curY = cy;
+        let curRot = rot0;
+        let opacity = 1;
+        const startTime = performance.now();
+        const duration = 600 + Math.random() * 400;
+
+        (function animate(sEl, _vx, _vy, _vr, _dur) {
+          const elapsed = performance.now() - startTime;
+          const t = elapsed / _dur;
+          if (t >= 1) { sEl.remove(); return; }
+          const eased = 1 - t * t; // ease-out quad
+          // Use elapsed-based position for frame-rate independence
+          const tSec = elapsed / 1000;
+          curX = cx + _vx * tSec * eased;
+          curY = cy + _vy * tSec * eased + 100 * tSec * tSec; // gravity term
+          curRot = rot0 + _vr * tSec;
+          opacity = Math.max(0, 1 - t * 1.2);
+          sEl.style.left = curX + 'px';
+          sEl.style.top = curY + 'px';
+          sEl.style.transform = `translate(-50%,-50%) rotate(${curRot}deg)`;
+          sEl.style.opacity = opacity;
+          requestAnimationFrame(function() { animate(sEl, _vx, _vy, _vr, _dur); });
+        })(shard, vx, vy, rotSpeed, duration);
+      }
+    }
 
     function showUpgradeModal(isBonusRound = false, focusPath = null) {
       // Bail out if the game has ended; prevents stale setTimeout from showing modal post-death
@@ -1529,9 +1607,25 @@ window.spawnBossChest = function(x, z) {
         card.style.boxShadow   = `0 0 20px ${cardColor}40`;
         if (isMythic) card.style.overflow = 'visible';
 
+        // ── Card 3D flip structure: back face + front face ──
+        const cardInner = document.createElement('div');
+        cardInner.className = 'card-inner';
+
+        // Back face (shown during entry, before flip)
+        const cardBackFace = document.createElement('div');
+        cardBackFace.className = 'card-face card-back-face';
+        const backLogo = document.createElement('div');
+        backLogo.className = 'card-back-logo';
+        backLogo.textContent = '💧';
+        cardBackFace.appendChild(backLogo);
+
+        // Front face (revealed after flip)
+        const cardFront = document.createElement('div');
+        cardFront.className = 'card-face card-front';
+
         // LVL UP cards: rarity header + icon + title + desc (playing-card layout)
         const iconHtml = u.icon ? `<span class="upgrade-icon">${u.icon}</span>` : '';
-        card.innerHTML = `
+        cardFront.innerHTML = `
           <div class="upgrade-rarity-header" style="color: ${cardColor}; text-shadow: 0 0 8px ${cardColor};">${cardRarityLabel}</div>
           <div style="text-align: center;">${iconHtml}<div class="upgrade-title">${u.title}</div></div>
           <div class="upgrade-desc">${u.desc}</div>`;
@@ -1543,22 +1637,41 @@ window.spawnBossChest = function(x, z) {
             pEl.className = 'mythic-particle';
             pEl.style.setProperty('--mp-x', `${Math.random() * 100}%`);
             pEl.style.setProperty('--mp-delay', `${(_p * 0.28).toFixed(2)}s`);
-            card.appendChild(pEl);
+            cardFront.appendChild(pEl);
           }
         }
-        
-        // Add dramatic entrance animation - sequential reveal with rotation (one by one)
+
+        cardInner.appendChild(cardBackFace);
+        cardInner.appendChild(cardFront);
+        card.appendChild(cardInner);
+
+        // ── 6 different entry animations (randomly assigned) ──
+        const _cardEntryAnims = [
+          'cardEnterFromTop',    // 0: drops from top
+          'cardEnterFromLeft',   // 1: rockets from left
+          'cardEnterFromRight',  // 2: blasts from right
+          'cardEnterFromBottom', // 3: erupts from bottom
+          'cardEnterZoomPop',    // 4: pops from center
+          'cardEnterSpiral',     // 5: diagonal spiral
+        ];
+        const _animName = _cardEntryAnims[index % _cardEntryAnims.length];
+        const _animDur = 0.65;
+        // Stagger: 0.3s wall + 0.22s between each card
+        const cardDelay = 0.3 + (index * 0.22);
         card.style.opacity = '0';
-        card.style.transform = 'scale(0.2) rotateY(90deg)';
-        // Stagger delay: 0.3s for wall to appear, then 0.15s between each card
-        const cardDelay = 0.3 + (index * 0.15);
-        card.style.animation = `cardRevealRotate 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) ${cardDelay}s forwards`;
-        // Clear the inline animation after the entrance completes so CSS rarity-glow animations take over
+        card.style.pointerEvents = 'none'; // Disable clicks until flipped
+        card.style.animation = `${_animName} ${_animDur}s cubic-bezier(0.34, 1.45, 0.64, 1) ${cardDelay}s both`;
+
+        // After entry animation completes, flash the thud effect
         card.addEventListener('animationend', (e) => {
-          if (e.animationName && e.animationName === 'cardRevealRotate') {
+          const entryAnims = new Set(_cardEntryAnims);
+          if (e.animationName && entryAnims.has(e.animationName)) {
             card.style.animation = '';
             card.style.opacity = '1';
             card.style.transform = '';
+            // Thud flash
+            card.classList.add('card-thud-flash');
+            setTimeout(() => card.classList.remove('card-thud-flash'), 380);
           }
         }, { once: true });
         
@@ -1577,8 +1690,13 @@ window.spawnBossChest = function(x, z) {
         borderFlowEl.className = 'border-flow';
         card.appendChild(borderFlowEl);
 
+        // Green selection edge (shown on card choice)
+        const greenEdgeEl = document.createElement('div');
+        greenEdgeEl.className = 'card-green-edge';
+        card.appendChild(greenEdgeEl);
+
         // Melting drip drops hanging from the bottom border
-        const _rarityDripCounts = { common: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
+        const _rarityDripCounts = { common: 2, uncommon: 2, rare: 3, epic: 4, legendary: 5, mythic: 6 };
         const _dripCount = rarityInfo ? (_rarityDripCounts[rarityInfo.name] || 2) : 2;
         for (let _d = 0; _d < _dripCount; _d++) {
           const dripEl = document.createElement('div');
@@ -1605,11 +1723,13 @@ window.spawnBossChest = function(x, z) {
         }
 
         // Shared "apply and close" logic called when hold completes
+        let _isApplying = false;
         const applyUpgradeAndClose = () => {
+          if (_isApplying) return;
+          _isApplying = true;
           const allCards = list.querySelectorAll('.upgrade-card');
           allCards.forEach(c => {
             c.style.pointerEvents = 'none';
-            c.style.opacity = '0.5';
             c.classList.remove('holding');
           });
 
@@ -1619,6 +1739,7 @@ window.spawnBossChest = function(x, z) {
           try {
             const rarityFlashColors = {
               'rarity-common':    'rgba(255,255,255,0.25)',
+              'rarity-uncommon':  'rgba(85,204,85,0.30)',
               'rarity-rare':      'rgba(0,170,255,0.35)',
               'rarity-epic':      'rgba(170,0,255,0.40)',
               'rarity-legendary': 'rgba(255,215,0,0.45)',
@@ -1626,6 +1747,7 @@ window.spawnBossChest = function(x, z) {
             };
             const rarityMeshColors = {
               'rarity-common':    0xFFFFFF,
+              'rarity-uncommon':  0x55CC55,
               'rarity-rare':      0x00AAFF,
               'rarity-epic':      0xAA00FF,
               'rarity-legendary': 0xFFD700,
@@ -1649,78 +1771,112 @@ window.spawnBossChest = function(x, z) {
             }
           } catch (_ve) { /* non-critical visual — ignore */ }
 
-          // Phase 4: Wrap in try-catch to ensure modal always closes
-          try {
-            u.apply();
-            // Debug: log LVL UP applied (class/perk upgrades logged verbosely)
-            if (window.GameDebug) window.GameDebug.onUpgradeApplied(u.id, playerStats);
-          } catch (error) {
-            console.error('Error applying LVL UP:', error);
-            if (window.GameDebug) window.GameDebug.oshot('upgrade_err_' + (u.id || 'unk'), 'LVL UP apply error ' + (u.id || '') + ': ' + error.message, error.stack);
+          // ── Phase 1: Green glow edge sweeps around chosen card ──
+          const greenEdge = card.querySelector('.card-green-edge');
+          if (greenEdge) {
+            greenEdge.classList.add('animating');
           }
 
-          // Always close modal
-          modal.style.display = 'none';
-          modal.querySelector('h2').innerText = 'LEVEL UP!';
-          modal.querySelector('h2').style.fontSize = '24px';
-          modal.querySelector('h2').style.color = '';
-          // Hide skip button and clear its timeout
-          const skipBtn = document.getElementById('levelup-skip-btn');
-          if (skipBtn) skipBtn.style.display = 'none';
-          clearTimeout(window.levelupSkipTimeoutId);
-
-          // Restore camera position and projection after level-up
-          if (savedCameraPosition) {
-            camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
-            camera.left = savedCameraPosition.left;
-            camera.right = savedCameraPosition.right;
-            camera.top = savedCameraPosition.top;
-            camera.bottom = savedCameraPosition.bottom;
-            camera.updateProjectionMatrix();
-            savedCameraPosition = null; // Clear after restoration
-          }
-
-          // Check for Double Upgrade Chance bonus (only on the first pick, not on bonus rounds)
-          if (!isBonusRound && playerStats.doubleUpgradeChance > 0) {
-            const bonusChance = Math.min(1.0, playerStats.doubleUpgradeChance);
-            if (Math.random() < bonusChance) {
-              // Bonus round: reopen modal with a new set of choices without unpausing
-              showUpgradeModal(true);
-              // Resume combo timer
-              if (comboState.pausedAt) {
-                const pauseDuration = Date.now() - comboState.pausedAt;
-                comboState.lastKillTime += pauseDuration;
-                comboState.pausedAt = null;
-              }
-              lastHudUpdateMs = 0; // Force HUD refresh
-              updateHUD();
-              return;
-            }
-          }
-
-          forceGameUnpause();
-
-          // Resume combo timer after level-up
-          if (comboState.pausedAt) {
-            const pauseDuration = Date.now() - comboState.pausedAt;
-            comboState.lastKillTime += pauseDuration;
-            comboState.pausedAt = null;
-          }
-
-          lastHudUpdateMs = 0; // Force HUD refresh after level-up
-          updateHUD();
-
-          // Re-enable pointer events after closing (for next level up)
+          // Phase 2: After edge animation (1.0s), zoom card up
           setTimeout(() => {
+            // Zoom chosen card up
+            card.style.transition = 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s';
+            card.style.transform = 'scale(1.18) translateY(-18px)';
+            card.style.zIndex = '200';
+
+            // Dim and suck other cards + modal bg into center hole
             allCards.forEach(c => {
-              c.style.pointerEvents = 'auto';
-              c.style.opacity = '1';
-              c.dataset.selected = '';
-              c.style.outline = 'none';
-              c.style.boxShadow = '';
-              c.style.transform = 'scale(1)';
+              if (c !== card) {
+                c.style.transition = 'transform 0.4s ease-in, opacity 0.4s ease-in';
+                c.style.transform = 'scale(0.2)';
+                c.style.opacity = '0';
+              }
             });
-          }, 500);
+            // Suck the modal background out
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+              modalContent.style.transition = 'transform 0.5s ease-in, opacity 0.45s';
+              modalContent.style.transform = 'translate(-50%,-50%) scale(0.05)';
+              modalContent.style.opacity = '0';
+            }
+
+            // Phase 3: After zoom (0.5s), apply the upgrade and do shard explosion
+            setTimeout(() => {
+              // Apply upgrade
+              try {
+                u.apply();
+                if (window.GameDebug) window.GameDebug.onUpgradeApplied(u.id, playerStats);
+              } catch (error) {
+                console.error('Error applying LVL UP:', error);
+              }
+
+              // Shard explosion of chosen card
+              _explodeCardShards(card);
+
+              // Hide chosen card after shards launched
+              setTimeout(() => {
+                card.style.opacity = '0';
+                card.style.pointerEvents = 'none';
+              }, 80);
+
+              // Wait 0.2s after shards, then close everything
+              setTimeout(() => {
+                // Always close modal
+                modal.style.display = 'none';
+                modal.style.transform = '';
+                modal.style.opacity = '';
+                if (modal.querySelector('.modal-content')) {
+                  modal.querySelector('.modal-content').style.transform = '';
+                  modal.querySelector('.modal-content').style.opacity = '';
+                }
+                modal.querySelector('h2').innerText = 'LEVEL UP!';
+                modal.querySelector('h2').style.fontSize = '24px';
+                modal.querySelector('h2').style.color = '';
+                const skipBtn = document.getElementById('levelup-skip-btn');
+                if (skipBtn) skipBtn.style.display = 'none';
+                clearTimeout(window.levelupSkipTimeoutId);
+
+                // Restore camera position and projection after level-up
+                if (savedCameraPosition) {
+                  camera.position.set(savedCameraPosition.x, savedCameraPosition.y, savedCameraPosition.z);
+                  camera.left = savedCameraPosition.left;
+                  camera.right = savedCameraPosition.right;
+                  camera.top = savedCameraPosition.top;
+                  camera.bottom = savedCameraPosition.bottom;
+                  camera.updateProjectionMatrix();
+                  savedCameraPosition = null; // Clear after restoration
+                }
+
+                // Check for Double Upgrade Chance bonus (only on the first pick, not on bonus rounds)
+                if (!isBonusRound && playerStats.doubleUpgradeChance > 0) {
+                  const bonusChance = Math.min(1.0, playerStats.doubleUpgradeChance);
+                  if (Math.random() < bonusChance) {
+                    showUpgradeModal(true);
+                    if (comboState.pausedAt) {
+                      const pauseDuration = Date.now() - comboState.pausedAt;
+                      comboState.lastKillTime += pauseDuration;
+                      comboState.pausedAt = null;
+                    }
+                    lastHudUpdateMs = 0;
+                    updateHUD();
+                    return;
+                  }
+                }
+
+                forceGameUnpause();
+
+                // Resume combo timer after level-up
+                if (comboState.pausedAt) {
+                  const pauseDuration = Date.now() - comboState.pausedAt;
+                  comboState.lastKillTime += pauseDuration;
+                  comboState.pausedAt = null;
+                }
+
+                lastHudUpdateMs = 0; // Force HUD refresh after level-up
+                updateHUD();
+              }, 200); // 0.2s after shards
+            }, 350); // shard explosion duration
+          }, 1100); // 1.0s green edge + 0.1s zoom
         };
 
         let holdTimer = null;
@@ -1808,6 +1964,27 @@ window.spawnBossChest = function(x, z) {
       void modal.offsetHeight;
       modal.classList.add('lvl-entering');
       setTimeout(function() { modal.classList.remove('lvl-entering'); }, 700);
+
+      // ── After all cards have entered, flip them face-up one by one ──
+      const _numCards = choices.length;
+      // Time for last card to land: 0.3s wall + (n-1)*0.22s stagger + 0.65s anim
+      const _allEnteredMs = Math.round((0.3 + (_numCards - 1) * 0.22 + 0.65) * 1000) + 60;
+      const _allCards = list.querySelectorAll('.upgrade-card');
+      setTimeout(function() {
+        for (let _fi = 0; _fi < _allCards.length; _fi++) {
+          (function(_idx, _c) {
+            setTimeout(function() {
+              const _ci = _c.querySelector('.card-inner');
+              if (_ci) {
+                _ci.style.transition = 'transform 0.52s cubic-bezier(0.34, 1.45, 0.64, 1)';
+                _c.classList.add('card-flipped');
+              }
+              // Enable interaction only after flip
+              setTimeout(function() { _c.style.pointerEvents = 'auto'; }, 540);
+            }, _idx * 160);
+          })(_fi, _allCards[_fi]);
+        }
+      }, _allEnteredMs);
 
       // --- Dopamine level-up FX: time dilation, camera zoom, chromatic aberration ---
       if (window.DopamineSystem && window.DopamineSystem.LevelUpFX) {

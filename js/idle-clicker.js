@@ -8,11 +8,15 @@ var CLICKER_CONFIG = {
   BASE_CLICK_GOLD: 1,
   BASE_CLICK_ESSENCE: 0.1,
   COMBO_WINDOW_MS: 500,
-  COMBO_MAX: 20,
+  COMBO_MAX: 40,
   COMBO_MULTIPLIER_PER_STACK: 0.1,
+  COMBO_MEGA_THRESHOLD: 15,
+  COMBO_MEGA_BONUS: 0.04,
   CRIT_BASE_CHANCE: 0.05,
   CRIT_MIN_MULT: 2,
   CRIT_MAX_MULT: 5,
+  CRIT_STREAK_BONUS: 0.02,
+  CRIT_STREAK_MAX: 0.25,
   CLICK_POWER_TIERS: [
     { level: 1, goldMult: 2, cost: 50 },
     { level: 2, goldMult: 2, cost: 150 },
@@ -26,7 +30,8 @@ var CLICKER_CONFIG = {
     CPS_PER_LEVEL: 0.5,
     BASE_COST: 200,
     COST_SCALE: 2.2
-  }
+  },
+  DRONE_VISUALS: { orbitRadius: 38, maxDrones: 6 }
 };
 
 function getClickerDefaults() {
@@ -37,6 +42,7 @@ function getClickerDefaults() {
     totalClicks: 0,
     totalEssenceEarned: 0,
     combo: 0,
+    critStreak: 0,
     lastClickTime: 0
   };
 }
@@ -78,16 +84,23 @@ function processClick(saveData, ascensionBonuses) {
   clicker.lastClickTime = now;
 
   var comboMult = 1 + (clicker.combo * CLICKER_CONFIG.COMBO_MULTIPLIER_PER_STACK);
+  if (clicker.combo >= CLICKER_CONFIG.COMBO_MEGA_THRESHOLD) {
+    comboMult += (clicker.combo - CLICKER_CONFIG.COMBO_MEGA_THRESHOLD + 1) * CLICKER_CONFIG.COMBO_MEGA_BONUS;
+  }
   var powerMult = getClickPower(clicker);
   var clickBonus = bonuses.clickPowerBonus || 1;
 
   var critChance = CLICKER_CONFIG.CRIT_BASE_CHANCE + (bonuses.critChanceBonus || 0);
+  critChance += Math.min(clicker.critStreak * CLICKER_CONFIG.CRIT_STREAK_BONUS, CLICKER_CONFIG.CRIT_STREAK_MAX);
   var isCrit = Math.random() < critChance;
   var critMult = 1;
   if (isCrit) {
     critMult = CLICKER_CONFIG.CRIT_MIN_MULT +
       Math.random() * (CLICKER_CONFIG.CRIT_MAX_MULT - CLICKER_CONFIG.CRIT_MIN_MULT);
     critMult = Math.round(critMult * 10) / 10;
+    clicker.critStreak = Math.min(clicker.critStreak + 1, Math.ceil(CLICKER_CONFIG.CRIT_STREAK_MAX / CLICKER_CONFIG.CRIT_STREAK_BONUS));
+  } else {
+    clicker.critStreak = 0;
   }
 
   var goldEarned = Math.floor(
@@ -108,7 +121,8 @@ function processClick(saveData, ascensionBonuses) {
     isCrit: isCrit,
     critMult: isCrit ? critMult : null,
     combo: clicker.combo,
-    comboMult: comboMult
+    comboMult: comboMult,
+    critStreak: clicker.critStreak
   };
 }
 

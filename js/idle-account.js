@@ -1,31 +1,31 @@
 // idle-account.js — Advanced account system with XP from everything
 window.GameAccount = (function () {
   var MILESTONES = [
-    { level: 1,   title: 'Puddle',              border: null },
-    { level: 3,   title: 'Stream',              border: null },
-    { level: 5,   title: 'Adventurer',          border: null },
-    { level: 8,   title: 'Wanderer',            border: 'Bronze' },
-    { level: 10,  title: 'Explorer',            border: 'Bronze' },
-    { level: 13,  title: 'Survivor',            border: null },
-    { level: 16,  title: 'Pathfinder',          border: null },
-    { level: 20,  title: 'Warrior',             border: 'Silver' },
-    { level: 25,  title: 'Skilled',             border: 'Silver' },
-    { level: 30,  title: 'Slayer',              border: null },
-    { level: 35,  title: 'Champion',            border: null },
-    { level: 40,  title: 'Veteran',             border: 'Gold' },
-    { level: 45,  title: 'Elite',               border: 'Gold' },
-    { level: 50,  title: 'Guardian',            border: null },
-    { level: 55,  title: 'Warden',              border: null },
-    { level: 60,  title: 'Expert',              border: 'Platinum' },
-    { level: 65,  title: 'Conqueror',           border: 'Platinum' },
-    { level: 70,  title: 'Hero',                border: null },
-    { level: 75,  title: 'Titan',               border: null },
-    { level: 80,  title: 'Master',              border: 'Diamond' },
-    { level: 85,  title: 'Grandmaster',         border: 'Diamond' },
-    { level: 88,  title: 'Mythic',              border: null },
-    { level: 92,  title: 'Ascendant',           border: null },
-    { level: 96,  title: 'Waterdrop Survivor',  border: 'Prismatic' },
-    { level: 100, title: 'H2O',                 border: 'Prismatic' }
+    { level: 1,   title: 'Initiate',             border: null },
+    { level: 3,   title: 'Neophyte',             border: null },
+    { level: 5,   title: 'Awakened',             border: null },
+    { level: 8,   title: 'Seeker',               border: 'Bronze' },
+    { level: 10,  title: 'Acolyte of Enki',      border: 'Bronze' },
+    { level: 13,  title: 'Watcher',              border: null },
+    { level: 16,  title: 'Shard Bearer',         border: null },
+    { level: 20,  title: 'Nephilim',             border: 'Silver' },
+    { level: 25,  title: 'Bloodguard',           border: 'Silver' },
+    { level: 30,  title: 'Eye of Anu',           border: null },
+    { level: 35,  title: 'Starcaller',           border: null },
+    { level: 40,  title: 'Marduk\'s Blade',      border: 'Gold' },
+    { level: 45,  title: 'Celestial Vanguard',   border: 'Gold' },
+    { level: 50,  title: 'Annunaki Champion',    border: null },
+    { level: 55,  title: 'Warden of Nibiru',     border: null },
+    { level: 60,  title: 'Keeper of Tablets',    border: 'Platinum' },
+    { level: 65,  title: 'Stargate Guardian',    border: 'Platinum' },
+    { level: 70,  title: 'Sovereign of Eridu',   border: null },
+    { level: 75,  title: 'Titan of the Abyss',   border: null },
+    { level: 80,  title: 'High Priest of Enlil',  border: 'Diamond' },
+    { level: 85,  title: 'Grandmaster Annunaki', border: 'Diamond' },
+    { level: 88,  title: 'Anunnaki Archon',      border: null },
+    { level: 92,  title: 'Ascendant God-King',   border: null },
+    { level: 96,  title: 'Waterdrop Survivor',   border: 'Prismatic' },
+    { level: 100, title: 'H2O — The Eternal',    border: 'Prismatic' }
   ];
 
   var MAX_LEVEL = 100;
@@ -221,6 +221,26 @@ window.GameAccount = (function () {
       levelUpRewards.push({ level: newLevel, stat: randomStat });
     }
     return { leveledUp: leveledUp, newLevel: newLevel, rewards: levelUpRewards };
+  }
+
+  // Centralized Annunaki rank → hex color map.  Consumed by both the level-up curtain in
+  // quest-system.js and the Account XP bar in the Profile building overlay.
+  var RANK_COLORS = {
+    Initiate: '#88aacc', Neophyte: '#88aacc', Awakened: '#55cc55',
+    Seeker: '#55cc55', 'Acolyte of Enki': '#44aaff',
+    Watcher: '#44aaff', 'Shard Bearer': '#44aaff', Nephilim: '#6644cc',
+    Bloodguard: '#6644cc', 'Eye of Anu': '#aa44ff', Starcaller: '#aa44ff',
+    'Marduk\'s Blade': '#ffaa00', 'Celestial Vanguard': '#ffaa00',
+    'Annunaki Champion': '#ffaa00', 'Warden of Nibiru': '#ffd700',
+    'Keeper of Tablets': '#ffd700', 'Stargate Guardian': '#ffd700',
+    'Sovereign of Eridu': '#ffd700', 'Titan of the Abyss': '#ffd700',
+    'High Priest of Enlil': '#88eeff', 'Grandmaster Annunaki': '#88eeff',
+    'Anunnaki Archon': '#ff4444', 'Ascendant God-King': '#ff4444',
+    'Waterdrop Survivor': '#ff88ff', 'H2O — The Eternal': '#ff88ff'
+  };
+
+  function getRankColor(title) {
+    return RANK_COLORS[title] || '#FFD700';
   }
 
   function getCurrentTitle(saveData) {
@@ -536,6 +556,7 @@ window.GameAccount = (function () {
     getCurrentTitle: getCurrentTitle,
     getCurrentBorder: getCurrentBorder,
     getMilestones: getMilestones,
+    getRankColor: getRankColor,
     setProfileName: setProfileName,
     setProfileIcon: setProfileIcon,
     renderAccountPanel: renderAccountPanel,

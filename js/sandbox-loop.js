@@ -4756,6 +4756,9 @@
   // Pre-allocated camera follow target (avoids new Vector3 every frame)
   const _camTarget  = new THREE.Vector3();
 
+  // Input initialization guard — prevents double registration across game resets
+  let _inputInitialized = false;
+
   // Named event handlers for proper cleanup (prevents memory leaks)
   function _onKeyDown(e) {
     _keysDown[e.code] = true;
@@ -4785,6 +4788,11 @@
   }
 
   function _initInput() {
+    // Guard against double registration — listeners should only be attached once
+    // per page lifetime, even if initialization is accidentally re-entered.
+    if (_inputInitialized) return;
+    _inputInitialized = true;
+
     // Add event listeners for keyboard and mouse
     document.addEventListener('keydown', _onKeyDown);
     document.addEventListener('keyup', _onKeyUp);
@@ -4802,6 +4810,8 @@
 
   // PERFORMANCE FIX: Cleanup event listeners to prevent memory leaks across game resets
   function _cleanupInput() {
+    if (!_inputInitialized) return; // Nothing to clean up
+
     document.removeEventListener('keydown', _onKeyDown);
     document.removeEventListener('keyup', _onKeyUp);
     document.removeEventListener('mousemove', _onMouseMove);
@@ -4813,6 +4823,8 @@
       jZone.removeEventListener('touchend', _onTouchEnd);
       jZone.removeEventListener('touchcancel', _onTouchEnd);
     }
+
+    _inputInitialized = false; // Allow re-initialization after cleanup
   }
 
   function _onTouchStart(e) {

@@ -165,6 +165,10 @@
         if (currentQuest.id === 'quest_pushingLimits' && saveData.tutorialQuests.firstBossDefeated) {
           progressTutorialQuest('quest_pushingLimits', true);
         }
+        // Artifact Shrine arc: quest_shrineCalibrate = survive 3 minutes in one run
+        if (currentQuest.id === 'quest_shrineCalibrate' && survivalTime >= 180) {
+          progressTutorialQuest('quest_shrineCalibrate', true);
+        }
 
         // === Legacy quest checks (backward compatibility) ===
         if (currentQuest.id === 'quest4_kill10' && saveData.tutorialQuests.killsThisRun >= 10) {

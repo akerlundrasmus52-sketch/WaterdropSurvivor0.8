@@ -681,7 +681,8 @@ _dropIM.instanceColor.needsUpdate  = true;
 
 function _buildMistPool() {
 var geo = new THREE.SphereGeometry(1.0, 6, 4);
-var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, vertexColors: true });
+var mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, vertexColors: true, side: THREE.DoubleSide });
+mat.blending = THREE.AdditiveBlending;
 
 _mistIM = new THREE.InstancedMesh(geo, mat, CFG.MIST_COUNT);
 _mistIM.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -966,8 +967,9 @@ _updateStream(_streams[i], dt);
 }
 
 // ── Update per-enemy wounds (dripping) ───
-_goreMap.forEach(function(gs) {
-if (!gs.alive) return;
+for (var _gsEntry of _goreMap.values()) {
+var gs = _gsEntry;
+if (!gs.alive) continue;
 var col = ENEMY_BLOOD[gs.type] || ENEMY_BLOOD.default;
 var ex = gs.enemy.mesh ? gs.enemy.mesh.position.x : 0;
 var ey = gs.enemy.mesh ? gs.enemy.mesh.position.y : 0;
@@ -977,7 +979,7 @@ var evz = gs.enemy.velocity ? gs.enemy.velocity.z : 0;
 for (var j = 0; j < gs.wounds.length; j++) {
 _updateWound(gs.wounds[j], dt, ex, ey, ez, evx, evz, col);
 }
-});
+}
 
 // ── Fade decals ──────────────────────────
 // Throttle: only check 10 decals per frame to save CPU.
@@ -1022,25 +1024,36 @@ function _updateDrop(d, dt, im, isMist) {
 d.life -= dt;
 if (d.life <= 0) { _killDrop(d, im); return; }
 
+var misty = isMist || d.isMist;
+
 if (d.onGround) {
-// Settled: slowly spread as puddle, fade near end
-d.r = Math.min(d.r + dt * 0.008, 0.025);
-if (d.life < 2.5) {
-var a = d.life / 2.5;
-_m4.makeScale(d.r * 5 * a, 0.04 * a, d.r * 5 * a);
-_m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
-im.setMatrixAt(d.idx, _m4);
-}
-return;
+  if (misty) {
+    // Mist dissipates into a hazy puddle instead of sitting as a solid decal
+    d.life = Math.min(d.life, 0.3);
+    var ma = Math.max(0.15, d.life / d.maxLife);
+    _m4.makeScale(d.r * 3 * ma, 0.02 * ma, d.r * 3 * ma);
+    _m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
+    im.setMatrixAt(d.idx, _m4);
+    return;
+  }
+  // Settled: slowly spread as puddle, fade near end
+  d.r = Math.min(d.r + dt * 0.008, 0.025);
+  if (d.life < 2.5) {
+    var a = d.life / 2.5;
+    _m4.makeScale(d.r * 5 * a, 0.04 * a, d.r * 5 * a);
+    _m4.setPosition(d.px, CFG.GROUND_Y, d.pz);
+    im.setMatrixAt(d.idx, _m4);
+  }
+  return;
 }
 
 // ── Gravity ────────────────────────────
-d.vy += CFG.GRAVITY * dt;
+d.vy += CFG.GRAVITY * dt * (misty ? 0.35 : 1);
 
 // ── Viscous drag ───────────────────────
 // Drag coefficient increases with speed (realistic)
 var speed2 = d.vx * d.vx + d.vy * d.vy + d.vz * d.vz;
-var drag   = 1.0 - d.viscosity * dt * Math.sqrt(speed2) * 0.5;
+var drag   = 1.0 - d.viscosity * dt * Math.sqrt(speed2) * 0.5 * (misty ? 1.35 : 1);
 if (drag < 0) drag = 0;
 d.vx *= drag;
 d.vy *= drag;
@@ -1054,7 +1067,7 @@ d.pz += d.vz * dt;
 // ── Ground collision ───────────────────
 if (d.py <= CFG.GROUND_Y) {
 d.py = CFG.GROUND_Y;
-if (d.bounces < d.maxBounces && !isMist) {
+if (d.bounces < d.maxBounces && !misty) {
 // Realistic bounce: lose 60-70% energy, lateral bleeds off
 var bounceY = Math.abs(d.vy) * Math.max(0.05, 0.35 - d.viscosity * 0.25);
 d.vy = bounceY;
@@ -1067,15 +1080,16 @@ _spawnDecal(d.px, d.pz, d.r * 0.8, d.color);
 } else {
 d.vy = 0; d.vx = 0; d.vz = 0;
 d.onGround = true;
-_spawnDecal(d.px, d.pz, d.r * 1.2, d.color);
+if (!misty) _spawnDecal(d.px, d.pz, d.r * 1.2, d.color);
 }
 }
 
 // ── Update InstancedMesh matrix ────────
 var spd  = Math.sqrt(speed2);
-var s    = d.r * 1.5;
+var fade = misty ? Math.max(0.2, d.life / d.maxLife) : 1.0;
+var s    = d.r * (misty ? 3.0 : 1.5) * fade;
 
-if (!d.onGround && spd > 3.5) {
+if (!d.onGround && spd > 3.5 && !misty) {
 // Elongate drop along velocity vector at high speed
 var stretch = 1.0 + spd * 0.07;
 _m4.makeScale(s, s * stretch, s);
@@ -1241,9 +1255,12 @@ d.frozen    = false; d.charred = false;
 // ══════════════════════════════════════════
 
 function _fxBullet(hx, hy, hz, normal, wp, col) {
-var nx = normal ? -normal.x : 0;
-var ny = normal ? -normal.y : 0;
-var nz = normal ? -normal.z : 1;
+var nx = 0, ny = 0, nz = 1;
+if (normal) {
+_s1.set(normal.x, normal.y, normal.z);
+if (_s1.lengthSq() > 0.0001) _s1.normalize();
+nx = -_s1.x; ny = -_s1.y; nz = -_s1.z;
+}
 
 var count = wp.dropCount;
 var sMin  = wp.dropSpeed[0], sMax = wp.dropSpeed[1];
@@ -1256,7 +1273,7 @@ var sctr = wp.woundR * 5;
 d.alive  = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx * spd + (Math.random()-0.5) * sctr * 6;
-d.vy = ny * spd * 0.2 - Math.random() * 0.6;
+d.vy = ny * spd + Math.random() * 1.2;
 d.vz = nz * spd + (Math.random()-0.5) * sctr * 6;
 d.r         = 0.006 + Math.random()*0.009;
 d.maxLife   = 2.5 + Math.random()*1.5;
@@ -1276,7 +1293,7 @@ var spd = wp.mistSpeed[0] + Math.random()*(wp.mistSpeed[1]-wp.mistSpeed[0]);
 d.alive = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx*spd + (Math.random()-0.5)*spd*0.8;
-d.vy = ny*spd*0.1 - Math.random()*0.2;
+d.vy = ny*spd*0.6 + Math.random()*0.6;
 d.vz = nz*spd + (Math.random()-0.5)*spd*0.8;
 d.r         = 0.004 + Math.random()*0.007;
 d.maxLife   = 0.8 + Math.random()*0.5;
@@ -1320,7 +1337,7 @@ var sctr = 0.08;
 d.alive = true;
 d.px = hx; d.py = hy; d.pz = hz;
 d.vx = nx * spd + (Math.random()-0.5) * sctr;
-d.vy = ny * spd + (Math.random()-0.5) * sctr;
+d.vy = ny * spd * 0.8 + Math.random() * 0.8;
 d.vz = nz * spd + (Math.random()-0.5) * sctr;
 d.r         = 0.018 + Math.random()*0.012;
 d.maxLife   = 3.5 + Math.random()*1.5;
@@ -1756,12 +1773,9 @@ default:
 _burstRadial(ex, ey, ez, 180, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58);
 _burstUpward(ex, ey, ez, 40, col.base, 5.0, 14.0, 0.012, 0.030, 3.0, 0.58);
 if (Math.random() < 0.5) _spawnChunks(ex, ey, ez, null, 3+Math.floor(Math.random()*4), wp, col);
-[0, 120, 240].forEach(function(delay) {
-  setTimeout(function() {
-    if (!_ready) return;
-    _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58);
-  }, delay);
-});
+setTimeout(function() { if (_ready) _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58); }, 0);
+setTimeout(function() { if (_ready) _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58); }, 120);
+setTimeout(function() { if (_ready) _burstRadial(ex, ey, ez, 30, col.base, 2.0, 18.0, 0.012, 0.030, 3.0, 0.58); }, 240);
 break;
 }
 

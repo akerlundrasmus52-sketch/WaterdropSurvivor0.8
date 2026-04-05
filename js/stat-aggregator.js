@@ -192,11 +192,15 @@
         stats.weaponDamage = (stats.weaponDamage || 0) + 0.03 * wsLvl;
       }
 
-      // Shrine: +regen / level (0.5 per level, from bonus.regen)
+      // Shrine: Artifact Shrine — artifact slots + critDamage + voidLifesteal per level
       if (bldgs.shrine && bldgs.shrine.level > 0) {
         var shLvl = bldgs.shrine.level;
-        stats.hpRegenPerSecond = (stats.hpRegenPerSecond || 0) + 0.5 * shLvl;
-        stats.hpRegen           = (stats.hpRegen           || 0) + 0.5 * shLvl;
+        // +10% crit damage per level
+        stats.critDamage = (stats.critDamage || 1.0) + 0.1 * shLvl;
+        // +2% void lifesteal per level
+        stats.voidLifesteal = (stats.voidLifesteal || 0) + 0.02 * shLvl;
+        // Expose unlocked artifact slot count for the UI
+        stats.artifactSlots = shLvl;
       }
 
       // Training Grounds (legacy): +5% damage / level, +3% attack speed / level
