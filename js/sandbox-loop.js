@@ -3576,16 +3576,16 @@
 
     // Respect pickup-range / XP collection-radius upgrades, if available
     const _xpStats = (typeof window.playerStats !== 'undefined' && window.playerStats) || player.stats || null;
-    // Use playerStats.pickupRange as a direct multiplier (default 1.0 = normal range)
-    // XPStarSystem multiplies XP_CFG.MAGNET_RANGE (1.5 units) by the radiusMultiplier.
-    const _BASE_MAGNET = 1.5; // must match XP_CFG.MAGNET_RANGE
+    // Read the base magnet range directly from XPStarSystem so this code stays in sync
+    // whenever XP_CFG.MAGNET_RANGE is tuned — no duplicate hardcoded constant.
+    const _BASE_MAGNET = XPStarSystem.getMagnetRange();
     const _baseMultiplier = (_xpStats && typeof _xpStats.pickupRange === 'number' && _xpStats.pickupRange > 0)
       ? _xpStats.pickupRange
       : 1.0;
-    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE (1.5)
+    // Each XP Magnet stack adds +2.5 world-units; convert to multiplier against MAGNET_RANGE
     const _magnetStacks = (window._sandboxXpMagnetRunStacks || 0);
     // playerStats.magnetRange (set by Magnet Drop building) only overrides when it exceeds the
-    // current scaled base (1.5 * _baseMultiplier), so pickup upgrades are never downgraded.
+    // current scaled base, so pickup upgrades are never downgraded.
     const _currentBaseRange = _BASE_MAGNET * _baseMultiplier;
     const _playerMagnetRange = (_xpStats && typeof _xpStats.magnetRange === 'number' && _xpStats.magnetRange > _currentBaseRange)
       ? _xpStats.magnetRange / _BASE_MAGNET

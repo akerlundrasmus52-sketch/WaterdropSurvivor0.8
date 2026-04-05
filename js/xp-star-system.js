@@ -576,6 +576,15 @@ const XPStarManager = {
     return this._activeStars.length;
   },
 
+  /**
+   * getMagnetRange()
+   * Returns the base magnet range (XP_CFG.MAGNET_RANGE) so callers like sandbox-loop.js
+   * can derive upgrade multipliers without duplicating the constant.
+   */
+  getMagnetRange: function() {
+    return XP_CFG.MAGNET_RANGE;
+  },
+
   dispose: function() {
     for (let star of this._pool) {
       star.dispose();

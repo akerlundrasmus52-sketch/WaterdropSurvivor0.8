@@ -173,8 +173,42 @@ window.DialogueSystem = (function () {
   var TW_DELAY_SENTENCE_END = 180;  // ms — longer pause at . ! ?
 
   // ── Cinematic overlay state ────────────────────────────────
-  var _cinActive     = false;  // true when cinematic overlay is shown
-  var _cinOverlay    = null;   // root overlay element
+  // All cinematic teardown state is module-level so dismiss() can call _cinDismiss()
+  // from the outside without access to _showCinematic's closure.
+  var _cinActive      = false;  // true when cinematic overlay is shown
+  var _cinOverlay     = null;   // root overlay element
+  var _cinTwTimer     = null;   // typewriter timer (module-level for dismiss access)
+  var _cinAaTimer     = null;   // auto-advance timer
+  var _cinWasPaused   = false;  // whether setGamePaused(true) was called
+  var _cinOnComplete  = null;   // completion callback
+  var _cinSafeTimer   = null;   // 25s safety auto-close timer
+
+  /**
+   * _cinDismiss()
+   * Centralized cinematic teardown — clears all timers, unpauses if needed, fires onComplete.
+   * Called from both the internal _closeCinematic closure AND the public dismiss() API.
+   */
+  function _cinDismiss() {
+    if (!_cinActive && !_cinOverlay) return; // nothing to do
+    clearTimeout(_cinTwTimer);
+    clearTimeout(_cinAaTimer);
+    clearTimeout(_cinSafeTimer);
+    _cinTwTimer    = null;
+    _cinAaTimer    = null;
+    _cinSafeTimer  = null;
+    _cinActive     = false;
+    if (_cinOverlay) {
+      if (_cinOverlay.parentNode) _cinOverlay.parentNode.removeChild(_cinOverlay);
+      _cinOverlay = null;
+    }
+    if (_cinWasPaused && typeof window.setGamePaused === 'function') {
+      window.setGamePaused(false);
+    }
+    _cinWasPaused = false;
+    var cb = _cinOnComplete;
+    _cinOnComplete = null;
+    if (typeof cb === 'function') cb();
+  }
 
   // Eye of Horus SVG watermark (inline — no external asset required)
   var _EYE_OF_HORUS_SVG = [
@@ -221,25 +255,32 @@ window.DialogueSystem = (function () {
    * _showCinematic(dialogueArray, options)
    * Full-screen dark cinematic overlay with Eye of Horus watermark, Annunaki gold/cyan styling,
    * multi-sentence typewriter, tap-to-advance, and game-pause while active.
+   *
+   * All teardown state is stored at module level (_cinTwTimer, _cinAaTimer, _cinWasPaused,
+   * _cinOnComplete) so the public dismiss() API can call _cinDismiss() without needing access
+   * to a local closure, avoiding timer/pause imbalance bugs.
    */
   function _showCinematic(dialogueArray, options) {
-    if (_cinActive) return; // prevent double-open
     options = options || {};
+    if (_cinActive) {
+      // Already showing a cinematic — fire the caller's completion callback so it doesn't hang
+      if (typeof options.onComplete === 'function') options.onComplete();
+      return;
+    }
 
-    // Pause the game while cinematic is active
-    var _wasPaused = false;
+    // Store module-level teardown state
+    _cinOnComplete = options.onComplete || null;
+    _cinWasPaused  = false;
     if (typeof window.setGamePaused === 'function') {
-      _wasPaused = true;
+      _cinWasPaused = true;
       window.setGamePaused(true);
     }
 
     _cinActive = true;
     var sentences = dialogueArray;
     var sentIdx = 0;
-    var twTimer = null;
-    var aaTimer = null;
     var twDone = false;
-    var closed = false;
+    var closed = false; // local guard so click handler can't re-trigger after teardown
 
     // Inject required CSS animations once
     if (!document.getElementById('ds-cin-style')) {
@@ -402,12 +443,12 @@ window.DialogueSystem = (function () {
           if (ch === '.' || ch === '!' || ch === '?') delay = TW_DELAY_SENTENCE_END;
           else if (ch === ',') delay = TW_DELAY_COMMA;
           ci++;
-          twTimer = setTimeout(_next, delay);
+          _cinTwTimer = setTimeout(_next, delay);
         } else {
           twDone = true;
           tapHint.style.opacity = '1';
           var dur = (s.duration != null) ? s.duration : (s.text.length * 50 + 2000);
-          aaTimer = setTimeout(_advance, dur);
+          _cinAaTimer = setTimeout(_advance, dur);
         }
       }
       _next();
@@ -415,14 +456,14 @@ window.DialogueSystem = (function () {
 
     // ── Advance to next sentence or close ─────────────────────
     function _advance() {
-      clearTimeout(twTimer);
-      clearTimeout(aaTimer);
+      clearTimeout(_cinTwTimer);
+      clearTimeout(_cinAaTimer);
       if (!twDone) {
         // Finish typewriter instantly
         textEl.textContent = sentences[sentIdx].text;
         twDone = true;
         tapHint.style.opacity = '1';
-        aaTimer = setTimeout(_advance, 1400);
+        _cinAaTimer = setTimeout(_advance, 1400);
         return;
       }
       sentIdx++;
@@ -433,21 +474,28 @@ window.DialogueSystem = (function () {
       }
     }
 
-    // ── Close overlay ──────────────────────────────────────────
+    // ── Close overlay (delegates to the shared module-level teardown) ──
     function _closeCinematic() {
       if (closed) return;
       closed = true;
-      clearTimeout(twTimer);
-      clearTimeout(aaTimer);
-      _cinActive = false;
-      _cinOverlay = null;
+      clearTimeout(_cinTwTimer);
+      clearTimeout(_cinAaTimer);
+      clearTimeout(_cinSafeTimer);
+      _cinTwTimer   = null;
+      _cinAaTimer   = null;
+      _cinSafeTimer = null;
+      _cinActive    = false;
+      _cinOverlay   = null;
       ov.style.animation = 'dsCinFadeOut 0.4s ease-in forwards';
       setTimeout(function () {
         if (ov.parentNode) ov.parentNode.removeChild(ov);
-        if (_wasPaused && typeof window.setGamePaused === 'function') {
+        if (_cinWasPaused && typeof window.setGamePaused === 'function') {
           window.setGamePaused(false);
         }
-        if (typeof options.onComplete === 'function') options.onComplete();
+        _cinWasPaused = false;
+        var cb = _cinOnComplete;
+        _cinOnComplete = null;
+        if (typeof cb === 'function') cb();
       }, 380);
     }
 
@@ -456,8 +504,8 @@ window.DialogueSystem = (function () {
       if (closed) return;
       _advance();
     });
-    // Safety auto-close: max 25s total
-    setTimeout(_closeCinematic, 25000);
+    // Safety auto-close: max 25s total — stored in module-level so dismiss() can clear it
+    _cinSafeTimer = setTimeout(_closeCinematic, 25000);
 
     // Start first sentence
     _typeSentence();
@@ -736,14 +784,14 @@ window.DialogueSystem = (function () {
   /**
    * dismiss()
    * Immediately hide the bubble and fire onComplete callback.
-   * Also dismisses the cinematic overlay if it is active.
+   * Also dismisses the cinematic overlay via the shared _cinDismiss() routine, which
+   * correctly clears all timers, calls setGamePaused(false), and fires the cinematic
+   * onComplete — preventing pause/timer imbalance when external code calls dismiss().
    */
   function dismiss() {
-    // Dismiss cinematic overlay if open
-    if (_cinActive && _cinOverlay) {
-      _cinActive = false;
-      if (_cinOverlay.parentNode) _cinOverlay.parentNode.removeChild(_cinOverlay);
-      _cinOverlay = null;
+    // Dismiss cinematic overlay using the centralized cleanup path
+    if (_cinActive || _cinOverlay) {
+      _cinDismiss();
     }
     clearTimeout(_twTimer);
     clearTimeout(_aaTimer);

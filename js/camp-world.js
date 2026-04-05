@@ -196,6 +196,17 @@
   const AIDA_CHIP_POS   = { x: 4, z: -2.5 }; // chip nearby, slightly further from fire
   const AIDA_QUEST_HALL_POS = { x: 0, z: 9.5 }; // in front of Quest Hall (z:11) once built
   const AIDA_INTRO_RADIUS = 5.0;  // Generous radius so the interaction is easy to trigger
+
+  /**
+   * _getAidaRobotPos()
+   * Returns the live world position of the AIDA robot mesh when it exists, falling back to the
+   * default spawn constant. Always use this for proximity checks so they stay accurate after the
+   * robot has been relocated (e.g., from campfire to Quest Hall after building is complete).
+   */
+  function _getAidaRobotPos() {
+    if (_aidaRobotMesh) return _aidaRobotMesh.position;
+    return AIDA_ROBOT_POS;
+  }
   let _aidaRobotMesh  = null;  // broken robot Group
   let _aidaChipMesh   = null;  // glowing chip Mesh (hidden after pickup)
   let _aidaIntroState = {      // session cache (authoritative value in saveData)
@@ -1480,8 +1491,9 @@
 
     // ─ Robot proximity prompt ─
     if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
-      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      const _rp = _getAidaRobotPos();
+      const rdx = _playerPos.x - _rp.x;
+      const rdz = _playerPos.z - _rp.z;
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         _promptEl.textContent = '🤖 Broken Robot — Insert Chip [E]';
         _promptEl.style.display = 'block';
@@ -1494,8 +1506,9 @@
     }
     // ─ Post-insertion: show hint to go to Quest Hall ─
     if (_aidaIntroState.chipInserted) {
-      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
-      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      const _rp = _getAidaRobotPos();
+      const rdx = _playerPos.x - _rp.x;
+      const rdz = _playerPos.z - _rp.z;
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         _promptEl.textContent = '🤖 A.I.D.A — Go to Quest Hall! [E]';
         _promptEl.style.display = 'block';
@@ -4148,8 +4161,9 @@
           }
         }
         if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-          const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
-          const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+          const _rp = _getAidaRobotPos();
+          const rdx = _playerPos.x - _rp.x;
+          const rdz = _playerPos.z - _rp.z;
           if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
             _keys['KeyE'] = false; // consume key
             _insertAidaChip();
@@ -4575,8 +4589,9 @@
       }
     }
     if (_aidaIntroState.chipPickedUp && !_aidaIntroState.chipInserted) {
-      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
-      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      const _rp = _getAidaRobotPos();
+      const rdx = _playerPos.x - _rp.x;
+      const rdz = _playerPos.z - _rp.z;
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         _insertAidaChip();
         return;
@@ -4584,8 +4599,9 @@
     }
     // Post-insertion: near robot shows hint to go to Quest Hall (no longer opens Profile)
     if (_aidaIntroState.chipInserted) {
-      const rdx = _playerPos.x - AIDA_ROBOT_POS.x;
-      const rdz = _playerPos.z - AIDA_ROBOT_POS.z;
+      const _rp = _getAidaRobotPos();
+      const rdx = _playerPos.x - _rp.x;
+      const rdz = _playerPos.z - _rp.z;
       if (Math.sqrt(rdx * rdx + rdz * rdz) < AIDA_INTRO_RADIUS) {
         const DS = window.DialogueSystem;
         if (DS && DS.DIALOGUES && DS.DIALOGUES.aidaQuestHallHint) {
@@ -5965,11 +5981,12 @@
         targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
       } else if (cq === 'quest_findingAida') {
         // Phase 1: chip not yet picked up → point to chip
-        // Phase 2: chip picked up but not inserted → point to AIDA robot
+        // Phase 2: chip picked up but not inserted → point to AIDA robot (live position)
         if (!_aidaIntroState.chipPickedUp) {
           targetDef = { x: AIDA_CHIP_POS.x, z: AIDA_CHIP_POS.z };
         } else {
-          targetDef = { x: AIDA_ROBOT_POS.x, z: AIDA_ROBOT_POS.z };
+          const _rp = _getAidaRobotPos();
+          targetDef = { x: _rp.x, z: _rp.z };
         }
       }
     }
