@@ -240,7 +240,7 @@
       _currentTarget = _findNearestEnemy();
 
       if (_currentTarget && _currentTarget.mesh) {
-        _fireP lasmaBolt();
+        _firePlasmaBolt();
         _attackCooldown = _attackInterval;
       }
     }
