@@ -377,7 +377,7 @@ function _renderActiveExpedition(expedition, companionInfo, exploLevel) {
              background:repeating-linear-gradient(90deg,rgba(0,255,255,0.4) 0,rgba(0,255,255,0.4) 6px,transparent 6px,transparent 12px);
              transform:translateY(-50%);border-radius:1px;"></div>
         <!-- Progress filled path -->
-        <div style="position:absolute;top:50%;left:8px;width:calc(${Math.min(progress, 100)}% - 16px);height:2px;
+        <div style="position:absolute;top:50%;left:8px;width:max(0px, calc(${Math.min(progress, 100)}% - 16px));height:2px;
              background:linear-gradient(90deg,#aa44ff,#00ffff);transform:translateY(-50%);border-radius:1px;
              transition:width 0.5s;box-shadow:0 0 8px rgba(0,255,255,0.6);"></div>
         <!-- Destination marker -->
@@ -551,8 +551,10 @@ function _exploTick() {
   }
 
   // Check if arrived
-  if (progress >= 100 && !expedition.battlePending && !expedition.battleDone) {
-    // Arrival: generate loot burst
+  if (progress >= 100 && !expedition.arrivalProcessed) {
+    expedition.arrivalProcessed = true;
+
+    // Arrival: generate loot burst (runs exactly once)
     const lootCount = 2 + Math.floor(Math.random() * 3);
     for (let i = 0; i < lootCount; i++) {
       const loot = _exploRollLoot(dest, explo.level || 1);
@@ -561,7 +563,7 @@ function _exploTick() {
         `Found: ${loot.item}`, dest, loot);
     }
 
-    // Random battle encounter (40% chance + one guaranteed for stormwolf destination)
+    // Random battle encounter on arrival (base 40%, increased by destination difficulty)
     const enemyPool = dest.enemies || ['slimeBrute'];
     const battleChance = 0.4 + (dest.difficulty - 1) * 0.2;
     if (Math.random() < battleChance) {
@@ -649,13 +651,16 @@ window.cancelExpedition = cancelExpedition;
 function _grantExploXP(amount) {
   if (!window.saveData || !window.saveData.exploration) return;
   const explo = window.saveData.exploration;
+  explo.level = explo.level || 1;
   explo.xp = (explo.xp || 0) + amount;
-  const xpMax = _exploXpToNext(explo.level || 1);
-  if (explo.xp >= xpMax) {
+
+  let xpMax = _exploXpToNext(explo.level);
+  while (explo.xp >= xpMax) {
     explo.xp -= xpMax;
-    explo.level = (explo.level || 1) + 1;
+    explo.level += 1;
     if (typeof showStatChange === 'function') showStatChange(`🗺 Exploration Level Up! Now LV.${explo.level}`);
     if (typeof playSound === 'function') playSound('levelUp');
+    xpMax = _exploXpToNext(explo.level);
   }
 }
 
@@ -694,7 +699,7 @@ function startTCGBattle(enemyId) {
     playerHp:  20,
     enemyHp:   enemy.hp,
     turn:      'player',
-    phase:     'draw',
+    phase:     'play',
     log:       [],
     energy:    2,
     maxEnergy: 3,
@@ -1195,3 +1200,18 @@ function _buildTCGHTML() {
     setTimeout(_tryResume, 2000);
   }
 })();
+
+// ── Test hooks for deterministic exploration helpers ──────────
+const COMPANION_EXPLORATION_TEST_API = Object.freeze({
+  _exploXpToNext,
+  _exploDuration,
+  _exploBaseCatchRate
+});
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports.__companionExplorationTestApi = COMPANION_EXPLORATION_TEST_API;
+}
+
+if (typeof globalThis !== 'undefined') {
+  globalThis.__companionExplorationTestApi = COMPANION_EXPLORATION_TEST_API;
+}
