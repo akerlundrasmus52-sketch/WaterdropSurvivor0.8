@@ -2902,8 +2902,8 @@
       ].join(';');
 
       // ── helpers ──────────────────────────────────────────────
-      const RARITY_COLOR  = { common:'#9e9e9e', uncommon:'#1aff1a', rare:'#0af', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff2a2a' };
-      const RARITY_SHADOW = { common:'#9e9e9e44', uncommon:'#1aff1a66', rare:'#0af6', epic:'#a335ee66', legendary:'#ff800066', mythic:'#ff2a2aaa' };
+      const RARITY_COLOR  = { common:'#aaaaaa', uncommon:'#55cc55', rare:'#44aaff', epic:'#aa44ff', legendary:'#ffd700', mythic:'#ff4444' };
+      const RARITY_SHADOW = { common:'#aaaaaa44', uncommon:'#55cc5566', rare:'#44aaff66', epic:'#aa44ff66', legendary:'#ffd70066', mythic:'#ff4444aa' };
       const RARITY_STARS  = { common:'✦', uncommon:'✦✦', rare:'✦✦✦', epic:'✦✦✦✦', legendary:'✦✦✦✦✦', mythic:'◈ MYTHIC' };
       const TYPE_ICON = { weapon:'⚔️', armor:'🛡️', helmet:'⛑️', boots:'👢', ring:'💍', amulet:'📿', consumable:'⚗️', material:'📦', currency:'💰' };
 
@@ -2914,6 +2914,8 @@
         list.push({ id:'__gold__',    name:'Gold',    rarity:'legendary', icon:'🪙', qty: saveData.gold    || 0, cat:'materials', description:'The universal currency of the realm.', lore:'Gold — forged in the core of Nibiru and scattered across the Earth after the great descent.' });
         list.push({ id:'__gems__',    name:'Gems',    rarity:'epic',      icon:'💎', qty: saveData.gems    || 0, cat:'materials', description:'Premium gemstones used for rare transactions.', lore:'"The Annunaki traded souls for gems in the old age." — Unknown inscription' });
         list.push({ id:'__essence__', name:'Essence', rarity:'rare',      icon:'✨', qty: saveData.essence || 0, cat:'materials', description:'Distilled void energy, used in the Neural Matrix.', lore:'Pure consciousness rendered tangible through Annunaki alchemy.' });
+        const wdeQty = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
+        if (wdeQty > 0 || true) list.push({ id:'__wde__', name:'Waterdrop Energy', rarity:'rare', icon:'💧', qty: wdeQty, cat:'materials', description:'Compressed liquid intelligence from Nibiru. Powers the Artifact Resonance Grid.', lore:'"The drops remember every battle you survived." — A.I.D.A' });
         // Resources
         const res = saveData.resources || {};
         const resNames = { wood:'Wood 🪵', stone:'Stone 🪨', coal:'Coal', iron:'Iron ⚙️', crystal:'Crystal 🔮', magicEssence:'Magic Essence', flesh:'Flesh', fur:'Fur', leather:'Leather', feather:'Feather', chitin:'Chitin', berry:'Berries 🍓', flower:'Flowers 🌸' };
@@ -3219,7 +3221,7 @@
         etherealBlade:  { name: 'Ethereal Blade',   icon: '⚔️',  rarity: 'epic',      desc: '+40% Physical Damage · +10% Crit Chance',    stats: { physDamage: 0.4, critChance: 0.10 } },
       };
 
-      const rarityColors = { common:'#aaa', uncommon:'#1aff1a', rare:'#0070dd', epic:'#a335ee', legendary:'#ff8000', mythic:'#ff4444' };
+      const rarityColors = { common:'#aaaaaa', uncommon:'#55cc55', rare:'#44aaff', epic:'#aa44ff', legendary:'#ffd700', mythic:'#ff4444' };
 
       // Build slot HTML
       const slotHTML = [0, 1, 2].map(i => {
@@ -3295,7 +3297,7 @@
 
       modal.innerHTML = `
         <div style="max-width:680px;width:100%;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;
                border-bottom:1px solid rgba(0,255,255,0.3);padding-bottom:12px;">
             <div>
               <div style="color:#00ffff;font-family:Bangers,cursive;font-size:28px;letter-spacing:4px;
@@ -3306,27 +3308,68 @@
             <button id="shrine-back-btn" class="inv-back-btn">← Back</button>
           </div>
 
-          <div style="color:#888;font-size:12px;margin-bottom:18px;line-height:1.6;
-               border:1px solid rgba(0,255,255,0.15);border-radius:8px;padding:12px;
-               background:rgba(0,255,255,0.03);">
-            <i>Artifacts provide massive passive stat boosts and only drop from Bosses or Void Expeditions.
-            Upgrade the Shrine to unlock additional slots.</i>
+          <!-- Shrine tabs -->
+          <div class="rg-tabs">
+            <button class="rg-tab active" data-shrine-tab="slots">◈ ARTIFACT SLOTS</button>
+            <button class="rg-tab" data-shrine-tab="merge">⚗️ RESONANCE MERGE</button>
           </div>
 
-          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;margin-bottom:12px;">
-            ◈ ARTIFACT SLOTS
+          <!-- Tab: Artifact Slots -->
+          <div id="shrine-tab-slots">
+            <div style="color:#888;font-size:12px;margin-bottom:18px;line-height:1.6;
+                 border:1px solid rgba(0,255,255,0.15);border-radius:8px;padding:12px;
+                 background:rgba(0,255,255,0.03);">
+              <i>Artifacts provide massive passive stat boosts and only drop from Bosses or Void Expeditions.
+              Upgrade the Shrine to unlock additional slots.</i>
+            </div>
+            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;margin-bottom:12px;">
+              ◈ ARTIFACT SLOTS
+            </div>
+            <div class="shrine-slots-row">${slotHTML}</div>
+            ${upgradeHTML}
+            <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;
+                 margin-top:24px;margin-bottom:12px;">◈ ARTIFACT COLLECTION</div>
+            <div class="shrine-inv-list">${artifactInventoryHTML}</div>
           </div>
-          <div class="shrine-slots-row">${slotHTML}</div>
 
-          ${upgradeHTML}
-
-          <div style="color:#C9A227;font-family:Bangers,cursive;font-size:16px;letter-spacing:2px;
-               margin-top:24px;margin-bottom:12px;">◈ ARTIFACT COLLECTION</div>
-          <div class="shrine-inv-list">${artifactInventoryHTML}</div>
+          <!-- Tab: Resonance Merge -->
+          <div id="shrine-tab-merge" style="display:none;">
+            <div style="color:#888;font-size:12px;margin-bottom:14px;line-height:1.6;
+                 border:1px solid rgba(0,255,255,0.15);border-radius:8px;padding:12px;
+                 background:rgba(0,255,255,0.03);">
+              <i>⚗️ Select 2 identical Artifacts from the grid below, then click <b>[MERGE]</b>.
+              A skill-check animation will begin — click at the right moment to succeed.<br>
+              <b>Success:</b> artifacts merge into 1 of the next rarity with a bonus stat.<br>
+              <b>Miss:</b> artifacts are kept but <span style="color:#44ddff">💧 Waterdrop Energy</span> is lost.</i>
+            </div>
+            <div id="rg-wde-display" style="color:#44ddff;font-size:13px;margin-bottom:10px;text-align:center;"></div>
+            <!-- 3×4 Resonance Grid -->
+            <div class="rg-grid" id="rg-grid"></div>
+            <!-- Merge controls -->
+            <div class="rg-merge-panel">
+              <div class="rg-merge-title">⚗️ RESONANCE MERGE</div>
+              <div class="rg-merge-status" id="rg-status">Select 2 identical Artifacts from the grid to begin.</div>
+              <div class="rg-merge-cost">Cost: 💧 20 Waterdrop Energy per attempt</div>
+              <button class="rg-merge-btn" id="rg-merge-btn" disabled>⚗️ MERGE</button>
+            </div>
+          </div>
         </div>
       `;
 
       document.body.appendChild(modal);
+
+      // ── Tab switching ──────────────────────────────────────────────────────
+      modal.querySelectorAll('.rg-tab').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          modal.querySelectorAll('.rg-tab').forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          const tab = btn.dataset.shrineTab;
+          modal.querySelector('#shrine-tab-slots').style.display = tab === 'slots' ? '' : 'none';
+          const mergeTab = modal.querySelector('#shrine-tab-merge');
+          mergeTab.style.display = tab === 'merge' ? '' : 'none';
+          if (tab === 'merge') _initResonanceGrid(modal);
+        });
+      });
 
       modal.querySelector('#shrine-back-btn').onclick = () => {
         modal.remove();
@@ -3378,6 +3421,228 @@
         modal.remove();
         showArtifactShrineUI();
       };
+
+      // ── Resonance Grid logic ───────────────────────────────────────────────
+
+      const RG_MERGE_COST = 20;  // Waterdrop Energy per attempt
+
+      /** Next rarity progression for merge */
+      const RG_RARITY_UP = {
+        common: 'uncommon', uncommon: 'rare', rare: 'epic',
+        epic: 'legendary', legendary: 'mythic', mythic: 'mythic'
+      };
+
+      /** Bonus stat granted on successful merge */
+      const RG_MERGE_BONUS_STATS = [
+        { stat: 'critDamage',   label: '+10% Crit Damage',   value: 0.10 },
+        { stat: 'physDamage',   label: '+8% Physical Damage', value: 0.08 },
+        { stat: 'attackSpeed',  label: '+6% Attack Speed',    value: 0.06 },
+        { stat: 'cdReduction',  label: '-5% Cooldowns',       value: 0.05 },
+        { stat: 'critChance',   label: '+5% Crit Chance',     value: 0.05 },
+        { stat: 'voidLifesteal',label: '+2% Void Lifesteal',  value: 0.02 },
+      ];
+
+      let _rgSelected = []; // up to 2 indices into artifactInventory
+
+      function _initResonanceGrid(modal) {
+        const grid      = modal.querySelector('#rg-grid');
+        const statusEl  = modal.querySelector('#rg-status');
+        const mergeBtn  = modal.querySelector('#rg-merge-btn');
+        const wdeDisp   = modal.querySelector('#rg-wde-display');
+        if (!grid) return;
+
+        function _refreshWde() {
+          const wde = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
+          if (wdeDisp) wdeDisp.textContent = `💧 Waterdrop Energy: ${wde}`;
+        }
+        _refreshWde();
+
+        // Fill the 12-cell grid (3 cols × 4 rows)
+        grid.innerHTML = '';
+        const inv = saveData.artifacts || [];
+        for (let i = 0; i < 12; i++) {
+          const cell = document.createElement('div');
+          const art  = inv[i];
+          if (art) {
+            const def = ARTIFACT_DEFS[art.id] || art;
+            const col = rarityColors[def.rarity] || '#aaa';
+            cell.className = 'rg-cell rg-filled';
+            cell.style.borderColor = col;
+            cell.innerHTML = `
+              <div class="rg-cell-icon">${def.icon || '🔮'}</div>
+              <div class="rg-cell-name">${def.name}</div>
+              <div class="rg-cell-rarity" style="color:${col}">${(def.rarity || '').toUpperCase()}</div>
+            `;
+            cell.dataset.invIdx = i;
+            cell.addEventListener('click', function() { _selectCell(i, cell, inv, statusEl, mergeBtn); });
+          } else {
+            cell.className = 'rg-cell rg-empty';
+            cell.innerHTML = `<div style="font-size:20px;opacity:0.25;">🔮</div>`;
+          }
+          grid.appendChild(cell);
+        }
+
+        function _selectCell(idx, cell, inv, statusEl, mergeBtn) {
+          const art = inv[idx];
+          if (!art) return;
+
+          // Deselect if already selected
+          if (_rgSelected.includes(idx)) {
+            _rgSelected = _rgSelected.filter(function(i) { return i !== idx; });
+            cell.classList.remove('rg-selected');
+            _updateStatus(statusEl, mergeBtn, inv);
+            return;
+          }
+          if (_rgSelected.length >= 2) {
+            // Deselect old first pick
+            const oldIdx = _rgSelected.shift();
+            const oldCell = grid.querySelector(`[data-inv-idx="${oldIdx}"]`);
+            if (oldCell) oldCell.classList.remove('rg-selected');
+          }
+          _rgSelected.push(idx);
+          cell.classList.add('rg-selected');
+          _updateStatus(statusEl, mergeBtn, inv);
+        }
+
+        function _updateStatus(statusEl, mergeBtn, inv) {
+          if (_rgSelected.length < 2) {
+            statusEl.textContent = _rgSelected.length === 1
+              ? 'Select a second artifact of the same type to merge.'
+              : 'Select 2 identical Artifacts from the grid to begin.';
+            mergeBtn.disabled = true;
+            return;
+          }
+          const a = inv[_rgSelected[0]];
+          const b = inv[_rgSelected[1]];
+          const defA = ARTIFACT_DEFS[a.id] || a;
+          const defB = ARTIFACT_DEFS[b.id] || b;
+          if (a.id !== b.id) {
+            statusEl.innerHTML = '<span style="color:#ff6644">⚠️ Artifacts must be the same type to merge.</span>';
+            mergeBtn.disabled = true;
+            return;
+          }
+          if (defA.rarity !== defB.rarity) {
+            statusEl.innerHTML = '<span style="color:#ff6644">⚠️ Artifacts must be the same rarity to merge.</span>';
+            mergeBtn.disabled = true;
+            return;
+          }
+          const wde = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
+          if (wde < RG_MERGE_COST) {
+            statusEl.innerHTML = `<span style="color:#ff6644">⚠️ Need 💧 ${RG_MERGE_COST} WDE (have ${wde}). Buy more at The Dropplet Shop.</span>`;
+            mergeBtn.disabled = true;
+            return;
+          }
+          const nextRarity = RG_RARITY_UP[defA.rarity] || defA.rarity;
+          const col = rarityColors[nextRarity] || '#aaa';
+          statusEl.innerHTML = `✅ Ready to merge: <b style="color:${rarityColors[defA.rarity]||'#aaa'}">${defA.name}</b> × 2 →
+            <b style="color:${col}">[${nextRarity.toUpperCase()}] ${defA.name}</b> + bonus stat`;
+          mergeBtn.disabled = false;
+          _refreshWde();
+        }
+
+        mergeBtn && mergeBtn.addEventListener('click', function() {
+          if (_rgSelected.length < 2) return;
+          const inv = saveData.artifacts || [];
+          const a = inv[_rgSelected[0]];
+          const b = inv[_rgSelected[1]];
+          if (!a || !b || a.id !== b.id) return;
+          const defA = ARTIFACT_DEFS[a.id] || a;
+          if (defA.rarity !== (ARTIFACT_DEFS[b.id] || b).rarity) return;
+          // Deduct WDE
+          const wde = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
+          if (wde < RG_MERGE_COST) return;
+          saveData.resources.waterdropEnergy -= RG_MERGE_COST;
+          saveSaveData();
+          _refreshWde();
+          // Launch skill check
+          _launchSkillCheck(defA, function(success) {
+            if (success) {
+              _doMerge(defA);
+            } else {
+              if (typeof showStatChange === 'function') showStatChange('❌ Merge failed — WDE lost. Artifacts kept.');
+            }
+            _rgSelected = [];
+            _initResonanceGrid(modal);
+          });
+        });
+
+        _updateStatus(statusEl, mergeBtn, inv);
+      }
+
+      function _doMerge(defA) {
+        const inv         = saveData.artifacts || [];
+        const idxA        = _rgSelected[0];
+        const idxB        = _rgSelected[1];
+        const nextRarity  = RG_RARITY_UP[defA.rarity] || defA.rarity;
+        const bonusStat   = RG_MERGE_BONUS_STATS[Math.floor(Math.random() * RG_MERGE_BONUS_STATS.length)];
+        // Remove both (higher idx first to preserve lower idx)
+        const toRemove = [idxA, idxB].sort(function(a,b){return b-a;});
+        toRemove.forEach(function(idx) { inv.splice(idx, 1); });
+        // Insert merged artifact
+        const merged = {
+          id: defA.id || (defA.name || 'artifact').toLowerCase().replace(/\s+/g, '_') + '_' + Date.now(),
+          name: defA.name,
+          icon: defA.icon,
+          rarity: nextRarity,
+          desc: (defA.desc || '') + ` · ${bonusStat.label}`,
+          stats: Object.assign({}, defA.stats || {}, { [bonusStat.stat]: ((defA.stats || {})[bonusStat.stat] || 0) + bonusStat.value }),
+          _merged: true,
+        };
+        inv.unshift(merged);
+        saveData.artifacts = inv;
+        saveSaveData();
+        const col = rarityColors[nextRarity] || '#aaa';
+        if (typeof showStatChange === 'function') {
+          showStatChange(`✨ MERGE SUCCESS! ${defA.name} → <span style="color:${col}">[${nextRarity.toUpperCase()}]</span> + ${bonusStat.label}`);
+        }
+      }
+
+      /**
+       * Skill-check overlay: a ring shrinks toward a green zone.
+       * The player must click (or tap) while the ring is inside the green zone.
+       * @param {object} defA      Artifact definition (for display)
+       * @param {function} onDone  Called with (success: bool)
+       */
+      function _launchSkillCheck(defA, onDone) {
+        const ANIM_DUR_MS   = 1600;  // ring shrink duration
+        const GREEN_START   = 0.72;  // ring scale at which green zone begins (0=start, 1=end)
+        const GREEN_END     = 0.92;  // ring scale at which green zone ends
+
+        const overlay = document.createElement('div');
+        overlay.className = 'rg-skillcheck-overlay';
+        overlay.innerHTML = `
+          <div class="rg-skillcheck-label">⚗️ CLICK IN THE GREEN ZONE!</div>
+          <div class="rg-track">
+            <div class="rg-green-zone"></div>
+            <div class="rg-ring" id="rg-anim-ring" style="--rg-anim-dur:${ANIM_DUR_MS}ms;"></div>
+          </div>
+          <div class="rg-skillcheck-hint">TAP OR CLICK ANYWHERE</div>
+        `;
+        document.body.appendChild(overlay);
+
+        const startTime = performance.now();
+        let resolved = false;
+
+        function _resolve(success) {
+          if (resolved) return;
+          resolved = true;
+          overlay.remove();
+          onDone(success);
+        }
+
+        function _onInput() {
+          const elapsed  = performance.now() - startTime;
+          const progress = Math.min(elapsed / ANIM_DUR_MS, 1);
+          const success  = progress >= GREEN_START && progress <= GREEN_END;
+          _resolve(success);
+        }
+
+        overlay.addEventListener('click',   _onInput);
+        overlay.addEventListener('touchend', function(e) { e.preventDefault(); _onInput(); }, { passive: false });
+
+        // Auto-resolve as miss if player doesn't click in time
+        setTimeout(function() { _resolve(false); }, ANIM_DUR_MS + 200);
+      }
     }
     window.showArtifactShrineUI = showArtifactShrineUI;
 
@@ -4568,6 +4833,9 @@
           },
           astralGateway:       () => {
             if (typeof window.showAstralGateway === 'function') { window.showAstralGateway(); }
+          },
+          droppletShop:        () => {
+            if (typeof window.showDroppletShopUI === 'function') { window.showDroppletShopUI(); }
           },
           gachaStore:          () => {
             if (typeof showGachaStore === 'function') { showGachaStore(); }

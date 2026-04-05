@@ -6,11 +6,12 @@
     const notifications = [];
     const inventory = [];
     const RARITY = {
-      COMMON: { name: 'Common', color: 0xAAAAAA, multiplier: 1.0 },
-      RARE: { name: 'Rare', color: 0x5DADE2, multiplier: 1.25 },
-      EPIC: { name: 'Epic', color: 0x9B59B6, multiplier: 1.5 },
-      LEGENDARY: { name: 'Legendary', color: 0xF39C12, multiplier: 2.0 },
-      MYTHIC: { name: 'Mythic', color: 0xE74C3C, multiplier: 3.0 }
+      COMMON:   { name: 'Common',   color: 0xAAAAAA, multiplier: 1.0  },
+      UNCOMMON: { name: 'Uncommon', color: 0x55CC55, multiplier: 1.15 },
+      RARE:     { name: 'Rare',     color: 0x5DADE2, multiplier: 1.25 },
+      EPIC:     { name: 'Epic',     color: 0x9B59B6, multiplier: 1.5  },
+      LEGENDARY:{ name: 'Legendary',color: 0xF39C12, multiplier: 2.0  },
+      MYTHIC:   { name: 'Mythic',   color: 0xE74C3C, multiplier: 3.0  }
     };
 
     // --- SAVE SYSTEM ---
@@ -132,7 +133,8 @@
         weaponsmith: { level: 0, maxLevel: 1, unlocked: false },
         prismReliquary: { level: 0, maxLevel: 1, unlocked: false },
         neuralMatrix:   { level: 0, maxLevel: 1, unlocked: false },
-        astralGateway:  { level: 0, maxLevel: 1, unlocked: false }
+        astralGateway:  { level: 0, maxLevel: 1, unlocked: false },
+        droppletShop:   { level: 0, maxLevel: 1, unlocked: false }  // The Dropplet Shop
       },
       // Neural Matrix unlock state (which nodes the player has activated)
       neuralMatrix: {},
@@ -372,7 +374,8 @@
         crystal: 0, magicEssence: 0, gem: 0, flesh: 0,
         fur: 0, leather: 0, feather: 0, chitin: 0, venom: 0,
         berry: 0, flower: 0, vegetable: 0,
-        voidEssence: 0
+        voidEssence: 0,
+        waterdropEnergy: 0   // Waterdrop Energy — used in Artifact Resonance Grid merges
       },
       harvestingTools: {
         axe: false, sledgehammer: false, pickaxe: false, magicTool: false,
@@ -718,6 +721,14 @@
           if (!saveData.campBuildings.astralGateway) {
             saveData.campBuildings.astralGateway = { level: 0, maxLevel: 1, unlocked: false };
           }
+          if (!saveData.campBuildings.droppletShop) {
+            saveData.campBuildings.droppletShop = { level: 0, maxLevel: 1, unlocked: false };
+          }
+          // Ensure waterdropEnergy resource key exists on old saves
+          if (!saveData.resources) saveData.resources = {};
+          if (saveData.resources.waterdropEnergy === undefined) {
+            saveData.resources.waterdropEnergy = 0;
+          }
           // ── Void Rift migration ──
           if (!saveData.voidRifts) {
             saveData.voidRifts = { active: [], pendingRewards: [], artifacts: [], history: [] };
@@ -767,13 +778,13 @@
 
       // Ensure buildings not present in defaultSaveData are explicitly initialized
       if (!saveData.campBuildings) saveData.campBuildings = {};
-      ['astralGateway', 'neuralMatrix', 'prismReliquary'].forEach(function(key) {
+      ['astralGateway', 'neuralMatrix', 'prismReliquary', 'droppletShop'].forEach(function(key) {
         if (!saveData.campBuildings[key]) {
           saveData.campBuildings[key] = { level: 0, maxLevel: 1, unlocked: false };
         }
       });
 
-      // Ensure all default resource keys are present
+      // Ensure all default resource keys are present (including waterdropEnergy)
       saveData.resources = Object.assign({}, defaultSaveData.resources, saveData.resources);
       if (!saveData.rawGems) saveData.rawGems = {};
       if (!saveData.rawGems.ruby) saveData.rawGems.ruby = 0;
@@ -2502,7 +2513,7 @@
       var old = document.getElementById('item-info-overlay');
       if (old && old.parentNode) old.parentNode.removeChild(old);
 
-      var rarityMap = { common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff', epic: '#aa44ff', legendary: '#ffaa00' };
+      var rarityMap = { common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff', epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444' };
       var rarityColor = rarityMap[itemData.rarity] || '#ffffff';
 
       var overlay = document.createElement('div');

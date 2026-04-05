@@ -1097,9 +1097,9 @@ function showRecycleScreen() {
   const existing = document.getElementById('recycle-overlay');
   if (existing) existing.remove();
 
-  const RARITY_COLORS = { common:'#aaaaaa', uncommon:'#55cc55', rare:'#44aaff', epic:'#aa44ff', legendary:'#ffaa00' };
-  const RARITY_METAL  = { common:1, uncommon:2, rare:3, epic:5, legendary:8 };
-  const RARITY_LEATHER= { common:0, uncommon:0, rare:1, epic:2, legendary:3 };
+  const RARITY_COLORS = { common:'#aaaaaa', uncommon:'#55cc55', rare:'#44aaff', epic:'#aa44ff', legendary:'#ffaa00', mythic:'#ff4444' };
+  const RARITY_METAL  = { common:1, uncommon:2, rare:3, epic:5, legendary:8, mythic:12 };
+  const RARITY_LEATHER= { common:0, uncommon:0, rare:1, epic:2, legendary:3, mythic:5 };
 
   const overlay = document.createElement('div');
   overlay.id = 'recycle-overlay';

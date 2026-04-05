@@ -11307,3 +11307,479 @@
 .forge-screen-shake {
   animation: forgeShake 0.55s cubic-bezier(0.36,0.07,0.19,0.97);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UNIVERSAL RARITY FIX — missing .rarity-badge-uncommon + unified colors
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Uncommon badge — was missing from the badge row */
+.rarity-badge-uncommon {
+  color: #55cc55;
+  background: rgba(85,204,85,0.13);
+  border: 1px solid #55cc55;
+}
+
+/* Ensure .rarity-mythic (no trailing 'al') is covered for global badge use */
+.rarity-badge-mythical {
+  color: #ff2200;
+  background: rgba(255,34,0,0.15);
+  border: 1px solid #ff2200;
+  text-shadow: 0 0 6px rgba(255,34,0,0.8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE DROPPLET SHOP — full-screen modal
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.ds-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: radial-gradient(ellipse at top, rgba(0,20,40,0.98) 0%, rgba(0,0,0,1) 100%);
+  z-index: 200;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 16px;
+  box-sizing: border-box;
+  font-family: 'Courier New', monospace;
+}
+
+.ds-panel {
+  width: 100%;
+  max-width: 720px;
+}
+
+.ds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(0,200,255,0.3);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.ds-title {
+  font-family: 'Bangers', cursive;
+  font-size: 28px;
+  letter-spacing: 4px;
+  color: #00cfff;
+  text-shadow: 0 0 18px rgba(0,200,255,0.7);
+}
+
+.ds-subtitle {
+  color: #778899;
+  font-size: 11px;
+  margin-top: 3px;
+  font-style: italic;
+}
+
+.ds-back-btn {
+  background: linear-gradient(135deg, #0a2a3a, #0d3a4e);
+  border: 1px solid rgba(0,200,255,0.4);
+  border-radius: 8px;
+  color: #00cfff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  padding: 7px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.ds-back-btn:hover { background: rgba(0,200,255,0.12); box-shadow: 0 0 12px rgba(0,200,255,0.3); }
+
+.ds-currency-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.ds-cur-item { display: flex; align-items: center; gap: 4px; color: #e0d0a0; }
+.ds-cur-icon { font-size: 16px; }
+.ds-cur-val  { font-weight: bold; color: #ffd700; }
+.ds-wde      { color: #44ddff; }
+.ds-wde .ds-cur-val { color: #44ddff; }
+.ds-cur-sep  { color: #444; }
+
+.ds-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ds-tab {
+  flex: 1;
+  min-width: 110px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(0,200,255,0.25);
+  border-radius: 8px;
+  color: #667788;
+  font-family: 'Bangers', cursive;
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 9px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ds-tab:hover { color: #00cfff; border-color: rgba(0,200,255,0.5); }
+.ds-tab.active {
+  background: rgba(0,200,255,0.12);
+  border-color: #00cfff;
+  color: #00cfff;
+  box-shadow: 0 0 10px rgba(0,200,255,0.25);
+}
+
+.ds-content { min-height: 300px; }
+
+.ds-empty {
+  text-align: center;
+  color: #556677;
+  padding: 48px 20px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* SELL grid */
+.ds-sell-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ds-item-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ds-item-card:hover { background: rgba(0,200,255,0.05); }
+.ds-item-equipped   { opacity: 0.55; }
+
+.ds-item-icon { font-size: 28px; min-width: 36px; text-align: center; }
+
+.ds-item-info { flex: 1; min-width: 0; }
+.ds-item-name { font-weight: bold; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-item-rarity { font-size: 10px; color: #556677; letter-spacing: 1px; margin-top: 2px; }
+.ds-item-equipped-tag { font-size: 10px; color: #ffd700; margin-top: 2px; }
+
+.ds-item-sell { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.ds-sell-price { color: #ffd700; font-size: 13px; font-weight: bold; white-space: nowrap; }
+.ds-sell-btn {
+  background: linear-gradient(135deg, #b8860b, #8b6914);
+  border: 1px solid rgba(255,215,0,0.5);
+  border-radius: 6px;
+  color: #fff8e0;
+  font-family: 'Bangers', cursive;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ds-sell-btn:hover { background: linear-gradient(135deg, #daa520, #c8a000); box-shadow: 0 0 8px rgba(255,215,0,0.4); }
+.ds-sell-disabled { font-size: 10px; color: #556677; }
+
+/* BUY MATERIALS grid */
+.ds-buy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.ds-mat-card {
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(0,200,255,0.2);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  transition: border-color 0.15s;
+}
+.ds-mat-card:hover { border-color: rgba(0,200,255,0.5); }
+
+.ds-mat-icon  { font-size: 32px; }
+.ds-mat-name  { color: #c8d8e8; font-weight: bold; font-size: 14px; }
+.ds-mat-owned { color: #556677; font-size: 11px; }
+.ds-mat-price { color: #ffd700; font-size: 12px; margin-bottom: 4px; }
+
+.ds-mat-qty-row { display: flex; gap: 5px; }
+.ds-mat-buy {
+  background: rgba(0,200,255,0.1);
+  border: 1px solid rgba(0,200,255,0.35);
+  border-radius: 6px;
+  color: #00cfff;
+  font-family: 'Bangers', cursive;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.ds-mat-buy:hover { background: rgba(0,200,255,0.2); box-shadow: 0 0 6px rgba(0,200,255,0.3); }
+
+/* WATERDROP ENERGY tab */
+.ds-wde-wrap { display: flex; flex-direction: column; gap: 18px; }
+
+.ds-wde-hero {
+  text-align: center;
+  background: radial-gradient(ellipse at center, rgba(0,80,140,0.35) 0%, transparent 70%);
+  border: 1px solid rgba(0,200,255,0.25);
+  border-radius: 14px;
+  padding: 24px 16px;
+}
+.ds-wde-hero-icon  { font-size: 52px; }
+.ds-wde-hero-title {
+  font-family: 'Bangers', cursive;
+  font-size: 22px;
+  letter-spacing: 3px;
+  color: #44ddff;
+  text-shadow: 0 0 14px rgba(0,200,255,0.7);
+  margin: 8px 0 6px;
+}
+.ds-wde-hero-desc { color: #778899; font-size: 12px; line-height: 1.6; }
+
+.ds-wde-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ds-wde-card {
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+  background: rgba(0,20,50,0.5);
+  border: 1px solid rgba(0,200,255,0.35);
+  border-radius: 12px;
+  padding: 18px 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ds-wde-card:hover { border-color: #00cfff; box-shadow: 0 0 14px rgba(0,200,255,0.25); }
+
+.ds-wde-qty   { color: #44ddff; font-family: 'Bangers', cursive; font-size: 20px; letter-spacing: 1px; }
+.ds-wde-price { color: #ffd700; font-size: 13px; }
+.ds-wde-btn {
+  background: linear-gradient(135deg, #004070, #00264a);
+  border: 1px solid rgba(0,200,255,0.5);
+  border-radius: 8px;
+  color: #00cfff;
+  font-family: 'Bangers', cursive;
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 6px 18px;
+  cursor: pointer;
+  transition: all 0.12s;
+  width: 100%;
+}
+.ds-wde-btn:hover { background: rgba(0,200,255,0.18); box-shadow: 0 0 10px rgba(0,200,255,0.35); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARTIFACT RESONANCE GRID — merge minigame inside the Shrine
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.rg-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(0,255,255,0.25);
+}
+
+.rg-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #556677;
+  font-family: 'Bangers', cursive;
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.rg-tab:hover { color: #00ffff; }
+.rg-tab.active {
+  color: #00ffff;
+  border-bottom-color: #00ffff;
+}
+
+/* 3×4 resonance grid cells */
+.rg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,255,255,0.15);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.rg-cell {
+  aspect-ratio: 1;
+  min-height: 72px;
+  background: rgba(0,30,50,0.5);
+  border: 2px dashed rgba(0,255,255,0.2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  overflow: hidden;
+}
+.rg-cell:hover { border-color: rgba(0,255,255,0.5); transform: scale(1.04); }
+.rg-cell.rg-selected {
+  border-color: #ffd700;
+  border-style: solid;
+  box-shadow: 0 0 12px rgba(255,215,0,0.4);
+}
+.rg-cell.rg-filled { border-style: solid; }
+.rg-cell.rg-empty  { opacity: 0.55; }
+
+.rg-cell-icon  { font-size: 26px; }
+.rg-cell-name  { font-size: 9px; color: #99aabb; text-align: center; line-height: 1.2; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rg-cell-rarity{ font-size: 8px; letter-spacing: 1px; margin-top: 1px; }
+
+/* Merge panel beneath the grid */
+.rg-merge-panel {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(0,255,255,0.2);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.rg-merge-title  { font-family: 'Bangers', cursive; font-size: 16px; letter-spacing: 2px; color: #C9A227; margin-bottom: 8px; }
+.rg-merge-status { font-size: 12px; color: #778899; margin-bottom: 10px; min-height: 36px; line-height: 1.5; }
+.rg-merge-cost   { color: #44ddff; font-size: 12px; margin-bottom: 10px; }
+
+.rg-merge-btn {
+  background: linear-gradient(135deg, #7b2d00, #c84b00);
+  border: 2px solid rgba(255,100,0,0.6);
+  border-radius: 10px;
+  color: #fff5e0;
+  font-family: 'Bangers', cursive;
+  font-size: 20px;
+  letter-spacing: 3px;
+  padding: 10px 32px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.rg-merge-btn:hover { background: linear-gradient(135deg, #a03800, #f05000); box-shadow: 0 0 18px rgba(255,120,0,0.5); }
+.rg-merge-btn:disabled { opacity: 0.38; cursor: not-allowed; box-shadow: none; }
+
+/* ── Skill-check shrinking ring animation ─────────────────────── */
+
+@keyframes rg-ring-shrink {
+  0%   { transform: translate(-50%,-50%) scale(3.5); opacity: 0; }
+  8%   { opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1.0); opacity: 0.9; }
+}
+@keyframes rg-green-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,100,0.8); }
+  50%       { box-shadow: 0 0 0 8px rgba(0,255,100,0); }
+}
+@keyframes rg-success-burst {
+  0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(4); opacity: 0; }
+}
+@keyframes rg-fail-shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}
+
+/* Overlay container for the skill-check */
+.rg-skillcheck-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.75);
+  cursor: pointer;
+}
+.rg-skillcheck-label {
+  color: #ffd700;
+  font-family: 'Bangers', cursive;
+  font-size: 22px;
+  letter-spacing: 4px;
+  margin-bottom: 40px;
+  text-shadow: 0 0 14px rgba(255,215,0,0.7);
+  animation: rg-green-pulse 1s infinite;
+}
+/* Outer track ring */
+.rg-track {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 4px solid rgba(0,255,255,0.25);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Green zone band — fixed arc indicator */
+.rg-green-zone {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 10px solid rgba(0,255,100,0.75);
+  box-shadow: 0 0 20px rgba(0,255,100,0.5);
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+}
+/* The shrinking ring cursor */
+.rg-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 5px solid #ff6600;
+  box-shadow: 0 0 14px rgba(255,100,0,0.6);
+  transform: translate(-50%,-50%) scale(3.5);
+  animation: rg-ring-shrink var(--rg-anim-dur, 1.5s) linear forwards;
+  pointer-events: none;
+}
+.rg-skillcheck-hint {
+  margin-top: 30px;
+  color: #889;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
