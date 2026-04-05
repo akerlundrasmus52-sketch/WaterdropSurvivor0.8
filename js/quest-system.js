@@ -2915,7 +2915,7 @@
         list.push({ id:'__gems__',    name:'Gems',    rarity:'epic',      icon:'💎', qty: saveData.gems    || 0, cat:'materials', description:'Premium gemstones used for rare transactions.', lore:'"The Annunaki traded souls for gems in the old age." — Unknown inscription' });
         list.push({ id:'__essence__', name:'Essence', rarity:'rare',      icon:'✨', qty: saveData.essence || 0, cat:'materials', description:'Distilled void energy, used in the Neural Matrix.', lore:'Pure consciousness rendered tangible through Annunaki alchemy.' });
         const wdeQty = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
-        if (wdeQty > 0 || true) list.push({ id:'__wde__', name:'Waterdrop Energy', rarity:'rare', icon:'💧', qty: wdeQty, cat:'materials', description:'Compressed liquid intelligence from Nibiru. Powers the Artifact Resonance Grid.', lore:'"The drops remember every battle you survived." — A.I.D.A' });
+        list.push({ id:'__wde__', name:'Waterdrop Energy', rarity:'rare', icon:'💧', qty: wdeQty, cat:'materials', description:'Compressed liquid intelligence from Nibiru. Powers the Artifact Resonance Grid.', lore:'"The drops remember every battle you survived." — A.I.D.A' });
         // Resources
         const res = saveData.resources || {};
         const resNames = { wood:'Wood 🪵', stone:'Stone 🪨', coal:'Coal', iron:'Iron ⚙️', crystal:'Crystal 🔮', magicEssence:'Magic Essence', flesh:'Flesh', fur:'Fur', leather:'Leather', feather:'Feather', chitin:'Chitin', berry:'Berries 🍓', flower:'Flowers 🌸' };
@@ -3451,6 +3451,10 @@
         const wdeDisp   = modal.querySelector('#rg-wde-display');
         if (!grid) return;
 
+        // Reset selection state every time the grid is (re-)initialized so stale
+        // indices from a previous tab visit can never trigger invisible merges.
+        _rgSelected = [];
+
         function _refreshWde() {
           const wde = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
           if (wdeDisp) wdeDisp.textContent = `💧 Waterdrop Energy: ${wde}`;
@@ -3540,47 +3544,57 @@
           _refreshWde();
         }
 
-        mergeBtn && mergeBtn.addEventListener('click', function() {
-          if (_rgSelected.length < 2) return;
-          const inv = saveData.artifacts || [];
-          const a = inv[_rgSelected[0]];
-          const b = inv[_rgSelected[1]];
-          if (!a || !b || a.id !== b.id) return;
-          const defA = ARTIFACT_DEFS[a.id] || a;
-          if (defA.rarity !== (ARTIFACT_DEFS[b.id] || b).rarity) return;
-          // Deduct WDE
-          const wde = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
-          if (wde < RG_MERGE_COST) return;
-          saveData.resources.waterdropEnergy -= RG_MERGE_COST;
-          saveSaveData();
-          _refreshWde();
-          // Launch skill check
-          _launchSkillCheck(defA, function(success) {
-            if (success) {
-              _doMerge(defA);
-            } else {
-              if (typeof showStatChange === 'function') showStatChange('❌ Merge failed — WDE lost. Artifacts kept.');
-            }
-            _rgSelected = [];
-            _initResonanceGrid(modal);
-          });
-        });
+        // Use .onclick so re-entering the tab replaces the handler instead of stacking it.
+        if (mergeBtn) {
+          mergeBtn.onclick = function() {
+            if (_rgSelected.length < 2) return;
+            const inv = saveData.artifacts || [];
+            const a = inv[_rgSelected[0]];
+            const b = inv[_rgSelected[1]];
+            if (!a || !b || a.id !== b.id) return;
+            const defA = ARTIFACT_DEFS[a.id] || a;
+            if (defA.rarity !== (ARTIFACT_DEFS[b.id] || b).rarity) return;
+            // Deduct WDE
+            const wde = (saveData.resources && saveData.resources.waterdropEnergy) || 0;
+            if (wde < RG_MERGE_COST) return;
+            saveData.resources.waterdropEnergy -= RG_MERGE_COST;
+            saveSaveData();
+            _refreshWde();
+            // Capture the original artifact id before any mutation so merged
+            // artifacts can themselves be merged later.
+            const preservedId = a.id;
+            // Launch skill check
+            _launchSkillCheck(defA, function(success) {
+              if (success) {
+                _doMerge(defA, preservedId);
+              } else {
+                if (typeof showStatChange === 'function') showStatChange('❌ Merge failed — WDE lost. Artifacts kept.');
+              }
+              _rgSelected = [];
+              _initResonanceGrid(modal);
+            });
+          };
+        }
 
         _updateStatus(statusEl, mergeBtn, inv);
       }
 
-      function _doMerge(defA) {
+      function _doMerge(defA, preservedId) {
         const inv         = saveData.artifacts || [];
         const idxA        = _rgSelected[0];
         const idxB        = _rgSelected[1];
+        const artifactA   = inv[idxA];
         const nextRarity  = RG_RARITY_UP[defA.rarity] || defA.rarity;
         const bonusStat   = RG_MERGE_BONUS_STATS[Math.floor(Math.random() * RG_MERGE_BONUS_STATS.length)];
+        // Preserve the original artifact id so the merged artifact can itself be
+        // merged again in future attempts.
+        const mergedId    = preservedId || (artifactA && artifactA.id) || defA.id;
         // Remove both (higher idx first to preserve lower idx)
         const toRemove = [idxA, idxB].sort(function(a,b){return b-a;});
         toRemove.forEach(function(idx) { inv.splice(idx, 1); });
         // Insert merged artifact
         const merged = {
-          id: defA.id || (defA.name || 'artifact').toLowerCase().replace(/\s+/g, '_') + '_' + Date.now(),
+          id: mergedId,
           name: defA.name,
           icon: defA.icon,
           rarity: nextRarity,

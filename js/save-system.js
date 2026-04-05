@@ -2513,8 +2513,7 @@
       var old = document.getElementById('item-info-overlay');
       if (old && old.parentNode) old.parentNode.removeChild(old);
 
-      var rarityMap = { common: '#aaaaaa', uncommon: '#55cc55', rare: '#44aaff', epic: '#aa44ff', legendary: '#ffaa00', mythic: '#ff4444' };
-      var rarityColor = rarityMap[itemData.rarity] || '#ffffff';
+      var rarityColor = (typeof getRarityColor === 'function' ? getRarityColor : function(r) { return '#ffffff'; })(itemData.rarity);
 
       var overlay = document.createElement('div');
       overlay.id = 'item-info-overlay';

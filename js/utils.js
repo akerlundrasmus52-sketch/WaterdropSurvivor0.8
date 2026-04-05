@@ -4,12 +4,12 @@
 
 function getRarityColor(rarity) {
   const colors = {
-    common: '#AAAAAA',
-    uncommon: '#00FF00',
-    rare: '#5DADE2',
-    epic: '#9B59B6',
-    legendary: '#F39C12',
-    mythic: '#E74C3C'
+    common:    '#aaaaaa',
+    uncommon:  '#55cc55',
+    rare:      '#44aaff',
+    epic:      '#aa44ff',
+    legendary: '#ffd700',
+    mythic:    '#ff4444'
   };
   return colors[rarity] || colors.common;
 }

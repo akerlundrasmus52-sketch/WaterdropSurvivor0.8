@@ -138,7 +138,7 @@
 
   function _renderSellTab(modal, content) {
     const inventory = (window.saveData && saveData.inventory) || [];
-    const equippedIds = Object.values((saveData.equippedGear) || {}).filter(Boolean);
+    const equippedIds = Object.values((window.saveData && saveData.equippedGear) || {}).filter(Boolean);
 
     if (inventory.length === 0) {
       content.innerHTML = `<div class="ds-empty">Your Vault is empty.<br><span style="color:#666;font-size:11px;">Gear drops from enemies, bosses, and expeditions.</span></div>`;

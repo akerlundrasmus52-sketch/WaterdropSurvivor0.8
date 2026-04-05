@@ -11319,7 +11319,7 @@
   border: 1px solid #55cc55;
 }
 
-/* Ensure .rarity-mythic (no trailing 'al') is covered for global badge use */
+/* Alias for the 'mythical' naming variant used by card CSS classes (rarity-mythical) */
 .rarity-badge-mythical {
   color: #ff2200;
   background: rgba(255,34,0,0.15);
