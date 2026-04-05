@@ -505,6 +505,8 @@
           saveData.tutorial = { ...defaultSaveData.tutorial, ...(saveData.tutorial || {}) };
           // First-run tutorial system
           saveData.firstRunTutorial = { ...defaultSaveData.firstRunTutorial, ...(saveData.firstRunTutorial || {}) };
+          // A.I.D.A intro state — must be preserved strictly (chip/insert flags must survive page reloads)
+          saveData.aidaIntroState = saveData.aidaIntroState || {};
           // Destructibles info shown flag
           saveData.shownDestructiblesInfo = saveData.shownDestructiblesInfo || false;
           // Character visuals customization

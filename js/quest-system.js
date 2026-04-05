@@ -833,21 +833,23 @@
           const done = prog >= ch.target;
           const claimed = !!saveData.questHallChallenges[ch.id];
           const pct = Math.min(100, Math.floor((prog / ch.target) * 100));
-          const borderCol = claimed ? '#33aa33' : done ? '#00ccff' : 'rgba(0,204,255,0.3)';
-          const bgCol = claimed ? 'rgba(0,100,0,0.12)' : done ? 'rgba(0,204,255,0.1)' : 'rgba(0,20,40,0.5)';
+          // Annunaki gold/dark-cyan theme: replace the old blinding light-blue (#00ccff) with
+          // a sleek dark gold for "done-but-unclaimed" and green for "claimed".
+          const borderCol = claimed ? '#33aa33' : done ? '#C9A227' : 'rgba(201,162,39,0.2)';
+          const bgCol = claimed ? 'rgba(0,100,0,0.12)' : done ? 'linear-gradient(135deg,rgba(201,162,39,0.12),rgba(0,30,50,0.7))' : 'rgba(0,20,40,0.5)';
           html += `<div style="background:${bgCol};border:1px solid ${borderCol};border-radius:6px;padding:12px;margin-bottom:10px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <div style="font-family:'Bangers',cursive;font-size:15px;color:${claimed ? '#33aa33' : done ? '#00ccff' : '#88aacc'};letter-spacing:1px;">${ch.icon} ${ch.label}</div>
+              <div style="font-family:'Bangers',cursive;font-size:15px;color:${claimed ? '#33aa33' : done ? '#C9A227' : '#88aacc'};letter-spacing:1px;">${ch.icon} ${ch.label}</div>
               <div style="font-size:10px;color:#555;">+${ch.reward.xp} XP · +${ch.reward.gold} 💰</div>
             </div>
             <div style="font-size:11px;color:#888;margin-bottom:7px;">${ch.desc}</div>
             <div style="background:rgba(0,0,0,0.5);border-radius:4px;height:8px;overflow:hidden;margin-bottom:7px;">
-              <div style="width:${pct}%;height:100%;background:${claimed ? '#33aa33' : done ? '#00ccff' : 'rgba(0,204,255,0.4)'};transition:width 0.5s;"></div>
+              <div style="width:${pct}%;height:100%;background:${claimed ? '#33aa33' : done ? 'linear-gradient(90deg,#C9A227,#00ccaa)' : 'rgba(201,162,39,0.3)'};transition:width 0.5s;"></div>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div style="font-size:10px;color:#666;">${prog.toLocaleString()} / ${ch.target.toLocaleString()}</div>
               ${claimed ? '<div style="font-size:11px;color:#33aa33;font-weight:bold;">✅ CLAIMED</div>'
-                : done ? `<button class="ch-claim-btn" data-chid="${ch.id}" style="font-size:11px;padding:5px 12px;background:linear-gradient(to bottom,#006688,#003344);color:#00ccff;border:1px solid #00ccff;border-radius:4px;cursor:pointer;letter-spacing:1px;">🏅 Claim</button>`
+                : done ? `<button class="ch-claim-btn" data-chid="${ch.id}" style="font-size:11px;padding:5px 12px;background:linear-gradient(135deg,#3a2800,#1a1000);color:#C9A227;border:1px solid #C9A227;border-radius:4px;cursor:pointer;letter-spacing:1px;text-shadow:0 0 8px rgba(201,162,39,0.6);">🏅 Claim</button>`
                 : '<div style="font-size:10px;color:#444;">In Progress</div>'}
             </div>
           </div>`;

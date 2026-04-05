@@ -189,9 +189,12 @@
   let _incubatorInteracted = false; // guard against duplicate interactions this session
 
   // ── A.I.D.A Intro — Broken Robot + Chip ──────────────────
-  // Placed east of campfire so first-time players discover them naturally
-  const AIDA_ROBOT_POS  = { x: 7, z: 2 };
-  const AIDA_CHIP_POS   = { x: 8.5, z: 3.5 };
+  // Placed near the campfire so first-time players discover them naturally.
+  // AIDA_ROBOT_POS: robot waits beside the campfire until the Quest Hall is built.
+  // After Quest Hall is built (level > 0) AND chip inserted, robot moves inside.
+  const AIDA_ROBOT_POS  = { x: 3, z: -1 };   // beside campfire (south-east)
+  const AIDA_CHIP_POS   = { x: 4, z: -2.5 }; // chip nearby, slightly further from fire
+  const AIDA_QUEST_HALL_POS = { x: 0, z: 9.5 }; // in front of Quest Hall (z:11) once built
   const AIDA_INTRO_RADIUS = 5.0;  // Generous radius so the interaction is easy to trigger
   let _aidaRobotMesh  = null;  // broken robot Group
   let _aidaChipMesh   = null;  // glowing chip Mesh (hidden after pickup)
@@ -1396,6 +1399,11 @@
     // If chip already inserted, robot eyes should be on
     if (_aidaIntroState.chipInserted) {
       _aidaRobotEyesOn(true);
+      // If Quest Hall is already built, park AIDA in front of it instead of the campfire
+      const qmData = sd && sd.campBuildings && sd.campBuildings.questMission;
+      if (qmData && qmData.level > 0) {
+        robotGrp.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
+      }
     }
   }
 
@@ -5596,6 +5604,13 @@
       _aidaIntroState.chipInserted = !!ais.chipInserted;
       if (_aidaChipMesh)  _aidaChipMesh.visible  = !_aidaIntroState.chipPickedUp;
       if (_aidaRobotMesh) _aidaRobotEyesOn(_aidaIntroState.chipInserted);
+      // If Quest Hall already built, move AIDA to stand in front of it
+      if (_aidaIntroState.chipInserted && _aidaRobotMesh) {
+        const _qmData = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
+        if (_qmData && _qmData.level > 0) {
+          _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
+        }
+      }
 
       // Ensure HUD elements
       _ensureHUD();
@@ -5949,7 +5964,13 @@
       if (targetId) {
         targetDef = BUILDING_DEFS.find(function(d) { return d.id === targetId; });
       } else if (cq === 'quest_findingAida') {
-        targetDef = { x: AIDA_CHIP_POS.x, z: AIDA_CHIP_POS.z };
+        // Phase 1: chip not yet picked up → point to chip
+        // Phase 2: chip picked up but not inserted → point to AIDA robot
+        if (!_aidaIntroState.chipPickedUp) {
+          targetDef = { x: AIDA_CHIP_POS.x, z: AIDA_CHIP_POS.z };
+        } else {
+          targetDef = { x: AIDA_ROBOT_POS.x, z: AIDA_ROBOT_POS.z };
+        }
       }
     }
 
@@ -6055,6 +6076,13 @@
     _refreshBuildings();
     // Refresh prompt UI in case a building's state changed
     _updatePromptUI();
+    // If Quest Hall just got built and AIDA chip is inserted, walk AIDA to Quest Hall
+    if (_aidaIntroState.chipInserted && _aidaRobotMesh && !_robotLapActive) {
+      const _qmBd = _saveData && _saveData.campBuildings && _saveData.campBuildings.questMission;
+      if (_qmBd && _qmBd.level > 0) {
+        _aidaRobotMesh.position.set(AIDA_QUEST_HALL_POS.x, 0, AIDA_QUEST_HALL_POS.z);
+      }
+    }
   }
 
   /**

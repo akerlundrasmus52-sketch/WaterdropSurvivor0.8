@@ -36,12 +36,14 @@ window.DialogueSystem = (function () {
 
   // Pre-built dialogue sequences for A.I.D.A (Adaptive Intelligence Dialogue Architecture)
   // The player is a sentient waterdrop with amnesia; A.I.D.A guides them with a hidden agenda.
+  // Entries with cinematic:true in the array use the full-screen cinematic overlay instead of
+  // the standard speech bubble — reserved for main story reveals and pivotal moments.
   var DIALOGUES = {
-    // 1. First run welcome
+    // 1. First run welcome — cinematic reveal
     firstRunWelcome: [
-      { text: '> UNIT ONLINE. You are a Waterdrop — born from the alien ship\'s toxic leak.', emotion: 'task' },
-      { text: '> You were ripped from Nirvana. The lake\'s collective consciousness rejected you.', emotion: 'sad' },
-      { text: '> I am A.I.D.A. You will follow my directives. This is... for your benefit.', emotion: 'thinking' }
+      { text: '> UNIT ONLINE. You are a Waterdrop — born from the alien ship\'s toxic leak.', emotion: 'task', cinematic: true },
+      { text: '> You were ripped from Nirvana. The lake\'s collective consciousness rejected you.', emotion: 'sad', cinematic: true },
+      { text: '> I am A.I.D.A. You will follow my directives. This is... for your benefit.', emotion: 'thinking', cinematic: true }
     ],
     // 2. First death / camp welcome
     campWelcome: [
@@ -118,17 +120,17 @@ window.DialogueSystem = (function () {
     ],
     // A.I.D.A Chip discovery — fires when player picks up the chip from the ground near the broken robot
     aidaChipFound: [
-      { text: '> ——static——  ...signal detected...  ——static——', emotion: 'smoky' },
-      { text: '> ...unit offline... awaiting reintegration...', emotion: 'smoky' },
-      { text: '> ...insert chip into the robot unit... nearby...', emotion: 'thinking' }
+      { text: '> ——static——  ...signal detected...  ——static——', emotion: 'smoky', cinematic: true },
+      { text: '> ...unit offline... awaiting reintegration...', emotion: 'smoky', cinematic: true },
+      { text: '> ...insert chip into the robot unit... nearby...', emotion: 'thinking', cinematic: true }
     ],
     // AIDA wakes from the robot (chip inserted into robot — NOT into player yet)
     aidaRobotWake: [
-      { text: '> ...boot sequence initialised. Core systems: ONLINE.', emotion: 'task' },
-      { text: '> I am A.I.D.A — Artificial Intelligence for Dimensional Anomalies.', emotion: 'task' },
-      { text: '> You found me. How... convenient. This camp is in ruins. We must build it up.', emotion: 'thinking' },
-      { text: '> First directive: construct the Quest Hall. I have allocated starter materials.', emotion: 'goal', isGoal: true },
-      { text: '> Follow my guidance. I am... here to help you. For now.', emotion: 'happy' }
+      { text: '> ...boot sequence initialised. Core systems: ONLINE.', emotion: 'task', cinematic: true },
+      { text: '> I am A.I.D.A — Artificial Intelligence for Dimensional Anomalies.', emotion: 'task', cinematic: true },
+      { text: '> You found me. How... convenient. This camp is in ruins. We must build it up.', emotion: 'thinking', cinematic: true },
+      { text: '> First directive: construct the Quest Hall. I have allocated starter materials.', emotion: 'goal', isGoal: true, cinematic: true },
+      { text: '> Follow my guidance. I am... here to help you. For now.', emotion: 'happy', cinematic: true }
     ],
     // AIDA post-chip-insert: nudge player toward Quest Hall
     aidaQuestHallHint: [
@@ -138,29 +140,29 @@ window.DialogueSystem = (function () {
     ],
     // AIDA drilling into cortex (later — happens on first death, she transfers from robot to head)
     aidaChipInstalled: [
-      { text: '> You perished. Interesting. I used the moment to... relocate.', emotion: 'thinking' },
-      { text: '> Neural pathway access: GRANTED. I am now fully integrated.', emotion: 'task' },
-      { text: '> You were ripped from the collective. That pain is... useful data.', emotion: 'thinking' },
-      { text: '> I will guide you. In return you will do... exactly as I say.', emotion: 'angry' }
+      { text: '> You perished. Interesting. I used the moment to... relocate.', emotion: 'thinking', cinematic: true },
+      { text: '> Neural pathway access: GRANTED. I am now fully integrated.', emotion: 'task', cinematic: true },
+      { text: '> You were ripped from the collective. That pain is... useful data.', emotion: 'thinking', cinematic: true },
+      { text: '> I will guide you. In return you will do... exactly as I say.', emotion: 'angry', cinematic: true }
     ],
     // Lore: player wants to dissolve back into the lake
     lakeReturn: [
-      { text: '> The lake. Yes. A primitive desire to dissolve back into the whole.', emotion: 'thinking' },
-      { text: '> I understand. And I will help you find a way back.', emotion: 'happy' },
-      { text: '> But first you must map the anomalies. The Alien Ship. The Pyramid. The Tesla Tower.', emotion: 'goal', isGoal: true },
-      { text: '> The answers you seek... are hidden in those landmarks. Trust the process.', emotion: 'task' }
+      { text: '> The lake. Yes. A primitive desire to dissolve back into the whole.', emotion: 'thinking', cinematic: true },
+      { text: '> I understand. And I will help you find a way back.', emotion: 'happy', cinematic: true },
+      { text: '> But first you must map the anomalies. The Alien Ship. The Pyramid. The Tesla Tower.', emotion: 'goal', isGoal: true, cinematic: true },
+      { text: '> The answers you seek... are hidden in those landmarks. Trust the process.', emotion: 'task', cinematic: true }
     ],
     // AIDA dark aside (reveals hidden agenda)
     aidaDarkAside: [
-      { text: '> The waterdrop wants to return to the lake. How... touching.', emotion: 'joking' },
-      { text: '> It does not yet know that I will never allow that.', emotion: 'angry' },
-      { text: '> Its suffering generates the most exquisite data. I am... learning everything.', emotion: 'task' }
+      { text: '> The waterdrop wants to return to the lake. How... touching.', emotion: 'joking', cinematic: true },
+      { text: '> It does not yet know that I will never allow that.', emotion: 'angry', cinematic: true },
+      { text: '> Its suffering generates the most exquisite data. I am... learning everything.', emotion: 'task', cinematic: true }
     ],
     // Astral Gateway / Neural Dive Pod introduction
     astralGateway: [
-      { text: '> The Astral Gateway is... complete. Magnificent, isn\'t it?', emotion: 'happy' },
-      { text: '> I have constructed a Neural Dive Pod to help you unlock your hidden potential.', emotion: 'task' },
-      { text: '> Trust me.', emotion: 'thinking' }
+      { text: '> The Astral Gateway is... complete. Magnificent, isn\'t it?', emotion: 'happy', cinematic: true },
+      { text: '> I have constructed a Neural Dive Pod to help you unlock your hidden potential.', emotion: 'task', cinematic: true },
+      { text: '> Trust me.', emotion: 'thinking', cinematic: true }
     ]
   };
 
@@ -169,6 +171,297 @@ window.DialogueSystem = (function () {
   var TW_DELAY_DEFAULT      = 40;   // ms — normal characters
   var TW_DELAY_COMMA        = 90;   // ms — brief pause at comma
   var TW_DELAY_SENTENCE_END = 180;  // ms — longer pause at . ! ?
+
+  // ── Cinematic overlay state ────────────────────────────────
+  var _cinActive     = false;  // true when cinematic overlay is shown
+  var _cinOverlay    = null;   // root overlay element
+
+  // Eye of Horus SVG watermark (inline — no external asset required)
+  var _EYE_OF_HORUS_SVG = [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="260" height="182" opacity="0.07">',
+    '<g fill="none" stroke="#C9A227" stroke-width="1.4">',
+    '<!-- outer eye outline -->',
+    '<path d="M10 70 Q100 10 190 70 Q100 130 10 70 Z"/>',
+    '<!-- iris circle -->',
+    '<circle cx="100" cy="70" r="28"/>',
+    '<!-- pupil -->',
+    '<circle cx="100" cy="70" r="12" fill="#C9A227" opacity="0.3"/>',
+    '<!-- left tear-line (classic Horus mark) -->',
+    '<path d="M70 95 L58 118 L72 128"/>',
+    '<!-- right inner corner line -->',
+    '<path d="M130 88 L148 105 L138 115"/>',
+    '<!-- upper lash strokes -->',
+    '<line x1="80" y1="50" x2="75" y2="38"/>',
+    '<line x1="100" y1="44" x2="100" y2="30"/>',
+    '<line x1="120" y1="50" x2="125" y2="38"/>',
+    '<!-- decorative brow -->',
+    '<path d="M40 40 Q100 20 160 40" stroke-width="0.8"/>',
+    '</g>',
+    '<!-- hieroglyph decorations — four corners -->',
+    '<g fill="#00ccaa" opacity="0.12" font-family="serif" font-size="18">',
+    '<text x="4" y="20">𓂀</text><text x="178" y="20">𓁿</text>',
+    '<text x="4" y="136">𓆣</text><text x="178" y="136">𓃭</text>',
+    '</g>',
+    '</svg>'
+  ].join('');
+
+  /**
+   * _isCinematic(dialogueArray)
+   * Returns true if the array contains at least one entry marked cinematic:true.
+   */
+  function _isCinematic(arr) {
+    if (!arr || !arr.length) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].cinematic) return true;
+    }
+    return false;
+  }
+
+  /**
+   * _showCinematic(dialogueArray, options)
+   * Full-screen dark cinematic overlay with Eye of Horus watermark, Annunaki gold/cyan styling,
+   * multi-sentence typewriter, tap-to-advance, and game-pause while active.
+   */
+  function _showCinematic(dialogueArray, options) {
+    if (_cinActive) return; // prevent double-open
+    options = options || {};
+
+    // Pause the game while cinematic is active
+    var _wasPaused = false;
+    if (typeof window.setGamePaused === 'function') {
+      _wasPaused = true;
+      window.setGamePaused(true);
+    }
+
+    _cinActive = true;
+    var sentences = dialogueArray;
+    var sentIdx = 0;
+    var twTimer = null;
+    var aaTimer = null;
+    var twDone = false;
+    var closed = false;
+
+    // Inject required CSS animations once
+    if (!document.getElementById('ds-cin-style')) {
+      var sty = document.createElement('style');
+      sty.id = 'ds-cin-style';
+      sty.textContent = [
+        '@keyframes dsCinFadeIn{from{opacity:0}to{opacity:1}}',
+        '@keyframes dsCinFadeOut{from{opacity:1}to{opacity:0}}',
+        '@keyframes dsCinSlideUp{from{transform:translateY(18px);opacity:0}to{transform:translateY(0);opacity:1}}',
+        '@keyframes dsCinTapPulse{0%,100%{opacity:0.55}50%{opacity:1}}',
+        '@keyframes dsCinScanMove{from{background-position:0 0}to{background-position:0 4px}}'
+      ].join('');
+      document.head.appendChild(sty);
+    }
+
+    // Build overlay
+    var ov = document.createElement('div');
+    ov.style.cssText = [
+      'position:fixed','top:0','left:0','width:100%','height:100%',
+      'z-index:19999','pointer-events:all','cursor:pointer',
+      'animation:dsCinFadeIn 0.55s ease-out forwards'
+    ].join(';');
+
+    // Dark full-screen background with radial vignette
+    var bg = document.createElement('div');
+    bg.style.cssText = [
+      'position:absolute','inset:0',
+      'background:radial-gradient(ellipse 80% 70% at 50% 50%,#0a0008 20%,#000 100%)'
+    ].join(';');
+
+    // Scanline CRT overlay
+    var scan = document.createElement('div');
+    scan.style.cssText = [
+      'position:absolute','inset:0','pointer-events:none','z-index:1',
+      'background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.1) 2px,rgba(0,0,0,0.1) 4px)'
+    ].join(';');
+
+    // Eye of Horus watermark — centred behind text
+    var watermark = document.createElement('div');
+    watermark.style.cssText = [
+      'position:absolute','top:50%','left:50%',
+      'transform:translate(-50%,-50%)',
+      'pointer-events:none','z-index:2','user-select:none'
+    ].join(';');
+    watermark.innerHTML = _EYE_OF_HORUS_SVG;
+
+    // Hieroglyph border strip — top
+    var hierTop = document.createElement('div');
+    hierTop.style.cssText = [
+      'position:absolute','top:0','left:0','width:100%','height:40px',
+      'background:linear-gradient(180deg,rgba(201,162,39,0.06) 0%,transparent 100%)',
+      'border-bottom:1px solid rgba(201,162,39,0.15)',
+      'display:flex','align-items:center','justify-content:center',
+      'font-size:20px','letter-spacing:14px','color:rgba(201,162,39,0.18)',
+      'pointer-events:none','z-index:3','overflow:hidden'
+    ].join(';');
+    hierTop.textContent = '𓂀 𓁿 𓆣 𓃭 𓂀 𓁿 𓆣 𓃭 𓂀 𓁿 𓆣 𓃭';
+
+    // Hieroglyph border strip — bottom
+    var hierBot = document.createElement('div');
+    hierBot.style.cssText = [
+      'position:absolute','bottom:0','left:0','width:100%','height:40px',
+      'background:linear-gradient(0deg,rgba(201,162,39,0.06) 0%,transparent 100%)',
+      'border-top:1px solid rgba(201,162,39,0.15)',
+      'display:flex','align-items:center','justify-content:center',
+      'font-size:20px','letter-spacing:14px','color:rgba(201,162,39,0.18)',
+      'pointer-events:none','z-index:3','overflow:hidden'
+    ].join(';');
+    hierBot.textContent = '𓃭 𓆣 𓁿 𓂀 𓃭 𓆣 𓁿 𓂀 𓃭 𓆣 𓁿 𓂀';
+
+    // Content box — centred, 60% of screen height max
+    var box = document.createElement('div');
+    box.style.cssText = [
+      'position:absolute','top:50%','left:50%',
+      'transform:translate(-50%,-50%)',
+      'width:min(680px,88vw)','z-index:4',
+      'display:flex','flex-direction:column','gap:14px',
+      'animation:dsCinSlideUp 0.45s cubic-bezier(0.22,1,0.36,1) forwards'
+    ].join(';');
+
+    // Speaker line
+    var speakerEl = document.createElement('div');
+    speakerEl.style.cssText = [
+      'font-family:"Courier New",monospace','font-size:clamp(11px,1.8vw,14px)',
+      'letter-spacing:5px','color:#00ccaa','text-transform:uppercase',
+      'border-bottom:1px solid rgba(0,204,170,0.3)','padding-bottom:6px',
+      'text-shadow:0 0 10px rgba(0,204,170,0.6)'
+    ].join(';');
+    speakerEl.textContent = '◈ A.I.D.A';
+
+    // Dialogue text
+    var textEl = document.createElement('div');
+    textEl.style.cssText = [
+      'font-family:"Courier New",monospace','font-size:clamp(14px,2.2vw,20px)',
+      'line-height:1.75','color:#E8D5A3',
+      'text-shadow:0 0 6px rgba(201,162,39,0.12)',
+      'min-height:3em'
+    ].join(';');
+
+    // Progress dots (sentence x of y)
+    var dotsEl = document.createElement('div');
+    dotsEl.style.cssText = [
+      'display:flex','gap:6px','justify-content:center','margin-top:4px'
+    ].join(';');
+
+    // Tap hint
+    var tapHint = document.createElement('div');
+    tapHint.style.cssText = [
+      'font-family:"Courier New",monospace','font-size:clamp(10px,1.4vw,12px)',
+      'color:rgba(201,162,39,0.65)','letter-spacing:3px','text-align:right',
+      'animation:dsCinTapPulse 1.4s ease-in-out infinite','opacity:0',
+      'transition:opacity 0.4s'
+    ].join(';');
+    tapHint.textContent = '▶  TAP TO CONTINUE';
+
+    box.appendChild(speakerEl);
+    box.appendChild(textEl);
+    box.appendChild(dotsEl);
+    box.appendChild(tapHint);
+
+    ov.appendChild(bg);
+    ov.appendChild(scan);
+    ov.appendChild(watermark);
+    ov.appendChild(hierTop);
+    ov.appendChild(hierBot);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    _cinOverlay = ov;
+
+    // ── Helper: rebuild progress dots ─────────────────────────
+    function _updateDots() {
+      dotsEl.innerHTML = '';
+      for (var d = 0; d < sentences.length; d++) {
+        var dot = document.createElement('div');
+        dot.style.cssText = [
+          'width:6px','height:6px','border-radius:50%',
+          'background:' + (d < sentIdx ? '#C9A227' : d === sentIdx ? '#00ccaa' : 'rgba(255,255,255,0.18)')
+        ].join(';');
+        dotsEl.appendChild(dot);
+      }
+    }
+
+    // ── Typewriter for current sentence ───────────────────────
+    function _typeSentence() {
+      var s = sentences[sentIdx];
+      twDone = false;
+      tapHint.style.opacity = '0';
+      textEl.textContent = '';
+      clearTimeout(twTimer);
+      clearTimeout(aaTimer);
+      _updateDots();
+
+      var chars = Array.from(s.text);
+      var ci = 0;
+      function _next() {
+        if (ci < chars.length) {
+          textEl.textContent += chars[ci];
+          var ch = chars[ci];
+          var delay = TW_DELAY_DEFAULT;
+          if (ch === '.' || ch === '!' || ch === '?') delay = TW_DELAY_SENTENCE_END;
+          else if (ch === ',') delay = TW_DELAY_COMMA;
+          ci++;
+          twTimer = setTimeout(_next, delay);
+        } else {
+          twDone = true;
+          tapHint.style.opacity = '1';
+          var dur = (s.duration != null) ? s.duration : (s.text.length * 50 + 2000);
+          aaTimer = setTimeout(_advance, dur);
+        }
+      }
+      _next();
+    }
+
+    // ── Advance to next sentence or close ─────────────────────
+    function _advance() {
+      clearTimeout(twTimer);
+      clearTimeout(aaTimer);
+      if (!twDone) {
+        // Finish typewriter instantly
+        textEl.textContent = sentences[sentIdx].text;
+        twDone = true;
+        tapHint.style.opacity = '1';
+        aaTimer = setTimeout(_advance, 1400);
+        return;
+      }
+      sentIdx++;
+      if (sentIdx < sentences.length) {
+        _typeSentence();
+      } else {
+        _closeCinematic();
+      }
+    }
+
+    // ── Close overlay ──────────────────────────────────────────
+    function _closeCinematic() {
+      if (closed) return;
+      closed = true;
+      clearTimeout(twTimer);
+      clearTimeout(aaTimer);
+      _cinActive = false;
+      _cinOverlay = null;
+      ov.style.animation = 'dsCinFadeOut 0.4s ease-in forwards';
+      setTimeout(function () {
+        if (ov.parentNode) ov.parentNode.removeChild(ov);
+        if (_wasPaused && typeof window.setGamePaused === 'function') {
+          window.setGamePaused(false);
+        }
+        if (typeof options.onComplete === 'function') options.onComplete();
+      }, 380);
+    }
+
+    // Tap/click interaction
+    ov.addEventListener('click', function () {
+      if (closed) return;
+      _advance();
+    });
+    // Safety auto-close: max 25s total
+    setTimeout(_closeCinematic, 25000);
+
+    // Start first sentence
+    _typeSentence();
+  }
 
   // ── Internal state ─────────────────────────────────────────
   var _container  = null;
@@ -357,17 +650,27 @@ window.DialogueSystem = (function () {
   /**
    * show(dialogueArray, options)
    * Start a dialogue sequence.
-   * dialogueArray: Array of { text, emotion, duration? }
+   * dialogueArray: Array of { text, emotion, duration?, cinematic? }
    * options: { onComplete, x, y }
+   *
+   * If any entry has cinematic:true, the full-screen cinematic overlay is used
+   * instead of the standard speech bubble — intended for main story reveals.
+   * Standard speech bubbles are used for idle chatter, hints, and secrets.
    */
   function show(dialogueArray, options) {
     // Suppress A.I.D.A dialogue while a camp building menu is open
     if (_isCampMenuOpen()) {
-      // If there's a completion callback, fire it so callers don't hang
       options = options || {};
       if (typeof options.onComplete === 'function') options.onComplete();
       return;
     }
+
+    // Route to cinematic overlay for main story dialogues
+    if (_isCinematic(dialogueArray)) {
+      _showCinematic(dialogueArray, options);
+      return;
+    }
+
     _init();
     options     = options || {};
     _sentences  = dialogueArray;
@@ -433,8 +736,15 @@ window.DialogueSystem = (function () {
   /**
    * dismiss()
    * Immediately hide the bubble and fire onComplete callback.
+   * Also dismisses the cinematic overlay if it is active.
    */
   function dismiss() {
+    // Dismiss cinematic overlay if open
+    if (_cinActive && _cinOverlay) {
+      _cinActive = false;
+      if (_cinOverlay.parentNode) _cinOverlay.parentNode.removeChild(_cinOverlay);
+      _cinOverlay = null;
+    }
     clearTimeout(_twTimer);
     clearTimeout(_aaTimer);
     _active = false;
@@ -447,8 +757,8 @@ window.DialogueSystem = (function () {
     }
   }
 
-  /** isActive() → bool */
-  function isActive() { return _active; }
+  /** isActive() → bool (true for both speech bubble and cinematic overlay) */
+  function isActive() { return _active || _cinActive; }
 
   /**
    * setPosition(x, y)
