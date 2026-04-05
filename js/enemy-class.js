@@ -4390,11 +4390,12 @@
           
           // Show notification
           const rarityColors = {
-            common: '#AAAAAA',
-            uncommon: '#00FF00',
-            rare: '#5DADE2',
-            epic: '#9B59B6',
-            legendary: '#F39C12'
+            common:    '#aaaaaa',
+            uncommon:  '#55cc55',
+            rare:      '#44aaff',
+            epic:      '#aa44ff',
+            legendary: '#ffd700',
+            mythic:    '#ff4444'
           };
           createFloatingText(`+${newGear.name}`, deathPos, rarityColors[newGear.rarity] || '#FFFFFF');
           playSound('coin');

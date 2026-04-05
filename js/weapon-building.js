@@ -86,6 +86,7 @@ const WEAPON_DISPLAY = {
 
 const RARITY_COLORS = {
   common:    '#aaaaaa',
+  uncommon:  '#55cc55',
   rare:      '#4FC3F7',
   epic:      '#AA44FF',
   legendary: '#F39C12',

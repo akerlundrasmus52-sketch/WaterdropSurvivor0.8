@@ -48,6 +48,7 @@
     { id: 'astralGateway',       x:  7,  z:-18,  label: 'Astral Gateway',      icon: '🌀' },
     { id: 'accountBuilding',     x:  4,  z:-15,  label: 'Profile & Records',   icon: '👤' },
     { id: 'shrine',              x:  0,  z: -6,  label: 'The Artifact Shrine', icon: '🏛️' },
+    { id: 'droppletShop',        x: -14, z:  0,  label: 'The Dropplet Shop',   icon: '💧' },
   ];
 
   // ──────────────────────────────────────────────────────────
@@ -2059,6 +2060,7 @@
       case 'prismReliquary':     return _buildPrismReliquary(def);
       case 'astralGateway':      return _buildAstralGateway(def);
       case 'shrine':             return _buildArtifactShrine(def);
+      case 'droppletShop':       return _buildDroppletShop(def);
       default:                   return _buildGenericBuilding(def);
     }
   }
@@ -3557,13 +3559,71 @@
     _addNameSign(grp, def.label, 0, 5.2, 0);
     return grp;
   }
-  function _buildPrestigeAltar(def) {
+
+  // ── The Dropplet Shop — a waterdrop-themed merchant building ─────────────
+  function _buildDroppletShop(def) {
     const THREE = T();
     const grp = new THREE.Group();
     grp.position.set(def.x, 0, def.z);
 
-    // Stone platform
-    const platformGeo = new THREE.CylinderGeometry(4.5, 4.8, 0.5, 12);
+    // Tiled floor platform — cyan-tinted stone
+    const floorGeo = new THREE.BoxGeometry(6, 0.3, 6);
+    grp.add(_mesh(floorGeo, _lambert(0x0a2233)));
+
+    // Main stall body — front-open market stall shape
+    const bodyGeo = new THREE.BoxGeometry(5.5, 3.2, 4);
+    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x0d1f2d, emissive: 0x003344, emissiveIntensity: 0.3 });
+    const body = _mesh(bodyGeo, bodyMat);
+    body.position.set(0, 1.75, -0.5);
+    grp.add(body);
+
+    // Awning / canopy — slanted water-blue roof
+    const roofGeo = new THREE.BoxGeometry(6.5, 0.2, 5.2);
+    const roofMat = new THREE.MeshPhongMaterial({ color: 0x004466, emissive: 0x0088aa, emissiveIntensity: 0.4 });
+    const roof = _mesh(roofGeo, roofMat);
+    roof.position.set(0, 3.5, -0.2);
+    roof.rotation.x = 0.08;
+    grp.add(roof);
+
+    // Counter top — horizontal wooden plank
+    const counterGeo = new THREE.BoxGeometry(5.0, 0.15, 1.2);
+    const counter = _mesh(counterGeo, _lambert(0x1a3040));
+    counter.position.set(0, 1.2, 1.6);
+    grp.add(counter);
+
+    // Large glowing waterdrop orb (focal point)
+    const dropGeo = new THREE.SphereGeometry(0.6, 16, 16);
+    const dropMat = new THREE.MeshPhongMaterial({
+      color: 0x00ccff, emissive: 0x00aaff, emissiveIntensity: 1.5,
+      transparent: true, opacity: 0.85
+    });
+    const dropOrb = _mesh(dropGeo, dropMat);
+    dropOrb.position.set(0, 2.4, 1.2);
+    grp.add(dropOrb);
+
+    // Hanging sign — dark panel with glow
+    const signGeo = new THREE.BoxGeometry(3.0, 0.8, 0.08);
+    const signMat = new THREE.MeshPhongMaterial({ color: 0x001122, emissive: 0x00aaff, emissiveIntensity: 0.6 });
+    const sign = _mesh(signGeo, signMat);
+    sign.position.set(0, 4.1, 2.2);
+    grp.add(sign);
+
+    // Point light — cyan glow from orb
+    const shopLight = new THREE.PointLight(0x00ccff, 2.5, 12, 2);
+    shopLight.position.set(0, 2.8, 1.2);
+    grp.add(shopLight);
+    _alienLights.push({ light: shopLight, base: 2.5, phase: 1.1 });
+
+    // Warm accent light underneath counter
+    const warmLight = new THREE.PointLight(0x0055aa, 1.0, 6, 2);
+    warmLight.position.set(0, 0.8, 1.6);
+    grp.add(warmLight);
+
+    _addNameSign(grp, def.label, 0, 5.0, 0);
+    return grp;
+  }
+
+  function _buildPrestigeAltar(def) {
     grp.add(_mesh(platformGeo, _lambert(0x303040)));
 
     // Inner raised ring

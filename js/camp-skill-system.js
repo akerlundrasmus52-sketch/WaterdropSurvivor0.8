@@ -473,6 +473,16 @@
           critDamage: 0.1 * level,
           voidLifesteal: 0.02 * level
         })
+      },
+      droppletShop: {
+        name: 'The Dropplet Shop',
+        icon: '💧',
+        description: 'A mystical merchant stall. SELL unused weapons & gear from your Vault for Gold. BUY raw materials and Waterdrop Energy — the fuel for the Artifact Resonance Grid.',
+        baseCost: 0,
+        costMultiplier: 0,
+        maxCost: 0,
+        isFree: true,
+        bonus: (level) => ({})
       }
     };
 
@@ -2740,7 +2750,9 @@
       'campfireKitchen': 'quest30_buildCampfire',
       'weaponsmith': 'quest31_buildWeaponsmith',
       // === Late-game buildings ===
-      'prismReliquary': 'quest35_crystallizedTear'
+      'prismReliquary': 'quest35_crystallizedTear',
+      // === The Dropplet Shop — unlocks alongside the Prism Reliquary (late-game) ===
+      'droppletShop': 'quest35_crystallizedTear'
     };
     
     // Get current quest object
