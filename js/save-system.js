@@ -491,9 +491,9 @@
           if (!saveData.exploration) {
             saveData.exploration = { level: 1, xp: 0, activeExpedition: null, history: [] };
           }
-          if (!saveData.exploration.history)         saveData.exploration.history = [];
-          if (!saveData.exploration.level)           saveData.exploration.level = 1;
-          if (saveData.exploration.xp == null)       saveData.exploration.xp = 0;
+          if (!saveData.exploration.history)               saveData.exploration.history = [];
+          if (saveData.exploration.level == null)          saveData.exploration.level = 1;
+          if (saveData.exploration.xp == null)             saveData.exploration.xp = 0;
           // Account level system
           saveData.accountLevel = saveData.accountLevel || 1;
           saveData.accountXP = saveData.accountXP || 0;

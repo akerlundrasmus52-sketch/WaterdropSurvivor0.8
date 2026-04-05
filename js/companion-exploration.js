@@ -220,8 +220,9 @@ function renderExplorationTab(container) {
 
   // Ensure exploration data exists
   if (!sd.exploration) {
-    sd.exploration = { level: 1, xp: 0, activeExpedition: null };
+    sd.exploration = { level: 1, xp: 0, activeExpedition: null, history: [] };
   }
+  if (!sd.exploration.history) sd.exploration.history = [];
   const explo = sd.exploration;
   const exploLevel = explo.level || 1;
   const exploXp    = explo.xp || 0;
@@ -459,7 +460,8 @@ function _renderExploHistory(explo) {
 function startExpedition(destId) {
   if (!window.saveData) return;
   const sd = window.saveData;
-  if (!sd.exploration) sd.exploration = { level: 1, xp: 0, activeExpedition: null };
+  if (!sd.exploration) sd.exploration = { level: 1, xp: 0, activeExpedition: null, history: [] };
+  if (!sd.exploration.history) sd.exploration.history = [];
 
   // Can't start if already active
   if (sd.exploration.activeExpedition && !sd.exploration.activeExpedition.completed) {
@@ -580,7 +582,7 @@ function _appendExploEvent(expedition, companionName, text, dest, loot, type) {
   expedition.events = expedition.events || [];
   expedition.events.push({ text, loot: loot || null, type: type || 'travel', ts: Date.now() });
   // Keep to 30 events max
-  if (expedition.events.length > 30) expedition.events.shift();
+  if (expedition.events.length >= 30) expedition.events.shift();
 }
 
 // ── Complete expedition ───────────────────────────────────────
