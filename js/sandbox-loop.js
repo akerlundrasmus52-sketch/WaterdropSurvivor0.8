@@ -278,6 +278,7 @@
         if (window.WaveSpawner && typeof window.WaveSpawner.reset === 'function') window.WaveSpawner.reset();
         if (window.HitDetection && typeof window.HitDetection.reset === 'function') window.HitDetection.reset();
         if (window.LeapingSlimePool && typeof window.LeapingSlimePool.reset === 'function') window.LeapingSlimePool.reset();
+        if (window.GreyCompanion && typeof window.GreyCompanion.reset === 'function') window.GreyCompanion.reset();
         SeqWaveManager.reset();
       }, 800); // brief delay so blood/gore stays visible for dramatic effect
 
@@ -6472,6 +6473,10 @@
       if (typeof AidaBoss !== 'undefined' && AidaBoss.update) {
         AidaBoss.update(dt);
       }
+      // Grey Companion update
+      if (window.GreyCompanion && typeof GreyCompanion.update === 'function') {
+        GreyCompanion.update(dt);
+      }
 
       // Player class built-in update (handles dash, invulnerability ticks, etc.)
       if (player && typeof player.update === 'function') {
@@ -7055,6 +7060,11 @@
       }
       // Initialize Grey Boss system
       if (typeof GreyBossSystem !== 'undefined') { GreyBossSystem.init(scene, camera, player); }
+      // Initialize Grey Companion system
+      if (window.GreyCompanion && typeof GreyCompanion.init === 'function') {
+        GreyCompanion.init(scene, camera, player);
+        console.log('[🎮 SandboxLoop] ✓ Grey Companion system initialized');
+      }
 
       console.log('[🎮 SandboxLoop] Spawning first wave...');
       SeqWaveManager.start();  // Start sequential kill-based wave system
