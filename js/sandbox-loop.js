@@ -442,6 +442,13 @@
   let _homingMissileTimer = 0;
   let _poisonTimer        = 0;
   let _fireballTimer      = 0;
+  // Mobile detection: shared module-level flag so _applyGraphicsQuality() (called from
+  // settings UI as well as _initScene) can reference it without a ReferenceError.
+  // High-DPI mobile screens (e.g. iPhone 16) have devicePixelRatio ≥ 3, causing the GPU
+  // to render the post-processing chain at near-4K resolution and tanking frame rate.
+  const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || ('ontouchstart' in window && navigator.maxTouchPoints > 1);
+
   // Pre-allocated scratch array for combining enemy lists without GC allocation
   const _allEnemiesScratch = [];
   // ─── Gore: Corpse Linger System ──────────────────────────────────────────────
@@ -5387,7 +5394,7 @@
     let _savedQuality = DEFAULT_QUALITY;
     try { _savedQuality = localStorage.getItem('sandboxGraphicsQuality') || DEFAULT_QUALITY; } catch (_) {}
     // Apply defaults first so properties exist before _applyGraphicsQuality runs
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, _isMobile ? 1.5 : 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
@@ -5634,7 +5641,8 @@
         break;
       case 'ultra':
       default:
-        renderer.setPixelRatio(window.devicePixelRatio);
+        // Cap at 1.5 on mobile even in ultra mode to prevent GPU overload from 4K post-processing
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, _isMobile ? 1.5 : 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;

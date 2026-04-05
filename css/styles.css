@@ -11227,3 +11227,35 @@
   background: #222;
   border-color: #555;
 }
+
+/* ── Annunaki Forge — Merge Animations ──────────────────────────────────── */
+@keyframes forgeMergeFlash {
+  0%   { opacity: 0; transform: scale(0.8); }
+  30%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+@keyframes forgeMergeReveal {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(-8deg); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes forgeSpark {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--spark-x, 0px), var(--spark-y, 0px)) scale(0); opacity: 0; }
+}
+
+@keyframes forgeShake {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  15%  { transform: translate(-6px, 3px) rotate(-1.5deg); }
+  30%  { transform: translate(6px, -4px) rotate(1deg); }
+  45%  { transform: translate(-4px, 5px) rotate(-0.8deg); }
+  60%  { transform: translate(5px, -2px) rotate(0.5deg); }
+  75%  { transform: translate(-3px, 3px) rotate(-0.3deg); }
+  100% { transform: translate(0,0) rotate(0deg); }
+}
+
+.forge-screen-shake {
+  animation: forgeShake 0.55s cubic-bezier(0.36,0.07,0.19,0.97);
+}
