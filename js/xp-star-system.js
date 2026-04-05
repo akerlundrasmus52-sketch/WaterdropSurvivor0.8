@@ -56,9 +56,12 @@ const XP_CFG = {
   STAR_POINTS: 5,              // 5-pointed star
 
   // Magnetism
-  MAGNET_RANGE: 3.5,           // Pickup range at level 0 (no upgrades). Previously 12.0 which was far too strong.
-  MAGNET_SPEED: 4.5,           // Base pull speed at edge of range
-  COLLECT_RANGE: 1.0,          // Collection distance
+  // MAGNET_RANGE is deliberately tiny so the player must physically walk onto stars at level 0.
+  // Stars that enter the radius are pulled with a cubic slingshot acceleration — starts slow
+  // at the edge, then snaps rapidly into the player (gravity/slingshot feel).
+  MAGNET_RANGE: 1.5,           // Tiny pickup radius at level 0 — player must touch the star.
+  MAGNET_SPEED: 15,            // Pull speed in world-units/sec at the closest point (proper dt scaling).
+  COLLECT_RANGE: 1.0,          // Collection distance (must be < MAGNET_RANGE)
 
   // Pool size
   POOL_SIZE: 60,               // Pre-allocated stars (BUG C: increased from 50 to 60)
@@ -369,6 +372,12 @@ class XPStar {
     }
 
     // Magnetism: pull toward player (radius scaled by optional upgrade multiplier)
+    // BUG FIX: direction vector (dx, dy, dz) already points from star → player, so adding it
+    // to position moves the star toward the player (attraction, not repulsion).
+    // The old formula used "* dt * 60" which treated dt as frame-count instead of seconds,
+    // causing 60× overshoot at 60fps — the star flew past the player and oscillated wildly.
+    // Fixed: use "* dt" for proper world-units/sec movement, and clamp the step to prevent
+    // overshooting the player even on low-FPS spikes.
     const dx = playerX - this.mesh.position.x;
     const dy = playerY - this.mesh.position.y;
     const dz = playerZ - this.mesh.position.z;
@@ -379,13 +388,20 @@ class XPStar {
       // Lift off ground when magnetized
       this.onGround = false;
 
-      // Quadratic ramp-up: starts slow at the edge of range, accelerates as star gets closer
+      // Cubic slingshot ramp: t=0 at edge of range (slow), t=1 near player (fast snap).
+      // Starts almost still, then accelerates hard — "gravity well / slingshot" feel.
       const effectiveRange = XP_CFG.MAGNET_RANGE * rm;
-      const t = Math.max(0, (effectiveRange - dist) / effectiveRange); // 0 at edge, 1 at 0 units
-      const pullStrength = XP_CFG.MAGNET_SPEED * (1 + t * t * 4);
-      this.mesh.position.x += (dx / dist) * pullStrength * dt * 60;
-      this.mesh.position.y += (dy / dist) * pullStrength * dt * 60;
-      this.mesh.position.z += (dz / dist) * pullStrength * dt * 60;
+      const t = Math.max(0, (effectiveRange - dist) / effectiveRange); // 0 at edge → 1 at player
+      const pullStrength = XP_CFG.MAGNET_SPEED * (0.1 + t * t * t * 4); // cubic: 0.1× → 4.1× of MAGNET_SPEED
+
+      // Proper per-second movement (dt is in seconds).
+      // Clamp step so the star never overshoots the player in a single frame.
+      const step = Math.min(pullStrength * dt, dist - 0.02);
+      if (step > 0) {
+        this.mesh.position.x += (dx / dist) * step;
+        this.mesh.position.y += (dy / dist) * step;
+        this.mesh.position.z += (dz / dist) * step;
+      }
 
       // Clear physics velocity when being pulled
       this.vx = 0;
@@ -558,6 +574,15 @@ const XPStarManager = {
 
   getActiveCount: function() {
     return this._activeStars.length;
+  },
+
+  /**
+   * getMagnetRange()
+   * Returns the base magnet range (XP_CFG.MAGNET_RANGE) so callers like sandbox-loop.js
+   * can derive upgrade multipliers without duplicating the constant.
+   */
+  getMagnetRange: function() {
+    return XP_CFG.MAGNET_RANGE;
   },
 
   dispose: function() {
